@@ -1,9 +1,7 @@
 <template>
-  <h1>
-    Home
-  </h1>
+  <WeekCalendarPicker />
 </template>
 
 <script setup lang="ts">
-
+import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 </script>
