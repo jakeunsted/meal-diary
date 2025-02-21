@@ -10,10 +10,10 @@ export default defineNuxtConfig({
       supabaseKey: process.env.SUPABASE_KEY
     }
   },
-  css: ['@/assets/css/tailwind.css'],
-  postcss: {
-    plugins: {
-      tailwindcss,
-    },
+  css: ['@/assets/css/main.css'],
+  vite: {
+    plugins: [
+      tailwindcss(),
+    ],
   },
 })
