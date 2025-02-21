@@ -10,7 +10,7 @@ export default defineNuxtConfig({
       supabaseKey: process.env.SUPABASE_KEY
     }
   },
-  css: ['@/assets/css/main.css'],
+  css: ['~/assets/css/main.css'],
   vite: {
     plugins: [
       tailwindcss(),
