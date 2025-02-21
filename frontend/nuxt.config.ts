@@ -3,17 +3,26 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  devtools: { enabled: false },
   runtimeConfig: {
     public: {
       supabaseUrl: process.env.SUPABASE_URL,
       supabaseKey: process.env.SUPABASE_KEY
     }
   },
-  css: ['~/assets/css/main.css'],
+  css: ['~/assets/css/main.css', '@fortawesome/fontawesome-svg-core/styles.css'],
   vite: {
     plugins: [
       tailwindcss(),
     ],
+  },
+  modules: ['@vesp/nuxt-fontawesome'],
+  fontawesome: {
+    component: 'fa',
+    icons: {
+      solid: ['house', 'list', 'plus', 'circle-user'],
+      brands: [],
+      regular: [],
+    },
   },
 })
