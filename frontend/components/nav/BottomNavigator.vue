@@ -17,17 +17,17 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { useRoute, useRouter } from '#app';
 
 const route = useRoute();
 const router = useRouter();
 
-function isActive(path: string): boolean {
+function isActive(path) {
   return route.path === path;
 }
 
-function navigateTo(path: string) {
+function navigateTo(path) {
   router.push(path);
 }
 </script>
