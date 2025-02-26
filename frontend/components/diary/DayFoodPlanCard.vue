@@ -1,9 +1,10 @@
 <template>
   <div class="card bg-base-200 shadow-sm m-4">
-    <div class="card-title justify-center mt-2">
-      <h2 class="">{{ day }}</h2>
+    <div class="card-title justify-between my-2 flex items-center px-6" @click="toggleCard">
+      <div class="font-semibold">{{ day }}</div>
+      <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
     </div>
-    <div class="card-body">
+    <div class="card-body bg-base-300 rounded-b-lg" v-if="isOpen">
       <div class="card-content">
         <div class="flex justify-between mb-2">
           <h3 class="">Breakfast</h3>
@@ -44,4 +45,12 @@ const props = defineProps({
     type: Object,
   },
 })
+
+import { ref } from 'vue';
+
+const isOpen = ref(true);
+
+const toggleCard = () => {
+  isOpen.value = !isOpen.value;
+}
 </script>

@@ -10,7 +10,11 @@ export default defineNuxtConfig({
       supabaseKey: process.env.SUPABASE_KEY
     }
   },
-  css: ['~/assets/css/main.css', '@fortawesome/fontawesome-svg-core/styles.css'],
+  css: [
+    '~/assets/css/main.css',
+    '~/assets/css/main.scss',
+    '@fortawesome/fontawesome-svg-core/styles.css',
+  ],
   vite: {
     plugins: [
       tailwindcss(),
