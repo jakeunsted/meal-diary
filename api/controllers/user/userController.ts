@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { User } from '../db/models/associations.ts';
+import { User } from '../../db/models/associations.ts';
 import { Op } from 'sequelize';
 import bcrypt from 'bcrypt';
 

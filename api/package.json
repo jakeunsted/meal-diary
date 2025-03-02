@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "dev": "node --experimental-strip-types --experimental-transform-types --watch index.ts"
   },
   "author": "Jake Unsted",
@@ -11,12 +12,15 @@
   "description": "",
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/express": "^5.0.0",
     "@types/node": "^22.13.5",
     "@types/sequelize": "^4.28.20",
-    "typescript": "^5.7.3"
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.7"
   },
   "dependencies": {
-    "@types/express": "^5.0.0",
     "bcrypt": "^5.1.1",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
