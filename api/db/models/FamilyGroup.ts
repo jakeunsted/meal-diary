@@ -5,17 +5,17 @@ import ShoppingList from './ShoppingList.ts';
 import type { ShoppingListAttributes } from './ShoppingList.ts';
 
 interface FamilyGroupAttributes {
-  family_group_id: number;
+  id: number;
   name: string;
   created_by: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface FamilyGroupCreationAttributes extends Optional<FamilyGroupAttributes, 'family_group_id' | 'created_at' | 'updated_at'> {}
+interface FamilyGroupCreationAttributes extends Optional<FamilyGroupAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 class FamilyGroup extends Model<FamilyGroupAttributes, FamilyGroupCreationAttributes> implements FamilyGroupAttributes {
-  public family_group_id!: number;
+  public id!: number;
   public name!: string;
   public created_by!: number;
   
@@ -29,7 +29,7 @@ class FamilyGroup extends Model<FamilyGroupAttributes, FamilyGroupCreationAttrib
 
 FamilyGroup.init(
   {
-    family_group_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,

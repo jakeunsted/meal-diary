@@ -3,7 +3,7 @@ import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
 interface DailyMealAttributes {
-  daily_meal_id: number;
+  id: number;
   meal_diary_id: number;
   day_of_week: number;
   breakfast?: string;
@@ -13,10 +13,10 @@ interface DailyMealAttributes {
   updated_at?: Date;
 }
 
-interface DailyMealCreationAttributes extends Optional<DailyMealAttributes, 'daily_meal_id' | 'breakfast' | 'lunch' | 'dinner' | 'created_at' | 'updated_at'> {}
+interface DailyMealCreationAttributes extends Optional<DailyMealAttributes, 'id' | 'breakfast' | 'lunch' | 'dinner' | 'created_at' | 'updated_at'> {}
 
 class DailyMeal extends Model<DailyMealAttributes, DailyMealCreationAttributes> implements DailyMealAttributes {
-  public daily_meal_id!: number;
+  public id!: number;
   public meal_diary_id!: number;
   public day_of_week!: number;
   public breakfast!: string | undefined;
@@ -29,7 +29,7 @@ class DailyMeal extends Model<DailyMealAttributes, DailyMealCreationAttributes> 
 
 DailyMeal.init(
   {
-    daily_meal_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,

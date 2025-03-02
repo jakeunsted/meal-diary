@@ -3,17 +3,17 @@ import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
 export interface ShoppingListAttributes {
-  shopping_list_id: number;
+  id: number;
   family_group_id: number;
   content: object;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface ShoppingListCreationAttributes extends Optional<ShoppingListAttributes, 'shopping_list_id' | 'created_at' | 'updated_at'> {}
+interface ShoppingListCreationAttributes extends Optional<ShoppingListAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 class ShoppingList extends Model<ShoppingListAttributes, ShoppingListCreationAttributes> implements ShoppingListAttributes {
-  public shopping_list_id!: number;
+  public id!: number;
   public family_group_id!: number;
   public content!: object;
   
@@ -23,7 +23,7 @@ class ShoppingList extends Model<ShoppingListAttributes, ShoppingListCreationAtt
 
 ShoppingList.init(
   {
-    shopping_list_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,

@@ -3,7 +3,7 @@ import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
 interface UserAttributes {
-  user_id: number;
+  id: number;
   username: string;
   email: string;
   password_hash: string;
@@ -14,10 +14,10 @@ interface UserAttributes {
   updated_at?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, 'user_id' | 'created_at' | 'updated_at'> {}
+interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public user_id!: number;
+  public id!: number;
   public username!: string;
   public email!: string;
   public password_hash!: string;
@@ -31,7 +31,7 @@ class User extends Model<UserAttributes, UserCreationAttributes> implements User
 
 User.init(
   {
-    user_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,

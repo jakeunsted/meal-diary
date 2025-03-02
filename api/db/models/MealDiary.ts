@@ -3,17 +3,17 @@ import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
 interface MealDiaryAttributes {
-  meal_diary_id: number;
+  id: number;
   family_group_id: number;
   week_start_date: Date;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface MealDiaryCreationAttributes extends Optional<MealDiaryAttributes, 'meal_diary_id' | 'created_at' | 'updated_at'> {}
+interface MealDiaryCreationAttributes extends Optional<MealDiaryAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
 class MealDiary extends Model<MealDiaryAttributes, MealDiaryCreationAttributes> implements MealDiaryAttributes {
-  public meal_diary_id!: number;
+  public id!: number;
   public family_group_id!: number;
   public week_start_date!: Date;
   
@@ -23,7 +23,7 @@ class MealDiary extends Model<MealDiaryAttributes, MealDiaryCreationAttributes> 
 
 MealDiary.init(
   {
-    meal_diary_id: {
+    id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
