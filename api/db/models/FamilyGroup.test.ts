@@ -1,4 +1,3 @@
-// tests/models/FamilyGroup.test.ts
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { User, FamilyGroup, sequelize } from '../../db/db.ts';
 import { Op, ValidationError } from 'sequelize';
@@ -98,6 +97,6 @@ describe('FamilyGroup Model', () => {
     const usersInGroupJson = usersInGroup.map(user => user.toJSON());
     
     expect(usersInGroupJson).toHaveLength(1);
-    expect(usersInGroupJson[0].username).toBe('member');
+    expect(usersInGroupJson[0].username).toBe('vitest_member');
   }, 15000); // 15 second timeout
 });
