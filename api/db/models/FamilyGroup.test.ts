@@ -1,28 +1,11 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { User, FamilyGroup, sequelize } from '../../db/db.ts';
-import { Op, ValidationError } from 'sequelize';
+import { describe, it, expect } from 'vitest';
+import { User, FamilyGroup } from '../db.ts';
+import { ValidationError } from 'sequelize';
 
 describe('FamilyGroup Model', () => {
-  // Setup and teardown
-  beforeAll(async () => {
-    // Increase timeout to 30 seconds
-    await sequelize.sync({ force: true });
-  }, 30000); // 30 second timeout
-
-  afterAll(async () => {
-    await sequelize.close();
-  }, 30000); // 30 second timeout
-
-  beforeEach(async () => {
-    // Clear all test data
-    await FamilyGroup.destroy({ where: { name: { [Op.like]: 'Vitest -%' } } });
-    await User.destroy({ where: { username: { [Op.like]: 'vitest_%' } } });
-  }, 15000); // 15 second timeout
-
-  // Tests
   it('should create a new family group successfully', async () => {
     const user = await User.create({
-      username: 'vitest_test',
+      username: 'vitest_test_create_family',
       email: 'vitest_test@example.com',
       password_hash: 'hashedpassword123'
     });
@@ -62,14 +45,14 @@ describe('FamilyGroup Model', () => {
   it('should associate users with a family group', async () => {
     // Create users
     const creator = await User.create({
-      username: 'vitest_creator',
+      username: 'vitest_creator_family',
       email: 'vitest_creator@example.com',
       password_hash: 'hashedpassword123'
     });
     const creatorJson = creator.toJSON();
 
     const member = await User.create({
-      username: 'vitest_member',
+      username: 'vitest_member_family',
       email: 'vitest_member@example.com',
       password_hash: 'hashedpassword456'
     });
@@ -97,6 +80,6 @@ describe('FamilyGroup Model', () => {
     const usersInGroupJson = usersInGroup.map(user => user.toJSON());
     
     expect(usersInGroupJson).toHaveLength(1);
-    expect(usersInGroupJson[0].username).toBe('vitest_member');
+    expect(usersInGroupJson[0].username).toBe('vitest_member_family');
   }, 15000); // 15 second timeout
 });
