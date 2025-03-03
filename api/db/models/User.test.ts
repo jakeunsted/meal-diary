@@ -27,16 +27,25 @@ describe('User Model', () => {
   }, 15000);
 
   it('should require a unique username', async () => {
+    // Create a user first
     await User.create({
       username: 'vitest_test_unique',
       email: 'vitest_test_unique@example.com',
       password_hash: 'hashedpassword123'
     });
     
-    await expect(User.create({
-      username: 'vitest_test_unique',
-      email: 'vitest_test_unique_another@example.com',
-      password_hash: 'hashedpassword456'
-    })).rejects.toThrow(ValidationError);
+    try {
+      // Try to create another user with the same username
+      await User.create({
+        username: 'vitest_test_unique',
+        email: 'vitest_test_unique_another@example.com',
+        password_hash: 'hashedpassword456'
+      });
+      
+      expect.fail('Should have thrown a validation error');
+    } catch (error) {
+      expect(error).toBeInstanceOf(ValidationError);
+      expect((error as ValidationError).message).toContain('Validation error');
+    }
   }, 15000);
 });

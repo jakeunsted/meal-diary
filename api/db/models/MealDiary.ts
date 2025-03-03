@@ -12,14 +12,7 @@ interface MealDiaryAttributes {
 
 interface MealDiaryCreationAttributes extends Optional<MealDiaryAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class MealDiary extends Model<MealDiaryAttributes, MealDiaryCreationAttributes> implements MealDiaryAttributes {
-  public id!: number;
-  public family_group_id!: number;
-  public week_start_date!: Date;
-  
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-}
+class MealDiary extends Model<MealDiaryAttributes, MealDiaryCreationAttributes> {}
 
 MealDiary.init(
   {

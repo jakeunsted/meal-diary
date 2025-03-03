@@ -15,17 +15,7 @@ interface DailyMealAttributes {
 
 interface DailyMealCreationAttributes extends Optional<DailyMealAttributes, 'id' | 'breakfast' | 'lunch' | 'dinner' | 'created_at' | 'updated_at'> {}
 
-class DailyMeal extends Model<DailyMealAttributes, DailyMealCreationAttributes> implements DailyMealAttributes {
-  public id!: number;
-  public meal_diary_id!: number;
-  public day_of_week!: number;
-  public breakfast!: string | undefined;
-  public lunch!: string | undefined;
-  public dinner!: string | undefined;
-  
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-}
+class DailyMeal extends Model<DailyMealAttributes, DailyMealCreationAttributes> {}
 
 DailyMeal.init(
   {

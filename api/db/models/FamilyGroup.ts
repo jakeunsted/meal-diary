@@ -14,14 +14,7 @@ interface FamilyGroupAttributes {
 
 interface FamilyGroupCreationAttributes extends Optional<FamilyGroupAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class FamilyGroup extends Model<FamilyGroupAttributes, FamilyGroupCreationAttributes> implements FamilyGroupAttributes {
-  public id!: number;
-  public name!: string;
-  public created_by!: number;
-  
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-
+class FamilyGroup extends Model<FamilyGroupAttributes, FamilyGroupCreationAttributes> {
   public createShoppingList!: (data?: Partial<ShoppingListAttributes>) => Promise<ShoppingList>;
   public getShoppingList!: () => Promise<ShoppingList>;
   public setShoppingList!: (shoppingList: ShoppingList) => Promise<void>;

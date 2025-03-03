@@ -16,18 +16,7 @@ interface UserAttributes {
 
 interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public id!: number;
-  public username!: string;
-  public email!: string;
-  public password_hash!: string;
-  public first_name!: string | undefined;
-  public last_name!: string | undefined;
-  public family_group_id!: number | undefined;
-  
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-}
+class User extends Model<UserAttributes, UserCreationAttributes> {}
 
 User.init(
   {

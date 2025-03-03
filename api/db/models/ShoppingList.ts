@@ -12,14 +12,7 @@ export interface ShoppingListAttributes {
 
 interface ShoppingListCreationAttributes extends Optional<ShoppingListAttributes, 'id' | 'created_at' | 'updated_at'> {}
 
-class ShoppingList extends Model<ShoppingListAttributes, ShoppingListCreationAttributes> implements ShoppingListAttributes {
-  public id!: number;
-  public family_group_id!: number;
-  public content!: object;
-  
-  public readonly created_at!: Date;
-  public readonly updated_at!: Date;
-}
+class ShoppingList extends Model<ShoppingListAttributes, ShoppingListCreationAttributes> {}
 
 ShoppingList.init(
   {
