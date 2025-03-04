@@ -5,7 +5,7 @@
     </h1>
     <div>
       <div v-for="category in shoppingCategories" :key="category.id">
-        <CollapseListSection class="mx-4" :categoryTitle="category.name" :categoryItems="category.items" />
+        <CollapseListSection class="m-4" :categoryTitle="category.name" :categoryItems="category.items" />
       </div>
     </div>
   </div>
