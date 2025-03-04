@@ -9,7 +9,7 @@ let dbPassword: string | undefined;
 let dbHost: string | undefined;
 let dbPort: string | undefined;
 
-if (process.env.NODE_ENV === 'development') {
+if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
   if (!process.env.DEV_DB_NAME || !process.env.DEV_DB_USER || !process.env.DEV_DB_PASSWORD || !process.env.DEV_DB_HOST || !process.env.DEV_DB_PORT) {
     throw new Error('Development database configuration is missing');
   }
