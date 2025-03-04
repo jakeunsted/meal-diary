@@ -1,8 +1,8 @@
 import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
-import ShoppingList from './ShoppingList.ts';
-import type { ShoppingListAttributes } from './ShoppingList.ts';
+import ShoppingList from './ShoppingList.model.ts';
+import type { ShoppingListAttributes } from './ShoppingList.model.ts';
 
 interface FamilyGroupAttributes {
   id: number;

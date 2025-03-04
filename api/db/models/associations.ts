@@ -1,8 +1,8 @@
-import User from './User.ts';
-import FamilyGroup from './FamilyGroup.ts';
-import ShoppingList from './ShoppingList.ts';
-import MealDiary from './MealDiary.ts';
-import DailyMeal from './DailyMeal.ts';
+import User from './User.model.ts';
+import FamilyGroup from './FamilyGroup.model.ts';
+import ShoppingList from './ShoppingList.model.ts';
+import MealDiary from './MealDiary.model.ts';
+import DailyMeal from './DailyMeal.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 

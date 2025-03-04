@@ -4,7 +4,7 @@ import { Op } from 'sequelize';
 
 export async function setup() {
   console.log('Global setup: Initializing database...');
-  await initializeDatabase;
+  await initializeDatabase(true); // Force sync to ensure clean state
   console.log('Global setup: Database initialized.');
 }
 
