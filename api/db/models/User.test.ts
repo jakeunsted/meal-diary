@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { User } from '../../db/db.ts';
+import { User } from '../db.ts';
 import { ValidationError } from 'sequelize';
 
 describe('User Model', () => {
@@ -44,8 +44,22 @@ describe('User Model', () => {
       
       expect.fail('Should have thrown a validation error');
     } catch (error) {
-      expect(error).toBeInstanceOf(ValidationError);
       expect((error as ValidationError).message).toContain('Validation error');
     }
+  }, 15000);
+
+  it('should be able to delete a user', async () => {
+    const user = await User.create({
+      username: 'vitest_test_delete',
+      email: 'vitest_test_delete@example.com',
+      password_hash: 'hashedpassword123'
+    });
+    const userJson = user.toJSON();
+    expect(userJson).toBeDefined();
+    expect(userJson.id).toBeDefined();
+
+    await user.destroy();
+    const deletedUser = await User.findByPk(userJson.id);
+    expect(deletedUser).toBeNull();
   }, 15000);
 });

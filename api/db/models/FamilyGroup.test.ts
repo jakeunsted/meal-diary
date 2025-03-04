@@ -45,33 +45,41 @@ describe('FamilyGroup Model', () => {
   it('should associate users with a family group', async () => {
     // Create users
     const creator = await User.create({
-      username: 'vitest_creator_family',
-      email: 'vitest_creator@example.com',
+      username: 'vitest_creator_family_group',
+      email: 'vitest_creator_family_group@example.com',
       password_hash: 'hashedpassword123'
     });
     const creatorJson = creator.toJSON();
+    expect(creatorJson.id).toBeDefined();
 
-    const member = await User.create({
-      username: 'vitest_member_family',
-      email: 'vitest_member@example.com',
+    const member: User = await User.create({
+      username: 'vitest_member_family_group',
+      email: 'vitest_member_family_group@example.com',
       password_hash: 'hashedpassword456'
     });
     const memberJson = member.toJSON();
+    expect(memberJson.id).toBeDefined();
 
     // Create family group
     const group = await FamilyGroup.create({
-      name: 'Vitest - Associated Family',
+      name: 'Vitest - Associated Family Group',
       created_by: creatorJson.id
     });
     const groupJson = group.toJSON();
+    expect(groupJson.id).toBeDefined();
 
     // Associate member with group
     await member.update({ family_group_id: groupJson.id });
-
-    // Retrieve user with association
+    
+    // Retrieve user with association - use the ID directly
     const updatedMember = await User.findByPk(memberJson.id);
-    const updatedMemberJson = updatedMember?.toJSON();
-    expect(updatedMemberJson?.family_group_id).toBe(groupJson.id);
+
+    if (!updatedMember) {
+      throw new Error('User not found');
+    }
+    const updatedMemberJson = updatedMember.toJSON();
+
+    expect(updatedMemberJson.family_group_id).toBe(groupJson.id);
 
     // Get all users in group
     const usersInGroup = await User.findAll({
@@ -80,6 +88,6 @@ describe('FamilyGroup Model', () => {
     const usersInGroupJson = usersInGroup.map(user => user.toJSON());
     
     expect(usersInGroupJson).toHaveLength(1);
-    expect(usersInGroupJson[0].username).toBe('vitest_member_family');
+    expect(usersInGroupJson[0].username).toBe('vitest_member_family_group');
   }, 15000); // 15 second timeout
 });
