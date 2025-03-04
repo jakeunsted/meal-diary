@@ -14,6 +14,6 @@ COPY . .
 # Add type: module to package.json to fix the warning
 RUN npm pkg set type=module
 
-EXPOSE 3000
+EXPOSE 3001
 
 CMD ["npm", "run", "dev"]

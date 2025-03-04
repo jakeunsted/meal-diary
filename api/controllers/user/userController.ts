@@ -98,14 +98,14 @@ export const updateUser = async (req: Request, res: Response) => {
     }
     
     // Check if username or email is being changed and already exists
-    if (username && username !== user.username) {
+    if (username && username !== user.dataValues.username) {
       const existingUsername = await User.findOne({ where: { username } });
       if (existingUsername) {
         return res.status(409).json({ message: 'Username already taken' });
       }
     }
     
-    if (email && email !== user.email) {
+    if (email && email !== user.dataValues.email) {
       const existingEmail = await User.findOne({ where: { email } });
       if (existingEmail) {
         return res.status(409).json({ message: 'Email already in use' });
