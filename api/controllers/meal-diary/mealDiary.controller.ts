@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
-import { getWeeklyMeals, updateDailyMeal } from './mealDiary.service.ts';
+import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from './mealDiary.service.ts';
 
 // Create a new meal diary
 export const createMealDiary = async (req: Request, res: Response) => {
@@ -61,10 +61,18 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
     }
 
-    const weeklyMeals = await getWeeklyMeals(
+    let weeklyMeals = await getWeeklyMeals(
       parseInt(family_group_id),
       new Date(week_start_date as string)
     );
+
+    // if no weekly meals yet, create the diary and return empty meals
+    if (!weeklyMeals) {
+      weeklyMeals = await createNewWeeklyMeals(
+        parseInt(family_group_id),
+        new Date(week_start_date as string)
+      );
+    }
 
     return res.status(200).json(weeklyMeals);
   } catch (error) {

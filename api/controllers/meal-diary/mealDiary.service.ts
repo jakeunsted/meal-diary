@@ -8,6 +8,47 @@ interface DailyMealWithDay {
   dinner: string | null;
 }
 
+export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
+  // Create an array of 7 days starting from weekStartDate
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStartDate);
+    date.setDate(date.getDate() + index);
+    return {
+      date: date,
+      breakfast: '',
+      lunch: '',
+      dinner: '',
+    };
+  });
+
+  const mealDiary = await MealDiary.create({
+    family_group_id: familyGroupId,
+    week_start_date: weekStartDate
+  });
+
+  for (const day of days) {
+    await DailyMeal.create({
+      meal_diary_id: mealDiary.dataValues.id,
+      day_of_week: day.date.getDay(),
+      breakfast: day.breakfast || '',
+      lunch: day.lunch || '',
+      dinner: day.dinner || ''
+    });
+  }
+
+  const weeklyMeals: DailyMealWithDay[] = [];
+  for (let day = 1; day <= 7; day++) {
+    weeklyMeals.push({
+      day_of_week: day,
+      breakfast: '',
+      lunch: '',
+      dinner: ''
+    });
+  }
+
+  return weeklyMeals;
+};
+
 /**
  * Get the meal diary for given family group id with the daily meals for that week
  */

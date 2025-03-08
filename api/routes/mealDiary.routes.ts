@@ -22,8 +22,9 @@ router.get('/:family_group_id', async (req, res, next) => {
   }
 });
 
+// probably needs to get, or set and get if not there
 // Get meal diary with the daily meals for family group
-router.post('/:family_group_id/daily-meals', async (req, res, next) => {
+router.get('/:family_group_id/daily-meals', async (req, res, next) => {
   try {
     await mealDiaryController.getWeeklyMealsForFamilyGroup(req, res);
   } catch (error) {
