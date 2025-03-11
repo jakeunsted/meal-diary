@@ -3,6 +3,7 @@ import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
 import familyGroupRoutes from './routes/familyGroups.routes.ts';
+import { swaggerUi, specs } from './swagger.ts';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -19,6 +20,9 @@ app.use('/family-groups', familyGroupRoutes);
 app.get('/health', (req, res) => {
   res.status(200).json({ message: 'OK' });
 });
+
+// Swagger UI
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // Initialize the database
 (async () => {
