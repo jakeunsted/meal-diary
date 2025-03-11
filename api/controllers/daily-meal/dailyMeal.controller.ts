@@ -49,3 +49,28 @@ export const getDailyMealsByMealDiaryId = async (req: Request, res: Response) =>
     return res.status(500).json({ message: 'Failed to get daily meals' });
   }
 };
+
+// update a daily meal by id
+export const updateDailyMealById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { breakfast = null, lunch = null, dinner = null } = req.body;
+
+    const dailyMeal = await DailyMeal.findByPk(id);
+
+    if (!dailyMeal) {
+      return res.status(404).json({ message: 'Daily meal not found' });
+    }
+
+    dailyMeal.dataValues.breakfast = breakfast;
+    dailyMeal.dataValues.lunch = lunch;
+    dailyMeal.dataValues.dinner = dinner;
+
+    await dailyMeal.save();
+
+    return res.status(200).json(dailyMeal);
+  } catch (error) {
+    console.error('Error updating daily meal:', error);
+    return res.status(500).json({ message: 'Failed to update daily meal' });
+  }
+};

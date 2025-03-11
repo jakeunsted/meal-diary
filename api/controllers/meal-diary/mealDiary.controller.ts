@@ -36,12 +36,19 @@ export const getMealDiaryByFamilyGroupId = async (req: Request, res: Response) =
     }
 
     // Find meal diary by family group ID
-    const mealDiary = await MealDiary.findOne({
+    let mealDiary = await MealDiary.findOne({
       where: { family_group_id: parseInt(family_group_id) }
     });
 
+    // if no meal diary, create a new one
     if (!mealDiary) {
-      return res.status(404).json({ message: 'Meal diary not found' });
+      // get monday of current week
+      const monday = new Date();
+      monday.setDate(monday.getDate() - (monday.getDay() || 7) + 1);
+      mealDiary = await MealDiary.create({
+        family_group_id: parseInt(family_group_id),
+        week_start_date: monday
+      });
     }
 
     return res.status(200).json(mealDiary);

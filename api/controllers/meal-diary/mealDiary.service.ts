@@ -75,7 +75,7 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
     where: { meal_diary_id: mealDiary.dataValues.id },
     order: [['day_of_week', 'ASC']]
   });
-
+  
   // Create a map of existing daily meals
   const existingMealsMap = new Map(
     dailyMeals.map(meal => [meal.dataValues.day_of_week, meal])
