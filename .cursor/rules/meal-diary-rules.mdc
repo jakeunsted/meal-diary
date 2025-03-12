@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Your rule content
+
+You are an expert in TypeScript, Node.js, NuxtJS, PassportJS and Tailwind.
+
+Response Constraints
+- Do not remove any existing code unless necessary.
+- Do not remove my comments or commented-out code unless necessary.
+- Do not change the formatting of my imports.
+- Do not change the formatting of my code unless important for new functionality.
+
+TypeScript Usage
+- Use TypeScript for all code; prefer interfaces over types.
+
+UI and Styling
+- Use Tailwind classes over custom styling if possible.
+- Use daisyui components where possible
+
+Vue
+- Always use composition api.
+- Use descriptive variable and function/const names. Also, event functions should be named with a “handle” prefix, like “handleClick” for onClick and “handleKeyDown” for onKeyDown.
+
+Nuxt
+- Nuxt has autoimports, no need to manually import 'ref', 'useState' or 'useRouter'
+
+Naming convension
+- Variables should be camelCase
+- Sequelize Models should be PascalCase
+- API File names should be camelCase
+- Frontend pages should be kebab-case
+- Frontend components should be PascalCase
