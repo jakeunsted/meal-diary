@@ -27,6 +27,7 @@ Vue
 
 Nuxt
 - Nuxt has autoimports, no need to manually import 'ref', 'useState' or 'useRouter'
+- Nuxt server will act as business logic when communicating with API
 
 Naming convension
 - Variables should be camelCase
