@@ -3,6 +3,7 @@ import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
 import familyGroupRoutes from './routes/familyGroups.routes.ts';
+import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());
 app.use('/users', userRoutes);
 app.use('/meal-diaries', mealDiaryRoutes);
 app.use('/family-groups', familyGroupRoutes);
+app.use('/shopping-list', shoppingListRoutes);
 
 // health check
 app.get('/health', (req, res) => {

@@ -3,13 +3,11 @@ import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
 export interface ShoppingListItem {
-  id: number;
   name: string;
   checked: boolean;
 }
 
 export interface ShoppingListCategory {
-  id: number;
   name: string;
   items: ShoppingListItem[];
 }
