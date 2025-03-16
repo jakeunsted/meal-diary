@@ -1,6 +1,9 @@
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import { Op } from 'sequelize';
 
+/**
+ * Interface representing a daily meal with day of week information
+ */
 interface DailyMealWithDay {
   day_of_week: number;
   breakfast: string | null;
@@ -8,6 +11,12 @@ interface DailyMealWithDay {
   dinner: string | null;
 }
 
+/**
+ * Creates a new weekly meal plan for a family group
+ * @param familyGroupId - The ID of the family group
+ * @param weekStartDate - The start date of the week for the meal plan
+ * @returns {Promise<DailyMealWithDay[]>} An array of daily meals with day of week information
+ */
 export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
   // Create an array of 7 days starting from weekStartDate
   const days = Array.from({ length: 7 }, (_, index) => {
@@ -50,9 +59,12 @@ export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate:
 };
 
 /**
- * Get the meal diary for given family group id with the daily meals for that week
+ * Retrieves the weekly meal plan for a family group
+ * @param familyGroupId - The ID of the family group
+ * @param weekStartDate - The start date of the week for the meal plan
+ * @returns {Promise<DailyMealWithDay[]>} An array of daily meals with day of week information
+ * @throws {Error} If the meal diary for the specified week is not found
  */
-
 export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
   // First, find or create the meal diary for this week
   let mealDiary = await MealDiary.findOne({
@@ -96,6 +108,15 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
   return weeklyMeals;
 };
 
+/**
+ * Updates a specific daily meal in a family's weekly meal plan
+ * @param familyGroupId - The ID of the family group
+ * @param weekStartDate - The start date of the week for the meal plan
+ * @param dayOfWeek - The day of the week to update (1-7)
+ * @param updates - Object containing the meal updates (breakfast, lunch, dinner)
+ * @returns {Promise<DailyMeal>} The updated DailyMeal
+ * @throws {Error} If the meal diary for the specified week is not found
+ */
 export const updateDailyMeal = async (
   familyGroupId: number,
   weekStartDate: Date,
