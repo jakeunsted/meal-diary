@@ -87,10 +87,15 @@ const router = express.Router();
 
 /**
  * @openapi
- * /api/shopping-list:
+ * /api/shopping-list/{family_group_id}:
  *   get:
  *     summary: Get the entire shopping list
- *     description: Retrieves all shopping lists
+ *     description: Retrieves all shopping lists for a family group
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
  *     tags:
  *       - Shopping List
  *     responses:
@@ -105,7 +110,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/', async (req, res, next) => {
+router.get('/:family_group_id', async (req, res, next) => {
   try {
     await shoppingListController.getEntireShoppingList(req, res);
   } catch (error) {
@@ -115,12 +120,17 @@ router.get('/', async (req, res, next) => {
 
 /**
  * @openapi
- * /api/shopping-list/new-category:
+ * /api/shopping-list/{family_group_id}/new-category:
  *   post:
  *     summary: Add a new category to a shopping list
  *     description: Creates a new empty category in the shopping list
  *     tags:
  *       - Shopping List
+ *     parameters:
+ *       - name: Family Group ID
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
  *     requestBody:
  *       required: true
  *       content:
@@ -128,12 +138,8 @@ router.get('/', async (req, res, next) => {
  *           schema:
  *             type: object
  *             required:
- *               - family_group_id
  *               - category_name
  *             properties:
- *               family_group_id:
- *                 type: integer
- *                 description: The ID of the family group
  *               category_name:
  *                 type: string
  *                 description: The name of the new category
@@ -147,7 +153,7 @@ router.get('/', async (req, res, next) => {
  *       500:
  *         description: Failed to add new category
  */
-router.post('/new-category', async (req, res, next) => {
+router.post('/:family_group_id/new-category', async (req, res, next) => {
   try {
     await shoppingListController.addCategory(req, res);
   } catch (error) {
@@ -157,26 +163,27 @@ router.post('/new-category', async (req, res, next) => {
 
 /**
  * @openapi
- * /api/shopping-list/save-category:
+ * /api/shopping-list/{family_group_id}/save-category:
  *   post:
  *     summary: Save a category in the shopping list
  *     description: Replaces a category's contents with new values
  *     tags:
  *       - Shopping List
+ *     parameters:
+ *       - name: Family Group ID
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
  *     requestBody:
-*       required: true
-*       content:
+ *       required: true
+ *       content:
 *         application/json:
 *           schema:
 *             type: object
 *             required:
-*               - family_group_id
 *               - category_name
 *               - category_contents
 *             properties:
-*               family_group_id:
-*                 type: integer
-*                 description: The ID of the family group
 *               category_name:
 *                 type: string
 *                 description: The name of the category to update
@@ -192,7 +199,7 @@ router.post('/new-category', async (req, res, next) => {
 *       500:
 *         description: Failed to save category
 */
-router.post('/save-category', async (req, res, next) => {
+router.post('/:family_group_id/save-category', async (req, res, next) => {
   try {
     await shoppingListController.saveCategory(req, res);
   } catch (error) {
