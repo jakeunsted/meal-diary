@@ -19,7 +19,10 @@ export default defineNuxtConfig({
       tailwindcss(),
     ],
   },
-  modules: ['@vesp/nuxt-fontawesome'],
+  modules: [
+    '@vesp/nuxt-fontawesome',
+    '@pinia/nuxt',
+  ],
   fontawesome: {
     component: 'fa',
     icons: {
