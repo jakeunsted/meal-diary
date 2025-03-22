@@ -87,7 +87,7 @@ const router = express.Router();
 
 /**
  * @openapi
- * /api/shopping-list/{family_group_id}:
+ * /shopping-list/{family_group_id}:
  *   get:
  *     summary: Get the entire shopping list
  *     description: Retrieves all shopping lists for a family group
@@ -120,7 +120,7 @@ router.get('/:family_group_id', async (req, res, next) => {
 
 /**
  * @openapi
- * /api/shopping-list/{family_group_id}/new-category:
+ * /shopping-list/{family_group_id}/new-category:
  *   post:
  *     summary: Add a new category to a shopping list
  *     description: Creates a new empty category in the shopping list
@@ -163,7 +163,7 @@ router.post('/:family_group_id/new-category', async (req, res, next) => {
 
 /**
  * @openapi
- * /api/shopping-list/{family_group_id}/save-category:
+ * /shopping-list/{family_group_id}/save-category:
  *   post:
  *     summary: Save a category in the shopping list
  *     description: Replaces a category's contents with new values

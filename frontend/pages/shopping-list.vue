@@ -39,6 +39,7 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 
 const newCategoryName = ref('');
+const shoppingCategories = ref([]);
 
 const saveNewCategory = async () => {
   if (newCategoryName.value === '') {
@@ -50,7 +51,7 @@ const saveNewCategory = async () => {
 }
 
 onMounted(async () => {
-  await userStore.fetchUser(23);
+  await userStore.fetchUser(1);
   console.log('userStore.user?.family_group_id', userStore.user?.family_group_id);
   const shoppingListContent = await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
   shoppingCategories.value = shoppingListContent.categories;

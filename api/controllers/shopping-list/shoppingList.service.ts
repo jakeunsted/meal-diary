@@ -9,14 +9,20 @@ import type { ShoppingListCategory } from '../../db/models/ShoppingList.model.ts
  * @throws {Error} If shopping list not found
  */
 export const addNewCategory = async (family_group_id: number, category_name: string): Promise<ShoppingListCategory> => {
-  const shoppingList = await ShoppingList.findOne({
+  let shoppingList = await ShoppingList.findOne({
     where: {
       family_group_id,
     },
   });
 
   if (!shoppingList) {
-    throw new Error('Shopping list not found');
+    // Create new shopping list
+    shoppingList = await ShoppingList.create({
+      family_group_id,
+      content: {
+        categories: [],
+      },
+    });
   }
 
   const newCategory = {
@@ -24,7 +30,7 @@ export const addNewCategory = async (family_group_id: number, category_name: str
     items: [],
   };
 
-  // Content is init null, so we need to set it to an empty object with new category
+  // Handling null content case
   if (!shoppingList.dataValues.content) {
     shoppingList.dataValues.content = {
       categories: [newCategory],
@@ -32,6 +38,10 @@ export const addNewCategory = async (family_group_id: number, category_name: str
   } else {
     shoppingList.dataValues.content.categories.push(newCategory);
   }
+
+  shoppingList.changed('content' as any, true);
+
+  console.log('shoppingList', shoppingList.dataValues.content);
 
   await shoppingList.save();
 
@@ -63,7 +73,11 @@ export const replaceCategoryContents = async (family_group_id: number, category_
   }
 
   shoppingList.dataValues.content.categories[categoryIndex] = category_contents;
-  await shoppingList.save();
+  
+  // Update the content field directly instead of using save()
+  await shoppingList.update({
+    content: shoppingList.dataValues.content
+  });
 
   return shoppingList.dataValues.content.categories.find(category => category.name === category_name) as ShoppingListCategory;
 }
