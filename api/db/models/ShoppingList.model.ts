@@ -37,6 +37,7 @@ ShoppingList.init(
     },
     family_group_id: {
       type: DataTypes.INTEGER,
+      unique: true,
       allowNull: false,
     },
     content: {

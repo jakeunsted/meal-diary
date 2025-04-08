@@ -3,9 +3,20 @@
     <h1 class="text-2xl font-bold text-center m-4">
       Shopping List
     </h1>
-    <div>
-      <div v-for="category in shoppingCategories" :key="category.id">
-        <CollapseListSection class="m-4" :categoryTitle="category.name" :categoryItems="category.items" />
+    <div v-if="loading">
+      <div class="flex justify-center mb-4">
+        <span class="loading loading-spinner loading-xl"></span>
+      </div>
+    </div>
+    <div v-else>
+      <div v-for="category in shoppingCategories" :key="category.name">
+        <CollapseListSection 
+          class="m-4" 
+          :categoryTitle="category.name" 
+          :categoryItems="category.items" 
+          @addItem="saveCategory(category, $event)" 
+          @updateItem="saveCategory(category, $event)"
+        />
       </div>
     </div>
 
@@ -40,57 +51,31 @@ const userStore = useUserStore();
 
 const newCategoryName = ref('');
 const shoppingCategories = ref([]);
+const loading = ref(true);
 
 const saveNewCategory = async () => {
   if (newCategoryName.value === '') {
     return;
   }
-  const newCategory = await shoppingListStore.addCategory(newCategoryName.value);
+  const newCategory = await shoppingListStore.addCategory(userStore.user?.family_group_id, newCategoryName.value);
   newCategoryName.value = '';
   add_category_modal.close();
+  shoppingCategories.value.push(newCategory);
+}
+
+const saveCategory = async (category, event) => {
+  shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
 }
 
 onMounted(async () => {
+  // Temp hardcoded user
   await userStore.fetchUser(1);
-  console.log('userStore.user?.family_group_id', userStore.user?.family_group_id);
-  const shoppingListContent = await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
-  shoppingCategories.value = shoppingListContent.categories;
+  if (shoppingListStore.getShoppingListContent) {
+    shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
+  } else {
+    await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
+    shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
+  }
+  loading.value = false;
 });
-
-// const dummyFruits = [
-//   { id: 1, name: 'Apple' },
-//   { id: 2, name: 'Banana' },
-//   { id: 3, name: 'Cherry' },
-// ];
-
-// const dummyMeats = [
-//   { id: 1, name: 'Beef' },
-//   { id: 2, name: 'Chicken' },
-//   { id: 3, name: 'Fish' },
-// ];
-
-// const dummyBaking = [
-//   { id: 1, name: 'Bread' },
-//   { id: 2, name: 'Cake' },
-//   { id: 3, name: 'Pastry' },
-// ];
-
-// const dummyAlcohol = [
-//   { id: 1, name: 'Beer' },
-//   { id: 2, name: 'Wine' },
-//   { id: 3, name: 'Spirits' },
-// ];
-
-// const dummyOther = [
-//   { id: 1, name: 'Sponges' },
-// ];
-
-// const shoppingCategories = ref([
-//   { id: 1, name: 'Fruits & Vegetables', items: dummyFruits },
-//   { id: 2, name: 'Meat & Fish', items: dummyMeats },
-//   { id: 3, name: 'Baking', items: dummyBaking },
-//   { id: 4, name: 'Alcohol', items: dummyAlcohol },
-//   { id: 5, name: 'Other', items: dummyOther },
-// ]);
-
 </script>

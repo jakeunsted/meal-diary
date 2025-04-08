@@ -18,7 +18,8 @@
             <input 
               type="checkbox"
               class="checkbox checkbox-primary mr-2"
-              @change="updateItem(item.id, item.name)"
+              :checked="item.checked"
+              @change="updateItem(item.id, item.name, item.checked)"
             />
             <input 
               type="text"
@@ -51,6 +52,8 @@
 </template>
 
 <script setup>
+const emit = defineEmits(['addItem', 'updateItem' ]);
+
 const props = defineProps({
   categoryTitle: {
     type: String,
@@ -70,11 +73,35 @@ const toggleCollapse = () => {
 }
 
 const addItem = (name) => {
-  // handle new item in shopping list category
   props.categoryItems.push({
     id: props.categoryItems.length + 1,
     name: name,
+    checked: false,
   });
   newItemName.value = '';
+
+  emit('addItem', {
+    category: props.categoryTitle,
+    itemName: name,
+  });
+}
+
+const updateItem = (id, name, checked) => {
+  const item = props.categoryItems.find(item => item.id === id);
+  if (!item) return;
+  
+  if (checked !== undefined) {
+    item.checked = !item.checked;
+  } else {
+    item.name = name;
+  }
+  
+  props.categoryItems.splice(props.categoryItems.indexOf(item), 1, item);
+
+  emit('updateItem', {
+    category: props.categoryTitle,
+    itemName: name,
+    itemChecked: item.checked
+  });
 }
 </script>

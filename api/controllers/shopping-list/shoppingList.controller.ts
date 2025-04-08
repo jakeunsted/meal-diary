@@ -2,10 +2,20 @@ import type { Request, Response } from 'express';
 import { ShoppingList } from '../../db/models/associations.ts';
 import { addNewCategory, replaceCategoryContents } from './shoppingList.service.ts';
 
+// Create a base shopping list for a family group
+export const createBaseShoppingList = async (req: Request, res: Response) => {
+  const { family_group_id } = req.params;
+  const shoppingList = await ShoppingList.create({ family_group_id: Number(family_group_id) });
+  return res.status(200).json(shoppingList);
+};
+
 // Get entire shopping list for a family group
 export const getEntireShoppingList = async (req: Request, res: Response) => {
   const { family_group_id } = req.params;
-  const shoppingList = await ShoppingList.findAll({ where: { family_group_id } });
+  if (!family_group_id) {
+    return res.status(412).json({ message: 'Family group ID is required' });
+  }
+  const shoppingList = await ShoppingList.findOne({ where: { family_group_id: Number(family_group_id) } });
   return res.status(200).json(shoppingList);
 };
 
@@ -13,6 +23,9 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
 export const addCategory = async (req: Request, res: Response) => {
   const { family_group_id } = req.params;
   const { category_name } = req.body;
+  if (!family_group_id || !category_name) {
+    return res.status(412).json({ message: 'Family group ID and category name are required' });
+  }
   try {
     const shoppingListCategory = await addNewCategory(Number(family_group_id), category_name);
     return res.status(200).json(shoppingListCategory);

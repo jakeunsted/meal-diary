@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { FamilyGroup } from '../../db/models/associations.ts';
+import { createBaseShoppingList } from '../shopping-list/shoppingList.service.ts';
 
 export const createFamilyGroup = async (req: Request, res: Response) => {
   try {
@@ -9,6 +10,8 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
       name,
       created_by
     });
+
+    await createBaseShoppingList(familyGroup.dataValues.id);
 
     return res.status(201).json(familyGroup);
   } catch (error) {

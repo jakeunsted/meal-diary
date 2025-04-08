@@ -2,6 +2,21 @@ import { ShoppingList } from '../../db/models/associations.ts';
 import type { ShoppingListCategory } from '../../db/models/ShoppingList.model.ts';
 
 /**
+ * Creates a base shopping list for a family group
+ * @param {number} family_group_id - ID of the family group
+ * @returns {Promise<ShoppingList>} The newly created shopping list
+ * @throws {Error} If shopping list not found
+ */
+export const createBaseShoppingList = async (family_group_id: number): Promise<ShoppingList> => {
+  try {
+    const shoppingList = await ShoppingList.create({ family_group_id });
+    return shoppingList;
+  } catch (error) {
+    throw new Error('Failed to create base shopping list');
+  }
+};
+
+/**
  * Adds a new category to a family group's shopping list
  * @param {number} family_group_id - ID of the family group
  * @param {string} category_name - Name of the new category
@@ -41,8 +56,6 @@ export const addNewCategory = async (family_group_id: number, category_name: str
 
   shoppingList.changed('content' as any, true);
 
-  console.log('shoppingList', shoppingList.dataValues.content);
-
   await shoppingList.save();
 
   return shoppingList.dataValues.content.categories.find(category => category.name === category_name) as ShoppingListCategory;
@@ -74,10 +87,9 @@ export const replaceCategoryContents = async (family_group_id: number, category_
 
   shoppingList.dataValues.content.categories[categoryIndex] = category_contents;
   
-  // Update the content field directly instead of using save()
-  await shoppingList.update({
-    content: shoppingList.dataValues.content
-  });
+  shoppingList.changed('content' as any, true);
+
+  await shoppingList.save();
 
   return shoppingList.dataValues.content.categories.find(category => category.name === category_name) as ShoppingListCategory;
 }

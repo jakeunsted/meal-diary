@@ -87,6 +87,38 @@ const router = express.Router();
 
 /**
  * @openapi
+ * /shopping-list/{family_group_id}/create-shopping-list:
+ *   post:
+ *     summary: Create a base shopping list for a family group
+ *     description: Creates a base shopping list for a family group
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *     responses:
+ *       200:
+ *         description: The newly created shopping list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ShoppingList'
+ *       500:
+ *         description: Server error
+ */
+router.post('/:family_group_id/create-shopping-list', async (req, res, next) => {
+  try {
+    console.log('createBaseShoppingList');
+    await shoppingListController.createBaseShoppingList(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /shopping-list/{family_group_id}:
  *   get:
  *     summary: Get the entire shopping list
