@@ -50,7 +50,9 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 
 const newCategoryName = ref('');
-const shoppingCategories = ref([]);
+const shoppingCategories = computed(() => 
+  shoppingListStore.getShoppingListContent?.categories || []
+);
 const loading = ref(true);
 
 const saveNewCategory = async () => {
@@ -70,13 +72,14 @@ const saveCategory = async (category, event) => {
 onMounted(async () => {
   // Temp hardcoded user
   await userStore.fetchUser(1);
-  if (shoppingListStore.getShoppingListContent) {
-    shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
-  } else {
+  
+  // No need to manually copy the data initially
+  // Just fetch the data if not already available
+  if (!shoppingListStore.getShoppingListContent) {
     console.log('userStore.user', userStore.user);
     await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
-    shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
   }
+  
   loading.value = false;
 });
 </script>

@@ -35,8 +35,8 @@ export const addCategory = async (req: Request, res: Response) => {
       shoppingListCategory,
       'add-new-category'
     )
-    return res.status(200)
-    // return res.status(200).json(shoppingListCategory);
+    // return res.status(200)
+    return res.status(200).json(shoppingListCategory);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to add new category' });
   }
@@ -54,8 +54,8 @@ export const saveCategory = async (req: Request, res: Response) => {
       shoppingListCategory,
       'save-category'
     )
-    return res.status(200)
-    // return res.status(200).json(shoppingListCategory);
+    // return res.status(200)
+    return res.status(200).json(shoppingListCategory);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to save category' });
   }

@@ -25,6 +25,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.error = null;
         const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
         this.shoppingList = response;
+        console.log('shopping list from the store: ', JSON.stringify(this.shoppingList, null, 2));
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch shopping list';
       } finally {
@@ -81,6 +82,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async updateCategoryInStore(categoryName: string, categoryContents: ShoppingListCategory) {
       if (this.shoppingList?.content) {
+        console.log('category contents from the store: ', this.shoppingList.content.categories.find(
+          category => category.name === categoryName
+        )!.items);
         this.shoppingList.content.categories.find(
           category => category.name === categoryName
         )!.items = categoryContents.items;
