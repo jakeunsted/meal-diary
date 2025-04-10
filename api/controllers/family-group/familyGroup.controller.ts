@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { FamilyGroup } from '../../db/models/associations.ts';
-import { createBaseShoppingList } from '../shopping-list/shoppingList.service.ts';
+import { createBaseShoppingList } from '../../services/shoppingList.service.ts';
 
 export const createFamilyGroup = async (req: Request, res: Response) => {
   try {

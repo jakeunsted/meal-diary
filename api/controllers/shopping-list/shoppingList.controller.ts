@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { ShoppingList } from '../../db/models/associations.ts';
-import { addNewCategory, replaceCategoryContents } from './shoppingList.service.ts';
+import { addNewCategory, replaceCategoryContents } from '../../services/shoppingList.service.ts';
+import { sendShoppingListWebhook } from '../../services/webhook.service.ts';
 
 // Create a base shopping list for a family group
 export const createBaseShoppingList = async (req: Request, res: Response) => {
@@ -28,7 +29,14 @@ export const addCategory = async (req: Request, res: Response) => {
   }
   try {
     const shoppingListCategory = await addNewCategory(Number(family_group_id), category_name);
-    return res.status(200).json(shoppingListCategory);
+    sendShoppingListWebhook(
+      Number(family_group_id),
+      shoppingListCategory.name,
+      shoppingListCategory,
+      'add-new-category'
+    )
+    return res.status(200)
+    // return res.status(200).json(shoppingListCategory);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to add new category' });
   }
@@ -40,7 +48,14 @@ export const saveCategory = async (req: Request, res: Response) => {
   const { category_name, category_contents } = req.body;
   try {
     const shoppingListCategory = await replaceCategoryContents(Number(family_group_id), category_name, category_contents);
-    return res.status(200).json(shoppingListCategory);
+    sendShoppingListWebhook(
+      Number(family_group_id),
+      shoppingListCategory.name,
+      shoppingListCategory,
+      'save-category'
+    )
+    return res.status(200)
+    // return res.status(200).json(shoppingListCategory);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to save category' });
   }

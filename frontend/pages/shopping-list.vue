@@ -73,6 +73,7 @@ onMounted(async () => {
   if (shoppingListStore.getShoppingListContent) {
     shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
   } else {
+    console.log('userStore.user', userStore.user);
     await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
     shoppingCategories.value = shoppingListStore.getShoppingListContent?.categories;
   }

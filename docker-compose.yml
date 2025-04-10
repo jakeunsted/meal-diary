@@ -36,7 +36,7 @@ services:
       # Production DB variables
       DB_NAME: ${DB_NAME:-railway}
       DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-SekEzaEotOXRLIXgeprfrykbEDaszSsF}
+      DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: postgres
       DB_PORT: 5432
       NODE_ENV: development

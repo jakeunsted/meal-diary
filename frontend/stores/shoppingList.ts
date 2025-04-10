@@ -68,6 +68,23 @@ export const useShoppingListStore = defineStore('shoppingList', {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    /**
+     * This method searches for a category by its name within the shopping list's content
+     * and updates its items with the provided category contents.
+     * 
+     * @param {string} categoryName
+     * @param {ShoppingListCategory} categoryContents
+     * 
+     * @returns {void}
+     */
+    async updateCategoryInStore(categoryName: string, categoryContents: ShoppingListCategory) {
+      if (this.shoppingList?.content) {
+        this.shoppingList.content.categories.find(
+          category => category.name === categoryName
+        )!.items = categoryContents.items;
+      }
     }
   }
 })

@@ -1,5 +1,5 @@
-import { ShoppingList } from '../../db/models/associations.ts';
-import type { ShoppingListCategory } from '../../db/models/ShoppingList.model.ts';
+import ShoppingList from '../db/models/ShoppingList.model.ts';
+import type { ShoppingListCategory } from '../db/models/ShoppingList.model.ts';
 
 /**
  * Creates a base shopping list for a family group
