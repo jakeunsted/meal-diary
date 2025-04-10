@@ -25,7 +25,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.error = null;
         const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
         this.shoppingList = response;
-        console.log('shopping list from the store: ', JSON.stringify(this.shoppingList, null, 2));
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch shopping list';
       } finally {
@@ -68,6 +67,39 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.error = err instanceof Error ? err.message : 'Failed to save category';
       } finally {
         this.isLoading = false;
+      }
+    },
+
+    /**
+     * Handle a category that was added by another client via webhook
+     */
+    handleCategoryAdded(familyGroupId: number, categoryName: string, categoryData: ShoppingListCategory) {
+      if (this.shoppingList?.content) {
+        // Check if this category already exists (avoid duplicates)
+        const existingCategory = this.shoppingList.content.categories.find(
+          category => category.name === categoryName
+        );
+        
+        if (!existingCategory) {
+          this.shoppingList.content.categories.push(categoryData);
+        }
+      }
+    },
+    
+    /**
+     * Handle a category that was updated by another client via webhook
+     */
+    handleCategorySaved(familyGroupId: number, categoryName: string, categoryData: ShoppingListCategory) {
+      if (this.shoppingList?.content) {
+        const categoryIndex = this.shoppingList.content.categories.findIndex(
+          category => category.name === categoryName
+        );
+        
+        if (categoryIndex !== -1) {
+          // Update the existing category with new data
+          this.shoppingList.content.categories[categoryIndex].items = categoryData.items;
+          console.log('category updated in the store: ', this.shoppingList.content.categories[categoryIndex].items);
+        }
       }
     },
 

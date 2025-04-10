@@ -1,8 +1,9 @@
 <template>
-  <div class="">
+  <div>
     <h1 class="text-2xl font-bold text-center m-4">
       Shopping List
     </h1>
+
     <div v-if="loading">
       <div class="flex justify-center mb-4">
         <span class="loading loading-spinner loading-xl"></span>
@@ -10,11 +11,11 @@
     </div>
     <div v-else>
       <div v-for="category in shoppingCategories" :key="category.name">
-        <CollapseListSection 
-          class="m-4" 
-          :categoryTitle="category.name" 
-          :categoryItems="category.items" 
-          @addItem="saveCategory(category, $event)" 
+        <CollapseListSection
+          class="m-4"
+          :categoryTitle="category.name"
+          :categoryItems="category.items"
+          @addItem="saveCategory(category, $event)"
           @updateItem="saveCategory(category, $event)"
         />
       </div>
@@ -23,26 +24,17 @@
     <div class="flex justify-center">
       <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">Add Category</button>
     </div>
-    <dialog id="add_category_modal" class="modal">
-      <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-      </form>
-      <div class="modal-box">
-        <form method="dialog">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
-        <h3 class="text-lg font-bold mb-2">Add Category</h3>
-        <input type="text" class="input input-bordered w-full mb-4" required v-model="newCategoryName" placeholder="Category Name" />
-        <div class="flex flex-col items-center">
-          <button class="btn btn-outline btn-primary btn-sm" @click="saveNewCategory">Save</button>
-        </div>
-      </div>
-    </dialog>
+    <AddCategoryModal
+      :newCategoryName="newCategoryName"
+      :saveNewCategory="saveNewCategory"
+      @update:newCategoryName="newCategoryName = $event"
+    />
   </div>
 </template>
 
 <script setup>
 import CollapseListSection from '~/components/shopping-list/CollapseListSection.vue';
+import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 
@@ -50,36 +42,111 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 
 const newCategoryName = ref('');
+const loading = ref(true);
+
+// Use computed property to ensure reactivity to store changes
 const shoppingCategories = computed(() => 
   shoppingListStore.getShoppingListContent?.categories || []
 );
-const loading = ref(true);
 
 const saveNewCategory = async () => {
   if (newCategoryName.value === '') {
     return;
   }
-  const newCategory = await shoppingListStore.addCategory(userStore.user?.family_group_id, newCategoryName.value);
+  await shoppingListStore.addCategory(userStore.user?.family_group_id, newCategoryName.value);
   newCategoryName.value = '';
   add_category_modal.close();
-  shoppingCategories.value.push(newCategory);
 }
 
 const saveCategory = async (category, event) => {
-  shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
+  await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
 }
+
+// Set up event source for real-time updates
+let eventSource = null;
+
+const setupSSE = (familyGroupId) => {
+  if (import.meta.client) {
+    eventSource = new EventSource(`/api/server-sent-events/${familyGroupId}`);
+    
+    eventSource.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      if (data.type === 'add-new-category') {
+        handleRemoteCategoryAdded(data.data);
+      } else if (data.type === 'save-category') {
+        handleRemoteCategorySaved(data.data);
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('SSE Error:', error);
+      eventSource.close();
+      // Try to reconnect after a delay
+      setTimeout(() => setupSSE(familyGroupId), 5000);
+    };
+  }
+};
+
+const handleRemoteCategoryAdded = (data) => {
+  const { categoryName, categoryContents } = data;
+  
+  if (!shoppingListStore.getShoppingListContent) return;
+  
+  // Check if category already exists
+  const existingCategory = shoppingCategories.value.find(
+    category => category.name === categoryName
+  );
+  
+  if (!existingCategory) {
+    // Add category to store without API call
+    shoppingListStore.$patch((state) => {
+      if (state.shoppingList?.content) {
+        state.shoppingList.content.categories.push(categoryContents);
+      }
+    });
+  }
+};
+
+const handleRemoteCategorySaved = (data) => {
+  const { categoryName, categoryContents } = data;
+  
+  if (!shoppingListStore.getShoppingListContent) return;
+  
+  // Find and update category
+  shoppingListStore.$patch((state) => {
+    if (state.shoppingList?.content) {
+      const categoryIndex = state.shoppingList.content.categories.findIndex(
+        category => category.name === categoryName
+      );
+      
+      if (categoryIndex !== -1) {
+        state.shoppingList.content.categories[categoryIndex].items = categoryContents.items;
+      }
+    }
+  });
+};
 
 onMounted(async () => {
   // Temp hardcoded user
   await userStore.fetchUser(1);
-  
-  // No need to manually copy the data initially
-  // Just fetch the data if not already available
+
   if (!shoppingListStore.getShoppingListContent) {
-    console.log('userStore.user', userStore.user);
     await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
   }
-  
+
   loading.value = false;
+  
+  // Setup SSE for real-time updates to shopping list
+  if (userStore.user?.family_group_id) {
+    setupSSE(userStore.user.family_group_id);
+  }
+});
+
+onUnmounted(() => {
+  // Clean up SSE connection
+  if (eventSource) {
+    eventSource.close();
+  }
 });
 </script>

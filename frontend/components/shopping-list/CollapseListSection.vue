@@ -58,10 +58,12 @@ const props = defineProps({
   categoryTitle: {
     type: String,
     required: true,
+    default: () => '',
   },
   categoryItems: {
     type: Array,
     required: true,
+    default: () => [],
   },
 })
 
