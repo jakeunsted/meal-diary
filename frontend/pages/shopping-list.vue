@@ -38,8 +38,10 @@ import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 
+const { $sse } = useNuxtApp();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
+const { handleRemoteCategoryAdded, handleRemoteCategorySaved } = useShoppingListSSE();
 
 const newCategoryName = ref('');
 const loading = ref(true);
@@ -62,70 +64,7 @@ const saveCategory = async (category, event) => {
   await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
 }
 
-// Set up event source for real-time updates
-let eventSource = null;
-
-const setupSSE = (familyGroupId) => {
-  if (import.meta.client) {
-    eventSource = new EventSource(`/api/server-sent-events/${familyGroupId}`);
-    
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      
-      if (data.type === 'add-new-category') {
-        handleRemoteCategoryAdded(data.data);
-      } else if (data.type === 'save-category') {
-        handleRemoteCategorySaved(data.data);
-      }
-    };
-    
-    eventSource.onerror = (error) => {
-      console.error('SSE Error:', error);
-      eventSource.close();
-      // Try to reconnect after a delay
-      setTimeout(() => setupSSE(familyGroupId), 5000);
-    };
-  }
-};
-
-const handleRemoteCategoryAdded = (data) => {
-  const { categoryName, categoryContents } = data;
-  
-  if (!shoppingListStore.getShoppingListContent) return;
-  
-  // Check if category already exists
-  const existingCategory = shoppingCategories.value.find(
-    category => category.name === categoryName
-  );
-  
-  if (!existingCategory) {
-    // Add category to store without API call
-    shoppingListStore.$patch((state) => {
-      if (state.shoppingList?.content) {
-        state.shoppingList.content.categories.push(categoryContents);
-      }
-    });
-  }
-};
-
-const handleRemoteCategorySaved = (data) => {
-  const { categoryName, categoryContents } = data;
-  
-  if (!shoppingListStore.getShoppingListContent) return;
-  
-  // Find and update category
-  shoppingListStore.$patch((state) => {
-    if (state.shoppingList?.content) {
-      const categoryIndex = state.shoppingList.content.categories.findIndex(
-        category => category.name === categoryName
-      );
-      
-      if (categoryIndex !== -1) {
-        state.shoppingList.content.categories[categoryIndex].items = categoryContents.items;
-      }
-    }
-  });
-};
+let sseConnection = null;
 
 onMounted(async () => {
   // Temp hardcoded user
@@ -137,16 +76,16 @@ onMounted(async () => {
 
   loading.value = false;
   
-  // Setup SSE for real-time updates to shopping list
+  // Setup SSE for real-time updates to shopping list using the plugin
   if (userStore.user?.family_group_id) {
-    setupSSE(userStore.user.family_group_id);
+    sseConnection = $sse.setup(userStore.user.family_group_id, {
+      'add-new-category': handleRemoteCategoryAdded,
+      'save-category': handleRemoteCategorySaved
+    });
   }
 });
 
 onUnmounted(() => {
-  // Clean up SSE connection
-  if (eventSource) {
-    eventSource.close();
-  }
+  $sse.close();
 });
 </script>

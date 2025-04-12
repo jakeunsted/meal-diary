@@ -8,6 +8,11 @@ export interface ShoppingListCategory {
   items: ShoppingListItem[];
 }
 
+export interface SSEShoppingListCategoryUpdate {
+  categoryName: string;
+  categoryContents: ShoppingListCategory;
+}
+
 export interface ShoppingListContent {
   categories: ShoppingListCategory[];
 }
