@@ -15,19 +15,29 @@
       <div class="collapse-content bg-base-300 text-sm">
         <div class="py-2" v-if="categoryItems.length > 0">
           <div v-for="item in categoryItems" :key="item.id">
-            <input 
-              type="checkbox"
-              class="checkbox checkbox-primary mr-2"
-              :checked="item.checked"
-              @change="updateItem(item.id, item.name, item.checked)"
-            />
-            <input 
-              type="text"
-              placeholder="Enter item name"
-              class="input input-ghost"
-              :value="item.name"
-              @change="updateItem(item.id, $event.target.value)"
-            />
+            <div class="flex items-center justify-between">
+              <div class="flex-1 flex items-center">
+                <input 
+                type="checkbox"
+                class="checkbox checkbox-primary mr-2"
+                :checked="item.checked"
+                @change="updateItem(item.id, item.name, item.checked)"
+                />
+                <input 
+                  type="text"
+                  placeholder="Enter item name"
+                  class="input input-ghost flex-1"
+                  :value="item.name"
+                  @change="updateItem(item.id, $event.target.value)"
+                />
+              </div>
+              <button 
+                class="btn btn-ghost btn-sm"
+                @click="removeItem(item.id)"
+              >
+                <fa icon="xmark" />
+              </button>
+            </div>
           </div>
         </div>
         <div class="">
@@ -104,6 +114,19 @@ const updateItem = (id, name, checked) => {
     category: props.categoryTitle,
     itemName: name,
     itemChecked: item.checked
+  });
+}
+
+const removeItem = (id) => {
+  const item = props.categoryItems.find(item => item.id === id);
+  if (!item) return;
+  
+  props.categoryItems.splice(props.categoryItems.indexOf(item), 1);
+
+  emit('updateItem', {
+    category: props.categoryTitle,
+    itemName: item.name,
+    itemChecked: false
   });
 }
 </script>
