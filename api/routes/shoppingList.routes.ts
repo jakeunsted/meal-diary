@@ -110,7 +110,6 @@ const router = express.Router();
  */
 router.post('/:family_group_id/create-shopping-list', async (req, res, next) => {
   try {
-    console.log('createBaseShoppingList');
     await shoppingListController.createBaseShoppingList(req, res);
   } catch (error) {
     next(error);

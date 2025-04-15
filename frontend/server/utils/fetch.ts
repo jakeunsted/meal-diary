@@ -23,7 +23,7 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}): Pro
     finalUrl += (finalUrl.includes('?') ? '&' : '?') + params.toString();
   }
 
-  console.log(finalUrl);
+  console.log(`${options.method || 'GET'}: ${finalUrl}`);
 
   const { query, ...fetchOptions } = options;
 

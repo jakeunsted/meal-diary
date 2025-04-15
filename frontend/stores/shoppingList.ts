@@ -94,7 +94,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
         if (categoryIndex !== -1) {
           // Update the existing category with new data
           this.shoppingList.content.categories[categoryIndex].items = categoryData.items;
-          console.log('category updated in the store: ', this.shoppingList.content.categories[categoryIndex].items);
         }
       }
     },
@@ -110,9 +109,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async updateCategoryInStore(categoryName: string, categoryContents: ShoppingListCategory) {
       if (this.shoppingList?.content) {
-        console.log('category contents from the store: ', this.shoppingList.content.categories.find(
-          category => category.name === categoryName
-        )!.items);
         this.shoppingList.content.categories.find(
           category => category.name === categoryName
         )!.items = categoryContents.items;
