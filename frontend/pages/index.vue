@@ -2,14 +2,14 @@
   <div>
     <h1 class="text-2xl font-bold text-center m-4">Meal Diary</h1>
 
-    <div v-if="mealDiaryStore.loading">
+    <div v-if="mealDiaryStoreComputed.loading">
       <div class="flex justify-center mb-4">
         <span class="loading loading-spinner loading-xl"></span>
       </div>
     </div>
     <div v-else>
       <DayFoodPlanCard
-        v-for="(dayMeal, index) in mealDiaryStore.weeklyMeals"
+        v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
         :key="index"
         :day="getDayName(dayMeal.day_of_week)"
         :breakfast="{ name: dayMeal.breakfast }"
@@ -21,8 +21,9 @@
 
     <dialog id="set_meal_modal" class="modal">
       <SetUpdateMealModal
-        :meal="mealDiaryStore.selectedMeal.name"
-        @update:meal="mealDiaryStore.updateSelectedMealName"
+        v-if="mealDiaryStoreComputed.selectedMeal.type !== null"
+        :meal="mealDiaryStoreComputed.selectedMeal.name"
+        @update:meal="mealDiaryStoreComputed.updateSelectedMealName"
         @saveMeal="handleSaveMeal"
       />
     </dialog>
@@ -37,6 +38,9 @@ import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 
 const mealDiaryStore = useMealDiaryStore();
 const userStore = useUserStore();
+
+// Make mealDiaryStore reactive as a computed property
+const mealDiaryStoreComputed = computed(() => mealDiaryStore);
 
 // Convert day number to name
 const getDayName = (dayNumber) => {
@@ -53,7 +57,7 @@ const handleSetMeal = (mealType, dayOfWeek) => {
 // Handle saving the meal
 const handleSaveMeal = async () => {
   try {
-    await mealDiaryStore.saveMeal();
+    await mealDiaryStoreComputed.value.saveMeal();
     set_meal_modal.close();
   } catch (error) {
     // Handle error (maybe show a notification)
@@ -64,17 +68,17 @@ const handleSaveMeal = async () => {
 // Fetch meals when component mounts
 onMounted(async () => {
   if (userStore.user?.family_group_id) {
-    mealDiaryStore.fetchWeeklyMeals();
+    mealDiaryStoreComputed.value.fetchWeeklyMeals();
   } else {
     await userStore.fetchUser(1);
-    mealDiaryStore.fetchWeeklyMeals();
+    mealDiaryStoreComputed.value.fetchWeeklyMeals();
   }
 });
 
 // Watch for changes in family group ID
 watch(() => userStore.user?.family_group_id, (newId) => {
   if (newId) {
-    mealDiaryStore.fetchWeeklyMeals();
+    mealDiaryStoreComputed.value.fetchWeeklyMeals();
   }
 });
 </script>

@@ -3,7 +3,7 @@
     <form method="dialog">
       <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
     </form>
-    <h3 class="font-bold">Set Meal: {{ meal }}</h3>
+    <h3 class="font-bold">Set Meal</h3>
     <input
       type="text"
       class="input input-bordered w-full mb-4"
@@ -26,7 +26,13 @@ const props = defineProps({
     type: String,
     required: true,
   },
+  day: {
+    type: Number,
+    required: true,
+  },
 });
+
+console.log('props in SetUpdateMealModal', props);
 
 const saveMeal = () => {
   emit('saveMeal', props.meal);

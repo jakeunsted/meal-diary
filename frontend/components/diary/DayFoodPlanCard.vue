@@ -9,17 +9,23 @@
         <div class="card-content">
           <div class="flex justify-between mb-2">
             <h3 class="">Breakfast</h3>
-            <button v-if="breakfast && breakfast.name" class="btn btn-xs">{{ breakfast.name }}</button>
+            <div v-if="breakfast && breakfast.name">
+              <span class="badge badge-info" @click="$emit('setMeal', 'breakfast')">{{ breakfast.name }}</span>
+            </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'breakfast')">Set Meal +</button>
           </div>
           <div class="flex justify-between mb-2">
             <h3 class="">Lunch</h3>
-            <button v-if="lunch && lunch.name" class="btn btn-xs">{{ lunch.name }}</button>
+            <div v-if="lunch && lunch.name">
+              <span class="badge badge-info" @click="$emit('setMeal', 'lunch')">{{ lunch.name }}</span>
+            </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'lunch')">Set Meal +</button>
           </div>
           <div class="flex justify-between mb-2">
             <h3 class="">Dinner</h3>
-            <button v-if="dinner && dinner.name" class="btn btn-xs">{{ dinner.name }}</button>
+            <div v-if="dinner && dinner.name">
+              <span class="badge badge-info" @click="$emit('setMeal', 'dinner')">{{ dinner.name }}</span>
+            </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'dinner')">Set Meal +</button>
           </div>
         </div>
