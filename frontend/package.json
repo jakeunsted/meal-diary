@@ -13,6 +13,7 @@
     "@capacitor/android": "^7.0.1",
     "@capacitor/core": "^7.0.1",
     "@capacitor/ios": "^7.0.1",
+    "@formkit/auto-animate": "^0.8.2",
     "@nuxtjs/dotenv": "^1.4.2",
     "@pinia/nuxt": "^0.10.1",
     "@supabase/supabase-js": "^2.48.1",

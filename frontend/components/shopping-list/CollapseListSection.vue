@@ -13,31 +13,16 @@
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
       </div>
       <div class="collapse-content bg-base-300 text-sm">
-        <div class="py-2" v-if="categoryItems.length > 0">
-          <div v-for="item in categoryItems" :key="item.id">
-            <div class="flex items-center justify-between">
-              <div class="flex-1 flex items-center">
-                <input 
-                type="checkbox"
-                class="checkbox checkbox-primary mr-2"
-                :checked="item.checked"
-                @change="updateItem(item.id, item.name, item.checked)"
-                />
-                <input 
-                  type="text"
-                  placeholder="Enter item name"
-                  class="input input-ghost flex-1"
-                  :value="item.name"
-                  @change="updateItem(item.id, $event.target.value)"
-                />
-              </div>
-              <button 
-                class="btn btn-ghost btn-sm"
-                @click="removeItem(item.id)"
-              >
-                <fa icon="xmark" />
-              </button>
-            </div>
+        <div class="py-2" v-if="categoryItems.length > 0" v-auto-animate>
+          <div 
+            v-for="item in sortedItems" 
+            :key="item.id"
+          >
+            <ShoppingListItem 
+              :item="item" 
+              @update="handleItemUpdate" 
+              @remove="removeItem"
+            />
           </div>
         </div>
         <div class="">
@@ -62,7 +47,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['addItem', 'updateItem' ]);
+const emit = defineEmits(['addItem', 'updateItem']);
 
 const props = defineProps({
   categoryTitle: {
@@ -75,16 +60,26 @@ const props = defineProps({
     required: true,
     default: () => [],
   },
-})
+});
 
 const isOpen = ref(true);
 const newItemName = ref('');
 
+// Add computed property to sort items
+const sortedItems = computed(() => {
+  return [...props.categoryItems].sort((a, b) => {
+    if (a.checked === b.checked) return 0;
+    return a.checked ? 1 : -1;
+  });
+});
+
 const toggleCollapse = () => {
   isOpen.value = !isOpen.value;
-}
+};
 
 const addItem = (name) => {
+  if (!name.trim()) return;
+  
   props.categoryItems.push({
     id: props.categoryItems.length + 1,
     name: name,
@@ -96,7 +91,11 @@ const addItem = (name) => {
     category: props.categoryTitle,
     itemName: name,
   });
-}
+};
+
+const handleItemUpdate = (itemData) => {
+  updateItem(itemData.id, itemData.name, itemData.checked);
+};
 
 const updateItem = (id, name, checked) => {
   const item = props.categoryItems.find(item => item.id === id);
@@ -115,7 +114,7 @@ const updateItem = (id, name, checked) => {
     itemName: name,
     itemChecked: item.checked
   });
-}
+};
 
 const removeItem = (id) => {
   const item = props.categoryItems.find(item => item.id === id);
@@ -128,5 +127,5 @@ const removeItem = (id) => {
     itemName: item.name,
     itemChecked: false
   });
-}
+};
 </script>
