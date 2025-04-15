@@ -24,3 +24,9 @@ export interface ShoppingList {
   created_at?: Date;
   updated_at?: Date;
 }
+
+export interface ShoppingListState {
+  shoppingList: ShoppingList | null;
+  isLoading: boolean;
+  error: string | null;
+}

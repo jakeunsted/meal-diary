@@ -1,22 +1,6 @@
 import { defineStore } from 'pinia';
 import { useUserStore } from './user';
-
-interface DailyMeal {
-  day_of_week: number;
-  breakfast: string | null;
-  lunch: string | null;
-  dinner: string | null;
-}
-
-interface MealDiaryState {
-  weeklyMeals: DailyMeal[];
-  loading: boolean;
-  selectedMeal: {
-    type: string | null;
-    dayOfWeek: number | null;
-    name: string;
-  };
-}
+import type { MealDiaryState, DailyMeal } from '~/types/MealDiary';
 
 export const useMealDiaryStore = defineStore('mealDiary', {
   state: (): MealDiaryState => ({
@@ -50,11 +34,13 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       if (!userStore.user?.family_group_id) return;
 
       try {
-        this.loading = true;
-        const weekStartDate = this.getWeekStartDate().toISOString();
-        const familyGroupId = userStore.user.family_group_id;
-        const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDate}/daily-meals`);
-        this.weeklyMeals = response;
+        if (this.weeklyMeals.length === 0) {
+          this.loading = true;
+          const weekStartDate = this.getWeekStartDate().toISOString();
+          const familyGroupId = userStore.user.family_group_id;
+          const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDate}/daily-meals`);
+          this.weeklyMeals = response;
+        }
       } catch (error) {
         console.error('Error fetching weekly meals:', error);
         throw error;

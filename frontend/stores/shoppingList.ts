@@ -1,11 +1,5 @@
 import { defineStore } from 'pinia';
-import type { ShoppingList, ShoppingListCategory } from '~/types/ShoppingList'
-
-interface ShoppingListState {
-  shoppingList: ShoppingList | null;
-  isLoading: boolean;
-  error: string | null;
-}
+import type { ShoppingList, ShoppingListCategory, ShoppingListState } from '~/types/ShoppingList'
 
 export const useShoppingListStore = defineStore('shoppingList', {
   state: (): ShoppingListState => ({
@@ -21,10 +15,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
   actions: {
     async fetchShoppingList(familyGroupId: number) {
       try {
-        this.isLoading = true;
-        this.error = null;
-        const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
-        this.shoppingList = response;
+        if (!this.shoppingList) {
+          this.isLoading = true;
+          this.error = null;
+          const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
+          this.shoppingList = response;
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch shopping list';
       } finally {
