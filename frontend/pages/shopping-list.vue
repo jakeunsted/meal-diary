@@ -85,7 +85,7 @@ onMounted(async () => {
   }
 });
 
-onUnmounted(() => {
-  $sse.close();
-});
+// onUnmounted(() => {
+//   $sse.close();
+// });
 </script>
