@@ -3,6 +3,7 @@ export interface DailyMeal {
   breakfast: string | null;
   lunch: string | null;
   dinner: string | null;
+  week_start_date: string;
 }
 
 export interface MealDiaryState {

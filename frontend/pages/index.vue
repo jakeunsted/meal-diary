@@ -12,6 +12,7 @@
         v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
         :key="index"
         :day="getDayName(dayMeal.day_of_week)"
+        :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
         :breakfast="{ name: dayMeal.breakfast }"
         :lunch="{ name: dayMeal.lunch }"
         :dinner="{ name: dayMeal.dinner }"
@@ -46,6 +47,25 @@ const mealDiaryStoreComputed = computed(() => mealDiaryStore);
 const getDayName = (dayNumber) => {
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   return days[dayNumber - 1];
+};
+
+// Calculate the date for a specific day of the week
+const getDateForDay = (weekStartDate, dayNumber) => {
+  if (!weekStartDate) return '';
+  
+  try {
+    const startDate = new Date(weekStartDate);
+    if (isNaN(startDate.getTime())) return '';
+    
+    const dayOffset = dayNumber - 1; // Subtract 1 because Monday is 1 in our system
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + dayOffset);
+    
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch (error) {
+    console.error('Error calculating date:', error);
+    return '';
+  }
 };
 
 // Handle opening the meal modal

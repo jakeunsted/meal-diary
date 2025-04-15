@@ -39,7 +39,11 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           const weekStartDate = this.getWeekStartDate().toISOString();
           const familyGroupId = userStore.user.family_group_id;
           const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDate}/daily-meals`);
-          this.weeklyMeals = response;
+          // Add week_start_date to each meal
+          this.weeklyMeals = response.map(meal => ({
+            ...meal,
+            week_start_date: weekStartDate
+          }));
         }
       } catch (error) {
         console.error('Error fetching weekly meals:', error);
@@ -112,6 +116,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           // If this is a new day entry, add it to weeklyMeals
           this.weeklyMeals.push({
             day_of_week: this.selectedMeal.dayOfWeek,
+            week_start_date: this.getWeekStartDate().toISOString(),
             breakfast: this.selectedMeal.type === 'breakfast' ? this.selectedMeal.name : null,
             lunch: this.selectedMeal.type === 'lunch' ? this.selectedMeal.name : null,
             dinner: this.selectedMeal.type === 'dinner' ? this.selectedMeal.name : null

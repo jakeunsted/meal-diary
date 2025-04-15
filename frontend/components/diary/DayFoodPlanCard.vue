@@ -2,7 +2,7 @@
   <div class="animate-fade-in">
     <div class="card bg-base-200 shadow-sm m-4">
       <div class="card-title justify-between my-2 flex items-center px-6" @click="toggleCard">
-        <div class="font-semibold">{{ day }}</div>
+        <div class="font-semibold">{{ day }} - {{ date }}</div>
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
       </div>
       <div class="card-body bg-base-300 rounded-b-lg" v-if="isOpen">
@@ -46,6 +46,10 @@
 <script setup>
 const props = defineProps({
   day: {
+    required: true,
+    type: String,
+  },
+  date: {
     required: true,
     type: String,
   },
