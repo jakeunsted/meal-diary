@@ -37,12 +37,12 @@ const sequelize = new Sequelize(
     host: dbHost,
     port: parseInt(dbPort),
     dialect: 'postgres',
-    dialectOptions: {
+    dialectOptions: process.env.NODE_ENV !== 'development' && process.env.NODE_ENV !== 'test' ? {
       ssl: {
         require: false,
         rejectUnauthorized: false,
       }
-    },
+    } : undefined,
     logging: process.env.NODE_ENV === 'development' ? console.log : false,
   }
 );

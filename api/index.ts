@@ -5,7 +5,9 @@ import mealDiaryRoutes from './routes/mealDiary.routes.ts';
 import familyGroupRoutes from './routes/familyGroups.routes.ts';
 import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
+import path from 'path';
 
+const __dirname = path.resolve('./api');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
@@ -25,6 +27,9 @@ app.get('/health', (req, res) => {
 
 // Swagger UI
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// server api test coverage
+app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
 
 // Initialize the database
 (async () => {
