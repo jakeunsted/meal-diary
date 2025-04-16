@@ -1,7 +1,7 @@
 <template>
   <div>
     <h1 class="text-2xl font-bold text-center m-4">
-      Shopping List
+      {{ $t('Shopping List') }}
     </h1>
 
     <div v-if="loading">
@@ -22,7 +22,7 @@
     </div>
 
     <div class="flex justify-center" v-if="!loading">
-      <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">Add Category</button>
+      <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">{{ $t('Add Category') }}</button>
     </div>
     <AddCategoryModal
       :newCategoryName="newCategoryName"

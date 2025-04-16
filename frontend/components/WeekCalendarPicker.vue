@@ -16,7 +16,7 @@
 
       <div class="form-control w-full max-w-xs mx-auto text-center">
         <label class="label">
-          <span class="label-text">Week Selection</span>
+          <span class="label-text">{{ $t('Week Selection') }}</span>
         </label>
         <div class="flex flex-row gap-2">
           <button class="btn btn-primary" @click="selectedWeek = selectedWeek - 1">
@@ -27,7 +27,7 @@
             class="select select-bordered"
           >
             <option v-for="week in weeks" :key="week.number" :value="week.number">
-              Week {{ week.number }} ({{ week.startDate.toLocaleDateString() }} - {{ week.endDate.toLocaleDateString() }})
+              {{ $t('Week') }} {{ week.number }} ({{ week.startDate.toLocaleDateString() }} - {{ week.endDate.toLocaleDateString() }})
             </option>
           </select>
           <button class="btn btn-primary" @click="selectedWeek = selectedWeek + 1">

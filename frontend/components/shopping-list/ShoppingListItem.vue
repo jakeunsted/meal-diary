@@ -9,7 +9,7 @@
       />
       <input 
         type="text"
-        placeholder="Enter item name"
+        :placeholder="$t('Enter item name')"
         class="input input-ghost flex-1"
         :class="{ 'line-through text-gray-400': item.checked }"
         :value="item.name"

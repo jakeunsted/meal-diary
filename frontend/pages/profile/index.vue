@@ -18,7 +18,7 @@
 
       <div class="card bg-base-200 m-4 shadow-sm ">
         <div class="card-title px-6 my-2">
-          <h2 class="font-bold">Your family members</h2>
+          <h2 class="font-bold">{{ $t('Your family members') }}</h2>
         </div>
         <div class="bg-base-300 rounded-b-lg pb-6">
           <div class="card-body">
@@ -41,7 +41,7 @@
             <button 
               class="btn btn-primary"
               @click="addFamilyMember"
-            >Add family member</button>
+            >{{ $t('Add family member') }}</button>
           </div>
         </div>
       </div>

@@ -35,7 +35,7 @@
           </button>
           <input 
             type="text"
-            placeholder="Enter new item"
+            :placeholder="$t('Enter new item')"
             class="input input-ghost"
             v-model="newItemName"
             v-on:keyup.enter="addItem(newItemName)"

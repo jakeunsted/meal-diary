@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1 class="text-2xl font-bold text-center m-4">Meal Diary</h1>
+    <h1 class="text-2xl font-bold text-center m-4">{{ $t('Meal diary') }}</h1>
 
     <div v-if="mealDiaryStoreComputed.loading">
       <div class="flex justify-center mb-4">
