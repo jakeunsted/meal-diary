@@ -1,7 +1,7 @@
 export default {
-  defaultLocale: 'en',
+  defaultLocale: 'en_uk',
   locales: [
-    { code: 'uk', iso: 'en-UK', name: 'English (UK)', file: 'en_uk.json' },
-    { code: 'us', iso: 'en-US', name: 'English (US)', file: 'en_us.json' }
+    { code: 'en_uk', iso: 'en-UK', name: 'English (UK)', file: 'en_uk.json' },
+    { code: 'en_us', iso: 'en-US', name: 'English (US)', file: 'en_us.json' }
   ]
 }
