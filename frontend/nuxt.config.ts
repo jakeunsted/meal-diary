@@ -23,6 +23,7 @@ export default defineNuxtConfig({
     '@vesp/nuxt-fontawesome',
     '@pinia/nuxt',
     '@formkit/auto-animate/nuxt',
+    '@nuxtjs/i18n',
   ],
   fontawesome: {
     component: 'fa',
