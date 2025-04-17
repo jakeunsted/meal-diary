@@ -1,4 +1,5 @@
 import { getLatestEvents, addWebhookEvent } from '~/server/utils/shoppingListState';
+import { getLatestMealDiaryEvents } from '~/server/utils/mealDiaryState';
 import { EventEmitter } from 'events';
 
 // Create a global event emitter for SSE
@@ -24,8 +25,16 @@ export default defineEventHandler(async (event) => {
   });
   
   // Send initial data
-  const initialEvents = getLatestEvents(Number(familyGroupId));
-  response.write(`data: ${JSON.stringify({ type: 'initial', data: initialEvents })}\n\n`);
+  const initialShoppingEvents = getLatestEvents(Number(familyGroupId));
+  const initialMealDiaryEvents = getLatestMealDiaryEvents(Number(familyGroupId));
+  
+  response.write(`data: ${JSON.stringify({ 
+    type: 'initial', 
+    data: {
+      shoppingList: initialShoppingEvents,
+      mealDiary: initialMealDiaryEvents
+    }
+  })}\n\n`);
   
   // Function to send new events
   const sendEvent = (eventType: string, data: any) => {

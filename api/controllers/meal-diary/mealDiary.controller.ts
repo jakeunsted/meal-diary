@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from './mealDiary.service.ts';
+import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
 
 // Create a new meal diary
 export const createMealDiary = async (req: Request, res: Response) => {
@@ -100,11 +101,17 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       });
     }
 
-    const updatedMeal = await updateDailyMeal(
+    const updatedMeal= await updateDailyMeal(
       parseInt(family_group_id),
       new Date(week_start_date),
       parseInt(day_of_week),
       { breakfast, lunch, dinner }
+    );
+
+    sendDailyMealWebhook(
+      parseInt(family_group_id),
+      'update-daily-meal',
+      updatedMeal.dataValues as unknown as DailyMeal
     );
 
     return res.status(200).json(updatedMeal);

@@ -11,6 +11,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       dayOfWeek: null,
       name: '',
     },
+    eventSource: null as EventSource | null,
   }),
 
   getters: {
@@ -135,5 +136,86 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         throw error;
       }
     },
+
+    // Initialize SSE connection for real-time updates
+    initSSEConnection() {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      // Close existing connection if any
+      if (this.eventSource) {
+        this.eventSource.close();
+      }
+
+      // Create new SSE connection
+      this.eventSource = new EventSource(`/api/server-sent-events/${userStore.user.family_group_id}`);
+
+      // Handle initial data
+      this.eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'initial') {
+          // Handle initial data
+          if (data.data.mealDiary && data.data.mealDiary.length > 0) {
+            // Update weekly meals with initial data
+            this.updateMealsFromEvents(data.data.mealDiary);
+          }
+        } else if (data.type === 'update-daily-meal') {
+          // Handle daily meal update
+          this.handleDailyMealUpdate(data.data.dailyMeal);
+        }
+      };
+
+      // Handle connection errors
+      this.eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        // Attempt to reconnect after a delay
+        setTimeout(() => this.initSSEConnection(), 5000);
+      };
+    },
+
+    // Update meals from events
+    updateMealsFromEvents(events: any[]) {
+      // Process events and update weekly meals
+      events.forEach(event => {
+        if (event.type === 'update-daily-meal') {
+          this.handleDailyMealUpdate(event.data.dailyMeal);
+        }
+      });
+    },
+
+    // Handle daily meal update
+    handleDailyMealUpdate(dailyMeal: DailyMeal) {
+      if (!dailyMeal) return;
+
+      // Find existing meal for this day
+      const existingDayMealIndex = this.weeklyMeals.findIndex(
+        meal => meal.day_of_week === dailyMeal.day_of_week
+      );
+
+      if (existingDayMealIndex !== -1) {
+        // Update existing meal
+        this.weeklyMeals[existingDayMealIndex] = {
+          ...this.weeklyMeals[existingDayMealIndex],
+          breakfast: dailyMeal.breakfast,
+          lunch: dailyMeal.lunch,
+          dinner: dailyMeal.dinner
+        };
+      } else {
+        // Add new meal
+        this.weeklyMeals.push({
+          ...dailyMeal,
+          week_start_date: this.getWeekStartDate().toISOString()
+        });
+      }
+    },
+
+    // Clean up SSE connection
+    cleanupSSEConnection() {
+      if (this.eventSource) {
+        this.eventSource.close();
+        this.eventSource = null;
+      }
+    }
   },
 });

@@ -14,4 +14,5 @@ export interface MealDiaryState {
     dayOfWeek: number | null;
     name: string;
   };
+  eventSource: EventSource | null;
 }
