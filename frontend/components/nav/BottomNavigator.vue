@@ -1,6 +1,6 @@
 <template>
   <div class="dock dock-md">
-    <button :class="{ 'dock-active': isActive('/') }" @click="navigateTo('/')">
+    <button :class="{ 'dock-active': isActive('/diary') }" @click="navigateTo('/diary')">
       <fa icon="house"></fa>
       <span class="dock-label">Home</span>
     </button>
