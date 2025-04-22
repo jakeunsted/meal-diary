@@ -1,6 +1,6 @@
 import sequelize from './models/index.ts';
 import './models/associations.ts';
-import { User, FamilyGroup, ShoppingList, MealDiary, DailyMeal } from './models/associations.ts';
+import { User, FamilyGroup, ShoppingList, MealDiary, DailyMeal, RefreshToken } from './models/associations.ts';
 
 const initializeDatabase = async (force = false) => {
   try {
@@ -27,4 +27,5 @@ export {
   ShoppingList,
   MealDiary,
   DailyMeal,
+  RefreshToken
 };

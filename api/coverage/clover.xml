@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1744820890588" clover="3.2.0">
-  <project timestamp="1744820890588" name="All files">
-    <metrics statements="1042" coveredstatements="377" conditionals="34" coveredconditionals="21" methods="19" coveredmethods="8" elements="1095" coveredelements="406" complexity="0" loc="1042" ncloc="1042" packages="10" files="23" classes="23"/>
+<coverage generated="1745351192716" clover="3.2.0">
+  <project timestamp="1745351192716" name="All files">
+    <metrics statements="1312" coveredstatements="545" conditionals="60" coveredconditionals="38" methods="26" coveredmethods="14" elements="1398" coveredelements="597" complexity="0" loc="1312" ncloc="1312" packages="12" files="27" classes="27"/>
     <package name="api">
-      <metrics statements="48" coveredstatements="0" conditionals="2" coveredconditionals="0" methods="2" coveredmethods="0"/>
-      <file name="index.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/index.ts">
-        <metrics statements="28" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+      <metrics statements="53" coveredstatements="0" conditionals="2" coveredconditionals="0" methods="2" coveredmethods="0"/>
+      <file name="index.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/index.ts">
+        <metrics statements="33" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="3" count="0" type="stmt"/>
@@ -13,29 +13,34 @@
         <line num="5" count="0" type="stmt"/>
         <line num="6" count="0" type="stmt"/>
         <line num="7" count="0" type="stmt"/>
+        <line num="8" count="0" type="stmt"/>
         <line num="9" count="0" type="stmt"/>
-        <line num="10" count="0" type="stmt"/>
+        <line num="11" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
         <line num="13" count="0" type="stmt"/>
         <line num="16" count="0" type="stmt"/>
-        <line num="17" count="0" type="stmt"/>
-        <line num="18" count="0" type="stmt"/>
         <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
-        <line num="24" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
         <line num="27" count="0" type="stmt"/>
-        <line num="30" count="0" type="stmt"/>
+        <line num="28" count="0" type="stmt"/>
         <line num="31" count="0" type="stmt"/>
-        <line num="33" count="0" type="stmt"/>
-        <line num="35" count="0" type="stmt"/>
-        <line num="36" count="0" type="stmt"/>
+        <line num="34" count="0" type="stmt"/>
         <line num="37" count="0" type="stmt"/>
         <line num="38" count="0" type="stmt"/>
-        <line num="39" count="0" type="stmt"/>
         <line num="40" count="0" type="stmt"/>
-        <line num="41" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="46" count="0" type="stmt"/>
+        <line num="47" count="0" type="stmt"/>
+        <line num="48" count="0" type="stmt"/>
       </file>
-      <file name="swagger.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/swagger.ts">
+      <file name="swagger.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/swagger.ts">
         <metrics statements="20" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -59,9 +64,139 @@
         <line num="22" count="0" type="stmt"/>
       </file>
     </package>
+    <package name="api.controllers.auth">
+      <metrics statements="124" coveredstatements="101" conditionals="23" coveredconditionals="15" methods="4" coveredmethods="4"/>
+      <file name="auth.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/auth/auth.controller.ts">
+        <metrics statements="124" coveredstatements="101" conditionals="23" coveredconditionals="15" methods="4" coveredmethods="4"/>
+        <line num="2" count="1" type="stmt"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="5" count="1" type="stmt"/>
+        <line num="6" count="1" type="stmt"/>
+        <line num="13" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="14" count="2" type="stmt"/>
+        <line num="15" count="2" type="stmt"/>
+        <line num="17" count="2" type="cond" truecount="0" falsecount="1"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="21" count="2" type="stmt"/>
+        <line num="22" count="2" type="stmt"/>
+        <line num="23" count="2" type="stmt"/>
+        <line num="24" count="2" type="stmt"/>
+        <line num="25" count="2" type="stmt"/>
+        <line num="27" count="2" type="stmt"/>
+        <line num="28" count="2" type="stmt"/>
+        <line num="29" count="2" type="stmt"/>
+        <line num="30" count="2" type="stmt"/>
+        <line num="31" count="2" type="stmt"/>
+        <line num="34" count="2" type="stmt"/>
+        <line num="35" count="2" type="stmt"/>
+        <line num="38" count="2" type="stmt"/>
+        <line num="39" count="2" type="stmt"/>
+        <line num="40" count="2" type="stmt"/>
+        <line num="43" count="2" type="stmt"/>
+        <line num="44" count="2" type="stmt"/>
+        <line num="45" count="2" type="stmt"/>
+        <line num="46" count="2" type="stmt"/>
+        <line num="47" count="2" type="stmt"/>
+        <line num="48" count="2" type="stmt"/>
+        <line num="50" count="2" type="stmt"/>
+        <line num="51" count="2" type="stmt"/>
+        <line num="59" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="60" count="3" type="stmt"/>
+        <line num="61" count="3" type="stmt"/>
+        <line num="63" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="64" count="1" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
+        <line num="66" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="69" count="2" type="stmt"/>
+        <line num="70" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="71" count="0" type="stmt"/>
+        <line num="72" count="0" type="stmt"/>
+        <line num="73" count="0" type="cond" truecount="1" falsecount="0"/>
+        <line num="76" count="2" type="stmt"/>
+        <line num="77" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="78" count="1" type="stmt"/>
+        <line num="79" count="1" type="stmt"/>
+        <line num="80" count="1" type="stmt"/>
+        <line num="83" count="1" type="stmt"/>
+        <line num="86" count="1" type="stmt"/>
+        <line num="87" count="1" type="stmt"/>
+        <line num="88" count="1" type="stmt"/>
+        <line num="89" count="1" type="stmt"/>
+        <line num="90" count="1" type="stmt"/>
+        <line num="91" count="1" type="stmt"/>
+        <line num="92" count="1" type="stmt"/>
+        <line num="93" count="1" type="stmt"/>
+        <line num="94" count="1" type="stmt"/>
+        <line num="95" count="1" type="stmt"/>
+        <line num="96" count="1" type="stmt"/>
+        <line num="97" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="98" count="0" type="stmt"/>
+        <line num="99" count="0" type="stmt"/>
+        <line num="100" count="0" type="stmt"/>
+        <line num="101" count="3" type="stmt"/>
+        <line num="109" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="110" count="3" type="stmt"/>
+        <line num="111" count="3" type="stmt"/>
+        <line num="113" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="114" count="1" type="stmt"/>
+        <line num="115" count="1" type="stmt"/>
+        <line num="116" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="118" count="2" type="stmt"/>
+        <line num="119" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="120" count="0" type="stmt"/>
+        <line num="121" count="0" type="stmt"/>
+        <line num="122" count="0" type="cond" truecount="1" falsecount="0"/>
+        <line num="125" count="2" type="stmt"/>
+        <line num="128" count="2" type="stmt"/>
+        <line num="129" count="2" type="stmt"/>
+        <line num="130" count="2" type="stmt"/>
+        <line num="131" count="2" type="stmt"/>
+        <line num="132" count="2" type="stmt"/>
+        <line num="133" count="2" type="stmt"/>
+        <line num="134" count="2" type="stmt"/>
+        <line num="135" count="2" type="stmt"/>
+        <line num="136" count="2" type="cond" truecount="1" falsecount="0"/>
+        <line num="138" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="139" count="0" type="stmt"/>
+        <line num="140" count="0" type="stmt"/>
+        <line num="141" count="0" type="cond" truecount="1" falsecount="0"/>
+        <line num="144" count="1" type="stmt"/>
+        <line num="145" count="3" type="cond" truecount="0" falsecount="1"/>
+        <line num="146" count="0" type="stmt"/>
+        <line num="147" count="0" type="stmt"/>
+        <line num="148" count="0" type="cond" truecount="1" falsecount="0"/>
+        <line num="151" count="1" type="stmt"/>
+        <line num="153" count="1" type="stmt"/>
+        <line num="154" count="1" type="stmt"/>
+        <line num="155" count="1" type="stmt"/>
+        <line num="156" count="1" type="stmt"/>
+        <line num="157" count="1" type="stmt"/>
+        <line num="158" count="1" type="cond" truecount="0" falsecount="1"/>
+        <line num="159" count="0" type="stmt"/>
+        <line num="160" count="0" type="stmt"/>
+        <line num="161" count="0" type="stmt"/>
+        <line num="162" count="3" type="stmt"/>
+        <line num="170" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="171" count="2" type="stmt"/>
+        <line num="172" count="2" type="stmt"/>
+        <line num="174" count="2" type="cond" truecount="1" falsecount="0"/>
+        <line num="176" count="1" type="stmt"/>
+        <line num="177" count="1" type="stmt"/>
+        <line num="178" count="1" type="stmt"/>
+        <line num="179" count="1" type="stmt"/>
+        <line num="181" count="2" type="stmt"/>
+        <line num="182" count="2" type="cond" truecount="0" falsecount="1"/>
+        <line num="183" count="0" type="stmt"/>
+        <line num="184" count="0" type="stmt"/>
+        <line num="185" count="0" type="stmt"/>
+        <line num="186" count="2" type="stmt"/>
+      </file>
+    </package>
     <package name="api.controllers.daily-meal">
       <metrics statements="53" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
-      <file name="dailyMeal.controller.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/daily-meal/dailyMeal.controller.ts">
+      <file name="dailyMeal.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/daily-meal/dailyMeal.controller.ts">
         <metrics statements="53" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="6" count="0" type="stmt"/>
@@ -120,7 +255,7 @@
     </package>
     <package name="api.controllers.family-group">
       <metrics statements="26" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
-      <file name="familyGroup.controller.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/family-group/familyGroup.controller.ts">
+      <file name="familyGroup.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/family-group/familyGroup.controller.ts">
         <metrics statements="26" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="3" count="0" type="stmt"/>
@@ -151,200 +286,105 @@
       </file>
     </package>
     <package name="api.controllers.meal-diary">
-      <metrics statements="183" coveredstatements="64" conditionals="16" coveredconditionals="16" methods="4" coveredmethods="3"/>
-      <file name="mealDiary.controller.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/meal-diary/mealDiary.controller.ts">
-        <metrics statements="85" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+      <metrics statements="91" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+      <file name="mealDiary.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/meal-diary/mealDiary.controller.ts">
+        <metrics statements="91" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="3" count="0" type="stmt"/>
-        <line num="6" count="0" type="stmt"/>
+        <line num="4" count="0" type="stmt"/>
         <line num="7" count="0" type="stmt"/>
         <line num="8" count="0" type="stmt"/>
-        <line num="11" count="0" type="stmt"/>
+        <line num="9" count="0" type="stmt"/>
         <line num="12" count="0" type="stmt"/>
         <line num="13" count="0" type="stmt"/>
-        <line num="16" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
         <line num="17" count="0" type="stmt"/>
         <line num="18" count="0" type="stmt"/>
         <line num="19" count="0" type="stmt"/>
-        <line num="21" count="0" type="stmt"/>
-        <line num="22" count="0" type="stmt"/>
-        <line num="23" count="0" type="stmt"/>
-        <line num="24" count="0" type="stmt"/>
-        <line num="25" count="0" type="stmt"/>
-        <line num="26" count="0" type="stmt"/>
-        <line num="29" count="0" type="stmt"/>
-        <line num="30" count="0" type="stmt"/>
-        <line num="31" count="0" type="stmt"/>
-        <line num="34" count="0" type="stmt"/>
-        <line num="35" count="0" type="stmt"/>
-        <line num="36" count="0" type="stmt"/>
-        <line num="39" count="0" type="stmt"/>
-        <line num="40" count="0" type="stmt"/>
-        <line num="41" count="0" type="stmt"/>
-        <line num="44" count="0" type="stmt"/>
-        <line num="46" count="0" type="stmt"/>
-        <line num="47" count="0" type="stmt"/>
-        <line num="48" count="0" type="stmt"/>
-        <line num="49" count="0" type="stmt"/>
-        <line num="50" count="0" type="stmt"/>
-        <line num="51" count="0" type="stmt"/>
-        <line num="52" count="0" type="stmt"/>
-        <line num="54" count="0" type="stmt"/>
-        <line num="55" count="0" type="stmt"/>
-        <line num="56" count="0" type="stmt"/>
-        <line num="57" count="0" type="stmt"/>
-        <line num="58" count="0" type="stmt"/>
-        <line num="59" count="0" type="stmt"/>
-        <line num="62" count="0" type="stmt"/>
-        <line num="63" count="0" type="stmt"/>
-        <line num="64" count="0" type="stmt"/>
-        <line num="65" count="0" type="stmt"/>
-        <line num="67" count="0" type="stmt"/>
-        <line num="68" count="0" type="stmt"/>
-        <line num="69" count="0" type="stmt"/>
-        <line num="71" count="0" type="stmt"/>
-        <line num="72" count="0" type="stmt"/>
-        <line num="73" count="0" type="stmt"/>
-        <line num="74" count="0" type="stmt"/>
-        <line num="77" count="0" type="stmt"/>
-        <line num="78" count="0" type="stmt"/>
-        <line num="79" count="0" type="stmt"/>
-        <line num="80" count="0" type="stmt"/>
-        <line num="81" count="0" type="stmt"/>
-        <line num="82" count="0" type="stmt"/>
-        <line num="84" count="0" type="stmt"/>
-        <line num="85" count="0" type="stmt"/>
-        <line num="86" count="0" type="stmt"/>
-        <line num="87" count="0" type="stmt"/>
-        <line num="88" count="0" type="stmt"/>
-        <line num="89" count="0" type="stmt"/>
-        <line num="92" count="0" type="stmt"/>
-        <line num="93" count="0" type="stmt"/>
-        <line num="94" count="0" type="stmt"/>
-        <line num="95" count="0" type="stmt"/>
-        <line num="97" count="0" type="stmt"/>
-        <line num="98" count="0" type="stmt"/>
-        <line num="99" count="0" type="stmt"/>
-        <line num="100" count="0" type="stmt"/>
-        <line num="101" count="0" type="stmt"/>
-        <line num="103" count="0" type="stmt"/>
-        <line num="104" count="0" type="stmt"/>
-        <line num="105" count="0" type="stmt"/>
-        <line num="106" count="0" type="stmt"/>
-        <line num="107" count="0" type="stmt"/>
-        <line num="108" count="0" type="stmt"/>
-        <line num="110" count="0" type="stmt"/>
-        <line num="111" count="0" type="stmt"/>
-        <line num="112" count="0" type="stmt"/>
-        <line num="113" count="0" type="stmt"/>
-        <line num="114" count="0" type="stmt"/>
-        <line num="115" count="0" type="stmt"/>
-      </file>
-      <file name="mealDiary.service.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/meal-diary/mealDiary.service.ts">
-        <metrics statements="98" coveredstatements="64" conditionals="15" coveredconditionals="15" methods="3" coveredmethods="2"/>
-        <line num="1" count="1" type="stmt"/>
-        <line num="20" count="1" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
         <line num="22" count="0" type="stmt"/>
         <line num="23" count="0" type="stmt"/>
         <line num="24" count="0" type="stmt"/>
         <line num="25" count="0" type="stmt"/>
         <line num="26" count="0" type="stmt"/>
         <line num="27" count="0" type="stmt"/>
-        <line num="28" count="0" type="stmt"/>
-        <line num="29" count="0" type="stmt"/>
         <line num="30" count="0" type="stmt"/>
         <line num="31" count="0" type="stmt"/>
-        <line num="33" count="0" type="stmt"/>
-        <line num="34" count="0" type="stmt"/>
+        <line num="32" count="0" type="stmt"/>
         <line num="35" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
-        <line num="38" count="0" type="stmt"/>
-        <line num="39" count="0" type="stmt"/>
+        <line num="37" count="0" type="stmt"/>
         <line num="40" count="0" type="stmt"/>
         <line num="41" count="0" type="stmt"/>
         <line num="42" count="0" type="stmt"/>
-        <line num="43" count="0" type="stmt"/>
-        <line num="44" count="0" type="stmt"/>
         <line num="45" count="0" type="stmt"/>
-        <line num="46" count="0" type="stmt"/>
+        <line num="47" count="0" type="stmt"/>
         <line num="48" count="0" type="stmt"/>
         <line num="49" count="0" type="stmt"/>
         <line num="50" count="0" type="stmt"/>
         <line num="51" count="0" type="stmt"/>
         <line num="52" count="0" type="stmt"/>
         <line num="53" count="0" type="stmt"/>
-        <line num="54" count="0" type="stmt"/>
         <line num="55" count="0" type="stmt"/>
         <line num="56" count="0" type="stmt"/>
+        <line num="57" count="0" type="stmt"/>
         <line num="58" count="0" type="stmt"/>
         <line num="59" count="0" type="stmt"/>
-        <line num="68" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="70" count="3" type="stmt"/>
-        <line num="71" count="3" type="stmt"/>
-        <line num="72" count="3" type="stmt"/>
-        <line num="73" count="3" type="stmt"/>
-        <line num="74" count="3" type="stmt"/>
-        <line num="75" count="3" type="stmt"/>
-        <line num="77" count="3" type="cond" truecount="1" falsecount="0"/>
-        <line num="79" count="1" type="stmt"/>
-        <line num="80" count="1" type="stmt"/>
-        <line num="81" count="1" type="stmt"/>
-        <line num="82" count="1" type="stmt"/>
-        <line num="83" count="1" type="stmt"/>
-        <line num="86" count="3" type="stmt"/>
-        <line num="87" count="3" type="stmt"/>
-        <line num="88" count="3" type="stmt"/>
-        <line num="89" count="3" type="stmt"/>
-        <line num="92" count="3" type="stmt"/>
-        <line num="93" count="3" type="cond" truecount="1" falsecount="0"/>
-        <line num="94" count="3" type="stmt"/>
-        <line num="97" count="3" type="stmt"/>
-        <line num="98" count="3" type="cond" truecount="1" falsecount="0"/>
-        <line num="99" count="21" type="stmt"/>
-        <line num="100" count="21" type="stmt"/>
-        <line num="101" count="21" type="stmt"/>
-        <line num="102" count="21" type="cond" truecount="2" falsecount="0"/>
-        <line num="103" count="21" type="cond" truecount="2" falsecount="0"/>
-        <line num="104" count="21" type="cond" truecount="2" falsecount="0"/>
-        <line num="105" count="21" type="stmt"/>
-        <line num="106" count="21" type="stmt"/>
-        <line num="108" count="3" type="stmt"/>
-        <line num="109" count="3" type="stmt"/>
-        <line num="120" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="121" count="4" type="stmt"/>
-        <line num="122" count="4" type="stmt"/>
-        <line num="123" count="4" type="stmt"/>
-        <line num="124" count="4" type="stmt"/>
-        <line num="129" count="4" type="stmt"/>
-        <line num="131" count="4" type="stmt"/>
-        <line num="132" count="4" type="stmt"/>
-        <line num="133" count="4" type="stmt"/>
-        <line num="134" count="4" type="stmt"/>
-        <line num="135" count="4" type="stmt"/>
-        <line num="136" count="4" type="stmt"/>
-        <line num="138" count="4" type="cond" truecount="1" falsecount="0"/>
-        <line num="139" count="1" type="stmt"/>
-        <line num="140" count="1" type="cond" truecount="1" falsecount="0"/>
-        <line num="143" count="3" type="stmt"/>
-        <line num="144" count="3" type="stmt"/>
-        <line num="145" count="3" type="stmt"/>
-        <line num="146" count="3" type="stmt"/>
-        <line num="147" count="3" type="stmt"/>
-        <line num="148" count="3" type="stmt"/>
-        <line num="150" count="4" type="cond" truecount="1" falsecount="0"/>
-        <line num="152" count="2" type="stmt"/>
-        <line num="153" count="2" type="stmt"/>
-        <line num="154" count="2" type="stmt"/>
-        <line num="155" count="2" type="stmt"/>
-        <line num="156" count="2" type="cond" truecount="1" falsecount="0"/>
-        <line num="159" count="3" type="stmt"/>
-        <line num="161" count="3" type="stmt"/>
-        <line num="162" count="3" type="stmt"/>
+        <line num="60" count="0" type="stmt"/>
+        <line num="63" count="0" type="stmt"/>
+        <line num="64" count="0" type="stmt"/>
+        <line num="65" count="0" type="stmt"/>
+        <line num="66" count="0" type="stmt"/>
+        <line num="68" count="0" type="stmt"/>
+        <line num="69" count="0" type="stmt"/>
+        <line num="70" count="0" type="stmt"/>
+        <line num="72" count="0" type="stmt"/>
+        <line num="73" count="0" type="stmt"/>
+        <line num="74" count="0" type="stmt"/>
+        <line num="75" count="0" type="stmt"/>
+        <line num="78" count="0" type="stmt"/>
+        <line num="79" count="0" type="stmt"/>
+        <line num="80" count="0" type="stmt"/>
+        <line num="81" count="0" type="stmt"/>
+        <line num="82" count="0" type="stmt"/>
+        <line num="83" count="0" type="stmt"/>
+        <line num="85" count="0" type="stmt"/>
+        <line num="86" count="0" type="stmt"/>
+        <line num="87" count="0" type="stmt"/>
+        <line num="88" count="0" type="stmt"/>
+        <line num="89" count="0" type="stmt"/>
+        <line num="90" count="0" type="stmt"/>
+        <line num="93" count="0" type="stmt"/>
+        <line num="94" count="0" type="stmt"/>
+        <line num="95" count="0" type="stmt"/>
+        <line num="96" count="0" type="stmt"/>
+        <line num="98" count="0" type="stmt"/>
+        <line num="99" count="0" type="stmt"/>
+        <line num="100" count="0" type="stmt"/>
+        <line num="101" count="0" type="stmt"/>
+        <line num="102" count="0" type="stmt"/>
+        <line num="104" count="0" type="stmt"/>
+        <line num="105" count="0" type="stmt"/>
+        <line num="106" count="0" type="stmt"/>
+        <line num="107" count="0" type="stmt"/>
+        <line num="108" count="0" type="stmt"/>
+        <line num="109" count="0" type="stmt"/>
+        <line num="111" count="0" type="stmt"/>
+        <line num="112" count="0" type="stmt"/>
+        <line num="113" count="0" type="stmt"/>
+        <line num="114" count="0" type="stmt"/>
+        <line num="115" count="0" type="stmt"/>
+        <line num="117" count="0" type="stmt"/>
+        <line num="118" count="0" type="stmt"/>
+        <line num="119" count="0" type="stmt"/>
+        <line num="120" count="0" type="stmt"/>
+        <line num="121" count="0" type="stmt"/>
+        <line num="122" count="0" type="stmt"/>
       </file>
     </package>
     <package name="api.controllers.shopping-list">
       <metrics statements="51" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
-      <file name="shoppingList.controller.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/shopping-list/shoppingList.controller.ts">
+      <file name="shoppingList.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/shopping-list/shoppingList.controller.ts">
         <metrics statements="51" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="3" count="0" type="stmt"/>
@@ -401,7 +441,7 @@
     </package>
     <package name="api.controllers.user">
       <metrics statements="114" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
-      <file name="userController.controller.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/controllers/user/userController.controller.ts">
+      <file name="userController.controller.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/controllers/user/userController.controller.ts">
         <metrics statements="114" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="2" count="0" type="stmt"/>
         <line num="3" count="0" type="stmt"/>
@@ -521,7 +561,7 @@
     </package>
     <package name="api.db">
       <metrics statements="15" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
-      <file name="db.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/db.ts">
+      <file name="db.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/db.ts">
         <metrics statements="15" coveredstatements="4" conditionals="0" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
@@ -541,8 +581,8 @@
       </file>
     </package>
     <package name="api.db.models">
-      <metrics statements="325" coveredstatements="309" conditionals="5" coveredconditionals="1" methods="1" coveredmethods="1"/>
-      <file name="DailyMeal.model.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/DailyMeal.model.ts">
+      <metrics statements="392" coveredstatements="376" conditionals="6" coveredconditionals="2" methods="2" coveredmethods="2"/>
+      <file name="DailyMeal.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/DailyMeal.model.ts">
         <metrics statements="60" coveredstatements="60" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
@@ -605,7 +645,7 @@
         <line num="75" count="1" type="stmt"/>
         <line num="77" count="1" type="stmt"/>
       </file>
-      <file name="FamilyGroup.model.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/FamilyGroup.model.ts">
+      <file name="FamilyGroup.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/FamilyGroup.model.ts">
         <metrics statements="42" coveredstatements="42" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="1" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
@@ -650,7 +690,7 @@
         <line num="56" count="1" type="stmt"/>
         <line num="58" count="1" type="stmt"/>
       </file>
-      <file name="MealDiary.model.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/MealDiary.model.ts">
+      <file name="MealDiary.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/MealDiary.model.ts">
         <metrics statements="44" coveredstatements="44" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
@@ -697,11 +737,23 @@
         <line num="56" count="1" type="stmt"/>
         <line num="58" count="1" type="stmt"/>
       </file>
-      <file name="ShoppingList.model.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/ShoppingList.model.ts">
-        <metrics statements="40" coveredstatements="40" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <file name="RefreshToken.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/RefreshToken.model.ts">
+        <metrics statements="56" coveredstatements="56" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
         <line num="1" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
+        <line num="4" count="1" type="stmt"/>
+        <line num="18" count="1" type="stmt"/>
+        <line num="19" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="20" count="1" type="stmt"/>
+        <line num="22" count="1" type="stmt"/>
+        <line num="23" count="1" type="stmt"/>
+        <line num="24" count="1" type="stmt"/>
+        <line num="25" count="1" type="stmt"/>
+        <line num="26" count="1" type="stmt"/>
+        <line num="27" count="1" type="stmt"/>
+        <line num="28" count="1" type="stmt"/>
         <line num="29" count="1" type="stmt"/>
+        <line num="30" count="1" type="stmt"/>
         <line num="31" count="1" type="stmt"/>
         <line num="32" count="1" type="stmt"/>
         <line num="33" count="1" type="stmt"/>
@@ -738,9 +790,56 @@
         <line num="64" count="1" type="stmt"/>
         <line num="65" count="1" type="stmt"/>
         <line num="66" count="1" type="stmt"/>
+        <line num="67" count="1" type="stmt"/>
         <line num="68" count="1" type="stmt"/>
+        <line num="69" count="1" type="stmt"/>
+        <line num="70" count="1" type="stmt"/>
+        <line num="72" count="1" type="stmt"/>
       </file>
-      <file name="User.model.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/User.model.ts">
+      <file name="ShoppingList.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/ShoppingList.model.ts">
+        <metrics statements="40" coveredstatements="40" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="3" count="1" type="stmt"/>
+        <line num="31" count="1" type="stmt"/>
+        <line num="33" count="1" type="stmt"/>
+        <line num="34" count="1" type="stmt"/>
+        <line num="35" count="1" type="stmt"/>
+        <line num="36" count="1" type="stmt"/>
+        <line num="37" count="1" type="stmt"/>
+        <line num="38" count="1" type="stmt"/>
+        <line num="39" count="1" type="stmt"/>
+        <line num="40" count="1" type="stmt"/>
+        <line num="41" count="1" type="stmt"/>
+        <line num="42" count="1" type="stmt"/>
+        <line num="43" count="1" type="stmt"/>
+        <line num="44" count="1" type="stmt"/>
+        <line num="45" count="1" type="stmt"/>
+        <line num="46" count="1" type="stmt"/>
+        <line num="47" count="1" type="stmt"/>
+        <line num="48" count="1" type="stmt"/>
+        <line num="49" count="1" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
+        <line num="51" count="1" type="stmt"/>
+        <line num="52" count="1" type="stmt"/>
+        <line num="53" count="1" type="stmt"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
+        <line num="57" count="1" type="stmt"/>
+        <line num="58" count="1" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
+        <line num="60" count="1" type="stmt"/>
+        <line num="61" count="1" type="stmt"/>
+        <line num="62" count="1" type="stmt"/>
+        <line num="63" count="1" type="stmt"/>
+        <line num="64" count="1" type="stmt"/>
+        <line num="65" count="1" type="stmt"/>
+        <line num="66" count="1" type="stmt"/>
+        <line num="67" count="1" type="stmt"/>
+        <line num="68" count="1" type="stmt"/>
+        <line num="70" count="1" type="stmt"/>
+      </file>
+      <file name="User.model.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/User.model.ts">
         <metrics statements="56" coveredstatements="56" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
@@ -799,14 +898,14 @@
         <line num="72" count="1" type="stmt"/>
         <line num="74" count="1" type="stmt"/>
       </file>
-      <file name="associations.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/associations.ts">
-        <metrics statements="38" coveredstatements="38" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
+      <file name="associations.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/associations.ts">
+        <metrics statements="49" coveredstatements="49" conditionals="0" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
         <line num="3" count="1" type="stmt"/>
         <line num="4" count="1" type="stmt"/>
         <line num="5" count="1" type="stmt"/>
-        <line num="8" count="1" type="stmt"/>
+        <line num="6" count="1" type="stmt"/>
         <line num="9" count="1" type="stmt"/>
         <line num="10" count="1" type="stmt"/>
         <line num="11" count="1" type="stmt"/>
@@ -814,7 +913,7 @@
         <line num="13" count="1" type="stmt"/>
         <line num="14" count="1" type="stmt"/>
         <line num="15" count="1" type="stmt"/>
-        <line num="18" count="1" type="stmt"/>
+        <line num="16" count="1" type="stmt"/>
         <line num="19" count="1" type="stmt"/>
         <line num="20" count="1" type="stmt"/>
         <line num="21" count="1" type="stmt"/>
@@ -823,7 +922,7 @@
         <line num="24" count="1" type="stmt"/>
         <line num="25" count="1" type="stmt"/>
         <line num="26" count="1" type="stmt"/>
-        <line num="29" count="1" type="stmt"/>
+        <line num="27" count="1" type="stmt"/>
         <line num="30" count="1" type="stmt"/>
         <line num="31" count="1" type="stmt"/>
         <line num="32" count="1" type="stmt"/>
@@ -831,7 +930,7 @@
         <line num="34" count="1" type="stmt"/>
         <line num="35" count="1" type="stmt"/>
         <line num="36" count="1" type="stmt"/>
-        <line num="39" count="1" type="stmt"/>
+        <line num="37" count="1" type="stmt"/>
         <line num="40" count="1" type="stmt"/>
         <line num="41" count="1" type="stmt"/>
         <line num="42" count="1" type="stmt"/>
@@ -839,8 +938,19 @@
         <line num="44" count="1" type="stmt"/>
         <line num="45" count="1" type="stmt"/>
         <line num="46" count="1" type="stmt"/>
+        <line num="47" count="1" type="stmt"/>
+        <line num="50" count="1" type="stmt"/>
+        <line num="51" count="1" type="stmt"/>
+        <line num="52" count="1" type="stmt"/>
+        <line num="53" count="1" type="stmt"/>
+        <line num="54" count="1" type="stmt"/>
+        <line num="55" count="1" type="stmt"/>
+        <line num="56" count="1" type="stmt"/>
+        <line num="57" count="1" type="stmt"/>
+        <line num="58" count="1" type="stmt"/>
+        <line num="59" count="1" type="stmt"/>
       </file>
-      <file name="index.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/db/models/index.ts">
+      <file name="index.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/db/models/index.ts">
         <metrics statements="45" coveredstatements="29" conditionals="4" coveredconditionals="0" methods="0" coveredmethods="0"/>
         <line num="1" count="1" type="stmt"/>
         <line num="2" count="1" type="stmt"/>
@@ -889,9 +999,69 @@
         <line num="50" count="1" type="stmt"/>
       </file>
     </package>
+    <package name="api.middleware">
+      <metrics statements="34" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+      <file name="auth.middleware.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/middleware/auth.middleware.ts">
+        <metrics statements="34" coveredstatements="0" conditionals="1" coveredconditionals="1" methods="1" coveredmethods="1"/>
+        <line num="2" count="0" type="stmt"/>
+        <line num="3" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="21" count="0" type="stmt"/>
+        <line num="23" count="0" type="stmt"/>
+        <line num="24" count="0" type="stmt"/>
+        <line num="25" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="28" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="30" count="0" type="stmt"/>
+        <line num="31" count="0" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="34" count="0" type="stmt"/>
+        <line num="36" count="0" type="stmt"/>
+        <line num="37" count="0" type="stmt"/>
+        <line num="38" count="0" type="stmt"/>
+        <line num="39" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="46" count="0" type="stmt"/>
+        <line num="47" count="0" type="stmt"/>
+        <line num="48" count="0" type="stmt"/>
+        <line num="49" count="0" type="stmt"/>
+        <line num="50" count="0" type="stmt"/>
+      </file>
+    </package>
     <package name="api.routes">
-      <metrics statements="139" coveredstatements="0" conditionals="5" coveredconditionals="0" methods="5" coveredmethods="0"/>
-      <file name="dailyMeal.routes.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/routes/dailyMeal.routes.ts">
+      <metrics statements="156" coveredstatements="0" conditionals="6" coveredconditionals="0" methods="6" coveredmethods="0"/>
+      <file name="auth.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/auth.routes.ts">
+        <metrics statements="17" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+        <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
+        <line num="2" count="0" type="stmt"/>
+        <line num="3" count="0" type="stmt"/>
+        <line num="5" count="0" type="stmt"/>
+        <line num="12" count="0" type="stmt"/>
+        <line num="13" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
+        <line num="15" count="0" type="stmt"/>
+        <line num="16" count="0" type="stmt"/>
+        <line num="17" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="19" count="0" type="stmt"/>
+        <line num="20" count="0" type="stmt"/>
+        <line num="71" count="0" type="stmt"/>
+        <line num="118" count="0" type="stmt"/>
+        <line num="151" count="0" type="stmt"/>
+        <line num="153" count="0" type="stmt"/>
+      </file>
+      <file name="dailyMeal.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/dailyMeal.routes.ts">
         <metrics statements="18" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -912,7 +1082,7 @@
         <line num="131" count="0" type="stmt"/>
         <line num="133" count="0" type="stmt"/>
       </file>
-      <file name="familyGroups.routes.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/routes/familyGroups.routes.ts">
+      <file name="familyGroups.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/familyGroups.routes.ts">
         <metrics statements="18" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -933,7 +1103,7 @@
         <line num="105" count="0" type="stmt"/>
         <line num="107" count="0" type="stmt"/>
       </file>
-      <file name="mealDiary.routes.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/routes/mealDiary.routes.ts">
+      <file name="mealDiary.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/mealDiary.routes.ts">
         <metrics statements="32" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -968,7 +1138,7 @@
         <line num="330" count="0" type="stmt"/>
         <line num="332" count="0" type="stmt"/>
       </file>
-      <file name="shoppingList.routes.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/routes/shoppingList.routes.ts">
+      <file name="shoppingList.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/shoppingList.routes.ts">
         <metrics statements="32" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -1003,7 +1173,7 @@
         <line num="239" count="0" type="stmt"/>
         <line num="241" count="0" type="stmt"/>
       </file>
-      <file name="userRoutes.routes.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/routes/userRoutes.routes.ts">
+      <file name="userRoutes.routes.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/routes/userRoutes.routes.ts">
         <metrics statements="39" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
@@ -1047,8 +1217,109 @@
       </file>
     </package>
     <package name="api.services">
-      <metrics statements="88" coveredstatements="0" conditionals="2" coveredconditionals="0" methods="2" coveredmethods="0"/>
-      <file name="shoppingList.service.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/services/shoppingList.service.ts">
+      <metrics statements="203" coveredstatements="64" conditionals="17" coveredconditionals="15" methods="5" coveredmethods="2"/>
+      <file name="mealDiary.service.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/services/mealDiary.service.ts">
+        <metrics statements="98" coveredstatements="64" conditionals="15" coveredconditionals="15" methods="3" coveredmethods="2"/>
+        <line num="1" count="1" type="stmt"/>
+        <line num="20" count="1" type="stmt"/>
+        <line num="22" count="0" type="stmt"/>
+        <line num="23" count="0" type="stmt"/>
+        <line num="24" count="0" type="stmt"/>
+        <line num="25" count="0" type="stmt"/>
+        <line num="26" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
+        <line num="28" count="0" type="stmt"/>
+        <line num="29" count="0" type="stmt"/>
+        <line num="30" count="0" type="stmt"/>
+        <line num="31" count="0" type="stmt"/>
+        <line num="33" count="0" type="stmt"/>
+        <line num="34" count="0" type="stmt"/>
+        <line num="35" count="0" type="stmt"/>
+        <line num="36" count="0" type="stmt"/>
+        <line num="38" count="0" type="stmt"/>
+        <line num="39" count="0" type="stmt"/>
+        <line num="40" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="46" count="0" type="stmt"/>
+        <line num="48" count="0" type="stmt"/>
+        <line num="49" count="0" type="stmt"/>
+        <line num="50" count="0" type="stmt"/>
+        <line num="51" count="0" type="stmt"/>
+        <line num="52" count="0" type="stmt"/>
+        <line num="53" count="0" type="stmt"/>
+        <line num="54" count="0" type="stmt"/>
+        <line num="55" count="0" type="stmt"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="58" count="0" type="stmt"/>
+        <line num="59" count="0" type="stmt"/>
+        <line num="68" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="70" count="3" type="stmt"/>
+        <line num="71" count="3" type="stmt"/>
+        <line num="72" count="3" type="stmt"/>
+        <line num="73" count="3" type="stmt"/>
+        <line num="74" count="3" type="stmt"/>
+        <line num="75" count="3" type="stmt"/>
+        <line num="77" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="79" count="1" type="stmt"/>
+        <line num="80" count="1" type="stmt"/>
+        <line num="81" count="1" type="stmt"/>
+        <line num="82" count="1" type="stmt"/>
+        <line num="83" count="1" type="stmt"/>
+        <line num="86" count="3" type="stmt"/>
+        <line num="87" count="3" type="stmt"/>
+        <line num="88" count="3" type="stmt"/>
+        <line num="89" count="3" type="stmt"/>
+        <line num="92" count="3" type="stmt"/>
+        <line num="93" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="94" count="3" type="stmt"/>
+        <line num="97" count="3" type="stmt"/>
+        <line num="98" count="3" type="cond" truecount="1" falsecount="0"/>
+        <line num="99" count="21" type="stmt"/>
+        <line num="100" count="21" type="stmt"/>
+        <line num="101" count="21" type="stmt"/>
+        <line num="102" count="21" type="cond" truecount="2" falsecount="0"/>
+        <line num="103" count="21" type="cond" truecount="2" falsecount="0"/>
+        <line num="104" count="21" type="cond" truecount="2" falsecount="0"/>
+        <line num="105" count="21" type="stmt"/>
+        <line num="106" count="21" type="stmt"/>
+        <line num="108" count="3" type="stmt"/>
+        <line num="109" count="3" type="stmt"/>
+        <line num="120" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="121" count="4" type="stmt"/>
+        <line num="122" count="4" type="stmt"/>
+        <line num="123" count="4" type="stmt"/>
+        <line num="124" count="4" type="stmt"/>
+        <line num="129" count="4" type="stmt"/>
+        <line num="131" count="4" type="stmt"/>
+        <line num="132" count="4" type="stmt"/>
+        <line num="133" count="4" type="stmt"/>
+        <line num="134" count="4" type="stmt"/>
+        <line num="135" count="4" type="stmt"/>
+        <line num="136" count="4" type="stmt"/>
+        <line num="138" count="4" type="cond" truecount="1" falsecount="0"/>
+        <line num="139" count="1" type="stmt"/>
+        <line num="140" count="1" type="cond" truecount="1" falsecount="0"/>
+        <line num="143" count="3" type="stmt"/>
+        <line num="144" count="3" type="stmt"/>
+        <line num="145" count="3" type="stmt"/>
+        <line num="146" count="3" type="stmt"/>
+        <line num="147" count="3" type="stmt"/>
+        <line num="148" count="3" type="stmt"/>
+        <line num="150" count="4" type="cond" truecount="1" falsecount="0"/>
+        <line num="152" count="2" type="stmt"/>
+        <line num="153" count="2" type="stmt"/>
+        <line num="154" count="2" type="stmt"/>
+        <line num="155" count="2" type="stmt"/>
+        <line num="156" count="2" type="cond" truecount="1" falsecount="0"/>
+        <line num="159" count="3" type="stmt"/>
+        <line num="161" count="3" type="stmt"/>
+        <line num="162" count="3" type="stmt"/>
+      </file>
+      <file name="shoppingList.service.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/services/shoppingList.service.ts">
         <metrics statements="56" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="10" count="0" type="stmt"/>
@@ -1107,29 +1378,22 @@
         <line num="94" count="0" type="stmt"/>
         <line num="95" count="0" type="stmt"/>
       </file>
-      <file name="webhook.service.ts" path="/Users/jakeunsted/Documents/Git/meal-diary/api/services/webhook.service.ts">
-        <metrics statements="32" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
+      <file name="webhook.service.ts" path="/Users/jakeunsted/Documents/git/meal-diary/api/services/webhook.service.ts">
+        <metrics statements="49" coveredstatements="0" conditionals="1" coveredconditionals="0" methods="1" coveredmethods="0"/>
         <line num="1" count="0" type="cond" truecount="0" falsecount="1"/>
         <line num="2" count="0" type="stmt"/>
-        <line num="5" count="0" type="stmt"/>
-        <line num="7" count="0" type="stmt"/>
+        <line num="6" count="0" type="stmt"/>
         <line num="8" count="0" type="stmt"/>
         <line num="9" count="0" type="stmt"/>
         <line num="10" count="0" type="stmt"/>
         <line num="11" count="0" type="stmt"/>
         <line num="12" count="0" type="stmt"/>
         <line num="13" count="0" type="stmt"/>
-        <line num="15" count="0" type="stmt"/>
+        <line num="14" count="0" type="stmt"/>
         <line num="16" count="0" type="stmt"/>
         <line num="17" count="0" type="stmt"/>
-        <line num="19" count="0" type="stmt"/>
-        <line num="20" count="0" type="stmt"/>
-        <line num="21" count="0" type="stmt"/>
-        <line num="22" count="0" type="stmt"/>
-        <line num="23" count="0" type="stmt"/>
-        <line num="24" count="0" type="stmt"/>
-        <line num="25" count="0" type="stmt"/>
-        <line num="26" count="0" type="stmt"/>
+        <line num="18" count="0" type="stmt"/>
+        <line num="27" count="0" type="stmt"/>
         <line num="28" count="0" type="stmt"/>
         <line num="29" count="0" type="stmt"/>
         <line num="30" count="0" type="stmt"/>
@@ -1137,10 +1401,34 @@
         <line num="32" count="0" type="stmt"/>
         <line num="33" count="0" type="stmt"/>
         <line num="34" count="0" type="stmt"/>
-        <line num="35" count="0" type="stmt"/>
         <line num="36" count="0" type="stmt"/>
         <line num="37" count="0" type="stmt"/>
         <line num="38" count="0" type="stmt"/>
+        <line num="39" count="0" type="stmt"/>
+        <line num="40" count="0" type="stmt"/>
+        <line num="41" count="0" type="stmt"/>
+        <line num="42" count="0" type="stmt"/>
+        <line num="43" count="0" type="stmt"/>
+        <line num="44" count="0" type="stmt"/>
+        <line num="45" count="0" type="stmt"/>
+        <line num="46" count="0" type="stmt"/>
+        <line num="54" count="0" type="stmt"/>
+        <line num="55" count="0" type="stmt"/>
+        <line num="56" count="0" type="stmt"/>
+        <line num="57" count="0" type="stmt"/>
+        <line num="58" count="0" type="stmt"/>
+        <line num="59" count="0" type="stmt"/>
+        <line num="60" count="0" type="stmt"/>
+        <line num="62" count="0" type="stmt"/>
+        <line num="63" count="0" type="stmt"/>
+        <line num="64" count="0" type="stmt"/>
+        <line num="65" count="0" type="stmt"/>
+        <line num="66" count="0" type="stmt"/>
+        <line num="67" count="0" type="stmt"/>
+        <line num="68" count="0" type="stmt"/>
+        <line num="69" count="0" type="stmt"/>
+        <line num="70" count="0" type="stmt"/>
+        <line num="71" count="0" type="stmt"/>
       </file>
     </package>
   </project>

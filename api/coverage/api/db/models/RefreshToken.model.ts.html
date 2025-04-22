@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for api/db/models/ShoppingList.model.ts</title>
+    <title>Code coverage report for api/db/models/RefreshToken.model.ts</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="../../../prettify.css" />
     <link rel="stylesheet" href="../../../base.css" />
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../index.html">All files</a> / <a href="index.html">api/db/models</a> ShoppingList.model.ts</h1>
+        <h1><a href="../../../index.html">All files</a> / <a href="index.html">api/db/models</a> RefreshToken.model.ts</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>40/40</span>
+                <span class='fraction'>56/56</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/0</span>
+                <span class='fraction'>1/1</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>40/40</span>
+                <span class='fraction'>56/56</span>
             </div>
         
             
@@ -133,8 +133,11 @@
 <a name='L68'></a><a href='#L68'>68</a>
 <a name='L69'></a><a href='#L69'>69</a>
 <a name='L70'></a><a href='#L70'>70</a>
-<a name='L71'></a><a href='#L71'>71</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -149,22 +152,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -206,51 +210,53 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
+import User from './User.model.ts';
 &nbsp;
-export interface ShoppingListItem {
+export interface RefreshTokenAttributes {
   id: number;
-  name: string;
-  checked: boolean;
-}
-&nbsp;
-export interface ShoppingListCategory {
-  id: number;
-  name: string;
-  items: ShoppingListItem[];
-}
-&nbsp;
-export interface ShoppingListContent {
-  categories: ShoppingListCategory[];
-}
-&nbsp;
-export interface ShoppingListAttributes {
-  id: number;
-  family_group_id: number;
-  content: ShoppingListContent;
+  token: string;
+  user_id: number;
+  expires_at: Date;
+  is_revoked: boolean;
   created_at?: Date;
   updated_at?: Date;
 }
 &nbsp;
-interface ShoppingListCreationAttributes extends Optional&lt;ShoppingListAttributes, 'id' | 'content' | 'created_at' | 'updated_at'&gt; {}
+interface RefreshTokenCreationAttributes extends Optional&lt;RefreshTokenAttributes, 'id' | 'created_at' | 'updated_at'&gt; {}
 &nbsp;
-class ShoppingList extends Model&lt;ShoppingListAttributes, ShoppingListCreationAttributes&gt; {}
+class RefreshToken extends Model&lt;RefreshTokenAttributes, RefreshTokenCreationAttributes&gt; {
+  public readonly user?: User;
+}
 &nbsp;
-ShoppingList.init(
+RefreshToken.init(
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-    family_group_id: {
-      type: DataTypes.INTEGER,
+    token: {
+      type: DataTypes.STRING(500),
+      allowNull: false,
       unique: true,
+    },
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      unique: true,
+      references: {
+        model: User,
+        key: 'id',
+      },
+    },
+    expires_at: {
+      type: DataTypes.DATE,
       allowNull: false,
     },
-    content: {
-      type: DataTypes.JSONB,
-      allowNull: true,
-      defaultValue: { categories: [] },
+    is_revoked: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
     },
     created_at: {
       type: DataTypes.DATE,
@@ -265,14 +271,14 @@ ShoppingList.init(
   },
   {
     sequelize,
-    tableName: 'shopping_lists',
+    tableName: 'refresh_tokens',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   }
 );
 &nbsp;
-export default ShoppingList;
+export default RefreshToken;
 &nbsp;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
