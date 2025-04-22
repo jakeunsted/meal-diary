@@ -6,13 +6,43 @@
           <h1>Welcome to meal diary</h1>
         </div>
         <hr />
-        <button
-          @click="handleLogin"
-          class="btn btn-primary"
-          :disabled="isLoading"
-        >
-          Login with Auth0
-        </button>
+        <form @submit.prevent="handleLogin" class="space-y-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Email</span>
+            </label>
+            <input 
+              type="email" 
+              v-model="email" 
+              placeholder="your@email.com" 
+              class="input input-bordered" 
+              required
+            />
+          </div>
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text">Password</span>
+            </label>
+            <input 
+              type="password" 
+              v-model="password" 
+              placeholder="••••••••" 
+              class="input input-bordered" 
+              required
+            />
+          </div>
+          <div v-if="error" class="alert alert-error">
+            <span>{{ error }}</span>
+          </div>
+          <button
+            type="submit"
+            class="btn btn-primary w-full"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading" class="loading loading-spinner"></span>
+            <span v-else>Login</span>
+          </button>
+        </form>
       </div>
     </div>
   </div>
@@ -20,12 +50,22 @@
 
 <script setup>
 definePageMeta({
-  layout: false
-})
-const { login, isLoading } = useAuth();
+  layout: false,
+  middleware: ['auth']
+});
 
-const handleLogin = () => {
-  login()
-}
+const { login, isLoading, error } = useAuth();
+const email = ref('');
+const password = ref('');
 
+const handleLogin = async () => {
+  try {
+    const response = await login(email.value, password.value);
+    if (response && response.redirect) {
+      navigateTo(response.redirect);
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+  }
+};
 </script>

@@ -1,3 +1,5 @@
+import { useAuthStore } from "~/stores/auth";
+
 /**
  * Custom fetch export to use baseUrl from .env and return json
  * @param path - The path to fetch
@@ -8,7 +10,7 @@ interface ApiFetchOptions extends RequestInit {
   query?: Record<string, string | number | boolean | undefined | null>;
 }
 
-export async function apiFetch(path: string, options: ApiFetchOptions = {}): Promise<Response> {
+export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const config = useRuntimeConfig();
   const baseUrl = config.public.baseUrl;
   let finalUrl = `${baseUrl}${path}`;
@@ -30,6 +32,16 @@ export async function apiFetch(path: string, options: ApiFetchOptions = {}): Pro
   if (fetchOptions.method === 'POST' || fetchOptions.method === 'PUT' || fetchOptions.method === 'PATCH') {
     fetchOptions.headers = {
       'Content-Type': 'application/json',
+      ...fetchOptions.headers,
+    };
+  }
+
+  // Add authorization header if token exists
+  const authStore = useAuthStore();
+  if (authStore.accessToken) {
+    fetchOptions.headers = {
+      ...fetchOptions.headers,
+      'Authorization': `Bearer ${authStore.accessToken}`,
     };
   }
 

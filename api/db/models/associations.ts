@@ -3,6 +3,7 @@ import FamilyGroup from './FamilyGroup.model.ts';
 import ShoppingList from './ShoppingList.model.ts';
 import MealDiary from './MealDiary.model.ts';
 import DailyMeal from './DailyMeal.model.ts';
+import RefreshToken from './RefreshToken.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -45,6 +46,18 @@ DailyMeal.belongsTo(MealDiary, {
   foreignKeyConstraint: true
 });
 
+// User <-> RefreshToken associations
+RefreshToken.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user'
+});
+User.hasOne(RefreshToken, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'refreshToken'
+});
+
 // Export all models
 export {
   User,
@@ -52,4 +65,5 @@ export {
   ShoppingList,
   MealDiary,
   DailyMeal,
+  RefreshToken
 };
