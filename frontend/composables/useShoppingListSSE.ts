@@ -1,5 +1,5 @@
 import { useShoppingListStore } from '~/stores/shoppingList';
-import type { SSEShoppingListCategoryUpdate } from '~/types/ShoppingList';
+import type { SSEShoppingListCategoryUpdate, ShoppingListCategory, ShoppingListState } from '~/types/ShoppingList';
 
 export function useShoppingListSSE() {
   const shoppingListStore = useShoppingListStore();
@@ -16,12 +16,12 @@ export function useShoppingListSSE() {
     
     // Check if category already exists
     const existingCategory = shoppingCategories.value.find(
-      category => category.name === categoryName
+      (category: ShoppingListCategory): boolean => category.name === categoryName
     );
     
     if (!existingCategory) {
       // Add category to store without API call
-      shoppingListStore.$patch((state) => {
+      shoppingListStore.$patch((state: ShoppingListState): void => {
         if (state.shoppingList?.content) {
           state.shoppingList.content.categories.push(categoryContents);
         }
@@ -35,10 +35,10 @@ export function useShoppingListSSE() {
     if (!shoppingListStore.getShoppingListContent) return;
     
     // Find and update category
-    shoppingListStore.$patch((state) => {
+    shoppingListStore.$patch((state: ShoppingListState): void => {
       if (state.shoppingList?.content) {
         const categoryIndex = state.shoppingList.content.categories.findIndex(
-          category => category.name === categoryName
+          (category: ShoppingListCategory): boolean => category.name === categoryName
         );
         
         if (categoryIndex !== -1) {
