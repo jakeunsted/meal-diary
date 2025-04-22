@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FamilyGroup, MealDiary, User } from '../db.ts';
+import { FamilyGroup, MealDiary, User } from '../../db.ts';
 
 describe('MealDiary Model',  () => {
   it('should create a new meal diary successfully', async () => { 

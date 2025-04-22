@@ -2,7 +2,7 @@ import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
-interface UserAttributes {
+export interface UserAttributes {
   id: number;
   username: string;
   email: string;

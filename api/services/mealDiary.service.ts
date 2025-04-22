@@ -1,4 +1,4 @@
-import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
+import { MealDiary, DailyMeal } from '../db/models/associations.ts';
 import { Op } from 'sequelize';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FamilyGroup, ShoppingList, User } from '../db.ts';
+import { FamilyGroup, ShoppingList, User } from '../../db.ts';
 
 describe('ShoppingList Model', () => {
   it('should create a new shopping list successfully', async () => {

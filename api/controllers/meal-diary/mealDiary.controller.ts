@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
-import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from './mealDiary.service.ts';
+import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from '../../services/mealDiary.service.ts';
 import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
 
 // Create a new meal diary

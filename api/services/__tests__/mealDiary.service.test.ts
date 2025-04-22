@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { User, FamilyGroup, MealDiary, DailyMeal } from '../../db/models/associations.ts';
-import { getWeeklyMeals, updateDailyMeal } from './mealDiary.service.ts';
+import { getWeeklyMeals, updateDailyMeal } from '../mealDiary.service.ts';
 import { Op } from 'sequelize';
 
 describe('MealDiary Service', () => {

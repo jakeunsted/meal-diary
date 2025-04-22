@@ -1,6 +1,6 @@
 import express from 'express';
 import * as mealDiaryController from '../controllers/meal-diary/mealDiary.controller.ts';
-import * as mealDiaryService from '../controllers/meal-diary/mealDiary.service.ts';
+import * as mealDiaryService from '../services/mealDiary.service.ts';
 
 const router = express.Router();
 

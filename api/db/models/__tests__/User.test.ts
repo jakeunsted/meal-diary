@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { User } from '../db.ts';
+import { User } from '../../db.ts';
 import { ValidationError } from 'sequelize';
 
 describe('User Model', () => {

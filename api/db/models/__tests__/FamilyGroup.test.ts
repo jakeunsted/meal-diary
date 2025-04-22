@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { User, FamilyGroup } from '../db.ts';
+import { User, FamilyGroup } from '../../db.ts';
 import { ValidationError } from 'sequelize';
 
 describe('FamilyGroup Model', () => {

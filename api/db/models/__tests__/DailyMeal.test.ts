@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { FamilyGroup, MealDiary, DailyMeal, User } from '../db.ts';
+import { FamilyGroup, MealDiary, DailyMeal, User } from '../../db.ts';
 import { ValidationError } from 'sequelize';
 
 describe('DailyMeal Model', () => {
