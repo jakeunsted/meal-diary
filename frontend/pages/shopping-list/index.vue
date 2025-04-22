@@ -68,7 +68,7 @@ let sseConnection = null;
 
 onMounted(async () => {
   // Temp hardcoded user
-  await userStore.fetchUser(1);
+  await userStore.fetchUser();
 
   if (!shoppingListStore.getShoppingListContent) {
     await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);

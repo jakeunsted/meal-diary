@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import type { User } from '~/types/User'
+import { useAuthStore } from '~/stores/auth';
 
 interface UserState {
   user: User | null;
@@ -28,11 +29,16 @@ export const useUserStore = defineStore('user', {
   },
 
   actions: {
-    async fetchUser(id: number) {
+    async fetchUser() {
       try {
+        const authStore = useAuthStore();
+        if (!authStore.user?.id) {
+          throw new Error('No authenticated user found');
+        }
+        
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<User>(`/api/user/${id}`);
+        const response = await $fetch<User>(`/api/user/${authStore.user.id}`);
         this.user = response;
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch user';
@@ -41,11 +47,16 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    async updateUser(id: number, userData: Partial<User>) {
+    async updateUser(userData: Partial<User>) {
       try {
+        const authStore = useAuthStore();
+        if (!authStore.user?.id) {
+          throw new Error('No authenticated user found');
+        }
+
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<User>(`/api/user/${id}`, {
+        const response = await $fetch<User>(`/api/user/${authStore.user.id}`, {
           method: 'PUT',
           body: userData,
         });

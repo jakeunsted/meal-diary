@@ -91,7 +91,7 @@ onMounted(async () => {
     mealDiaryStoreComputed.value.fetchWeeklyMeals();
     mealDiaryStoreComputed.value.initSSEConnection();
   } else {
-    await userStore.fetchUser(1);
+    await userStore.fetchUser();
     mealDiaryStoreComputed.value.fetchWeeklyMeals();
     mealDiaryStoreComputed.value.initSSEConnection();
   }

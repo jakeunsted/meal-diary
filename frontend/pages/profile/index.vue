@@ -58,7 +58,7 @@ const userStore = useUserStore();
 
 // Fetch user data when component mounts
 onMounted(async () => {
-  await userStore.fetchUser(1); // Using a temporary ID until auth is implemented
+  await userStore.fetchUser();
 });
 
 const familyMembers = ref([
