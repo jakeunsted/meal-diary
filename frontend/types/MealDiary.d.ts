@@ -15,4 +15,5 @@ export interface MealDiaryState {
     name: string;
   };
   eventSource: EventSource | null;
+  currentWeekStart: string | null;
 }

@@ -2,6 +2,8 @@
   <div>
     <h1 class="text-2xl font-bold text-center m-4">{{ $t('Meal diary') }}</h1>
 
+    <WeekCalendarPicker @weekChange="handleWeekChange" />
+
     <div v-if="mealDiaryStoreComputed.loading">
       <div class="flex justify-center mb-4">
         <span class="loading loading-spinner loading-xl"></span>
@@ -40,6 +42,7 @@ import { useMealDiaryStore } from '~/stores/mealDiary';
 import { useUserStore } from '~/stores/user';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
+import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 
 const mealDiaryStore = useMealDiaryStore();
 const userStore = useUserStore();
@@ -87,6 +90,11 @@ const handleSaveMeal = async () => {
     // Handle error (maybe show a notification)
     console.error('Error saving meal:', error);
   }
+};
+
+// Handle week change from the calendar picker
+const handleWeekChange = (weekStartDate) => {
+  mealDiaryStoreComputed.value.fetchWeeklyMeals(weekStartDate);
 };
 
 // Fetch meals when component mounts
