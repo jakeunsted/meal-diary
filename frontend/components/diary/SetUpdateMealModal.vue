@@ -32,8 +32,6 @@ const props = defineProps({
   },
 });
 
-console.log('props in SetUpdateMealModal', props);
-
 const saveMeal = () => {
   emit('saveMeal', props.meal);
 }

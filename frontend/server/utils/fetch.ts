@@ -25,8 +25,6 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     finalUrl += (finalUrl.includes('?') ? '&' : '?') + params.toString();
   }
 
-  console.log(`${options.method || 'GET'}: ${finalUrl}`);
-
   const { query, ...fetchOptions } = options;
 
   if (fetchOptions.method === 'POST' || fetchOptions.method === 'PUT' || fetchOptions.method === 'PATCH') {

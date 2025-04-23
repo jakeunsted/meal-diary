@@ -40,7 +40,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         const dateToUse = weekStartDate || this.getWeekStartDate();
         const weekStartDateStr = new Date(dateToUse).toISOString();
         this.currentWeekStart = weekStartDateStr;
-        console.log('fetchWeeklyMeals currentWeekStart', this.currentWeekStart);
         
         const familyGroupId = userStore.user.family_group_id;
         const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
@@ -84,7 +83,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
 
     // Save meal to API
     async saveMeal() {
-      console.log('saveMeal', this.selectedMeal);
       const userStore = useUserStore();
       if (!userStore.user?.family_group_id || !this.selectedMeal.type || !this.selectedMeal.dayOfWeek) return;
 
@@ -96,7 +94,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           dinner: null,
           day_of_week: this.selectedMeal.dayOfWeek
         };
-        console.log('saveMeal currentWeekStart', this.currentWeekStart);
         // Create a complete meal object with all meal types
         const mealData = {
           week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString(),

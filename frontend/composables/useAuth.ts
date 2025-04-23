@@ -59,8 +59,6 @@ export const useAuth = () => {
           password
         }
       });
-
-      console.log('response', response);
       
       // Only store auth data if we have a valid response with tokens
       if (response && response.accessToken && response.refreshToken) {

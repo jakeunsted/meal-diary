@@ -30,8 +30,6 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-
-    console.log('response in api/auth/login.post.ts');
     
     // Only return redirect on successful login
     return {
