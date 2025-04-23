@@ -24,6 +24,7 @@ UI and Styling
 Vue
 - Always use composition api.
 - Use descriptive variable and function/const names. Also, event functions should be named with a “handle” prefix, like “handleClick” for onClick and “handleKeyDown” for onKeyDown.
+- Always used i18n for text
 
 Nuxt
 - Nuxt has autoimports, no need to manually import 'ref', 'useState' or 'useRouter'
