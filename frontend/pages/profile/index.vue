@@ -49,7 +49,11 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
+definePageMeta({
+  middleware: 'auth'
+});
+
 import { useUserStore } from '../../stores/user';
 const { user } = useUserStore();
 import { ref, onMounted } from 'vue';

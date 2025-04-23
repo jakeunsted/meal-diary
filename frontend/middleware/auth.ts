@@ -4,14 +4,22 @@ export default defineNuxtRouteMiddleware((to) => {
   const authStore = useAuthStore();
   const publicRoutes = ['/login', '/register', '/forgot-password'];
   
-  // Allow access to public routes
-  if (publicRoutes.includes(to.path)) {
-    return;
-  }
-  
-  // Check if user is authenticated
-  if (!authStore.isAuthenticated) {
-    // Redirect to login page
-    return navigateTo('/login');
+  // Only run client-side checks to avoid SSR issues
+  if (import.meta.client) {
+    // Check if we have auth data in localStorage but not in the store
+    if (!authStore.isAuthenticated && localStorage.getItem('auth')) {
+      // Force re-initialization of auth store
+      authStore.initializeAuth();
+    }
+    
+    // Redirect authenticated users away from public routes
+    if (publicRoutes.includes(to.path) && authStore.isAuthenticated) {
+      return navigateTo('/diary');
+    }
+    
+    // Redirect unauthenticated users to login for protected routes
+    if (!publicRoutes.includes(to.path) && !authStore.isAuthenticated) {
+      return navigateTo('/login');
+    }
   }
 }); 

@@ -32,6 +32,10 @@
 </template>
 
 <script setup>
+definePageMeta({
+  middleware: 'auth'
+});
+
 import { useMealDiaryStore } from '~/stores/mealDiary';
 import { useUserStore } from '~/stores/user';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';

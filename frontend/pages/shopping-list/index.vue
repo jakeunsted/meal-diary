@@ -33,6 +33,10 @@
 </template>
 
 <script setup>
+definePageMeta({
+  middleware: 'auth'
+});
+
 import CollapseListSection from '~/components/shopping-list/CollapseListSection.vue';
 import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
