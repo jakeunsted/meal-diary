@@ -3,13 +3,13 @@
     <div class="card w-96 bg-base-200">
       <div class="card-body">
         <div class="card-title">
-          <h1>Welcome to meal diary</h1>
+          <h1>{{ $t('Welcome to meal diary') }}</h1>
         </div>
         <hr />
         <form @submit.prevent="handleLogin" class="space-y-4">
           <div class="form-control">
             <label class="label">
-              <span class="label-text">Email</span>
+              <span class="label-text">{{ $t('Email') }}</span>
             </label>
             <input 
               type="email" 
@@ -21,7 +21,7 @@
           </div>
           <div class="form-control">
             <label class="label">
-              <span class="label-text">Password</span>
+              <span class="label-text">{{ $t('Password') }}</span>
             </label>
             <input 
               type="password" 
@@ -40,7 +40,7 @@
             :disabled="isLoading"
           >
             <span v-if="isLoading" class="loading loading-spinner"></span>
-            <span v-else>Login</span>
+            <span v-else>{{ $t('Login') }}</span>
           </button>
         </form>
       </div>
