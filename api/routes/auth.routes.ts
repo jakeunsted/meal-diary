@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { login, refreshToken, logout } from '../controllers/auth/auth.controller.ts';
+import { login, refreshToken, logout, validateToken } from '../controllers/auth/auth.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = Router();
@@ -149,5 +149,44 @@ router.post('/refresh-token', wrapHandler(refreshToken));
  *                   description: Error message.
  */
 router.post('/logout', authenticateToken, wrapHandler(logout));
+
+/**
+ * Validate token route to check token validity.
+ * @swagger
+ * /validate:
+ *   get:
+ *     summary: Validate access token.
+ *     description: Checks if the current access token is valid.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token is valid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   description: Whether the token is valid.
+ *                 user:
+ *                   type: object
+ *                   description: User data if token is valid.
+ *       401:
+ *         description: Token is invalid.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *                   description: Whether the token is valid.
+ *                 message:
+ *                   type: string
+ *                   description: Error message.
+ */
+router.get('/validate', authenticateToken, wrapHandler(validateToken));
 
 export default router; 

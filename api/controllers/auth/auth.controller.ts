@@ -184,3 +184,34 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     res.status(500).json({ message: 'Server error during logout' });
   }
 };
+
+/**
+ * Validate token controller
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ * @returns {Promise<void>}
+ */
+export const validateToken = async (req: Request, res: Response): Promise<void> => {
+  try {
+    // The authenticateToken middleware has already verified the token
+    // and attached the user to the request
+    const user = req.user as User & UserAttributes;
+    
+    res.status(200).json({
+      valid: true,
+      user: {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        firstName: user.first_name,
+        lastName: user.last_name
+      }
+    });
+  } catch (error) {
+    console.error('Token validation error:', error);
+    res.status(401).json({
+      valid: false,
+      message: 'Invalid token'
+    });
+  }
+};
