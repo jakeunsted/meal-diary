@@ -30,6 +30,49 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       return new Date(now.setDate(diff));
     },
 
+    // Save to localStorage
+    saveToLocalStorage() {
+      if (import.meta.client) {
+        const dataToStore = {
+          weeklyMeals: this.weeklyMeals,
+          currentWeekStart: this.currentWeekStart
+        };
+        localStorage.setItem('mealDiary', JSON.stringify(dataToStore));
+      }
+    },
+
+    // Load from localStorage
+    loadFromLocalStorage() {
+      if (import.meta.client) {
+        const storedData = localStorage.getItem('mealDiary');
+        if (storedData) {
+          try {
+            const { weeklyMeals, currentWeekStart } = JSON.parse(storedData);
+            this.weeklyMeals = weeklyMeals;
+            this.currentWeekStart = currentWeekStart;
+            return true;
+          } catch (error) {
+            console.error('Failed to parse stored meal diary:', error);
+            localStorage.removeItem('mealDiary');
+          }
+        }
+      }
+      return false;
+    },
+
+    initialize() {
+      // Try to load from localStorage first
+      const loadedFromStorage = this.loadFromLocalStorage();
+      
+      // Always fetch fresh data, but if we loaded from storage, use that week
+      if (loadedFromStorage && this.currentWeekStart) {
+        this.fetchWeeklyMeals(new Date(this.currentWeekStart));
+      } else {
+        // If no stored data or failed to load, fetch current week
+        this.fetchWeeklyMeals();
+      }
+    },
+
     // Fetch daily meals for week from API
     async fetchWeeklyMeals(weekStartDate?: Date) {
       const userStore = useUserStore();
@@ -49,9 +92,16 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           ...meal,
           week_start_date: weekStartDateStr
         }));
+
+        // Save to localStorage after successful fetch
+        this.saveToLocalStorage();
       } catch (error) {
         console.error('Error fetching weekly meals:', error);
-        throw error;
+        // If fetch fails, try to load from localStorage
+        const loadedFromStorage = this.loadFromLocalStorage();
+        if (!loadedFromStorage) {
+          throw error;
+        }
       } finally {
         this.loading = false;
       }
@@ -126,6 +176,9 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           });
         }
 
+        // Save to localStorage after successful update
+        this.saveToLocalStorage();
+
         // Reset selected meal
         this.selectedMeal = {
           type: null,
@@ -161,10 +214,14 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           if (data.data.mealDiary && data.data.mealDiary.length > 0) {
             // Update weekly meals with initial data
             this.updateMealsFromEvents(data.data.mealDiary);
+            // Save to localStorage after receiving initial data
+            this.saveToLocalStorage();
           }
         } else if (data.type === 'update-daily-meal') {
           // Handle daily meal update
           this.handleDailyMealUpdate(data.data.dailyMeal);
+          // Save to localStorage after receiving update
+          this.saveToLocalStorage();
         }
       };
 

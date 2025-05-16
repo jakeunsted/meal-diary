@@ -27,13 +27,15 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
     
-    // Save to localStorage for persistence
+    // Save to localStorage
     if (import.meta.client) {
-      localStorage.setItem('auth', JSON.stringify({
+      const authState: AuthState = {
         user: authData.user,
         accessToken: authData.accessToken,
-        refreshToken: authData.refreshToken
-      }));
+        refreshToken: authData.refreshToken,
+        isAuthenticated: true
+      };
+      localStorage.setItem('authState', JSON.stringify(authState));
     }
   };
   
@@ -42,9 +44,9 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = null;
     refreshToken.value = null;
     
-    // Remove from localStorage
+    // Clear localStorage
     if (import.meta.client) {
-      localStorage.removeItem('auth');
+      localStorage.removeItem('authState');
     }
   };
 
@@ -91,31 +93,33 @@ export const useAuthStore = defineStore('auth', () => {
       return true;
     } catch (error) {
       console.error('Token validation error:', error);
-      clearAuth();
-      return false;
+      // If we can't reach the API, keep the current auth state
+      // This allows offline access
+      return true;
     }
   };
   
   const initializeAuth = async () => {
     if (import.meta.client) {
-      const storedAuth = localStorage.getItem('auth');
+      const storedAuth = localStorage.getItem('authState');
       if (storedAuth) {
         try {
-          const authData = JSON.parse(storedAuth);
-          user.value = authData.user;
-          accessToken.value = authData.accessToken;
-          refreshToken.value = authData.refreshToken;
-          
-          // Validate the token
-          const isValid = await validateToken();
-          if (!isValid) {
-            clearAuth();
-            router.push('/login');
-          }
+          const authState: AuthState = JSON.parse(storedAuth);
+          user.value = authState.user;
+          accessToken.value = authState.accessToken;
+          refreshToken.value = authState.refreshToken;
         } catch (error) {
           console.error('Failed to parse stored auth data:', error);
           clearAuth();
         }
+      }
+    }
+    
+    if (accessToken.value) {
+      const isValid = await validateToken();
+      if (!isValid) {
+        clearAuth();
+        router.push('/login');
       }
     }
   };
@@ -125,7 +129,7 @@ export const useAuthStore = defineStore('auth', () => {
     router.push('/login');
   };
   
-  // Initialize auth state from localStorage on store creation
+  // Initialize auth state
   initializeAuth();
   
   // Set up periodic token validation (every 5 minutes)

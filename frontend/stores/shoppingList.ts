@@ -13,6 +13,30 @@ export const useShoppingListStore = defineStore('shoppingList', {
   },
 
   actions: {
+    // Save to localStorage
+    saveToLocalStorage() {
+      if (import.meta.client && this.shoppingList) {
+        localStorage.setItem('shoppingList', JSON.stringify(this.shoppingList));
+      }
+    },
+
+    // Load from localStorage
+    loadFromLocalStorage() {
+      if (import.meta.client) {
+        const storedData = localStorage.getItem('shoppingList');
+        if (storedData) {
+          try {
+            this.shoppingList = JSON.parse(storedData);
+            return true;
+          } catch (error) {
+            console.error('Failed to parse stored shopping list:', error);
+            localStorage.removeItem('shoppingList');
+          }
+        }
+      }
+      return false;
+    },
+
     async fetchShoppingList(familyGroupId: number) {
       try {
         if (!this.shoppingList) {
@@ -20,9 +44,16 @@ export const useShoppingListStore = defineStore('shoppingList', {
           this.error = null;
           const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
           this.shoppingList = response;
+          // Save to localStorage after successful fetch
+          this.saveToLocalStorage();
         }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch shopping list';
+        // If fetch fails, try to load from localStorage
+        const loadedFromStorage = this.loadFromLocalStorage();
+        if (!loadedFromStorage) {
+          throw err;
+        }
       } finally {
         this.isLoading = false;
       }
@@ -38,9 +69,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
         });
         if (this.shoppingList?.content) {
           this.shoppingList.content.categories.push(response);
+          // Save to localStorage after successful update
+          this.saveToLocalStorage();
         }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to add category';
+        throw err;
       } finally {
         this.isLoading = false;
       }
@@ -58,9 +92,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
           this.shoppingList.content.categories.find(
             category => category.name === categoryName
           )!.items = response.items;
+          // Save to localStorage after successful update
+          this.saveToLocalStorage();
         }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to save category';
+        throw err;
       } finally {
         this.isLoading = false;
       }
@@ -78,6 +115,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         
         if (!existingCategory) {
           this.shoppingList.content.categories.push(categoryData);
+          // Save to localStorage after receiving update
+          this.saveToLocalStorage();
         }
       }
     },
@@ -94,6 +133,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         if (categoryIndex !== -1) {
           // Update the existing category with new data
           this.shoppingList.content.categories[categoryIndex].items = categoryData.items;
+          // Save to localStorage after receiving update
+          this.saveToLocalStorage();
         }
       }
     },
@@ -112,6 +153,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.shoppingList.content.categories.find(
           category => category.name === categoryName
         )!.items = categoryContents.items;
+        // Save to localStorage after local update
+        this.saveToLocalStorage();
       }
     }
   }
