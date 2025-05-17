@@ -43,7 +43,7 @@ const sequelize = new Sequelize(
         rejectUnauthorized: false,
       }
     } : undefined,
-    logging: process.env.NODE_ENV === 'development' ? console.log : false,
+    logging: process.env.DEBUG === 'true' ? console.log : false,
   }
 );
 

@@ -7,7 +7,7 @@ export default defineNuxtRouteMiddleware((to) => {
   // Only run client-side checks to avoid SSR issues
   if (import.meta.client) {
     // Check if we have auth data in localStorage but not in the store
-    if (!authStore.isAuthenticated && localStorage.getItem('auth')) {
+    if (!authStore.isAuthenticated && localStorage.getItem('authState')) {
       // Force re-initialization of auth store
       authStore.initializeAuth();
     }

@@ -34,7 +34,6 @@ RefreshToken.init(
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      unique: true,
       references: {
         model: User,
         key: 'id',

@@ -1,17 +1,13 @@
 import { apiFetch } from '~/server/utils/fetch';
+import { useAuthStore } from '~/stores/auth';
+import { User } from '~/types/User';
 
 // Define the expected response type from the API
 interface LoginResponse {
   accessToken: string;
   refreshToken: string;
   statusCode: number;
-  user: {
-    id: string;
-    email: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-  };
+  user: User;
 }
 
 export default defineEventHandler(async (event) => {
@@ -29,6 +25,14 @@ export default defineEventHandler(async (event) => {
     const response = await apiFetch<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+    });
+
+    // Save values to the store
+    const authStore = useAuthStore();
+    authStore.setAuth({
+      accessToken: response.accessToken,
+      refreshToken: response.refreshToken,
+      user: response.user
     });
     
     // Only return redirect on successful login

@@ -49,57 +49,8 @@ export const useAuthStore = defineStore('auth', () => {
       localStorage.removeItem('authState');
     }
   };
-
-  const validateToken = async () => {
-    if (!accessToken.value) {
-      clearAuth();
-      return false;
-    }
-
-    try {
-      const response = await fetch('/api/auth/validate', {
-        headers: {
-          'Authorization': `Bearer ${accessToken.value}`
-        }
-      });
-
-      if (!response.ok) {
-        // If token is invalid, try to refresh
-        if (response.status === 401 && refreshToken.value) {
-          const refreshResponse = await fetch('/api/auth/refresh-token', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ refreshToken: refreshToken.value })
-          });
-
-          if (refreshResponse.ok) {
-            const { accessToken: newAccessToken, refreshToken: newRefreshToken } = await refreshResponse.json();
-            setAuth({
-              user: user.value!,
-              accessToken: newAccessToken,
-              refreshToken: newRefreshToken
-            });
-            return true;
-          }
-        }
-        clearAuth();
-        return false;
-      }
-
-      const { user: userData } = await response.json();
-      user.value = userData;
-      return true;
-    } catch (error) {
-      console.error('Token validation error:', error);
-      // If we can't reach the API, keep the current auth state
-      // This allows offline access
-      return true;
-    }
-  };
   
-  const initializeAuth = async () => {
+  const initializeAuth = () => {
     if (import.meta.client) {
       const storedAuth = localStorage.getItem('authState');
       if (storedAuth) {
@@ -114,28 +65,12 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     }
-    
-    if (accessToken.value) {
-      const isValid = await validateToken();
-      if (!isValid) {
-        clearAuth();
-        router.push('/login');
-      }
-    }
   };
   
   const logout = () => {
     clearAuth();
     router.push('/login');
   };
-  
-  // Initialize auth state
-  initializeAuth();
-  
-  // Set up periodic token validation (every 5 minutes)
-  if (import.meta.client) {
-    setInterval(validateToken, 5 * 60 * 1000);
-  }
   
   return {
     // State
@@ -150,7 +85,6 @@ export const useAuthStore = defineStore('auth', () => {
     setAuth,
     clearAuth,
     logout,
-    initializeAuth,
-    validateToken
+    initializeAuth
   };
 }); 
