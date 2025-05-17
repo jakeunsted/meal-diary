@@ -46,6 +46,8 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     };
   }
 
+  console.log('Calling API: ', finalUrl);
+
   const response = await fetch(finalUrl, fetchOptions);
   
   // If we get a 401 and have a refresh token, try to refresh
