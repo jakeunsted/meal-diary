@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../../db/models/User.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
 import { Op } from 'sequelize';
+import crypto from 'crypto';
 
 /**
  * Generate JWT tokens
@@ -24,8 +25,14 @@ const generateTokens = async (userId: number) => {
     { expiresIn: '15m' } // Short-lived access token
   );
   
+  // Generate a unique identifier for the refresh token
+  const tokenId = crypto.randomUUID();
+  
   const refreshToken = jwt.sign(
-    { userId },
+    { 
+      userId,
+      tokenId // Add unique identifier to prevent token collisions
+    },
     refreshSecret,
     { expiresIn: '7d' } // 7-day refresh token
   );
@@ -84,13 +91,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     
     // Return user data and tokens
     res.status(200).json({
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        firstName: user.first_name,
-        lastName: user.last_name
-      },
+      user,
       accessToken,
       refreshToken
     });
@@ -150,7 +151,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     // Generate new tokens (this will automatically delete the old one)
     const tokens = await generateTokens(user.id);
     
-    res.status(200).json(tokens);
+    res.status(200).json({
+      ...tokens,
+      user
+    });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
       res.status(403).json({ message: 'Invalid or expired refresh token' });
@@ -196,16 +200,12 @@ export const validateToken = async (req: Request, res: Response): Promise<void> 
     // The authenticateToken middleware has already verified the token
     // and attached the user to the request
     const user = req.user as User & UserAttributes;
-    
+
+    console.log('user', user);
+
     res.status(200).json({
       valid: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        firstName: user.first_name,
-        lastName: user.last_name
-      }
+      user
     });
   } catch (error) {
     console.error('Token validation error:', error);
