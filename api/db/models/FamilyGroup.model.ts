@@ -29,9 +29,12 @@ FamilyGroup.init(
       primaryKey: true,
     },
     random_identifier: {
-      type: DataTypes.STRING(14),
+      type: DataTypes.STRING,
       allowNull: false,
       unique: true,
+      validate: {
+        len: [14, 14],
+      },
     },
     name: {
       type: DataTypes.STRING(100),
