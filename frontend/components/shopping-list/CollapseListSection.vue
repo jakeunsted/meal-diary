@@ -8,6 +8,12 @@
       <div 
         class="collapse-title flex justify-between bg-base-200 items-center px-6"
         @click="toggleCollapse"
+        @touchstart="handlePressStart"
+        @touchend="handlePressEnd"
+        @touchcancel="handlePressEnd"
+        @mousedown="handlePressStart"
+        @mouseup="handlePressEnd"
+        @mouseleave="handlePressEnd"
       >
         <div class="font-semibold">{{ categoryTitle }}</div>
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
@@ -47,7 +53,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['addItem', 'updateItem']);
+const emit = defineEmits(['addItem', 'updateItem', 'longPress']);
 
 const props = defineProps({
   categoryTitle: {
@@ -64,6 +70,21 @@ const props = defineProps({
 
 const isOpen = ref(true);
 const newItemName = ref('');
+let pressTimer = null;
+const LONG_PRESS_DURATION = 500; // 500ms for long press
+
+const handlePressStart = () => {
+  pressTimer = setTimeout(() => {
+    emit('longPress');
+  }, LONG_PRESS_DURATION);
+};
+
+const handlePressEnd = () => {
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+};
 
 // Add computed property to sort items
 const sortedItems = computed(() => {
