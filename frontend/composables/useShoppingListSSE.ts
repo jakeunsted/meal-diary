@@ -47,10 +47,28 @@ export function useShoppingListSSE() {
       }
     });
   };
+
+  const handleRemoteCategoryDeleted = (data: { categoryName: string }) => {
+    console.log('handleRemoteCategoryDeleted', data);
+    const { categoryName } = data;
+    console.log('categoryName', categoryName);
+    
+    if (!shoppingListStore.getShoppingListContent) return;
+    
+    // Remove the category from the store
+    shoppingListStore.$patch((state: ShoppingListState): void => {
+      if (state.shoppingList?.content) {
+        state.shoppingList.content.categories = state.shoppingList.content.categories.filter(
+          (category: ShoppingListCategory): boolean => category.name !== categoryName
+        );
+      }
+    });
+  };
   
   // Return the handlers
   return {
     handleRemoteCategoryAdded,
-    handleRemoteCategorySaved
+    handleRemoteCategorySaved,
+    handleRemoteCategoryDeleted
   };
 }

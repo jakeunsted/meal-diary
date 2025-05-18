@@ -69,7 +69,14 @@ export const deleteCategory = async (req: Request, res: Response) => {
     return res.status(412).json({ message: 'Family group ID and category name are required' });
   }
   try {
-    const shoppingListCategory = await deleteCategoryByName(Number(family_group_id), category_name);
+    const shoppingListCategory = await deleteCategoryByName(Number(family_group_id), category_name as string);
+    sendShoppingListWebhook(
+      Number(family_group_id),
+      category_name as string,
+      null,
+      'delete-category'
+    )
+    return res.status(200).json(shoppingListCategory);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to delete category' });
   }

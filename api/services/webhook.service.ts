@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import ShoppingListCategory from '../db/models/ShoppingList.model.ts';
+import type { ShoppingListCategory } from '../db/models/ShoppingList.model.ts';
 import DailyMeal from '../db/models/DailyMeal.model.ts';
 
 dotenv.config();
@@ -21,13 +21,13 @@ if (!WEBHOOK_BASE_URL) {
  * Sends a webhook for a shopping list event
  * @param {number} familyGroupId - The ID of the family group
  * @param {string} categoryName - The name of the category
- * @param {ShoppingListCategory[]} categoryContents - The contents of the category
+ * @param {ShoppingListCategory} categoryContents - The contents of the category
  * @param {string} eventType - The type of the event
  */
 export const sendShoppingListWebhook = async (
   familyGroupId: number, 
   categoryName: string, 
-  categoryContents: ShoppingListCategory[], 
+  categoryContents: ShoppingListCategory | null, 
   eventType: string
 ) => {
   try {

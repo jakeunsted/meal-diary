@@ -45,7 +45,7 @@ import { useUserStore } from '~/stores/user';
 const { $sse } = useNuxtApp();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
-const { handleRemoteCategoryAdded, handleRemoteCategorySaved } = useShoppingListSSE();
+const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
 const newCategoryName = ref('');
 const loading = ref(true);
@@ -84,7 +84,8 @@ onMounted(async () => {
   if (userStore.user?.family_group_id) {
     sseConnection = $sse.setup(userStore.user.family_group_id, {
       'add-new-category': handleRemoteCategoryAdded,
-      'save-category': handleRemoteCategorySaved
+      'save-category': handleRemoteCategorySaved,
+      'delete-category': handleRemoteCategoryDeleted
     });
   }
 });

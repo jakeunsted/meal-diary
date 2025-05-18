@@ -11,6 +11,8 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
+
+  console.log('shopping-list webhook received', body);
   
   // Store the event
   addWebhookEvent(Number(familyGroupId), body.eventType, {
@@ -20,6 +22,7 @@ export default defineEventHandler(async (event) => {
   
   // Emit the event to all connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
+    type: body.eventType,
     categoryName: body.categoryName,
     categoryContents: body.categoryContents
   });
