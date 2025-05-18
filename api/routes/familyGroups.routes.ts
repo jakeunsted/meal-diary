@@ -1,5 +1,6 @@
 import express from 'express';
 import * as familyGroupController from '../controllers/family-group/familyGroup.controller.ts';
+import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -65,7 +66,7 @@ const router = express.Router();
  *       500:
  *         description: Failed to create family group
  */
-router.post('/', async (req, res, next) => {
+router.post('/', authenticateToken, async (req, res, next) => {
   try {
     await familyGroupController.createFamilyGroup(req, res);
   } catch (error) {
@@ -96,9 +97,52 @@ router.post('/', async (req, res, next) => {
  *       500:
  *         description: Failed to get family group
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     await familyGroupController.getFamilyGroupById(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/join:
+ *   post:
+ *     summary: Join a family group
+ *     tags: [FamilyGroups]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - random_identifier
+ *               - user_id
+ *             properties:
+ *               random_identifier:
+ *                 type: string
+ *                 description: The random identifier of the family group
+ *               user_id:
+ *                 type: integer
+ *                 description: The id of the user who is joining the family group
+ *     responses:
+ *       200:
+ *         description: The user has been added to the family group
+ *       400:
+ *         description: User already in the family group
+ *       404:
+ *         description: Family group not found
+ *       412:
+ *         description: Validation error
+ *       500:
+ *         description: Failed to join family group
+ */
+router.post('/join', authenticateToken, async (req, res, next) => {
+  try {
+    console.log('join group req', req.body);
+    await familyGroupController.joinFamilyGroup(req, res);
   } catch (error) {
     next(error);
   }
