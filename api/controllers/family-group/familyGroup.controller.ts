@@ -1,14 +1,7 @@
 import type { Request, Response } from 'express';
 import { FamilyGroup, User } from '../../db/models/associations.ts';
 import { createBaseShoppingList } from '../../services/shoppingList.service.ts';
-
-// List of 4-letter words for generating random identifiers
-const fourLetterWords = [
-  'bird', 'cake', 'door', 'fish', 'gold', 'hand', 'jump', 'kite',
-  'lion', 'moon', 'nest', 'play', 'rain', 'star', 'tree', 'wolf',
-  'yarn', 'zest', 'bear', 'cold', 'dark', 'easy', 'fast', 'good',
-  'high', 'iron', 'king', 'life', 'mind', 'nice', 'open', 'pure'
-];
+import { fourLetterWords } from '../../constants/four-letter-words.ts';
 
 // Generate a random identifier (three 4-letter words separated by hyphens)
 const generateRandomIdentifier = (): string => {
