@@ -86,9 +86,6 @@ const handleSubmit = async () => {
   errorMessage.value = '';
 
   const user = authStore.user;
-  console.log('access token', authStore.accessToken);
-  console.log('refresh token', authStore.refreshToken);
-  console.log('user', user);
 
   try {
     if (activeTab.value === 'create') {

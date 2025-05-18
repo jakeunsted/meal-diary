@@ -141,7 +141,6 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  */
 router.post('/join', authenticateToken, async (req, res, next) => {
   try {
-    console.log('join group req', req.body);
     await familyGroupController.joinFamilyGroup(req, res);
   } catch (error) {
     next(error);

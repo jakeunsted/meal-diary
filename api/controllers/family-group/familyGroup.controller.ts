@@ -19,7 +19,6 @@ const generateRandomIdentifier = (): string => {
 export const createFamilyGroup = async (req: Request, res: Response) => {
   try {
     const { name, created_by } = req.body;
-    console.log('create family group req', req.body);
 
     // Generate a unique random identifier
     let random_identifier = generateRandomIdentifier();
