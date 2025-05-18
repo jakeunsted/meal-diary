@@ -17,6 +17,7 @@
           :categoryItems="category.items"
           @addItem="saveCategory(category, $event)"
           @updateItem="saveCategory(category, $event)"
+          @longPress="handleLongPress(category)"
         />
       </div>
     </div>
@@ -29,6 +30,14 @@
       :saveNewCategory="saveNewCategory"
       @update:newCategoryName="newCategoryName = $event"
     />
+    <CategoryOptionsModal
+      ref="categoryOptionsModal"
+      v-if="selectedCategory"
+      :categoryName="selectedCategory.name"
+      @untickAll="handleUntickAll"
+      @tickAll="handleTickAll"
+      @deleteGroup="handleDeleteGroup"
+    />
   </div>
 </template>
 
@@ -39,21 +48,62 @@ definePageMeta({
 
 import CollapseListSection from '~/components/shopping-list/CollapseListSection.vue';
 import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
+import CategoryOptionsModal from '~/components/shopping-list/CategoryOptionsModal.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 
 const { $sse } = useNuxtApp();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
-const { handleRemoteCategoryAdded, handleRemoteCategorySaved } = useShoppingListSSE();
+const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
 const newCategoryName = ref('');
 const loading = ref(true);
+const selectedCategory = ref(null);
+const categoryOptionsModal = ref(null);
 
 // Use computed property to ensure reactivity to store changes
 const shoppingCategories = computed(() => 
   shoppingListStore.getShoppingListContent?.categories || []
 );
+
+const handleLongPress = (category) => {
+  selectedCategory.value = category;
+  categoryOptionsModal.value?.showModal();
+};
+
+const handleUntickAll = async () => {
+  if (!selectedCategory.value) return;
+  const updatedCategory = {
+    ...selectedCategory.value,
+    items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
+  };
+  await saveCategory(updatedCategory);
+};
+
+const handleTickAll = async () => {
+  if (!selectedCategory.value) return;
+  const updatedCategory = {
+    ...selectedCategory.value,
+    items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
+  };
+  await saveCategory(updatedCategory);
+};
+
+const handleDeleteGroup = async () => {
+  if (!selectedCategory.value) return;
+  try {
+    await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/delete-category`, {
+      method: 'DELETE',
+      params: {
+        category_name: selectedCategory.value.name
+      }
+    });
+    await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
+  } catch (error) {
+    console.error('Error deleting category:', error);
+  }
+};
 
 const saveNewCategory = async () => {
   if (newCategoryName.value === '') {
@@ -84,7 +134,8 @@ onMounted(async () => {
   if (userStore.user?.family_group_id) {
     sseConnection = $sse.setup(userStore.user.family_group_id, {
       'add-new-category': handleRemoteCategoryAdded,
-      'save-category': handleRemoteCategorySaved
+      'save-category': handleRemoteCategorySaved,
+      'delete-category': handleRemoteCategoryDeleted
     });
   }
 });

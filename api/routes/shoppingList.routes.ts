@@ -238,4 +238,47 @@ router.post('/:family_group_id/save-category', async (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/delete-category:
+ *   delete:
+ *     summary: Delete a category from the shopping list
+ *     description: Deletes a category from the shopping list
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: Family Group ID
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *     query:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - category_name
+ *             properties:
+ *               category_name:
+ *                 type: string
+ *                 description: The name of the category to delete
+ *     responses:
+ *       200:
+ *         description: The deleted category
+ *       404:
+ *         description: Category not found
+ *       412:
+ *         description: Family group ID and category name are required
+ *       500:
+ *         description: Failed to delete category
+ */
+router.delete('/:family_group_id/delete-category', async (req, res, next) => {
+  try {
+    await shoppingListController.deleteCategory(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

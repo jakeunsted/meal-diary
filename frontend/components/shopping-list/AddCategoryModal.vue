@@ -14,6 +14,7 @@
         required
         :value="newCategoryName"
         @input="$emit('update:newCategoryName', $event.target.value)"
+        @keydown.enter.prevent="saveNewCategory"
         :placeholder="$t('Category Name')"
       />
       <div class="flex flex-col items-center">

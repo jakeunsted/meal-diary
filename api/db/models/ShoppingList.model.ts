@@ -9,7 +9,6 @@ export interface ShoppingListItem {
 }
 
 export interface ShoppingListCategory {
-  id: number;
   name: string;
   items: ShoppingListItem[];
 }
