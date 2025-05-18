@@ -18,8 +18,8 @@
         <div class="font-semibold">{{ categoryTitle }}</div>
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
       </div>
-      <div class="collapse-content bg-base-300 text-sm">
-        <div class="py-2" v-if="categoryItems.length > 0" v-auto-animate>
+      <div class="collapse-content bg-base-300 text-sm mb-2 rounded-b-lg">
+        <div class="pt-2" v-if="categoryItems.length > 0" v-auto-animate>
           <div 
             v-for="item in sortedItems" 
             :key="item.id"
@@ -31,7 +31,7 @@
             />
           </div>
         </div>
-        <div class="">
+        <div class="pt-2">
           <button 
             class="btn btn-outline btn-primary btn-sm rounded-lg mr-2 w-[1.5rem]! h-[1.5rem]!"
             @click="addItem(newItemName)"
