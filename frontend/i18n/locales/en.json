@@ -23,5 +23,13 @@
   "Login": "Login",
   "Registration": "Registration",
   "Don't have an account?": "Don't have an account?",
-  "Register": "Register"
+  "Register": "Register",
+  "Family Group": "Family Group",
+  "Create New": "Create New",
+  "Join Existing": "Join Existing",
+  "Family Group Name": "Family Group Name",
+  "Enter family group name": "Enter family group name",
+  "Failed to join family group, please try again!": "Failed to join family group, please try again!",
+  "Family group not found": "Family group not found",
+  "Create family group": "Create family group"
 }
