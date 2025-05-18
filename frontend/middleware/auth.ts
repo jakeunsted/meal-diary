@@ -14,7 +14,12 @@ export default defineNuxtRouteMiddleware((to) => {
     
     // Redirect authenticated users away from public routes
     if (publicRoutes.includes(to.path) && authStore.isAuthenticated) {
-      return navigateTo('/diary');
+      if (authStore.user?.family_group_id) {
+        console.log('User is authenticated and has a family group ID:', authStore.user.family_group_id);
+        return navigateTo('/diary');
+      } else {
+        return navigateTo('/registration/step-2');
+      }
     }
     
     // Redirect unauthenticated users to login for protected routes

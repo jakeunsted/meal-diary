@@ -15,6 +15,7 @@ interface AuthResponse {
     username: string;
     firstName?: string;
     lastName?: string;
+    family_group_id?: number;
   };
   accessToken: string;
   refreshToken: string;
@@ -63,6 +64,12 @@ export const useAuth = () => {
       // Only store auth data if we have a valid response with tokens
       if (response && response.accessToken && response.refreshToken) {
         authStore.setAuth(response);
+        // if no family group id, redirect to registration step 2
+        if (!response.user.family_group_id) {
+          response.redirect = '/registration/step-2';
+        } else {
+          response.redirect = '/diary';
+        }
         return response;
       } else {
         throw new Error('Invalid response from server');
