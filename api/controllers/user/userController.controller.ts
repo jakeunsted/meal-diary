@@ -22,7 +22,7 @@ export const createUser = async (req: Request, res: Response) => {
       where: { 
         [Op.or]: [
           { username },
-          { email }
+          { email: email.toLowerCase() }
         ] 
       } 
     });
@@ -34,7 +34,7 @@ export const createUser = async (req: Request, res: Response) => {
     // Create new user
     const newUser = await User.create({
       username,
-      email,
+      email: email.toLowerCase(),
       password_hash: hashedPassword,
       first_name,
       last_name,
@@ -106,7 +106,7 @@ export const updateUser = async (req: Request, res: Response) => {
     }
     
     if (email && email !== user.dataValues.email) {
-      const existingEmail = await User.findOne({ where: { email } });
+      const existingEmail = await User.findOne({ where: { email: email.toLowerCase() } });
       if (existingEmail) {
         return res.status(409).json({ message: 'Email already in use' });
       }
@@ -115,7 +115,7 @@ export const updateUser = async (req: Request, res: Response) => {
     // Update user
     await user.update({
       username,
-      email,
+      email: email.toLowerCase(),
       first_name,
       last_name,
       family_group_id

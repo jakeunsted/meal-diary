@@ -73,7 +73,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     }
     
     // Find user by email
-    const user = await User.findOne({ where: { email } }) as User & UserAttributes;
+    const user = await User.findOne({ where: { email: email.toLowerCase() } }) as User & UserAttributes;
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
       return;
