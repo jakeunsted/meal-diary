@@ -93,3 +93,34 @@ export const replaceCategoryContents = async (family_group_id: number, category_
 
   return shoppingList.dataValues.content.categories.find(category => category.name === category_name) as ShoppingListCategory;
 }
+
+/**
+ * Deletes a category from a family group's shopping list
+ * @param {number} family_group_id - ID of the family group
+ * @param {string} category_name - Name of the category to delete
+ * @returns {Promise<void>}
+ */
+export const deleteCategory = async (family_group_id: number, category_name: string) => {
+  const shoppingList = await ShoppingList.findOne({
+    where: {
+      family_group_id,
+    },
+  });
+
+  if (!shoppingList) {
+    throw new Error('Shopping list not found');
+  }
+
+  const categoryIndex = shoppingList.dataValues.content.categories.findIndex(category => category.name === category_name);
+  if (categoryIndex === -1) {
+    throw new Error('Category not found');
+  }
+
+  shoppingList.dataValues.content.categories.splice(categoryIndex, 1);
+
+  shoppingList.changed('content' as any, true);
+
+  await shoppingList.save();
+
+  return shoppingList.dataValues.content.categories;
+}
