@@ -20,5 +20,8 @@
   "Welcome to meal diary": "Welcome to meal diary",
   "Email": "Email",
   "Password": "Password",
-  "Login": "Login"
+  "Login": "Login",
+  "Registration": "Registration",
+  "Don't have an account?": "Don't have an account?",
+  "Register": "Register"
 }
