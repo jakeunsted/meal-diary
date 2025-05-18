@@ -100,7 +100,7 @@ export const replaceCategoryContents = async (family_group_id: number, category_
  * @param {string} category_name - Name of the category to delete
  * @returns {Promise<void>}
  */
-export const deleteCategory = async (family_group_id: number, category_name: string) => {
+export const deleteCategoryByName = async (family_group_id: number, category_name: string) => {
   const shoppingList = await ShoppingList.findOne({
     where: {
       family_group_id,

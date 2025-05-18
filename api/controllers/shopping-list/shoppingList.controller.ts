@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { ShoppingList } from '../../db/models/associations.ts';
-import { addNewCategory, replaceCategoryContents, deleteCategory } from '../../services/shoppingList.service.ts';
+import { addNewCategory, replaceCategoryContents, deleteCategoryByName } from '../../services/shoppingList.service.ts';
 import { sendShoppingListWebhook } from '../../services/webhook.service.ts';
 
 // Create a base shopping list for a family group
@@ -69,7 +69,7 @@ export const deleteCategory = async (req: Request, res: Response) => {
     return res.status(412).json({ message: 'Family group ID and category name are required' });
   }
   try {
-    const shoppingListCategory = await deleteCategory(Number(family_group_id), category_name);
+    const shoppingListCategory = await deleteCategoryByName(Number(family_group_id), category_name);
   } catch (error) {
     return res.status(500).json({ message: 'Failed to delete category' });
   }
