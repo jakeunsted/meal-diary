@@ -201,8 +201,6 @@ export const validateToken = async (req: Request, res: Response): Promise<void> 
     // and attached the user to the request
     const user = req.user as User & UserAttributes;
 
-    console.log('user', user);
-
     res.status(200).json({
       valid: true,
       user

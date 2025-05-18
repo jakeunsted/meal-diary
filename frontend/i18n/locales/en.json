@@ -20,5 +20,22 @@
   "Welcome to meal diary": "Welcome to meal diary",
   "Email": "Email",
   "Password": "Password",
-  "Login": "Login"
+  "Login": "Login",
+  "Registration": "Registration",
+  "Don't have an account?": "Don't have an account?",
+  "Register": "Register",
+  "Family Group": "Family Group",
+  "Create New": "Create New",
+  "Join Existing": "Join Existing",
+  "Family Group Name": "Family Group Name",
+  "Enter family group name": "Enter family group name",
+  "Failed to join family group, please try again!": "Failed to join family group, please try again!",
+  "Family group not found": "Family group not found",
+  "Create Family Group": "Create Family Group",
+  "Join Family Group": "Join Family Group",
+  "Logging out...": "Logging out...",
+  "Too many login attempts, please try again after 15 minutes": "Too many login attempts, please try again after 15 minutes",
+  "Too many logout attempts, please try again after 15 minutes": "Too many logout attempts, please try again after 15 minutes",
+  "Too many token refresh attempts, please try again later": "Too many token refresh attempts, please try again later",
+  "Too many token validation requests, please try again later": "Too many token validation requests, please try again later"
 }

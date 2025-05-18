@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
 
 interface AuthState {
@@ -22,12 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value);
   
   // Actions
-  const setAuth = (authData: { user: User; accessToken: string; refreshToken: string }) => {
+  const setAuth = async (authData: { user: User; accessToken: string; refreshToken: string }) => {
     user.value = authData.user;
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
     
-    // Save to localStorage
+    // Save to Preferences
     if (import.meta.client) {
       const authState: AuthState = {
         user: authData.user,
@@ -35,41 +36,64 @@ export const useAuthStore = defineStore('auth', () => {
         refreshToken: authData.refreshToken,
         isAuthenticated: true
       };
-      localStorage.setItem('authState', JSON.stringify(authState));
+      await Preferences.set({
+        key: 'authState',
+        value: JSON.stringify(authState)
+      });
     }
   };
   
-  const clearAuth = () => {
+  const clearAuth = async () => {
+    // Clear state first
     user.value = null;
     accessToken.value = null;
     refreshToken.value = null;
     
-    // Clear localStorage
+    // Then clear storage
     if (import.meta.client) {
-      localStorage.removeItem('authState');
-    }
-  };
-  
-  const initializeAuth = () => {
-    if (import.meta.client) {
-      const storedAuth = localStorage.getItem('authState');
-      if (storedAuth) {
-        try {
-          const authState: AuthState = JSON.parse(storedAuth);
-          user.value = authState.user;
-          accessToken.value = authState.accessToken;
-          refreshToken.value = authState.refreshToken;
-        } catch (error) {
-          console.error('Failed to parse stored auth data:', error);
-          clearAuth();
-        }
+      try {
+        await Preferences.remove({ key: 'authState' });
+      } catch (error) {
+        console.error('Failed to clear auth state from storage:', error);
+      }
+      try {
+        await Preferences.remove({ key: 'mealDiary' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'shoppingList' });
+      } catch (error) {
+        // zzz
       }
     }
   };
   
-  const logout = () => {
-    clearAuth();
-    router.push('/login');
+  const initializeAuth = async () => {
+    if (!import.meta.client) return;
+    
+    try {
+      const { value } = await Preferences.get({ key: 'authState' });
+      if (value) {
+        const authState: AuthState = JSON.parse(value);
+        // Only restore if we have all required data
+        if (authState.user && authState.accessToken && authState.refreshToken) {
+          user.value = authState.user;
+          accessToken.value = authState.accessToken;
+          refreshToken.value = authState.refreshToken;
+        } else {
+          // If data is incomplete, clear it
+          await clearAuth();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to initialize auth state:', error);
+      await clearAuth();
+    }
+  };
+  
+  const logout = async () => {
+    await clearAuth();
   };
   
   return {

@@ -6,6 +6,7 @@ import type { ShoppingListAttributes } from './ShoppingList.model.ts';
 
 interface FamilyGroupAttributes {
   id: number;
+  random_identifier: string;
   name: string;
   created_by: number;
   created_at?: Date;
@@ -26,6 +27,14 @@ FamilyGroup.init(
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
+    },
+    random_identifier: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      unique: true,
+      validate: {
+        len: [14, 14],
+      },
     },
     name: {
       type: DataTypes.STRING(100),

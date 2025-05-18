@@ -19,7 +19,6 @@ export const authenticateToken = async (
   try {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
-    console.log('token', token);
 
     if (!token) {
       res.status(401).json({ message: 'No token provided' });
@@ -33,7 +32,7 @@ export const authenticateToken = async (
 
     const decoded = jwt.verify(token, jwtSecret) as { userId: number };
     const user = await User.findByPk(decoded.userId);
-    console.log('user', user);
+
     if (!user) {
       res.status(401).json({ message: 'User not found' });
       return;

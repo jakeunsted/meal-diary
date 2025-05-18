@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 // Rate limit for login attempts
 export const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 5 attempts per window
+  max: 20, // 5 attempts per window
   message: { message: 'Too many login attempts, please try again after 15 minutes' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -12,7 +12,7 @@ export const loginLimiter = rateLimit({
 // Rate limit for logout
 export const logoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 10, // 5 attempts per window
+  max: 20, // 5 attempts per window
   message: { message: 'Too many logout attempts, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,

@@ -11,8 +11,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-
-  console.log('shopping-list webhook received', body);
   
   // Store the event
   addWebhookEvent(Number(familyGroupId), body.eventType, {
