@@ -7,6 +7,7 @@ import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
+import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -14,6 +15,9 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+
+// Apply rate limiting to all routes
+app.use(apiLimiter);
 
 // Routes
 app.use('/users', userRoutes);

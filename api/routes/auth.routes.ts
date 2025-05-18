@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import { login, refreshToken, logout, validateToken } from '../controllers/auth/auth.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter } from '../middleware/rateLimit.middleware.ts';
 
 const router = Router();
 
@@ -68,7 +69,7 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                   type: string
  *                   description: Error message.
  */
-router.post('/login', wrapHandler(login));
+router.post('/login', loginLimiter, wrapHandler(login));
 
 /**
  * Refresh token route to issue new tokens.
@@ -115,7 +116,7 @@ router.post('/login', wrapHandler(login));
  *                   type: string
  *                   description: Error message.
  */
-router.post('/refresh-token', wrapHandler(refreshToken));
+router.post('/refresh-token', refreshTokenLimiter, wrapHandler(refreshToken));
 
 /**
  * Logout route to invalidate tokens.
@@ -148,7 +149,7 @@ router.post('/refresh-token', wrapHandler(refreshToken));
  *                   type: string
  *                   description: Error message.
  */
-router.post('/logout', authenticateToken, wrapHandler(logout));
+router.post('/logout', logoutLimiter, authenticateToken, wrapHandler(logout));
 
 /**
  * Validate token route to check token validity.
@@ -187,6 +188,6 @@ router.post('/logout', authenticateToken, wrapHandler(logout));
  *                   type: string
  *                   description: Error message.
  */
-router.get('/validate', authenticateToken, wrapHandler(validateToken));
+router.get('/validate', validateTokenLimiter, authenticateToken, wrapHandler(validateToken));
 
 export default router; 
