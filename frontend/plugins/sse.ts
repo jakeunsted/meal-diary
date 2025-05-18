@@ -13,7 +13,6 @@ export default defineNuxtPlugin(() => {
       
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        console.log('SSE received:', data);
         
         // Call the appropriate handler if it exists
         if (data.type === 'delete-category' && handlers['delete-category']) {

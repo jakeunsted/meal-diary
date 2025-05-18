@@ -49,9 +49,7 @@ export function useShoppingListSSE() {
   };
 
   const handleRemoteCategoryDeleted = (data: { categoryName: string }) => {
-    console.log('handleRemoteCategoryDeleted', data);
     const { categoryName } = data;
-    console.log('categoryName', categoryName);
     
     if (!shoppingListStore.getShoppingListContent) return;
     
