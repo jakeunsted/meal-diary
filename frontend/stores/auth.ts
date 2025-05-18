@@ -44,36 +44,56 @@ export const useAuthStore = defineStore('auth', () => {
   };
   
   const clearAuth = async () => {
+    // Clear state first
     user.value = null;
     accessToken.value = null;
     refreshToken.value = null;
     
-    // Clear Preferences
+    // Then clear storage
     if (import.meta.client) {
-      await Preferences.remove({ key: 'authState' });
+      try {
+        await Preferences.remove({ key: 'authState' });
+      } catch (error) {
+        console.error('Failed to clear auth state from storage:', error);
+      }
+      try {
+        await Preferences.remove({ key: 'mealDiary' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'shoppingList' });
+      } catch (error) {
+        // zzz
+      }
     }
   };
   
   const initializeAuth = async () => {
-    if (import.meta.client) {
+    if (!import.meta.client) return;
+    
+    try {
       const { value } = await Preferences.get({ key: 'authState' });
       if (value) {
-        try {
-          const authState: AuthState = JSON.parse(value);
+        const authState: AuthState = JSON.parse(value);
+        // Only restore if we have all required data
+        if (authState.user && authState.accessToken && authState.refreshToken) {
           user.value = authState.user;
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
-        } catch (error) {
-          console.error('Failed to parse stored auth data:', error);
+        } else {
+          // If data is incomplete, clear it
           await clearAuth();
         }
       }
+    } catch (error) {
+      console.error('Failed to initialize auth state:', error);
+      await clearAuth();
     }
   };
   
   const logout = async () => {
     await clearAuth();
-    router.push('/login');
   };
   
   return {
