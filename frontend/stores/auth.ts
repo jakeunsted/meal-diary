@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
 
 interface AuthState {
@@ -22,12 +23,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value);
   
   // Actions
-  const setAuth = (authData: { user: User; accessToken: string; refreshToken: string }) => {
+  const setAuth = async (authData: { user: User; accessToken: string; refreshToken: string }) => {
     user.value = authData.user;
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
     
-    // Save to localStorage
+    // Save to Preferences
     if (import.meta.client) {
       const authState: AuthState = {
         user: authData.user,
@@ -35,40 +36,43 @@ export const useAuthStore = defineStore('auth', () => {
         refreshToken: authData.refreshToken,
         isAuthenticated: true
       };
-      localStorage.setItem('authState', JSON.stringify(authState));
+      await Preferences.set({
+        key: 'authState',
+        value: JSON.stringify(authState)
+      });
     }
   };
   
-  const clearAuth = () => {
+  const clearAuth = async () => {
     user.value = null;
     accessToken.value = null;
     refreshToken.value = null;
     
-    // Clear localStorage
+    // Clear Preferences
     if (import.meta.client) {
-      localStorage.removeItem('authState');
+      await Preferences.remove({ key: 'authState' });
     }
   };
   
-  const initializeAuth = () => {
+  const initializeAuth = async () => {
     if (import.meta.client) {
-      const storedAuth = localStorage.getItem('authState');
-      if (storedAuth) {
+      const { value } = await Preferences.get({ key: 'authState' });
+      if (value) {
         try {
-          const authState: AuthState = JSON.parse(storedAuth);
+          const authState: AuthState = JSON.parse(value);
           user.value = authState.user;
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
         } catch (error) {
           console.error('Failed to parse stored auth data:', error);
-          clearAuth();
+          await clearAuth();
         }
       }
     }
   };
   
-  const logout = () => {
-    clearAuth();
+  const logout = async () => {
+    await clearAuth();
     router.push('/login');
   };
   
