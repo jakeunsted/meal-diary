@@ -42,6 +42,12 @@
             <span v-if="isLoading" class="loading loading-spinner"></span>
             <span v-else>{{ $t('Login') }}</span>
           </button>
+          <div class="text-center">
+            <p>
+              {{ $t('Don\'t have an account?') }} 
+              <a class="link link-hover link-primary" href="/registration/step-1">{{ $t('Register') }}</a>
+            </p>
+          </div>
         </form>
       </div>
     </div>
