@@ -14,6 +14,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     },
     eventSource: null as EventSource | null,
     currentWeekStart: null as string | null,
+    lastFetchTime: null as number | null,
   }),
 
   getters: {
@@ -36,7 +37,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       if (import.meta.client) {
         const dataToStore = {
           weeklyMeals: this.weeklyMeals,
-          currentWeekStart: this.currentWeekStart
+          currentWeekStart: this.currentWeekStart,
+          lastFetchTime: this.lastFetchTime
         };
         await Preferences.set({
           key: 'mealDiary',
@@ -51,9 +53,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         const { value } = await Preferences.get({ key: 'mealDiary' });
         if (value) {
           try {
-            const { weeklyMeals, currentWeekStart } = JSON.parse(value);
+            const { weeklyMeals, currentWeekStart, lastFetchTime } = JSON.parse(value);
             this.weeklyMeals = weeklyMeals;
             this.currentWeekStart = currentWeekStart;
+            this.lastFetchTime = lastFetchTime;
             return true;
           } catch (error) {
             console.error('Failed to parse stored meal diary:', error);
@@ -68,37 +71,53 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       // Try to load from Preferences first
       const loadedFromStorage = await this.loadFromLocalStorage();
       
-      // Always fetch fresh data, but if we loaded from storage, use that week
-      if (loadedFromStorage && this.currentWeekStart) {
-        await this.fetchWeeklyMeals(new Date(this.currentWeekStart));
-      } else {
-        // If no stored data or failed to load, fetch current week
+      // Only fetch if we don't have data or if it's too old
+      const now = Date.now();
+      const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
+      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+      console.log('loadedFromStorage', loadedFromStorage);
+      console.log('this.lastFetchTime', this.lastFetchTime);
+      console.log('cacheAge', cacheAge);
+      console.log('CACHE_DURATION', CACHE_DURATION);
+
+      if (!loadedFromStorage || !this.lastFetchTime || cacheAge > CACHE_DURATION) {
         await this.fetchWeeklyMeals();
       }
     },
 
     // Fetch daily meals for week from API
-    async fetchWeeklyMeals(weekStartDate?: Date) {
+    async fetchWeeklyMeals(weekStartDate?: Date, forceRefresh = false) {
       const userStore = useUserStore();
       if (!userStore.user?.family_group_id) return;
 
       try {
-        this.loading = true;
         const dateToUse = weekStartDate || this.getWeekStartDate();
         const weekStartDateStr = new Date(dateToUse).toISOString();
-        this.currentWeekStart = weekStartDateStr;
         
-        const familyGroupId = userStore.user.family_group_id;
-        const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
-        
-        // Add week_start_date to each meal
-        this.weeklyMeals = response.map(meal => ({
-          ...meal,
-          week_start_date: weekStartDateStr
-        }));
+        // Only fetch if we don't have data for this week or if force refresh is requested
+        const hasDataForWeek = this.currentWeekStart === weekStartDateStr && this.weeklyMeals.length > 0;
+        const now = Date.now();
+        const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
+        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-        // Save to Preferences after successful fetch
-        await this.saveToLocalStorage();
+        if (!hasDataForWeek || forceRefresh || cacheAge > CACHE_DURATION) {
+          this.loading = true;
+          this.currentWeekStart = weekStartDateStr;
+          
+          const familyGroupId = userStore.user.family_group_id;
+          const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
+          
+          // Add week_start_date to each meal
+          this.weeklyMeals = response.map(meal => ({
+            ...meal,
+            week_start_date: weekStartDateStr
+          }));
+
+          this.lastFetchTime = now;
+          // Save to Preferences after successful fetch
+          await this.saveToLocalStorage();
+        }
       } catch (error) {
         console.error('Error fetching weekly meals:', error);
         // If fetch fails, try to load from Preferences
@@ -196,58 +215,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       }
     },
 
-    // Initialize SSE connection for real-time updates
-    initSSEConnection() {
-      const userStore = useUserStore();
-      if (!userStore.user?.family_group_id) return;
-
-      // Close existing connection if any
-      if (this.eventSource) {
-        this.eventSource.close();
-      }
-
-      // Create new SSE connection
-      this.eventSource = new EventSource(`/api/server-sent-events/${userStore.user.family_group_id}`);
-
-      // Handle initial data
-      this.eventSource.onmessage = async (event) => {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'initial') {
-          // Handle initial data
-          if (data.data.mealDiary && data.data.mealDiary.length > 0) {
-            // Update weekly meals with initial data
-            this.updateMealsFromEvents(data.data.mealDiary);
-            // Save to Preferences after receiving initial data
-            await this.saveToLocalStorage();
-          }
-        } else if (data.type === 'update-daily-meal') {
-          // Handle daily meal update
-          this.handleDailyMealUpdate(data.data.dailyMeal);
-          // Save to Preferences after receiving update
-          await this.saveToLocalStorage();
-        }
-      };
-
-      // Handle connection errors
-      this.eventSource.onerror = (error) => {
-        console.error('SSE connection error:', error);
-        // Attempt to reconnect after a delay
-        setTimeout(() => this.initSSEConnection(), 5000);
-      };
-    },
-
-    // Update meals from events
-    updateMealsFromEvents(events: any[]) {
-      // Process events and update weekly meals
-      events.forEach(event => {
-        if (event.type === 'update-daily-meal') {
-          this.handleDailyMealUpdate(event.data.dailyMeal);
-        }
-      });
-    },
-
-    // Handle daily meal update
+    // Handle daily meal update from SSE
     handleDailyMealUpdate(dailyMeal: DailyMeal) {
       if (!dailyMeal) return;
 
@@ -271,14 +239,19 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString()
         });
       }
+
+      // Save to Preferences after receiving update
+      this.saveToLocalStorage();
     },
 
-    // Clean up SSE connection
-    cleanupSSEConnection() {
-      if (this.eventSource) {
-        this.eventSource.close();
-        this.eventSource = null;
-      }
+    // Update meals from events
+    updateMealsFromEvents(events: any[]) {
+      // Process events and update weekly meals
+      events.forEach(event => {
+        if (event.type === 'update-daily-meal') {
+          this.handleDailyMealUpdate(event.data.dailyMeal);
+        }
+      });
     }
   },
 });

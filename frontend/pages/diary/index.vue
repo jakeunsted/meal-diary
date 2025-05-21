@@ -101,11 +101,9 @@ const handleWeekChange = (weekStartDate) => {
 onMounted(async () => {
   if (userStore.user?.family_group_id) {
     mealDiaryStoreComputed.value.fetchWeeklyMeals();
-    mealDiaryStoreComputed.value.initSSEConnection();
   } else {
     await userStore.fetchUser();
     mealDiaryStoreComputed.value.fetchWeeklyMeals();
-    mealDiaryStoreComputed.value.initSSEConnection();
   }
 });
 
@@ -113,11 +111,6 @@ onMounted(async () => {
 watch(() => userStore.user?.family_group_id, (newId) => {
   if (newId) {
     mealDiaryStoreComputed.value.fetchWeeklyMeals();
-    mealDiaryStoreComputed.value.initSSEConnection();
   }
 });
-
-// onUnmounted(() => {
-//   mealDiaryStoreComputed.value.cleanupSSEConnection();
-// });
 </script>

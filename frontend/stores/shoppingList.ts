@@ -41,9 +41,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
       return false;
     },
 
-    async fetchShoppingList(familyGroupId: number) {
+    async fetchShoppingList(familyGroupId: number, forceRefresh = false) {
       try {
-        if (!this.shoppingList) {
+        // Only fetch if we don't have data or if force refresh is requested
+        if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
           const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);

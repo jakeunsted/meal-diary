@@ -16,4 +16,5 @@ export interface MealDiaryState {
   };
   eventSource: EventSource | null;
   currentWeekStart: string | null;
+  lastFetchTime: number | null;
 }

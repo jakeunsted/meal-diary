@@ -118,8 +118,6 @@ const saveCategory = async (category, event) => {
   await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
 }
 
-let sseConnection = null;
-
 onMounted(async () => {
   // Temp hardcoded user
   await userStore.fetchUser();
@@ -129,18 +127,5 @@ onMounted(async () => {
   }
 
   loading.value = false;
-  
-  // Setup SSE for real-time updates to shopping list using the plugin
-  if (userStore.user?.family_group_id) {
-    sseConnection = $sse.setup(userStore.user.family_group_id, {
-      'add-new-category': handleRemoteCategoryAdded,
-      'save-category': handleRemoteCategorySaved,
-      'delete-category': handleRemoteCategoryDeleted
-    });
-  }
 });
-
-// onUnmounted(() => {
-//   $sse.close();
-// });
 </script>
