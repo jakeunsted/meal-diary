@@ -11,9 +11,17 @@
       :value="meal"
       @input="$emit('update:meal', $event.target.value)"
       :placeholder="$t('Meal Name')"
+      :disabled="isLoading"
     />
     <div class="flex flex-col items-center">
-      <button class="btn btn-outline btn-primary btn-sm" @click="saveMeal">{{ $t('Save') }}</button>
+      <button 
+        class="btn btn-outline btn-primary btn-sm" 
+        @click="saveMeal"
+        :disabled="isLoading"
+      >
+        <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
+        <span v-else>{{ $t('Save') }}</span>
+      </button>
     </div>
   </div>
 </template>
@@ -32,7 +40,14 @@ const props = defineProps({
   },
 });
 
-const saveMeal = () => {
-  emit('saveMeal', props.meal);
+const isLoading = ref(false);
+
+const saveMeal = async () => {
+  isLoading.value = true;
+  try {
+    await emit('saveMeal', props.meal);
+  } finally {
+    isLoading.value = false;
+  }
 }
 </script>
