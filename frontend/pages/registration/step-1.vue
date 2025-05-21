@@ -119,7 +119,7 @@ const handleRegistration = async () => {
   }
 
   try {
-    const response = await fetch('/api/users', {
+    const response = await fetch('/api/user', {
       method: 'POST',
       body: JSON.stringify({ username: username.value, first_name: first_name.value, last_name: last_name.value, password: password.value }),
     });
