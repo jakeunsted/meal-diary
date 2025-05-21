@@ -19,6 +19,9 @@
                 class="input input-bordered" 
                 required
               />
+              <div v-if="errors.username" class="text-error text-sm mt-1">
+                {{ errors.username }}
+              </div>
 
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('Email') }}</span>
@@ -30,6 +33,9 @@
                 class="input input-bordered" 
                 required
               />
+              <div v-if="errors.email" class="text-error text-sm mt-1">
+                {{ errors.email }}
+              </div>
 
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('First name') }}</span>
@@ -41,6 +47,9 @@
                 class="input input-bordered" 
                 required
               />
+              <div v-if="errors.first_name" class="text-error text-sm mt-1">
+                {{ errors.first_name }}
+              </div>
 
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('Last name') }}</span>
@@ -52,6 +61,9 @@
                 class="input input-bordered"
                 required
               />
+              <div v-if="errors.last_name" class="text-error text-sm mt-1">
+                {{ errors.last_name }}
+              </div>
 
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('Password') }}</span>
@@ -63,6 +75,9 @@
                 class="input input-bordered"
                 required
               />
+              <div v-if="errors.password" class="text-error text-sm mt-1">
+                {{ errors.password }}
+              </div>
 
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('Confirm password') }}</span>
@@ -74,6 +89,13 @@
                 class="input input-bordered"
                 required
               />
+              <div v-if="errors.confirm_password" class="text-error text-sm mt-1">
+                {{ errors.confirm_password }}
+              </div>
+
+              <div v-if="errors.general" class="text-error text-center mt-4">
+                {{ errors.general }}
+              </div>
 
               <button type="submit" class="btn btn-primary w-full mt-4">
                 {{ $t('Register') }}
@@ -98,58 +120,96 @@ const password = ref('');
 const confirm_password = ref('');
 const email = ref('');
 
+const errors = ref({
+  username: '',
+  email: '',
+  first_name: '',
+  last_name: '',
+  password: '',
+  confirm_password: '',
+  general: ''
+});
+
+const clearErrors = () => {
+  errors.value = {
+    username: '',
+    email: '',
+    first_name: '',
+    last_name: '',
+    password: '',
+    confirm_password: '',
+    general: ''
+  };
+};
+
 const handleRegistration = async () => {
+  clearErrors();
+  let hasErrors = false;
+
   // validate form inputs
   if (!username.value) {
-    alert('Username is required');
-    return;
+    errors.value.username = 'Username is required';
+    hasErrors = true;
   }
 
   if (!email.value) {
-    alert('Email is required');
-    return;
+    errors.value.email = 'Email is required';
+    hasErrors = true;
   }
 
   if (!first_name.value) {
-    alert('First name is required');
-    return;
+    errors.value.first_name = 'First name is required';
+    hasErrors = true;
   }
 
   if (!last_name.value) {
-    alert('Last name is required');
-    return;
+    errors.value.last_name = 'Last name is required';
+    hasErrors = true;
   }
 
   if (!password.value) {
-    alert('Password is required');
-    return;
+    errors.value.password = 'Password is required';
+    hasErrors = true;
   }
 
   if (!confirm_password.value) {
-    alert('You need to confirm your password');
-    return;
+    errors.value.confirm_password = 'You need to confirm your password';
+    hasErrors = true;
   }
 
   if (password.value !== confirm_password.value) {
-    alert('Passwords do not match');
+    errors.value.confirm_password = 'Passwords do not match';
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
     return;
   }
 
   try {
     const response = await fetch('/api/user', {
       method: 'POST',
-      body: JSON.stringify({ username: username.value, email: email.value, first_name: first_name.value, last_name: last_name.value, password: password.value }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        username: username.value, 
+        email: email.value, 
+        first_name: first_name.value, 
+        last_name: last_name.value, 
+        password: password.value 
+      }),
     });
 
     if (response.ok) {
-      alert('User registered successfully');
       navigateTo('/registration/step-2');
     } else {
-      alert('Failed to register user');
+      const data = await response.json();
+      errors.value.general = data.message || 'Failed to register user';
     }
   } catch (error) {
     console.error('Error registering user:', error);
-    alert('Failed to register user');
+    errors.value.general = 'Failed to register user';
   }
 };
 </script>
