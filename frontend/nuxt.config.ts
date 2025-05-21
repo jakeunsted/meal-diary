@@ -7,9 +7,6 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       baseUrl: process.env.BASE_URL,
-      auth0Domain: process.env.AUTH0_DOMAIN,
-      auth0ClientId: process.env.AUTH0_CLIENT_ID,
-      auth0Audience: process.env.AUTH0_AUDIENCE,
     }
   },
   css: [
