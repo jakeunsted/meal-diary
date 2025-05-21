@@ -222,6 +222,15 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     handleDailyMealUpdate(dailyMeal: DailyMeal) {
       if (!dailyMeal) return;
 
+      // Only process updates for the current week being viewed
+      if (dailyMeal.week_start_date !== this.currentWeekStart) {
+        console.log('Ignoring update for different week:', {
+          receivedWeek: dailyMeal.week_start_date,
+          currentWeek: this.currentWeekStart
+        });
+        return;
+      }
+
       // Find existing meal for this day
       const existingDayMealIndex = this.weeklyMeals.findIndex(
         meal => meal.day_of_week === dailyMeal.day_of_week
