@@ -20,7 +20,7 @@
                 required
               />
 
-              <label class="label mb-2">
+              <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('Email') }}</span>
               </label>
               <input 
