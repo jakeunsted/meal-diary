@@ -37,5 +37,9 @@
   "Too many login attempts, please try again after 15 minutes": "Too many login attempts, please try again after 15 minutes",
   "Too many logout attempts, please try again after 15 minutes": "Too many logout attempts, please try again after 15 minutes",
   "Too many token refresh attempts, please try again later": "Too many token refresh attempts, please try again later",
-  "Too many token validation requests, please try again later": "Too many token validation requests, please try again later"
+  "Too many token validation requests, please try again later": "Too many token validation requests, please try again later",
+  "Username": "Username",
+  "First name": "First name",
+  "Last name": "Last name",
+  "Confirm password": "Confirm password"
 }

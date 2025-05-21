@@ -20,6 +20,17 @@
                 required
               />
 
+              <label class="label mb-2">
+                <span class="label-text">{{ $t('Email') }}</span>
+              </label>
+              <input 
+                type="text" 
+                v-model="email" 
+                placeholder="Email" 
+                class="input input-bordered" 
+                required
+              />
+
               <label class="label mt-4 mb-2">
                 <span class="label-text">{{ $t('First name') }}</span>
               </label>
@@ -85,11 +96,17 @@ const first_name = ref('');
 const last_name = ref('');
 const password = ref('');
 const confirm_password = ref('');
+const email = ref('');
 
 const handleRegistration = async () => {
   // validate form inputs
   if (!username.value) {
     alert('Username is required');
+    return;
+  }
+
+  if (!email.value) {
+    alert('Email is required');
     return;
   }
 
@@ -121,7 +138,7 @@ const handleRegistration = async () => {
   try {
     const response = await fetch('/api/user', {
       method: 'POST',
-      body: JSON.stringify({ username: username.value, first_name: first_name.value, last_name: last_name.value, password: password.value }),
+      body: JSON.stringify({ username: username.value, email: email.value, first_name: first_name.value, last_name: last_name.value, password: password.value }),
     });
 
     if (response.ok) {
