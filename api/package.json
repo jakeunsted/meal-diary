@@ -5,7 +5,9 @@
   "scripts": {
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "dev": "node --experimental-strip-types --experimental-transform-types --watch index.ts"
+    "dev": "node --experimental-strip-types --experimental-transform-types --watch index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
   },
   "author": "Jake Unsted",
   "license": "ISC",
