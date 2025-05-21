@@ -39,7 +39,9 @@ import { ref, computed, watchEffect } from 'vue';
 
 // Calculate the start date of a given week and year.
 const normalizeDate = (date) => {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const normalized = new Date(date);
+  normalized.setHours(0, 0, 0, 0);
+  return normalized;
 };
 
 const getFirstDayOfWeek = (year, week) => {

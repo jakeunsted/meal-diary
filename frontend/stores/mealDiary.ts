@@ -29,7 +29,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       const now = new Date();
       const day = now.getDay();
       const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      return new Date(now.setDate(diff));
+      const startDate = new Date(now);
+      startDate.setDate(diff);
+      startDate.setHours(0, 0, 0, 0);
+      return startDate;
     },
 
     // Save to Preferences
