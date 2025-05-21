@@ -31,9 +31,9 @@
             />
           </div>
         </div>
-        <div class="pt-2">
+        <div class="pt-2 flex items-center gap-2">
           <button 
-            class="btn btn-outline btn-primary btn-sm rounded-lg mr-2 w-[1.5rem]! h-[1.5rem]!"
+            class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
             @click="addItem(newItemName)"
             v-on:keyup.enter="addItem(newItemName)"
           >
