@@ -281,4 +281,49 @@ router.delete('/:family_group_id/delete-category', async (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/update-order:
+ *   post:
+ *     summary: Update the order of categories in a shopping list
+ *     description: Updates the order of categories in the shopping list
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: Family Group ID
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - categories
+ *             properties:
+ *               categories:
+ *                 type: array
+ *                 description: The ordered list of categories
+ *                 items:
+ *                   $ref: '#/components/schemas/ShoppingListCategory'
+ *     responses:
+ *       200:
+ *         description: The updated shopping list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ShoppingList'
+ *       500:
+ *         description: Failed to update category order
+ */
+router.post('/:family_group_id/update-order', async (req, res, next) => {
+  try {
+    await shoppingListController.updateCategoryOrder(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

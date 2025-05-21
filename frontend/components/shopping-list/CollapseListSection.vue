@@ -6,7 +6,7 @@
       :class="{ 'collapse-open': isOpen, 'collapse-close': !isOpen }"
     >
       <div 
-        class="collapse-title flex justify-between bg-base-200 items-center px-6"
+        class="collapse-title flex justify-between bg-base-200 items-center px-2"
         @click="toggleCollapse"
         @touchstart="handlePressStart"
         @touchend="handlePressEnd"
@@ -15,7 +15,23 @@
         @mouseup="handlePressEnd"
         @mouseleave="handlePressEnd"
       >
-        <div class="font-semibold">{{ categoryTitle }}</div>
+        <div class="flex items-center gap-2">
+          <div
+            class="cursor-move w-6 h-6 flex items-center justify-center relative z-10"
+            draggable="true"
+            @dragstart="handleDragStart"
+            @dragend="handleDragEnd"
+            @mousedown.stop
+            @touchstart.stop
+            @click.stop
+          >
+            <fa 
+              icon="grip-vertical"
+              class="text-lg text-gray-600"
+            />
+          </div>
+          <div class="font-semibold">{{ categoryTitle }}</div>
+        </div>
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
       </div>
       <div class="collapse-content bg-base-300 text-sm mb-2 rounded-b-lg">
@@ -53,7 +69,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['addItem', 'updateItem', 'longPress']);
+const emit = defineEmits(['addItem', 'updateItem', 'longPress', 'dragStart', 'dragEnd']);
 
 const props = defineProps({
   categoryTitle: {
@@ -148,6 +164,15 @@ const removeItem = (id) => {
     itemName: item.name,
     itemChecked: false
   });
+};
+
+const handleDragStart = (event) => {
+  event.dataTransfer.setData('text/plain', props.categoryTitle);
+  emit('dragStart', props.categoryTitle);
+};
+
+const handleDragEnd = () => {
+  emit('dragEnd');
 };
 </script>
 

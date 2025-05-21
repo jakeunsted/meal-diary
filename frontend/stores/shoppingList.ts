@@ -161,6 +161,27 @@ export const useShoppingListStore = defineStore('shoppingList', {
         // Save to Preferences after local update
         await this.saveToLocalStorage();
       }
+    },
+
+    async updateCategoryOrder(familyGroupId: number, categories: ShoppingListCategory[]) {
+      try {
+        this.isLoading = true;
+        this.error = null;
+        const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}/update-order`, {
+          method: 'POST',
+          body: { categories },
+        });
+        if (this.shoppingList) {
+          this.shoppingList.content.categories = categories;
+          // Save to Preferences after successful update
+          await this.saveToLocalStorage();
+        }
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to update category order';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
     }
   }
 })

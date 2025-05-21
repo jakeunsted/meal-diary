@@ -46,6 +46,12 @@ watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
             shoppingListStore.saveToLocalStorage();
           }
         },
+        'update-category-order': (data) => {
+          if (shoppingListStore.shoppingList?.content) {
+            shoppingListStore.shoppingList.content.categories = data.categoryContents;
+            shoppingListStore.saveToLocalStorage();
+          }
+        },
 
         // Meal diary events
         'update-daily-meal': (data) => mealDiaryStore.handleDailyMealUpdate(data.dailyMeal),

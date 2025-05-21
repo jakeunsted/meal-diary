@@ -28,7 +28,21 @@ export default defineNuxtConfig({
   fontawesome: {
     component: 'fa',
     icons: {
-      solid: ['house', 'list', 'plus', 'circle-user', 'chevron-left', 'chevron-right', 'chevron-up', 'chevron-down', 'plus', 'xmark', 'pencil'],
+      solid: [
+        'house', 
+        'list', 
+        'plus', 
+        'circle-user',
+        'chevron-left',
+        'chevron-right',
+        'chevron-up',
+        'chevron-down',
+        'plus',
+        'xmark',
+        'pencil',
+        'grip',
+        'grip-vertical',
+      ],
       brands: [],
       regular: [],
     },

@@ -81,3 +81,49 @@ export const deleteCategory = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to delete category' });
   }
 }
+
+// Update the order of categories in the shopping list
+export const updateCategoryOrder = async (req: Request, res: Response) => {
+  const { family_group_id } = req.params;
+  const { categories } = req.body;
+  if (!family_group_id || !categories || !Array.isArray(categories)) {
+    return res.status(412).json({ message: 'Family group ID and categories array are required' });
+  }
+  try {
+    const shoppingList = await ShoppingList.findOne({ where: { family_group_id: Number(family_group_id) } });
+    if (!shoppingList) {
+      return res.status(404).json({ message: 'Shopping list not found' });
+    }
+
+    // Update the categories order in the content
+    const updatedContent = {
+      categories: categories.map(category => ({
+        name: category.name,
+        items: category.items
+      }))
+    };
+
+    // Use update method directly with the new content
+    await shoppingList.update({ content: updatedContent });
+
+    // Send webhook for each category update
+    for (const category of categories) {
+      sendShoppingListWebhook(
+        Number(family_group_id),
+        category.name,
+        category,
+        'update-category-order'
+      );
+    }
+
+    // Fetch the updated shopping list to return
+    const updatedShoppingList = await ShoppingList.findOne({ 
+      where: { family_group_id: Number(family_group_id) } 
+    });
+
+    return res.status(200).json(updatedShoppingList);
+  } catch (error) {
+    console.error('Error updating category order:', error);
+    return res.status(500).json({ message: 'Failed to update category order' });
+  }
+};
