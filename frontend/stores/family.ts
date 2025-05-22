@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { FamilyMember, DisplayMember } from '~/types/FamilyGroup';
+import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 
 export const useFamilyStore = defineStore('family', {
   state: () => ({
+    familyGroup: null as FamilyGroup | null,
     members: [] as DisplayMember[],
     isLoading: false,
     error: null as string | null,
-    lastFetched: null as string | null,
+    groupLastFetched: null as string | null,
+    membersLastFetched: null as string | null,
   }),
 
   actions: {
@@ -64,7 +66,7 @@ export const useFamilyStore = defineStore('family', {
           }));
 
         this.members = filteredMembers;
-        this.lastFetched = new Date().toISOString();
+        this.membersLastFetched = new Date().toISOString();
 
         // Cache the data
         await Preferences.set({ 
@@ -73,10 +75,74 @@ export const useFamilyStore = defineStore('family', {
         });
         await Preferences.set({ 
           key: 'family_members_last_fetched', 
-          value: this.lastFetched 
+          value: this.membersLastFetched 
         });
       } catch (err: unknown) {
-        this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
+        // Try to load from cache if available
+        if (cachedData.value) {
+          this.members = JSON.parse(cachedData.value);
+          this.error = 'Using cached data - unable to fetch latest family members';
+        } else {
+          this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
+        }
+        throw err; // Re-throw to let the component handle it
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async fetchFamilyGroup() {
+      const userStore = useUserStore();
+      const authStore = useAuthStore();
+
+      if (!userStore.user?.family_group_id) return;
+
+      // Check if we have cached data that's less than 5 minutes old
+      const cachedData = await Preferences.get({ key: 'family_group' });
+      const lastFetched = await Preferences.get({ key: 'family_group_last_fetched' });
+      
+      if (cachedData.value && lastFetched.value) {
+        const lastFetchTime = new Date(lastFetched.value).getTime();
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        
+        if (lastFetchTime > fiveMinutesAgo) {
+          this.familyGroup = JSON.parse(cachedData.value);
+          return;
+        }
+      }
+
+      this.isLoading = true;
+      this.error = null;
+
+      try {
+        const response = await $fetch<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.accessToken}`,
+            'x-refresh-token': authStore.refreshToken || ''
+          }
+        });
+
+        this.familyGroup = response.data;
+        this.groupLastFetched = new Date().toISOString();
+
+        // Cache the data
+        await Preferences.set({ 
+          key: 'family_group', 
+          value: JSON.stringify(response.data) 
+        });
+        await Preferences.set({
+          key: 'family_group_last_fetched',
+          value: this.groupLastFetched
+        });
+      } catch (err: unknown) {
+        // Try to load from cache if available
+        if (cachedData.value) {
+          this.familyGroup = JSON.parse(cachedData.value);
+          this.error = 'Using cached data - unable to fetch latest family group';
+        } else {
+          this.error = err instanceof Error ? err.message : 'Failed to fetch family group';
+        }
+        throw err; // Re-throw to let the component handle it
       } finally {
         this.isLoading = false;
       }
@@ -85,8 +151,11 @@ export const useFamilyStore = defineStore('family', {
     clearCache() {
       Preferences.remove({ key: 'family_members' });
       Preferences.remove({ key: 'family_members_last_fetched' });
+      Preferences.remove({ key: 'family_group' });
+      Preferences.remove({ key: 'family_group_last_fetched' });
       this.members = [];
-      this.lastFetched = null;
+      this.membersLastFetched = null;
+      this.groupLastFetched = null;
     }
   }
 }); 

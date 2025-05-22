@@ -1,59 +1,44 @@
 <template>
-  <div>
-    <div class="mt-4">
-      <div v-if="userStore.isLoading" class="flex justify-center">
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      <div v-else-if="userStore.error" class="alert alert-error mx-4">
-        {{ userStore.error }}
-      </div>
-      <div v-else-if="userStore.user" class="avatar flex justify-center">
-        <div class="mask mask-squircle w-24">
-          <img :src="'/temp-avatars/avataaars1.png'" />
-        </div>
-      </div>
-      <h2 class="text-center font-bold">{{ userStore.getFullName }}</h2>
+  <div class="max-w-4xl mx-auto px-4 py-8">
+    <ProfileHeader
+      :user="userStore.user"
+      :is-loading="userStore.isLoading"
+      :error="userStore.error"
+      :full-name="userStore.getFullName"
+    />
 
-      <div class="divider mx-4"></div>
+    <FamilyDetails
+      :family-group="familyGroup"
+      :is-loading="isLoading"
+      :error="error"
+      @copy-code="copyFamilyCode"
+    />
 
-      <div class="card bg-base-200 m-4 shadow-sm ">
-        <div class="card-title px-6 my-2">
-          <h2 class="font-bold">{{ $t('Your family members') }}</h2>
-        </div>
-        <div class="bg-base-300 rounded-b-lg pb-6">
-          <div class="card-body">
-            <div v-if="isLoading" class="flex justify-center">
-              <span class="loading loading-spinner loading-md"></span>
-            </div>
-            <div v-else-if="error" class="alert alert-error">
-              {{ error }}
-            </div>
-            <div v-else class="flex flex-col gap-4">
-              <div class="flex flex-row gap-4">
-                <div v-for="member in familyMembers" :key="member.id">
-                  <div class="flex flex-col gap-2">
-                    <div class="avatar justify-center">
-                      <div class="w-12 rounded-full">
-                        <img :src="member.avatar" />
-                      </div>
-                    </div>
-                    <h3 class="font-semibold">{{ member.name }}</h3>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="card-actions px-6">
-            <button 
-              class="btn btn-primary"
-              @click="addFamilyMember"
-            >{{ $t('Add family member') }}</button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <FamilyMembers
+      :members="familyMembers"
+      :is-loading="isLoading"
+      :error="error"
+    />
   </div>
 </template>
+
+<style scoped>
+/* Add a fade-in for the entire page */
+.max-w-4xl {
+  animation: pageFadeIn 0.8s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
 
 <script setup lang="ts">
 definePageMeta({
@@ -63,17 +48,57 @@ definePageMeta({
 import { storeToRefs } from 'pinia';
 import { useFamilyStore } from '~/stores/family';
 import { useUserStore } from '~/stores/user';
+import ProfileHeader from '~/components/profile/ProfileHeader.vue';
+import FamilyDetails from '~/components/profile/FamilyDetails.vue';
+import FamilyMembers from '~/components/profile/FamilyMembers.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
-const { members: familyMembers, isLoading, error } = storeToRefs(familyStore);
+const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(familyStore);
+
+const handleError = (error: unknown) => {
+  console.error('Error in profile page:', error);
+};
 
 onMounted(async () => {
-  await userStore.fetchUser();
-  await familyStore.fetchMembers();
+  try {
+    await userStore.fetchUser();
+    await Promise.all([
+      familyStore.fetchMembers().catch(handleError),
+      familyStore.fetchFamilyGroup().catch(handleError)
+    ]);
+  } catch (error) {
+    handleError(error);
+  }
 });
 
-const addFamilyMember = () => {
-  console.log('addFamilyMember');
+const copyFamilyCode = async () => {
+  if (familyGroup.value?.random_identifier) {
+    try {
+      await navigator.clipboard.writeText(familyGroup.value.random_identifier);
+      // Show success toast
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-top toast-end';
+      toast.innerHTML = `
+        <div class="alert alert-success">
+          <span>Family code copied to clipboard!</span>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      // Show error toast
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-top toast-end';
+      toast.innerHTML = `
+        <div class="alert alert-error">
+          <span>Failed to copy family code</span>
+        </div>
+      `;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+  }
 };
 </script>
