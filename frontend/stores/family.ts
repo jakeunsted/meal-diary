@@ -1,14 +1,16 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { FamilyMember, DisplayMember } from '~/types/FamilyGroup';
+import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 
 export const useFamilyStore = defineStore('family', {
   state: () => ({
+    familyGroup: null as FamilyGroup | null,
     members: [] as DisplayMember[],
     isLoading: false,
     error: null as string | null,
-    lastFetched: null as string | null,
+    groupLastFetched: null as string | null,
+    membersLastFetched: null as string | null,
   }),
 
   actions: {
@@ -64,7 +66,7 @@ export const useFamilyStore = defineStore('family', {
           }));
 
         this.members = filteredMembers;
-        this.lastFetched = new Date().toISOString();
+        this.membersLastFetched = new Date().toISOString();
 
         // Cache the data
         await Preferences.set({ 
@@ -73,7 +75,7 @@ export const useFamilyStore = defineStore('family', {
         });
         await Preferences.set({ 
           key: 'family_members_last_fetched', 
-          value: this.lastFetched 
+          value: this.membersLastFetched 
         });
       } catch (err: unknown) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
@@ -82,11 +84,47 @@ export const useFamilyStore = defineStore('family', {
       }
     },
 
+    async fetchFamilyGroup() {
+      const userStore = useUserStore();
+      const authStore = useAuthStore();
+
+      if (!userStore.user?.family_group_id) return;
+
+      try {
+        const response = await $fetch<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
+          headers: {
+            'Authorization': `Bearer ${authStore.accessToken}`,
+            'x-refresh-token': authStore.refreshToken || ''
+          }
+        });
+
+        this.familyGroup = response.data;
+        this.groupLastFetched = new Date().toISOString();
+
+        // Cache the data
+        await Preferences.set({ 
+          key: 'family_group', 
+          value: JSON.stringify(response.data) 
+        });
+        await Preferences.set({
+          key: 'family_group_last_fetched',
+          value: this.groupLastFetched
+        });
+      } catch (err: unknown) {
+        this.error = err instanceof Error ? err.message : 'Failed to fetch family group';
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
     clearCache() {
       Preferences.remove({ key: 'family_members' });
       Preferences.remove({ key: 'family_members_last_fetched' });
+      Preferences.remove({ key: 'family_group' });
+      Preferences.remove({ key: 'family_group_last_fetched' });
       this.members = [];
-      this.lastFetched = null;
+      this.membersLastFetched = null;
+      this.groupLastFetched = null;
     }
   }
 }); 
