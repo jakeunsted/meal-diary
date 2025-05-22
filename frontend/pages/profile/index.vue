@@ -1,100 +1,44 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 py-8">
-    <!-- Profile Header -->
-    <div class="flex flex-col items-center mb-8">
-      <div v-if="userStore.isLoading" class="flex justify-center">
-        <span class="loading loading-spinner loading-lg"></span>
-      </div>
-      <div v-else-if="userStore.error" class="alert alert-error w-full max-w-md">
-        <i class="fas fa-exclamation-circle mr-2"></i>
-        {{ userStore.error }}
-      </div>
-      <div v-else-if="userStore.user" class="flex flex-col items-center">
-        <div class="avatar mb-4">
-          <div class="mask mask-squircle w-32 h-32 ring ring-primary ring-offset-base-100 ring-offset-2">
-            <img :src="'/temp-avatars/avataaars1.png'" class="w-full h-full object-cover" />
-          </div>
-        </div>
-        <h2 class="text-2xl font-bold text-center mb-2">{{ userStore.getFullName }}</h2>
-      </div>
-    </div>
+    <ProfileHeader
+      :user="userStore.user"
+      :is-loading="userStore.isLoading"
+      :error="userStore.error"
+      :full-name="userStore.getFullName"
+    />
 
-    <!-- Family Details Card -->
-    <div class="card bg-base-100 shadow-xl mb-8">
-      <div class="card-header bg-base-200 px-6 py-4 rounded-t-lg">
-        <h2 class="card-title text-xl font-bold">{{ $t('Your family details') }}</h2>
-      </div>
-      <div class="card-body rounded-b-lg">
-        <div v-if="isLoading" class="flex flex-col items-center space-y-6 py-4">
-          <div class="skeleton h-4 w-32"></div>
-          <div class="skeleton h-4 w-48"></div>
-          <div class="skeleton h-4 w-40"></div>
-        </div>
-        <div v-else-if="error" class="alert alert-error">
-          <i class="fas fa-exclamation-circle mr-2"></i>
-          {{ error }}
-        </div>
-        <div v-else-if="familyGroup" class="flex flex-col items-center text-center">
-          <div class="max-w-md space-y-6">
-            <div class="space-y-2">
-              <h3 class="font-semibold text-lg">{{ $t('Family group name') }}</h3>
-              <p class="text-base-content/80">{{ familyGroup.name }}</p>
-            </div>
-            <div class="space-y-4">
-              <div>
-                <h3 class="font-semibold text-lg">{{ $t('Family group code') }}</h3>
-                <div class="flex items-center justify-center gap-2 mt-2">
-                  <code 
-                    @click="copyFamilyCode" 
-                    class="bg-base-300 px-3 py-2 rounded-lg font-mono cursor-pointer hover:bg-base-400 transition-colors flex items-center gap-2"
-                  >
-                    {{ familyGroup.random_identifier }}
-                    <fa icon="copy" class="text-sm opacity-70" />
-                  </code>
-                </div>
-              </div>
-              <p class="text-sm text-base-content/70">
-                {{ $t('Share this code with new users to join your family group') }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <FamilyDetails
+      :family-group="familyGroup"
+      :is-loading="isLoading"
+      :error="error"
+      @copy-code="copyFamilyCode"
+    />
 
-    <!-- Family Members Card -->
-    <div class="card bg-base-100 shadow-xl">
-      <div class="card-header bg-base-200 px-6 py-4 rounded-t-lg">
-        <h2 class="card-title text-xl font-bold">{{ $t('Your family members') }}</h2>
-      </div>
-      <div class="card-body rounded-b-lg">
-        <div v-if="isLoading" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          <div v-for="i in 4" :key="i" class="flex flex-col items-center p-4 bg-base-200 rounded-xl">
-            <div class="skeleton w-16 h-16 rounded-full mb-3"></div>
-            <div class="skeleton h-4 w-24"></div>
-          </div>
-        </div>
-        <div v-else-if="error" class="alert alert-error">
-          <i class="fas fa-exclamation-circle mr-2"></i>
-          {{ error }}
-        </div>
-        <div v-else>
-          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-6">
-            <div v-for="member in familyMembers" :key="member.id" 
-                class="flex flex-col items-center p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-colors">
-              <div class="avatar mb-3">
-                <div class="w-16 h-16 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                  <img :src="member.avatar" class="w-full h-full object-cover" />
-                </div>
-              </div>
-              <h3 class="font-semibold text-center">{{ member.name }}</h3>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <FamilyMembers
+      :members="familyMembers"
+      :is-loading="isLoading"
+      :error="error"
+    />
   </div>
 </template>
+
+<style scoped>
+/* Add a fade-in for the entire page */
+.max-w-4xl {
+  animation: pageFadeIn 0.8s ease-out;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>
 
 <script setup lang="ts">
 definePageMeta({
@@ -104,6 +48,9 @@ definePageMeta({
 import { storeToRefs } from 'pinia';
 import { useFamilyStore } from '~/stores/family';
 import { useUserStore } from '~/stores/user';
+import ProfileHeader from '~/components/profile/ProfileHeader.vue';
+import FamilyDetails from '~/components/profile/FamilyDetails.vue';
+import FamilyMembers from '~/components/profile/FamilyMembers.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
@@ -111,7 +58,6 @@ const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(fa
 
 const handleError = (error: unknown) => {
   console.error('Error in profile page:', error);
-  // You could add a toast notification here if you want
 };
 
 onMounted(async () => {
