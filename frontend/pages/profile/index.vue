@@ -22,9 +22,15 @@
         </div>
         <div class="bg-base-300 rounded-b-lg pb-6">
           <div class="card-body">
-            <div class="flex flex-col gap-4">
+            <div v-if="isLoading" class="flex justify-center">
+              <span class="loading loading-spinner loading-md"></span>
+            </div>
+            <div v-else-if="error" class="alert alert-error">
+              {{ error }}
+            </div>
+            <div v-else class="flex flex-col gap-4">
               <div class="flex flex-row gap-4">
-                <div v-for="member in familyMembers" :key="member.name">
+                <div v-for="member in familyMembers" :key="member.id">
                   <div class="flex flex-col gap-2">
                     <div class="avatar justify-center">
                       <div class="w-12 rounded-full">
@@ -57,26 +63,17 @@ definePageMeta({
 import { useUserStore } from '../../stores/user';
 const { user } = useUserStore();
 import { ref, onMounted } from 'vue';
+import { useAuthStore } from '../../stores/auth';
+import useFamilyGroup from '~/composables/useFamilyGroup';
 
 const userStore = useUserStore();
+const { familyMembers, isLoading, error, fetchFamilyMembers } = useFamilyGroup();
 
-// Fetch user data when component mounts
+// Fetch user data and family members when component mounts
 onMounted(async () => {
   await userStore.fetchUser();
+  await fetchFamilyMembers();
 });
-
-const familyMembers = ref([
-  {
-    id: 1,
-    name: 'John Doe',
-    avatar: '/temp-avatars/avataaars2.png',
-  },
-  {
-    id: 2,
-    name: 'Jane Doe',
-    avatar: '/temp-avatars/avataaars3.png',
-  },
-]);
 
 const addFamilyMember = () => {
   console.log('addFamilyMember');
