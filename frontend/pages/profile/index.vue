@@ -55,24 +55,22 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   middleware: 'auth'
 });
 
-import { useUserStore } from '../../stores/user';
-const { user } = useUserStore();
-import { ref, onMounted } from 'vue';
-import { useAuthStore } from '../../stores/auth';
-import useFamilyGroup from '~/composables/useFamilyGroup';
+import { storeToRefs } from 'pinia';
+import { useFamilyStore } from '~/stores/family';
+import { useUserStore } from '~/stores/user';
 
 const userStore = useUserStore();
-const { familyMembers, isLoading, error, fetchFamilyMembers } = useFamilyGroup();
+const familyStore = useFamilyStore();
+const { members: familyMembers, isLoading, error } = storeToRefs(familyStore);
 
-// Fetch user data and family members when component mounts
 onMounted(async () => {
   await userStore.fetchUser();
-  await fetchFamilyMembers();
+  await familyStore.fetchMembers();
 });
 
 const addFamilyMember = () => {
