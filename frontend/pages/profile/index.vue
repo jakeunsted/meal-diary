@@ -6,6 +6,7 @@
         <span class="loading loading-spinner loading-lg"></span>
       </div>
       <div v-else-if="userStore.error" class="alert alert-error w-full max-w-md">
+        <i class="fas fa-exclamation-circle mr-2"></i>
         {{ userStore.error }}
       </div>
       <div v-else-if="userStore.user" class="flex flex-col items-center">
@@ -24,10 +25,13 @@
         <h2 class="card-title text-xl font-bold">{{ $t('Your family details') }}</h2>
       </div>
       <div class="card-body rounded-b-lg">
-        <div v-if="isLoading" class="flex justify-center py-8">
-          <span class="loading loading-spinner loading-md"></span>
+        <div v-if="isLoading" class="flex flex-col items-center space-y-6 py-4">
+          <div class="skeleton h-4 w-32"></div>
+          <div class="skeleton h-4 w-48"></div>
+          <div class="skeleton h-4 w-40"></div>
         </div>
         <div v-else-if="error" class="alert alert-error">
+          <i class="fas fa-exclamation-circle mr-2"></i>
           {{ error }}
         </div>
         <div v-else-if="familyGroup" class="flex flex-col items-center text-center">
@@ -64,10 +68,14 @@
         <h2 class="card-title text-xl font-bold">{{ $t('Your family members') }}</h2>
       </div>
       <div class="card-body rounded-b-lg">
-        <div v-if="isLoading" class="flex justify-center py-8">
-          <span class="loading loading-spinner loading-md"></span>
+        <div v-if="isLoading" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <div v-for="i in 4" :key="i" class="flex flex-col items-center p-4 bg-base-200 rounded-xl">
+            <div class="skeleton w-16 h-16 rounded-full mb-3"></div>
+            <div class="skeleton h-4 w-24"></div>
+          </div>
         </div>
         <div v-else-if="error" class="alert alert-error">
+          <i class="fas fa-exclamation-circle mr-2"></i>
           {{ error }}
         </div>
         <div v-else>
@@ -101,15 +109,22 @@ const userStore = useUserStore();
 const familyStore = useFamilyStore();
 const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(familyStore);
 
-onMounted(async () => {
-  await userStore.fetchUser();
-  await familyStore.fetchMembers();
-  await familyStore.fetchFamilyGroup();
-});
-
-const addFamilyMember = () => {
-  console.log('addFamilyMember');
+const handleError = (error: unknown) => {
+  console.error('Error in profile page:', error);
+  // You could add a toast notification here if you want
 };
+
+onMounted(async () => {
+  try {
+    await userStore.fetchUser();
+    await Promise.all([
+      familyStore.fetchMembers().catch(handleError),
+      familyStore.fetchFamilyGroup().catch(handleError)
+    ]);
+  } catch (error) {
+    handleError(error);
+  }
+});
 
 const copyFamilyCode = async () => {
   if (familyGroup.value?.random_identifier) {

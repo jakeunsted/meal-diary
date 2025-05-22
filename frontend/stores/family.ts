@@ -78,7 +78,14 @@ export const useFamilyStore = defineStore('family', {
           value: this.membersLastFetched 
         });
       } catch (err: unknown) {
-        this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
+        // Try to load from cache if available
+        if (cachedData.value) {
+          this.members = JSON.parse(cachedData.value);
+          this.error = 'Using cached data - unable to fetch latest family members';
+        } else {
+          this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
+        }
+        throw err; // Re-throw to let the component handle it
       } finally {
         this.isLoading = false;
       }
@@ -89,6 +96,23 @@ export const useFamilyStore = defineStore('family', {
       const authStore = useAuthStore();
 
       if (!userStore.user?.family_group_id) return;
+
+      // Check if we have cached data that's less than 5 minutes old
+      const cachedData = await Preferences.get({ key: 'family_group' });
+      const lastFetched = await Preferences.get({ key: 'family_group_last_fetched' });
+      
+      if (cachedData.value && lastFetched.value) {
+        const lastFetchTime = new Date(lastFetched.value).getTime();
+        const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+        
+        if (lastFetchTime > fiveMinutesAgo) {
+          this.familyGroup = JSON.parse(cachedData.value);
+          return;
+        }
+      }
+
+      this.isLoading = true;
+      this.error = null;
 
       try {
         const response = await $fetch<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
@@ -111,7 +135,14 @@ export const useFamilyStore = defineStore('family', {
           value: this.groupLastFetched
         });
       } catch (err: unknown) {
-        this.error = err instanceof Error ? err.message : 'Failed to fetch family group';
+        // Try to load from cache if available
+        if (cachedData.value) {
+          this.familyGroup = JSON.parse(cachedData.value);
+          this.error = 'Using cached data - unable to fetch latest family group';
+        } else {
+          this.error = err instanceof Error ? err.message : 'Failed to fetch family group';
+        }
+        throw err; // Re-throw to let the component handle it
       } finally {
         this.isLoading = false;
       }
