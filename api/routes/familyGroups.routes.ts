@@ -147,4 +147,37 @@ router.post('/join', authenticateToken, async (req, res, next) => {
   }
 });
 
+/**
+ * @openapi
+ * /family-groups/{id}/members:
+ *   get:
+ *     summary: Get all members of a family group
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The family group id
+ *     responses:
+ *       200:
+ *         description: List of family group members
+ *       400:
+ *         description: Invalid family group id
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Family group not found
+ *       500:
+ *         description: Failed to get family group members
+ */
+router.get('/:id/members', authenticateToken, async (req, res, next) => {
+  try {
+    await familyGroupController.getFamilyGroupMembers(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

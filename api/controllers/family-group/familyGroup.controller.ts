@@ -84,3 +84,27 @@ export const getFamilyGroupById = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to get family group' });
   }
 };
+
+export const getFamilyGroupMembers = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = parseInt(req.params.id);
+    if (isNaN(familyGroupId)) {
+      return res.status(400).json({ message: 'Invalid family group ID' });
+    }
+
+    const familyGroup = await FamilyGroup.findByPk(familyGroupId);
+    if (!familyGroup) {
+      return res.status(404).json({ message: 'Family group not found' });
+    }
+
+    const members = await User.findAll({
+      where: { family_group_id: familyGroupId },
+      attributes: ['id', 'username', 'email', 'created_at', 'updated_at']
+    });
+
+    return res.status(200).json(members);
+  } catch (error) {
+    console.error('Error getting family group members:', error);
+    return res.status(500).json({ message: 'Failed to get family group members' });
+  }
+};
