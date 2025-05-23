@@ -11,4 +11,4 @@ export default defineEventHandler(async (event) => {
   }
 
   return await authenticatedFetch(event, `/family-groups/${id}`);
-}); 
+});
