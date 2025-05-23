@@ -18,6 +18,6 @@ export default defineEventHandler(async (event) => {
     body: JSON.stringify({
       category_name: category_name,
     }),
-  });
+  }, event);
   return category;
 });

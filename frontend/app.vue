@@ -39,7 +39,6 @@ watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
         'add-new-category': (data) => shoppingListStore.handleCategoryAdded(userStore.user.family_group_id, data.categoryName, data.categoryContents),
         'save-category': (data) => shoppingListStore.handleCategorySaved(userStore.user.family_group_id, data.categoryName, data.categoryContents),
         'delete-category': (data) => {
-          console.log('delete-category', data);
           if (shoppingListStore.shoppingList?.content) {
             shoppingListStore.shoppingList.content.categories = shoppingListStore.shoppingList.content.categories.filter(
               category => category.name !== data.categoryName
@@ -48,7 +47,6 @@ watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
           }
         },
         'update-category-order': (data) => {
-          console.log('update-category-order', data);
           // if (shoppingListStore.shoppingList?.content) {
           //   shoppingListStore.shoppingList.content.categories = data.categoryContents;
           //   shoppingListStore.saveToLocalStorage();

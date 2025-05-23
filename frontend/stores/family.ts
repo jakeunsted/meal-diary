@@ -3,6 +3,35 @@ import { Preferences } from '@capacitor/preferences';
 import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 
+const CACHE_NAME = 'avatar-cache-v1';
+
+async function cacheAvatar(url: string): Promise<string> {
+  try {
+    // If it's a generic avatar or a relative path, return it as is
+    if (url.startsWith('/temp-avatars/') || url.startsWith('/')) {
+      return url;
+    }
+
+    // Check if the image is already in cache
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(url);
+    
+    if (cachedResponse) {
+      return URL.createObjectURL(await cachedResponse.blob());
+    }
+
+    // If not in cache, fetch and cache it
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch avatar');
+    
+    await cache.put(url, response.clone());
+    return URL.createObjectURL(await response.blob());
+  } catch (error) {
+    console.error('Error caching avatar:', error);
+    return url; // Return original URL if caching fails
+  }
+}
+
 export const useFamilyStore = defineStore('family', {
   state: () => ({
     familyGroup: null as FamilyGroup | null,
@@ -57,13 +86,37 @@ export const useFamilyStore = defineStore('family', {
           });
         }
 
-        const filteredMembers = response.data
-          .filter((member: FamilyMember) => member.id !== userStore.user?.id)
-          .map((member: FamilyMember) => ({
-            id: member.id,
-            name: member.username,
-            avatar: '/temp-avatars/avataaars' + (member.id % 3 + 1) + '.png',
-          }));
+        // Process members and cache their avatars
+        const filteredMembers = await Promise.all(
+          response.data
+            .filter((member: FamilyMember) => member.id !== userStore.user?.id)
+            .map(async (member: FamilyMember) => {
+              try {
+                // If no avatar_url, use generic avatar directly
+                if (!member.avatar_url) {
+                  return {
+                    id: member.id,
+                    name: member.username,
+                    avatar_url: '/temp-avatars/generic-avatar.png',
+                  };
+                }
+                // Only try to cache if there's an actual avatar_url
+                const cachedUrl = await cacheAvatar(member.avatar_url);
+                return {
+                  id: member.id,
+                  name: member.username,
+                  avatar_url: cachedUrl,
+                };
+              } catch (e) {
+                console.error('Error processing member avatar:', e);
+                return {
+                  id: member.id,
+                  name: member.username,
+                  avatar_url: '/temp-avatars/generic-avatar.png',
+                };
+              }
+            })
+        );
 
         this.members = filteredMembers;
         this.membersLastFetched = new Date().toISOString();

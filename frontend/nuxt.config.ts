@@ -43,6 +43,7 @@ export default defineNuxtConfig({
         'grip',
         'grip-vertical',
         'copy',
+        'pen',
       ],
       brands: [],
       regular: [],

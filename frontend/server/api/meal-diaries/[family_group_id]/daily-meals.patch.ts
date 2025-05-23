@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   const response = await apiFetch(`/meal-diaries/${familyGroupId}/daily-meals`, {
     method: 'PATCH',
     body: JSON.stringify(body),
-  });
+  }, event);
 
   return response;
 });

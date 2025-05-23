@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
     const response = await apiFetch<TokenResponse>('/auth/refresh-token', {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
-    });
+    }, event);
     
     return response;
   } catch (error: any) {

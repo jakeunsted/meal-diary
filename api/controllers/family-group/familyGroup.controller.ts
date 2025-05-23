@@ -99,7 +99,7 @@ export const getFamilyGroupMembers = async (req: Request, res: Response) => {
 
     const members = await User.findAll({
       where: { family_group_id: familyGroupId },
-      attributes: ['id', 'username', 'email', 'created_at', 'updated_at']
+      attributes: ['id', 'username', 'email', 'avatar_url', 'created_at', 'updated_at']
     });
 
     return res.status(200).json(members);

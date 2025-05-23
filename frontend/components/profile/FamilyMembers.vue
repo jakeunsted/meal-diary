@@ -21,7 +21,11 @@
                 class="flex flex-col items-center p-4 bg-base-200 rounded-xl hover:bg-base-300 transition-colors">
               <div class="avatar mb-3">
                 <div class="w-16 h-16 rounded-full ring ring-primary ring-offset-base-100 ring-offset-2">
-                  <img :src="member.avatar" class="w-full h-full object-cover" />
+                  <img 
+                    :src="member.avatar_url || '/temp-avatars/generic-avatar.png'" 
+                    :alt="member.name"
+                    class="w-12 h-12 rounded-full object-cover"
+                  />
                 </div>
               </div>
               <h3 class="font-semibold text-center">{{ member.name }}</h3>

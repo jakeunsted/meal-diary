@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     const response = await apiFetch<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
-    });
+    }, event);
 
     // Save values to the store
     const authStore = useAuthStore();

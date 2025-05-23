@@ -17,6 +17,6 @@ export default defineEventHandler(async (event) => {
     body: JSON.stringify({
       categories: categories,
     }),
-  });
+  }, event);
   return updatedList;
 });

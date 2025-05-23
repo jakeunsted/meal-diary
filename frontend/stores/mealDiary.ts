@@ -79,11 +79,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
       const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-      console.log('loadedFromStorage', loadedFromStorage);
-      console.log('this.lastFetchTime', this.lastFetchTime);
-      console.log('cacheAge', cacheAge);
-      console.log('CACHE_DURATION', CACHE_DURATION);
-
       if (!loadedFromStorage || !this.lastFetchTime || cacheAge > CACHE_DURATION) {
         await this.fetchWeeklyMeals();
       }

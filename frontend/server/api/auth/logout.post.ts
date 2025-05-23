@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     // Forward the logout request to the API
     await apiFetch('/auth/logout', {
       method: 'POST',
-    });
+    }, event);
     
     return { success: true };
   } catch (error: any) {
