@@ -24,6 +24,13 @@ export const useAuthStore = defineStore('auth', () => {
   
   // Actions
   const setAuth = async (authData: { user: User; accessToken: string; refreshToken: string }) => {
+    console.log('[Auth Store] Setting auth data:', { 
+      hasUser: !!authData.user,
+      hasAccessToken: !!authData.accessToken,
+      hasRefreshToken: !!authData.refreshToken,
+      userId: authData.user?.id
+    });
+    
     user.value = authData.user;
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
@@ -36,6 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
         refreshToken: authData.refreshToken,
         isAuthenticated: true
       };
+      console.log('[Auth Store] Saving auth state to storage');
       await Preferences.set({
         key: 'authState',
         value: JSON.stringify(authState)
@@ -44,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
   };
   
   const clearAuth = async () => {
+    console.log('[Auth Store] Clearing auth data');
     // Clear state first
     user.value = null;
     accessToken.value = null;
@@ -52,9 +61,10 @@ export const useAuthStore = defineStore('auth', () => {
     // Then clear storage
     if (import.meta.client) {
       try {
+        console.log('[Auth Store] Removing auth state from storage');
         await Preferences.remove({ key: 'authState' });
       } catch (error) {
-        console.error('Failed to clear auth state from storage:', error);
+        console.error('[Auth Store] Failed to clear auth state from storage:', error);
       }
       try {
         await Preferences.remove({ key: 'mealDiary' });
@@ -73,21 +83,32 @@ export const useAuthStore = defineStore('auth', () => {
     if (!import.meta.client) return;
     
     try {
+      console.log('[Auth Store] Initializing auth state from storage');
       const { value } = await Preferences.get({ key: 'authState' });
       if (value) {
         const authState: AuthState = JSON.parse(value);
+        console.log('[Auth Store] Found stored auth state:', {
+          hasUser: !!authState.user,
+          hasAccessToken: !!authState.accessToken,
+          hasRefreshToken: !!authState.refreshToken,
+          userId: authState.user?.id
+        });
         // Only restore if we have all required data
         if (authState.user && authState.accessToken && authState.refreshToken) {
           user.value = authState.user;
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
+          console.log('[Auth Store] Successfully restored auth state');
         } else {
+          console.log('[Auth Store] Incomplete auth state, clearing');
           // If data is incomplete, clear it
           await clearAuth();
         }
+      } else {
+        console.log('[Auth Store] No stored auth state found');
       }
     } catch (error) {
-      console.error('Failed to initialize auth state:', error);
+      console.error('[Auth Store] Failed to initialize auth state:', error);
       await clearAuth();
     }
   };

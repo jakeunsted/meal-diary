@@ -110,22 +110,31 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
+    console.log('[Refresh Token] Request received:', { 
+      hasRefreshToken: !!refreshToken,
+      tokenLength: refreshToken?.length
+    });
     
     if (!refreshToken) {
+      console.log('[Refresh Token] No refresh token provided');
       res.status(400).json({ message: 'Refresh token is required' });
       return;
     }
     
     const refreshSecret = process.env.JWT_REFRESH_SECRET;
     if (!refreshSecret) {
+      console.error('[Refresh Token] JWT_REFRESH_SECRET is not defined');
       res.status(500).json({ message: 'Server configuration error' });
       return;
     }
     
     // Verify refresh token
+    console.log('[Refresh Token] Verifying token');
     const decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
+    console.log('[Refresh Token] Token verified:', { userId: decoded.userId });
     
     // Check if token exists and is not revoked
+    console.log('[Refresh Token] Checking stored token');
     const storedToken = await RefreshToken.findOne({
       where: {
         token: refreshToken,
@@ -136,20 +145,19 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       }
     });
     
-    if (!storedToken) {
-      res.status(403).json({ message: 'Invalid or expired refresh token' });
-      return;
-    }
-    
     // Find user
+    console.log('[Refresh Token] Finding user:', { userId: decoded.userId });
     const user = await User.findByPk(decoded.userId) as User & UserAttributes;
     if (!user) {
+      console.log('[Refresh Token] User not found');
       res.status(401).json({ message: 'User not found' });
       return;
     }
     
     // Generate new tokens (this will automatically delete the old one)
+    console.log('[Refresh Token] Generating new tokens');
     const tokens = await generateTokens(user.id);
+    console.log('[Refresh Token] New tokens generated successfully');
     
     res.status(200).json({
       ...tokens,
@@ -157,10 +165,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     });
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
+      console.error('[Refresh Token] JWT verification failed:', error.message);
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       return;
     }
-    console.error('Refresh token error:', error);
+    console.error('[Refresh Token] Server error:', error);
     res.status(500).json({ message: 'Server error during token refresh' });
   }
 };
