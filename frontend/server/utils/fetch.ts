@@ -52,7 +52,9 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
   
   // If we get a 401 and have a refresh token, try to refresh
   if (response.status === 401 && refreshToken) {
+    console.log('[Token Refresh] Attempting to refresh token after 401 response');
     try {
+      console.log('[Token Refresh] Making refresh token request to:', `${baseUrl}/auth/refresh-token`);
       const refreshResponse = await fetch(`${baseUrl}/auth/refresh-token`, {
         method: 'POST',
         headers: {
@@ -61,8 +63,11 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         body: JSON.stringify({ refreshToken }),
       });
 
+      console.log('[Token Refresh] Refresh response status:', refreshResponse.status);
+      
       if (refreshResponse.ok) {
         const data = await refreshResponse.json();
+        console.log('[Token Refresh] Token refresh successful, updating auth store');
         // Update auth store with new tokens
         authStore.setAuth({
           user: data.user,
@@ -71,6 +76,7 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         });
 
         // Retry the original request with new token
+        console.log('[Token Refresh] Retrying original request with new token');
         fetchOptions.headers = {
           ...fetchOptions.headers,
           'Authorization': `Bearer ${data.accessToken}`,
@@ -78,6 +84,7 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         const retryResponse = await fetch(finalUrl, fetchOptions);
         
         if (!retryResponse.ok) {
+          console.error('[Token Refresh] Retry request failed:', retryResponse.status);
           const error = await retryResponse.json().catch(() => ({ message: 'Unknown error' }));
           throw { 
             statusCode: retryResponse.status, 
@@ -85,9 +92,15 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
           };
         }
         
+        console.log('[Token Refresh] Retry request successful');
         return retryResponse.json();
+      } else {
+        console.error('[Token Refresh] Refresh request failed:', refreshResponse.status);
+        const error = await refreshResponse.json().catch(() => ({ message: 'Unknown error' }));
+        throw error;
       }
     } catch (error) {
+      console.error('[Token Refresh] Error during token refresh:', error);
       // If refresh fails, clear auth and throw error
       authStore.clearAuth();
       throw error;
@@ -96,6 +109,7 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
   
   // If response is not ok and we didn't handle it above, throw error
   if (!response.ok) {
+    console.error('[API Request] Request failed:', response.status);
     const error = await response.json().catch(() => ({ message: 'Unknown error' }));
     throw { 
       statusCode: response.status, 
