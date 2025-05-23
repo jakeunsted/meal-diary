@@ -5,6 +5,6 @@ export default defineEventHandler(async (event) => {
   const user = await apiFetch('/users', {
     method: 'POST',
     body: JSON.stringify(body),
-  });
+  }, event);
   return user;
 });

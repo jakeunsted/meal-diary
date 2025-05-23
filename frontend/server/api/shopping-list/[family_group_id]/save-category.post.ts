@@ -18,6 +18,6 @@ export default defineEventHandler(async (event) => {
       category_name: category_name,
       category_contents: category_contents,
     }),
-  });
+  }, event);
   return category;
 });

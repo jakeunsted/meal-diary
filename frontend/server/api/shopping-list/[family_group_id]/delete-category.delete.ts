@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
       query: {
         category_name: category_name as string
       }
-    });
+    }, event);
 
     return response;
   } catch (error) {

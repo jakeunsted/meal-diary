@@ -24,7 +24,7 @@ export async function authenticatedFetch<T>(
           'Authorization': `Bearer ${token}`,
           ...options.headers
         }
-      });
+      }, event);
       return {
         data: response,
         headers: {}

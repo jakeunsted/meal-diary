@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   const response = await apiFetch(`/meal-diaries/${family_group_id}/daily-meals`, {
     method: 'GET',
     query: { week_start_date }
-  });
+  }, event);
 
   return response;
 });

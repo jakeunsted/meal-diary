@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
     const response = await apiFetch('/family-groups', {
       method: 'POST',
       body: JSON.stringify(body),
-    });
+    }, event);
 
     return response;
   } catch (error: any) {
