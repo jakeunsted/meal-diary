@@ -3,6 +3,30 @@ import { Preferences } from '@capacitor/preferences';
 import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 
+const CACHE_NAME = 'avatar-cache-v1';
+
+async function cacheAvatar(url: string): Promise<string> {
+  try {
+    // Check if the image is already in cache
+    const cache = await caches.open(CACHE_NAME);
+    const cachedResponse = await cache.match(url);
+    
+    if (cachedResponse) {
+      return URL.createObjectURL(await cachedResponse.blob());
+    }
+
+    // If not in cache, fetch and cache it
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('Failed to fetch avatar');
+    
+    await cache.put(url, response.clone());
+    return URL.createObjectURL(await response.blob());
+  } catch (error) {
+    console.error('Error caching avatar:', error);
+    return url; // Return original URL if caching fails
+  }
+}
+
 export const useFamilyStore = defineStore('family', {
   state: () => ({
     familyGroup: null as FamilyGroup | null,
@@ -57,15 +81,20 @@ export const useFamilyStore = defineStore('family', {
           });
         }
 
-        const filteredMembers = response.data
-          .filter((member: FamilyMember) => member.id !== userStore.user?.id)
-          .map((member: FamilyMember) => {
-            return {
-              id: member.id,
-              name: member.username,
-              avatar_url: member.avatar_url || '/temp-avatars/generic-avatar.png',
-            };
-          });
+        // Process members and cache their avatars
+        const filteredMembers = await Promise.all(
+          response.data
+            .filter((member: FamilyMember) => member.id !== userStore.user?.id)
+            .map(async (member: FamilyMember) => {
+              const avatarUrl = member.avatar_url || '/temp-avatars/generic-avatar.png';
+              const cachedUrl = await cacheAvatar(avatarUrl);
+              return {
+                id: member.id,
+                name: member.username,
+                avatar_url: cachedUrl,
+              };
+            })
+        );
 
         this.members = filteredMembers;
         this.membersLastFetched = new Date().toISOString();
