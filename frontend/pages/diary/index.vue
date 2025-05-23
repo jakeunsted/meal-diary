@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="max-w-4xl mx-auto">
     <h1 class="text-2xl font-bold text-center m-4">{{ $t('Meal diary') }}</h1>
 
     <WeekCalendarPicker @weekChange="handleWeekChange" />
