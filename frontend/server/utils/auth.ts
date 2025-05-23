@@ -25,7 +25,6 @@ export async function authenticatedFetch<T>(
           ...options.headers
         }
       });
-      console.log('response', response);
       return {
         data: response,
         headers: {}

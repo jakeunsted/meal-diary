@@ -67,7 +67,6 @@ onMounted(async () => {
       familyStore.fetchMembers().catch(handleError),
       familyStore.fetchFamilyGroup().catch(handleError)
     ]);
-    console.log('familyMembers', familyMembers.value);
   } catch (error) {
     handleError(error);
   }
