@@ -128,6 +128,10 @@ export const useUserStore = defineStore('user', {
       }
     },
 
+    async updateUserAvatar(avatarUrl: string) {
+      return this.updateUser({ avatar_url: avatarUrl });
+    },
+
     clearUser() {
       this.user = null;
       this.error = null;

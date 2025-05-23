@@ -41,5 +41,8 @@
   "Username": "Username",
   "First name": "First name",
   "Last name": "Last name",
-  "Confirm password": "Confirm password"
+  "Confirm password": "Confirm password",
+  "Family code copied to clipboard!": "Family code copied to clipboard!",
+  "Failed to copy family code to clipboard!": "Failed to copy family code to clipboard!",
+  "Your family details": "Your family details"
 }

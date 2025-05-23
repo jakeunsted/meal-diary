@@ -89,7 +89,7 @@ export const getUserById = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.id);
-    const { username, email, first_name, last_name, family_group_id } = req.body;
+    const { username, email, first_name, last_name, family_group_id, avatar_url } = req.body;
     
     const user = await User.findByPk(userId);
     
@@ -115,10 +115,11 @@ export const updateUser = async (req: Request, res: Response) => {
     // Update user
     await user.update({
       username,
-      email: email.toLowerCase(),
+      email: email?.toLowerCase(),
       first_name,
       last_name,
-      family_group_id
+      family_group_id,
+      avatar_url
     });
     
     // Get updated user without password hash

@@ -59,11 +59,13 @@ export const useFamilyStore = defineStore('family', {
 
         const filteredMembers = response.data
           .filter((member: FamilyMember) => member.id !== userStore.user?.id)
-          .map((member: FamilyMember) => ({
-            id: member.id,
-            name: member.username,
-            avatar: '/temp-avatars/avataaars' + (member.id % 3 + 1) + '.png',
-          }));
+          .map((member: FamilyMember) => {
+            return {
+              id: member.id,
+              name: member.username,
+              avatar_url: member.avatar_url || '/temp-avatars/generic-avatar.png',
+            };
+          });
 
         this.members = filteredMembers;
         this.membersLastFetched = new Date().toISOString();

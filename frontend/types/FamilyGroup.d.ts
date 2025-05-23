@@ -2,6 +2,7 @@ export interface FamilyMember {
   id: number;
   username: string;
   email: string;
+  avatar_url?: string;
   created_at: string;
   updated_at: string;
 }
@@ -9,7 +10,7 @@ export interface FamilyMember {
 export interface DisplayMember {
   id: number;
   name: string;
-  avatar: string;
+  avatar_url?: string;
 }
 
 export interface FamilyGroup {
