@@ -18,7 +18,7 @@
         <div 
           v-for="category in shoppingCategories" 
           :key="category.name"
-          class="list-item"
+          class=""
           :class="{ 'drag-over-top': isDragOverTop(category), 'drag-over-bottom': isDragOverBottom(category) }"
           @dragover.prevent="handleDragOver($event, category)"
           @dragleave.prevent="handleDragLeave(category)"
