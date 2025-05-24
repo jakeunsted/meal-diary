@@ -40,7 +40,7 @@
 }
 </style>
 
-<script setup lang="ts">
+<script setup>
 definePageMeta({
   middleware: 'auth'
 });
@@ -56,7 +56,7 @@ const userStore = useUserStore();
 const familyStore = useFamilyStore();
 const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(familyStore);
 
-const handleError = (error: unknown) => {
+const handleError = (error) => {
   console.error('Error in profile page:', error);
 };
 

@@ -9,6 +9,14 @@ export default defineNuxtConfig({
       baseUrl: process.env.BASE_URL,
     }
   },
+  app: {
+    head: {
+      viewport: 'width=device-width, initial-scale=1, viewport-fit=cover',
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }
+      ]
+    }
+  },
   css: [
     '~/assets/css/main.css',
     '~/assets/css/main.scss',

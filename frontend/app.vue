@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="min-h-screen safe-top safe-bottom">
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
@@ -73,3 +73,13 @@ onUnmounted(() => {
   }
 });
 </script>
+
+<style>
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+</style>
