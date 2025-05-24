@@ -1,13 +1,13 @@
-import { apiFetch } from '~/server/utils/fetch';
+import { authenticatedFetch } from '~/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
 
-    const response = await apiFetch('/family-groups/join', {
+    const response = await authenticatedFetch(event, '/family-groups/join', {
       method: 'POST',
       body: JSON.stringify(body),
-    }, event);
+    });
 
     return response;
   } catch (error: any) {

@@ -117,6 +117,10 @@ const handleSubmit = async () => {
             random_identifier: familyKey.value,
             user_id: user.id
           },
+          headers: {
+            'Authorization': `Bearer ${authStore.accessToken}`,
+            'x-refresh-token': authStore.refreshToken || ''
+          }
         });
 
         if (response) {
