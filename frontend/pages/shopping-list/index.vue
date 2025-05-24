@@ -4,11 +4,7 @@
       {{ $t('Shopping List') }}
     </h1>
 
-    <div v-if="loading">
-      <div class="flex justify-center mb-4">
-        <span class="loading loading-spinner loading-xl"></span>
-      </div>
-    </div>
+    <ShoppingListSkeleton v-if="loading" />
     <div v-else>
       <transition-group 
         name="list" 
@@ -66,6 +62,7 @@ definePageMeta({
 import CollapseListSection from '~/components/shopping-list/CollapseListSection.vue';
 import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
 import CategoryOptionsModal from '~/components/shopping-list/CategoryOptionsModal.vue';
+import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 

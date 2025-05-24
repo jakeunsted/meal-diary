@@ -4,11 +4,7 @@
 
     <WeekCalendarPicker @weekChange="handleWeekChange" />
 
-    <div v-if="mealDiaryStoreComputed.loading">
-      <div class="flex justify-center mb-4">
-        <span class="loading loading-spinner loading-xl"></span>
-      </div>
-    </div>
+    <MealDiarySkeleton v-if="mealDiaryStoreComputed.loading" />
     <div v-else>
       <DayFoodPlanCard
         v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
@@ -43,6 +39,7 @@ import { useUserStore } from '~/stores/user';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
+import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
 
 const mealDiaryStore = useMealDiaryStore();
 const userStore = useUserStore();
