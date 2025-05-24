@@ -32,7 +32,7 @@
           </div>
           <div class="font-semibold">{{ categoryTitle }}</div>
         </div>
-        <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" />
+        <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" class="pr-1" />
       </div>
       <div class="collapse-content bg-base-300 text-sm mb-2 rounded-b-lg">
         <div class="pt-2" v-if="categoryItems.length > 0" v-auto-animate>
