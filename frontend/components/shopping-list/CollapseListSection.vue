@@ -61,6 +61,7 @@
             class="input input-ghost"
             v-model="newItemName"
             v-on:keyup.enter="addItem(newItemName)"
+            @focus="$emit('inputFocus', $event)"
           />
         </div>
       </div>
@@ -69,7 +70,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['addItem', 'updateItem', 'longPress', 'dragStart', 'dragEnd']);
+const emit = defineEmits(['addItem', 'updateItem', 'longPress', 'dragStart', 'dragEnd', 'inputFocus']);
 
 const props = defineProps({
   categoryTitle: {
