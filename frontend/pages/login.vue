@@ -1,5 +1,5 @@
 <template>
-  <div class="flex justify-center items-center h-screen">
+  <div class="min-h-screen w-full flex items-center justify-center fixed inset-0">
     <div class="card w-96 bg-base-200">
       <div class="card-body">
         <div class="card-title">
