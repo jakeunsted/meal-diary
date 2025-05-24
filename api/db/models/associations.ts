@@ -121,6 +121,18 @@ Recipe.belongsTo(User, {
   as: 'creator'
 });
 
+// FamilyGroup <-> Recipe associations
+FamilyGroup.hasMany(Recipe, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'recipes'
+});
+Recipe.belongsTo(FamilyGroup, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'familyGroup'
+});
+
 // Recipe <-> Ingredient associations (through RecipeIngredient)
 Recipe.belongsToMany(Ingredient, {
   through: RecipeIngredient,
