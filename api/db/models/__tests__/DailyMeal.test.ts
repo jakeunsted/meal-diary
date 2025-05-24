@@ -17,7 +17,7 @@ describe('DailyMeal Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Daily Meal Test',
       created_by: userJson.id,
-      random_identifier: 'vitestOne'
+      random_identifier: 'vitest-1111113'
     });
     const familyGroupJson = familyGroup.toJSON();
     expect(familyGroupJson.id).toBeDefined();
@@ -61,7 +61,7 @@ describe('DailyMeal Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Day Validation Test',
       created_by: userJson.id,
-      random_identifier: 'vitestTwo'
+      random_identifier: 'vitest-1111114'
     });
     const familyGroupJson = familyGroup.toJSON();
 
@@ -109,7 +109,7 @@ describe('DailyMeal Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Unique Constraint Test',
       created_by: userJson.id,
-      random_identifier: 'vitestThree'
+      random_identifier: 'vitest-1111115'
     });
     const familyGroupJson = familyGroup.toJSON();
 
@@ -154,7 +154,7 @@ describe('DailyMeal Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Update Meal Test',
       created_by: userJson.id,
-      random_identifier: 'vitestFour'
+      random_identifier: 'vitest-1111116'
     });
     const familyGroupJson = familyGroup.toJSON();
 

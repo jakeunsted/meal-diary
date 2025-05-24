@@ -14,7 +14,7 @@ describe('FamilyGroup Model', () => {
     const groupData = {
       name: 'Vitest - Test Family',
       created_by: userJson.id,
-      random_identifier: 'vitestFive'
+      random_identifier: 'vitest-1111111'
     };
 
     const group = await FamilyGroup.create(groupData);
@@ -65,7 +65,7 @@ describe('FamilyGroup Model', () => {
     const group = await FamilyGroup.create({
       name: 'Vitest - Associated Family Group',
       created_by: creatorJson.id,
-      random_identifier: 'vitestSix'
+      random_identifier: 'vitest-1111112'
     });
     const groupJson = group.toJSON();
     expect(groupJson.id).toBeDefined();

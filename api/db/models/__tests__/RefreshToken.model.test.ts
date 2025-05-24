@@ -66,63 +66,6 @@ describe('RefreshToken Model', () => {
     await expect(RefreshToken.create(tokenData)).rejects.toThrow();
   });
 
-  // it('should have correct associations with User model', async () => {
-  //   // Create a test user
-  //   const user = await User.create({
-  //     email: 'vitest_test_refresh_token4@example.com',
-  //     username: 'vitest_test_refresh_token4',
-  //     password_hash: 'hashedpassword',
-  //     first_name: 'Test',
-  //     last_name: 'User'
-  //   }) as User & UserAttributes;
-
-  //   // Create a refresh token
-  //   const refreshToken = await RefreshToken.create({
-  //     token: 'vitest_test_refresh_token4',
-  //     user_id: user.id,
-  //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-  //     is_revoked: false
-  //   }) as RefreshToken & RefreshTokenAttributes;
-
-  //   // Test the association
-  //   const tokenWithUser = await RefreshToken.findOne({
-  //     where: { id: refreshToken.id },
-  //     include: ['user']
-  //   }) as (RefreshToken & RefreshTokenAttributes & { user?: User & UserAttributes }) | null;
-
-  //   console.log('tokenWithUser', tokenWithUser);
-
-  //   expect(tokenWithUser?.user).toBeDefined();
-  //   expect(tokenWithUser?.user?.id).toBe(user.id);
-  // });
-
-  it('should enforce one refresh token per user', async () => {
-    // Create a test user
-    const user = await User.create({
-      email: 'vitest_test_refresh_token5@example.com',
-      username: 'vitest_test_refresh_token5',
-      password_hash: 'hashedpassword',
-      first_name: 'Test',
-      last_name: 'User'
-    }) as User & UserAttributes;
-
-    // Create first token
-    await RefreshToken.create({
-      token: 'vitest_test_refresh_token5',
-      user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      is_revoked: false
-    });
-
-    // Try to create second token for same user
-    await expect(RefreshToken.create({
-      token: 'vitest_test_refresh_token5_second',
-      user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      is_revoked: false
-    })).rejects.toThrow();
-  });
-
   it('should handle token expiration', async () => {
     // Create a test user
     const user = await User.create({

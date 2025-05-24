@@ -16,7 +16,7 @@ describe('ShoppingList Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Shopping List Test',
       created_by: userJson.id,
-      random_identifier: 'vitestEight'
+      random_identifier: 'vitest-1111118'
     });
     const familyGroupJson = familyGroup.toJSON();
     expect(familyGroupJson.id).toBeDefined();
@@ -58,7 +58,7 @@ describe('ShoppingList Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Default Content Test',
       created_by: userJson.id,
-      random_identifier: 'vitestNine'
+      random_identifier: 'vitest-1111119'
     });
     const familyGroupJson = familyGroup.toJSON();
 
@@ -85,7 +85,7 @@ describe('ShoppingList Model', () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Update List Test',
       created_by: userJson.id,
-      random_identifier: 'vitestTen'
+      random_identifier: 'vitest-1111110'
     });
     const familyGroupJson = familyGroup.toJSON();
 
