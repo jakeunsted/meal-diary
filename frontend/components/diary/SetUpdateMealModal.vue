@@ -43,11 +43,13 @@ const props = defineProps({
 const isLoading = ref(false);
 
 const saveMeal = async () => {
-  isLoading.value = true;
-  try {
-    await emit('saveMeal', props.meal);
-  } finally {
-    isLoading.value = false;
+  // Close the modal immediately
+  const closeButton = document.querySelector('.modal-box form button');
+  if (closeButton) {
+    closeButton.click();
   }
+  
+  // Emit the save event without waiting
+  emit('saveMeal', props.meal);
 }
 </script>
