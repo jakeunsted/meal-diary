@@ -7,6 +7,9 @@ import RefreshToken from './RefreshToken.model.ts';
 import ItemCategory from './ItemCategory.model.ts';
 import ShoppingListCategory from './ShoppingListCategory.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
+import Recipe from './Recipe.model.ts';
+import Ingredient from './Ingredient.model.ts';
+import RecipeIngredient from './RecipeIngredient.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -106,6 +109,42 @@ User.hasOne(RefreshToken, {
   as: 'refreshToken'
 });
 
+// User <-> Recipe associations
+User.hasMany(Recipe, {
+  foreignKey: 'created_by',
+  foreignKeyConstraint: true,
+  as: 'recipes'
+});
+Recipe.belongsTo(User, {
+  foreignKey: 'created_by',
+  foreignKeyConstraint: true,
+  as: 'creator'
+});
+
+// Recipe <-> Ingredient associations (through RecipeIngredient)
+Recipe.belongsToMany(Ingredient, {
+  through: RecipeIngredient,
+  foreignKey: 'recipe_id',
+  otherKey: 'ingredient_id',
+  as: 'ingredients'
+});
+Ingredient.belongsToMany(Recipe, {
+  through: RecipeIngredient,
+  foreignKey: 'ingredient_id',
+  otherKey: 'recipe_id',
+  as: 'recipes'
+});
+
+// RecipeIngredient associations
+RecipeIngredient.belongsTo(Recipe, {
+  foreignKey: 'recipe_id',
+  foreignKeyConstraint: true
+});
+RecipeIngredient.belongsTo(Ingredient, {
+  foreignKey: 'ingredient_id',
+  foreignKeyConstraint: true
+});
+
 // Export all models
 export {
   User,
@@ -116,5 +155,8 @@ export {
   RefreshToken,
   ItemCategory,
   ShoppingListCategory,
-  ShoppingListItem
+  ShoppingListItem,
+  Recipe,
+  Ingredient,
+  RecipeIngredient
 };
