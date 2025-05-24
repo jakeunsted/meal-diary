@@ -19,7 +19,7 @@ const initializeDatabase = async (force = false) => {
     console.log('Database connection established successfully.');
     
     // Sync all models
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: true, force });
     console.log('Database synchronized successfully.');
     
     return true;

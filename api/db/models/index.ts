@@ -5,7 +5,7 @@ dotenv.config();
 
 let sequelize: Sequelize;
 
-if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
+if (process.env.NODE_ENV === 'development') {
   if (!process.env.DEV_DB_NAME || !process.env.DEV_DB_USER || !process.env.DEV_DB_PASSWORD || !process.env.DEV_DB_HOST || !process.env.DEV_DB_PORT) {
     throw new Error('Development database configuration is missing');
   }
@@ -17,6 +17,22 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
     {
       host: process.env.DEV_DB_HOST,
       port: parseInt(process.env.DEV_DB_PORT),
+      dialect: 'postgres',
+      logging: process.env.DEBUG === 'true' ? console.log : false,
+    }
+  );
+} else if (process.env.NODE_ENV === 'test') {
+  if (!process.env.LOCAL_DB_NAME || !process.env.LOCAL_DB_USER || !process.env.LOCAL_DB_PASSWORD || !process.env.LOCAL_DB_HOST || !process.env.LOCAL_DB_PORT) {
+    throw new Error('Local database configuration is missing');
+  }
+  
+  sequelize = new Sequelize(
+    process.env.LOCAL_DB_NAME,
+    process.env.LOCAL_DB_USER,
+    process.env.LOCAL_DB_PASSWORD,
+    {
+      host: process.env.LOCAL_DB_HOST,
+      port: parseInt(process.env.LOCAL_DB_PORT),
       dialect: 'postgres',
       logging: process.env.DEBUG === 'true' ? console.log : false,
     }
