@@ -14,7 +14,7 @@ describe('MealDiary Model',  () => {
     const familyGroup = await FamilyGroup.create({
       name: 'Vitest - Meal Diary Test',
       created_by: userJson.id,
-      random_identifier: 'vitestSeven'
+      random_identifier: 'vitest-1111117'
     });
     const familyGroupJson = familyGroup.toJSON();
     expect(familyGroupJson.id).toBeDefined();

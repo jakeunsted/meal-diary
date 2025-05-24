@@ -20,7 +20,7 @@ describe('MealDiary Service', () => {
     testFamilyGroup = await FamilyGroup.create({
       name: 'Vitest meal diary - Test Family Group',
       created_by: testUser.id,
-      random_identifier: 'vitestEleven'
+      random_identifier: 'vitestElevenee'
     });
 
     // Create test meal diary
