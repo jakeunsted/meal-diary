@@ -63,7 +63,6 @@ definePageMeta({
 const { login, isLoading, error } = useAuth();
 const email = ref('');
 const password = ref('');
-const authStore = useAuthStore();
 
 const handleLogin = async () => {
   try {

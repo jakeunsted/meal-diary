@@ -5,7 +5,7 @@ import type { ApiResponse } from '~/types/Api';
 export async function authenticatedFetch<T>(
   event: H3Event,
   url: string,
-  options: { headers?: Record<string, string> } = {}
+  options: RequestInit = {}
 ): Promise<ApiResponse<T>> {
   const authHeader = getHeader(event, 'authorization');
   const refreshToken = getHeader(event, 'x-refresh-token');
@@ -20,6 +20,7 @@ export async function authenticatedFetch<T>(
   const makeRequest = async (token: string) => {
     try {
       const response = await apiFetch<T>(url, {
+        ...options,
         headers: {
           'Authorization': `Bearer ${token}`,
           ...options.headers

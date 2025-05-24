@@ -96,6 +96,10 @@ const handleSubmit = async () => {
             name: familyName.value,
             created_by: user.id
           },
+          headers: {
+            'Authorization': `Bearer ${authStore.accessToken}`,
+            'x-refresh-token': authStore.refreshToken || ''
+          }
         });
 
         if (response) {
