@@ -4,7 +4,7 @@
       {{ $t('Shopping List') }}
     </h1>
 
-    <ShoppingListSkeleton v-if="loading" />
+    <ShoppingListSkeleton v-if="!hasData" />
     <div v-else>
       <transition-group 
         name="list" 
@@ -35,7 +35,7 @@
       </transition-group>
     </div>
 
-    <div class="flex justify-center" v-if="!loading">
+    <div class="flex justify-center" v-if="hasData">
       <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">{{ $t('Add Category') }}</button>
     </div>
     <AddCategoryModal
@@ -72,12 +72,13 @@ const userStore = useUserStore();
 const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
 const newCategoryName = ref('');
-const loading = ref(true);
+const loading = ref(false);
 const selectedCategory = ref(null);
 const categoryOptionsModal = ref(null);
 const draggedCategory = ref(null);
 const dragOverCategory = ref(null);
 const dragOverPosition = ref(null);
+const hasData = computed(() => !!shoppingListStore.getShoppingListContent);
 
 // Use computed property to ensure reactivity to store changes
 const shoppingCategories = computed(() => 
@@ -203,14 +204,20 @@ const handleInputFocus = (event) => {
 };
 
 onMounted(async () => {
-  // Temp hardcoded user
-  await userStore.fetchUser();
+  // Start loading data immediately
+  const loadData = async () => {
+    try {
+      await userStore.fetchUser();
+      if (!shoppingListStore.getShoppingListContent) {
+        await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
+      }
+    } catch (error) {
+      console.error('Error loading shopping list:', error);
+    }
+  };
 
-  if (!shoppingListStore.getShoppingListContent) {
-    await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
-  }
-
-  loading.value = false;
+  // Start loading data without waiting
+  loadData();
 });
 </script>
 

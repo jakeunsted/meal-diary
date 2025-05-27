@@ -2,10 +2,9 @@
   <div class="max-w-4xl mx-auto">
     <h1 class="text-2xl font-bold text-center m-4">{{ $t('Meal diary') }}</h1>
 
-    <WeekCalendarPicker @weekChange="handleWeekChange" />
-
-    <MealDiarySkeleton v-if="mealDiaryStoreComputed.loading" />
+    <MealDiarySkeleton v-if="!hasMealData" />
     <div v-else>
+      <WeekCalendarPicker @weekChange="handleWeekChange" />
       <DayFoodPlanCard
         v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
         :key="index"
@@ -46,6 +45,8 @@ const userStore = useUserStore();
 
 // Make mealDiaryStore reactive as a computed property
 const mealDiaryStoreComputed = computed(() => mealDiaryStore);
+const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.length > 0);
+// const hasMealData = false
 
 // Convert day number to name
 const getDayName = (dayNumber) => {
@@ -95,13 +96,21 @@ const handleWeekChange = (weekStartDate) => {
 };
 
 // Fetch meals when component mounts
-onMounted(async () => {
-  if (userStore.user?.family_group_id) {
-    mealDiaryStoreComputed.value.fetchWeeklyMeals();
-  } else {
-    await userStore.fetchUser();
-    mealDiaryStoreComputed.value.fetchWeeklyMeals();
-  }
+onMounted(() => {
+  // Start loading data immediately without waiting
+  const loadData = async () => {
+    try {
+      if (!userStore.user?.family_group_id) {
+        await userStore.fetchUser();
+      }
+      await mealDiaryStoreComputed.value.fetchWeeklyMeals();
+    } catch (error) {
+      console.error('Error loading meal diary:', error);
+    }
+  };
+
+  // Start loading data without waiting
+  loadData();
 });
 
 // Watch for changes in family group ID

@@ -1,7 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto">
-    <div class="skeleton h-8 w-48 mx-auto mb-8"></div>
-    
+  <div class="max-w-4xl mx-auto">    
     <!-- Week picker skeleton -->
     <div class="p-4">
       <div class="flex flex-col md:flex-row gap-4">

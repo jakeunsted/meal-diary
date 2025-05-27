@@ -2,21 +2,21 @@
   <div class="max-w-4xl mx-auto px-4 py-8">
     <ProfileHeader
       :user="userStore.user"
-      :is-loading="userStore.isLoading"
+      :is-loading="!hasUserData"
       :error="userStore.error"
       :full-name="userStore.getFullName"
     />
 
     <FamilyDetails
       :family-group="familyGroup"
-      :is-loading="isLoading"
+      :is-loading="!hasFamilyData"
       :error="error"
       @copy-code="copyFamilyCode"
     />
 
     <FamilyMembers
       :members="familyMembers"
-      :is-loading="isLoading"
+      :is-loading="!hasFamilyData"
       :error="error"
     />
   </div>
@@ -51,25 +51,35 @@ import { useUserStore } from '~/stores/user';
 import ProfileHeader from '~/components/profile/ProfileHeader.vue';
 import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
+import { computed, onMounted } from 'vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
 const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(familyStore);
 
+const hasUserData = computed(() => !!userStore.user);
+const hasFamilyData = computed(() => !!familyGroup.value);
+
 const handleError = (error) => {
   console.error('Error in profile page:', error);
 };
 
-onMounted(async () => {
-  try {
-    await userStore.fetchUser();
-    await Promise.all([
-      familyStore.fetchMembers().catch(handleError),
-      familyStore.fetchFamilyGroup().catch(handleError)
-    ]);
-  } catch (error) {
-    handleError(error);
-  }
+onMounted(() => {
+  // Start loading data immediately without waiting
+  const loadData = async () => {
+    try {
+      await userStore.fetchUser();
+      await Promise.all([
+        familyStore.fetchMembers().catch(handleError),
+        familyStore.fetchFamilyGroup().catch(handleError)
+      ]);
+    } catch (error) {
+      handleError(error);
+    }
+  };
+
+  // Start loading data without waiting
+  loadData();
 });
 
 const copyFamilyCode = async () => {
