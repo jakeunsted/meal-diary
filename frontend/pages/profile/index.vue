@@ -51,7 +51,7 @@ import { useUserStore } from '~/stores/user';
 import ProfileHeader from '~/components/profile/ProfileHeader.vue';
 import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, nextTick } from 'vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
@@ -64,18 +64,23 @@ const handleError = (error) => {
   console.error('Error in profile page:', error);
 };
 
-onMounted(() => {
-  // Start loading data immediately without waiting
+onMounted(async () => {
+  await nextTick();
+  
+  // Start loading data after skeleton is visible
   const loadData = async () => {
     try {
+      // Start all requests in parallel
       const [userData] = await Promise.all([
         userStore.fetchUser(),
+        // If we have a family group ID in the store, start loading family data immediately
         userStore.user?.family_group_id && Promise.all([
           familyStore.fetchMembers().catch(handleError),
           familyStore.fetchFamilyGroup().catch(handleError)
         ])
       ]);
 
+      // If we didn't have a family group ID before, load family data now
       if (!familyGroup.value && userData?.family_group_id) {
         await Promise.all([
           familyStore.fetchMembers().catch(handleError),
@@ -87,7 +92,7 @@ onMounted(() => {
     }
   };
 
-  // Start loading data without waiting
+  // Start loading data
   loadData();
 });
 

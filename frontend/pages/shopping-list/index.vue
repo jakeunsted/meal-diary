@@ -207,8 +207,10 @@ const handleInputFocus = (event) => {
   }, 100);
 };
 
-onMounted(() => {
-  // Start loading data immediately without waiting
+onMounted(async () => {
+  await nextTick();
+  
+  // Start loading data after skeleton is visible
   const loadData = async () => {
     try {
       // Start all requests in parallel
@@ -221,7 +223,7 @@ onMounted(() => {
     }
   };
 
-  // Start loading data without waiting
+  // Start loading data
   loadData();
 });
 </script>
