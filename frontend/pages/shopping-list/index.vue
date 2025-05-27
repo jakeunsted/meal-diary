@@ -80,6 +80,10 @@ const dragOverCategory = ref(null);
 const dragOverPosition = ref(null);
 const hasData = computed(() => !!shoppingListStore.getShoppingListContent);
 
+const handleError = (error) => {
+  console.error('Error in shopping list page:', error);
+};
+
 // Use computed property to ensure reactivity to store changes
 const shoppingCategories = computed(() => 
   shoppingListStore.getShoppingListContent?.categories || []
@@ -203,16 +207,17 @@ const handleInputFocus = (event) => {
   }, 100);
 };
 
-onMounted(async () => {
-  // Start loading data immediately
+onMounted(() => {
+  // Start loading data immediately without waiting
   const loadData = async () => {
     try {
-      await userStore.fetchUser();
-      if (!shoppingListStore.getShoppingListContent) {
-        await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
-      }
+      // Start all requests in parallel
+      await Promise.all([
+        shoppingListStore.fetchShoppingList().catch(handleError),
+        userStore.fetchUser().catch(handleError)
+      ]);
     } catch (error) {
-      console.error('Error loading shopping list:', error);
+      handleError(error);
     }
   };
 

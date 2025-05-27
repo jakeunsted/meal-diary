@@ -68,11 +68,20 @@ onMounted(() => {
   // Start loading data immediately without waiting
   const loadData = async () => {
     try {
-      await userStore.fetchUser();
-      await Promise.all([
-        familyStore.fetchMembers().catch(handleError),
-        familyStore.fetchFamilyGroup().catch(handleError)
+      const [userData] = await Promise.all([
+        userStore.fetchUser(),
+        userStore.user?.family_group_id && Promise.all([
+          familyStore.fetchMembers().catch(handleError),
+          familyStore.fetchFamilyGroup().catch(handleError)
+        ])
       ]);
+
+      if (!familyGroup.value && userData?.family_group_id) {
+        await Promise.all([
+          familyStore.fetchMembers().catch(handleError),
+          familyStore.fetchFamilyGroup().catch(handleError)
+        ]);
+      }
     } catch (error) {
       handleError(error);
     }
