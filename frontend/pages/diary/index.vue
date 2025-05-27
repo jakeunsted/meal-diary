@@ -13,6 +13,7 @@
         :breakfast="{ name: dayMeal.breakfast }"
         :lunch="{ name: dayMeal.lunch }"
         :dinner="{ name: dayMeal.dinner }"
+        :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
         @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
       />
     </div>
@@ -39,39 +40,15 @@ import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
+import { useDateUtils } from '~/composables/useDateUtils.ts';
 
 const mealDiaryStore = useMealDiaryStore();
 const userStore = useUserStore();
+const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
 // Make mealDiaryStore reactive as a computed property
 const mealDiaryStoreComputed = computed(() => mealDiaryStore);
 const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.length > 0);
-// const hasMealData = false
-
-// Convert day number to name
-const getDayName = (dayNumber) => {
-  const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-  return days[dayNumber - 1];
-};
-
-// Calculate the date for a specific day of the week
-const getDateForDay = (weekStartDate, dayNumber) => {
-  if (!weekStartDate) return '';
-  
-  try {
-    const startDate = new Date(weekStartDate);
-    if (isNaN(startDate.getTime())) return '';
-    
-    const dayOffset = dayNumber - 1; // Subtract 1 because Monday is 1 in our system
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + dayOffset);
-    
-    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-  } catch (error) {
-    console.error('Error calculating date:', error);
-    return '';
-  }
-};
 
 // Handle opening the meal modal
 const handleSetMeal = (mealType, dayOfWeek) => {

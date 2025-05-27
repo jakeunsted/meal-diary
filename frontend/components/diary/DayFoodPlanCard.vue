@@ -65,11 +65,21 @@ const props = defineProps({
     required: false,
     type: Object,
   },
+  isPastDay: {
+    required: false,
+    type: Boolean,
+    default: false
+  }
 })
 
 defineEmits(['setMeal'])
 
-const isOpen = ref(true);
+const isOpen = ref(!props.isPastDay);
+
+// Watch for changes in isPastDay prop
+watch(() => props.isPastDay, (newValue) => {
+  isOpen.value = !newValue;
+});
 
 const toggleCard = () => {
   isOpen.value = !isOpen.value;
