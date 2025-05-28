@@ -10,6 +10,7 @@
       required
       :value="meal"
       @input="$emit('update:meal', $event.target.value)"
+      @keydown.enter.prevent="saveMeal"
       :placeholder="$t('Meal Name')"
       :disabled="isLoading"
     />
