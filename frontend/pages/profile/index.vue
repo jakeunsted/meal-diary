@@ -19,6 +19,8 @@
       :is-loading="!hasFamilyData"
       :error="error"
     />
+
+    <LogoutButton />
   </div>
 </template>
 
@@ -51,6 +53,7 @@ import { useUserStore } from '~/stores/user';
 import ProfileHeader from '~/components/profile/ProfileHeader.vue';
 import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
+import LogoutButton from '~/components/profile/LogoutButton.vue';
 import { computed, onMounted, nextTick } from 'vue';
 
 const userStore = useUserStore();
