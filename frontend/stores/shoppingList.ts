@@ -1,25 +1,50 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { ShoppingList, ShoppingListCategory, ShoppingListState } from '~/types/ShoppingList'
+import type { ShoppingList, ShoppingListCategory, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
+
+export interface ShoppingListState {
+  shoppingList: ShoppingList | null;
+  categories: ShoppingListCategory[];
+  items: ShoppingListItem[];
+  itemCategories: ItemCategory[];
+  isLoading: boolean;
+  error: string | null;
+}
 
 export const useShoppingListStore = defineStore('shoppingList', {
   state: (): ShoppingListState => ({
     shoppingList: null,
+    categories: [],
+    items: [],
+    itemCategories: [],
     isLoading: false,
     error: null,
   }),
 
   getters: {
-    getShoppingListContent: (state) => state.shoppingList?.content
+    getItemsByCategory: (state) => (categoryId: number) => {
+      return state.items.filter(item => item.shopping_list_categories === categoryId);
+    },
+    getCategoryById: (state) => (categoryId: number) => {
+      return state.categories.find(category => category.id === categoryId);
+    },
+    getItemCategoryById: (state) => (categoryId: number) => {
+      return state.itemCategories.find(category => category.id === categoryId);
+    }
   },
 
   actions: {
     // Save to Preferences
     async saveToLocalStorage() {
-      if (import.meta.client && this.shoppingList) {
+      if (import.meta.client) {
         await Preferences.set({
           key: 'shoppingList',
-          value: JSON.stringify(this.shoppingList)
+          value: JSON.stringify({
+            shoppingList: this.shoppingList,
+            categories: this.categories,
+            items: this.items,
+            itemCategories: this.itemCategories
+          })
         });
       }
     },
@@ -30,7 +55,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
         const { value } = await Preferences.get({ key: 'shoppingList' });
         if (value) {
           try {
-            this.shoppingList = JSON.parse(value);
+            const data = JSON.parse(value);
+            this.shoppingList = data.shoppingList;
+            this.categories = data.categories;
+            this.items = data.items;
+            this.itemCategories = data.itemCategories;
             return true;
           } catch (error) {
             console.error('Failed to parse stored shopping list:', error);
@@ -39,6 +68,21 @@ export const useShoppingListStore = defineStore('shoppingList', {
         }
       }
       return false;
+    },
+
+    async fetchItemCategories() {
+      try {
+        this.isLoading = true;
+        this.error = null;
+        const response = await $fetch<ItemCategory[]>('/api/item-categories');
+        this.itemCategories = response;
+        await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to fetch item categories';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
     },
 
     async fetchShoppingList(familyGroupId: number, forceRefresh = false) {
@@ -64,120 +108,89 @@ export const useShoppingListStore = defineStore('shoppingList', {
       }
     },
 
-    async addCategory(familyGroupId: number, categoryName: string) {
+    async fetchFamilyGroupCategories(familyGroupId: number) {
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ShoppingListCategory>(`/api/shopping-list/${familyGroupId}/new-category`, {
-          method: 'POST',
-          body: { category_name: categoryName },
-        });
-        if (this.shoppingList?.content) {
-          this.shoppingList.content.categories.push(response);
-          // Save to Preferences after successful update
-          await this.saveToLocalStorage();
-        }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to add category';
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    async saveCategory(familyGroupId: number, categoryName: string, categoryContents: ShoppingListCategory[]) {
-      try {
-        this.isLoading = true;
-        this.error = null;
-        const response = await $fetch<ShoppingListCategory>(`/api/shopping-list/${familyGroupId}/save-category`, {
-          method: 'POST',
-          body: { category_name: categoryName, category_contents: categoryContents },
-        });
-        if (this.shoppingList?.content) {
-          this.shoppingList.content.categories.find(
-            category => category.name === categoryName
-          )!.items = response.items;
-          // Save to Preferences after successful update
-          await this.saveToLocalStorage();
-        }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to save category';
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    /**
-     * Handle a category that was added by another client via webhook
-     */
-    async handleCategoryAdded(familyGroupId: number, categoryName: string, categoryData: ShoppingListCategory) {
-      if (this.shoppingList?.content) {
-        // Check if this category already exists (avoid duplicates)
-        const existingCategory = this.shoppingList.content.categories.find(
-          category => category.name === categoryName
-        );
-        
-        if (!existingCategory) {
-          this.shoppingList.content.categories.push(categoryData);
-          // Save to Preferences after receiving update
-          await this.saveToLocalStorage();
-        }
-      }
-    },
-    
-    /**
-     * Handle a category that was updated by another client via webhook
-     */
-    async handleCategorySaved(familyGroupId: number, categoryName: string, categoryData: ShoppingListCategory) {
-      if (this.shoppingList?.content) {
-        const categoryIndex = this.shoppingList.content.categories.findIndex(
-          category => category.name === categoryName
-        );
-        
-        if (categoryIndex !== -1) {
-          // Update the existing category with new data
-          this.shoppingList.content.categories[categoryIndex].items = categoryData.items;
-          // Save to Preferences after receiving update
-          await this.saveToLocalStorage();
-        }
-      }
-    },
-
-    /**
-     * This method searches for a category by its name within the shopping list's content
-     * and updates its items with the provided category contents.
-     * 
-     * @param {string} categoryName
-     * @param {ShoppingListCategory} categoryContents
-     * 
-     * @returns {void}
-     */
-    async updateCategoryInStore(categoryName: string, categoryContents: ShoppingListCategory) {
-      if (this.shoppingList?.content) {
-        this.shoppingList.content.categories.find(
-          category => category.name === categoryName
-        )!.items = categoryContents.items;
-        // Save to Preferences after local update
+        const response = await $fetch<ShoppingListCategory[]>(`/api/shopping-list/${familyGroupId}/categories`);
+        this.categories = response;
         await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to fetch categories';
+        throw err;
+      } finally {
+        this.isLoading = false;
       }
     },
 
-    async updateCategoryOrder(familyGroupId: number, categories: ShoppingListCategory[]) {
+    async addItem(familyGroupId: number, item: { name: string, shopping_list_categories: number }) {
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}/update-order`, {
+        const response = await $fetch<ShoppingListItem>(`/api/shopping-list/${familyGroupId}/items`, {
           method: 'POST',
-          body: { categories },
+          body: item,
         });
-        if (this.shoppingList) {
-          this.shoppingList.content.categories = categories;
-          // Save to Preferences after successful update
+        this.items.push(response);
+        await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to add item';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async updateItem(familyGroupId: number, itemId: number, updates: Partial<ShoppingListItem>) {
+      try {
+        this.isLoading = true;
+        this.error = null;
+        const response = await $fetch<ShoppingListItem>(`/api/shopping-list/${familyGroupId}/items/${itemId}`, {
+          method: 'PUT',
+          body: updates,
+        });
+        const index = this.items.findIndex(item => item.id === itemId);
+        if (index !== -1) {
+          this.items[index] = response;
           await this.saveToLocalStorage();
         }
       } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to update category order';
+        this.error = err instanceof Error ? err.message : 'Failed to update item';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async deleteItem(familyGroupId: number, itemId: number) {
+      try {
+        this.isLoading = true;
+        this.error = null;
+        await $fetch(`/api/shopping-list/${familyGroupId}/items/${itemId}`, {
+          method: 'DELETE' as any,
+        });
+        this.items = this.items.filter(item => item.id !== itemId);
+        await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete item';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
+    },
+
+    async deleteCategory(familyGroupId: number, categoryId: number) {
+      try {
+        this.isLoading = true;
+        this.error = null;
+        await $fetch(`/api/shopping-list/${familyGroupId}/categories/${categoryId}`, {
+          method: 'DELETE' as any,
+        });
+        this.categories = this.categories.filter(category => category.id !== categoryId);
+        this.items = this.items.filter(item => item.shopping_list_categories !== categoryId);
+        await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete category';
         throw err;
       } finally {
         this.isLoading = false;
