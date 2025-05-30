@@ -111,57 +111,7 @@ export const addCategory = async (req: Request, res: Response) => {
 };
 
 /**
- * Updates an existing category in a shopping list
- * @param {Request} req - Express request object containing updated category details
- * @param {Response} res - Express response object
- * @returns {Promise<void>} - Returns the updated category
- */
-export const updateCategory = async (req: Request, res: Response) => {
-  const { family_group_id, category_id } = req.params;
-  const { name, icon = null } = req.body;
-
-  const result = await sequelize.transaction(async (t: Transaction) => {
-    const shoppingListCategory = await ShoppingListCategory.findOne({
-      where: { id: Number(category_id) },
-      include: [
-        {
-          model: ShoppingList,
-          where: { family_group_id: Number(family_group_id) },
-        },
-        {
-          model: ItemCategory,
-          as: 'itemCategory',
-        },
-      ],
-      transaction: t,
-    });
-
-    if (!shoppingListCategory) {
-      return res.status(404).json({ message: 'Category not found' });
-    }
-
-    const itemCategory = await ItemCategory.findOne({
-      where: { id: Number(shoppingListCategory.get('item_categories_id')) },
-      transaction: t,
-    });
-
-    if (!itemCategory) {
-      throw new Error('Item category not found');
-    }
-
-    await itemCategory.update(
-      { name, icon },
-      { transaction: t }
-    );
-
-    return shoppingListCategory;
-  });
-
-  res.json(result);
-};
-
-/**
- * Deletes a category from a shopping list and soft deletes all its items
+ * Deletes a category from a family shopping list and soft deletes all its items
  * @param {Request} req - Express request object
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the deleted category

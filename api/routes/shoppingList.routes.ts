@@ -359,67 +359,9 @@ router.get('/:family_group_id/categories', async (req, res, next) => {
 /**
  * @openapi
  * /shopping-list/{family_group_id}/categories/{category_id}:
- *   put:
- *     summary: Update a category in the shopping list
- *     description: Updates an existing category in the shopping list
- *     tags:
- *       - Shopping List
- *     parameters:
- *       - name: family_group_id
- *         in: path
- *         required: true
- *         description: The id of the family group
- *       - name: category_id
- *         in: path
- *         required: true
- *         description: The id of the category to update
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name:
- *                 type: string
- *                 description: The new name of the category
- *               icon:
- *                 type: string
- *                 description: The new icon identifier for the category
- *     responses:
- *       200:
- *         description: The updated category
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ShoppingListCategory'
- *       404:
- *         description: Category not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Category not found
- *       500:
- *         description: Failed to update category
- */
-router.put('/:family_group_id/categories/:category_id', async (req, res, next) => {
-  try {
-    await shoppingListController.updateCategory(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
- * /shopping-list/{family_group_id}/categories/{category_id}:
  *   delete:
- *     summary: Delete a category from the shopping list
- *     description: Deletes a category and all its items from the shopping list
+ *     summary: Delete a category from the family shopping list
+ *     description: Deletes a category and all its items from the family shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
