@@ -204,6 +204,36 @@ export const deleteCategory = async (req: Request, res: Response) => {
 };
 
 /**
+ * Get all categories for a family group
+ * @param {Request} req - Express request object
+ * @param {Response} res - Express response object
+ * @returns {Promise<void>} - Returns the categories
+ */
+export const getFamilyCategories = async (req: Request, res: Response) => {
+  const { family_group_id } = req.params;
+
+  if (!family_group_id) {
+    return res.status(412).json({ message: 'Family group ID is required' });
+  }
+
+  const categories = await ShoppingListCategory.findAll({
+    where: { shopping_list_id: Number(family_group_id) },
+    include: [
+      {
+        model: ItemCategory,
+        as: 'itemCategory',
+      },
+    ],
+  });
+
+  if (!categories) {
+    return res.status(404).json({ message: 'Categories not found' });
+  }
+
+  res.json(categories);
+};
+
+/**
  * Adds a new item to a shopping list category
  * @param {Request} req - Express request object containing item details
  * @param {Response} res - Express response object

@@ -297,6 +297,67 @@ router.post('/:family_group_id/categories', async (req, res, next) => {
 
 /**
  * @openapi
+ * /shopping-list/{family_group_id}/categories:
+ *   get:
+ *     summary: Get all categories for a shopping list
+ *     description: Retrieves all categories for a shopping list
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *     responses:
+ *       200:
+ *         description: The categories for the shopping list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ShoppingListCategoryWithItems'
+ *       404:
+ *         description: Categories not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Categories not found
+ *       412:
+ *         description: Family group ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Family group ID is required
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to get categories
+ */
+router.get('/:family_group_id/categories', async (req, res, next) => {
+  try {
+    await shoppingListController.getFamilyCategories(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /shopping-list/{family_group_id}/categories/{category_id}:
  *   put:
  *     summary: Update a category in the shopping list
