@@ -3,7 +3,10 @@ import ItemCategory from '../../db/models/ItemCategory.model.ts';
 
 export const getAllItemCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await ItemCategory.findAll();
+    console.log('fetching item categories');
+    const categories = await ItemCategory.findAll({
+      order: [['name', 'ASC']]
+    });
     res.json(categories);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching item categories', error });

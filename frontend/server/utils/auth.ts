@@ -10,6 +10,8 @@ export async function authenticatedFetch<T>(
   const authHeader = getHeader(event, 'authorization');
   const refreshToken = getHeader(event, 'x-refresh-token');
 
+  console.log('Calling auth api: ', url);
+
   if (!authHeader) {
     throw createError({
       statusCode: 401,

@@ -38,11 +38,7 @@
     <div class="flex justify-center" v-if="hasData">
       <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">{{ $t('Add Category') }}</button>
     </div>
-    <AddCategoryModal
-      :newCategoryName="newCategoryName"
-      :saveNewCategory="saveNewCategory"
-      @update:newCategoryName="newCategoryName = $event"
-    />
+    <AddCategoryModal />
     <CategoryOptionsModal
       ref="categoryOptionsModal"
       v-if="selectedCategory"
@@ -71,14 +67,13 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
-const newCategoryName = ref('');
 const loading = ref(false);
 const selectedCategory = ref(null);
 const categoryOptionsModal = ref(null);
 const draggedCategory = ref(null);
 const dragOverCategory = ref(null);
 const dragOverPosition = ref(null);
-const hasData = computed(() => !!shoppingListStore.getShoppingListContent);
+const hasData = computed(() => !!shoppingListStore.shoppingList);
 
 const handleError = (error) => {
   console.error('Error in shopping list page:', error);
@@ -90,27 +85,27 @@ const shoppingCategories = computed(() =>
 );
 
 const handleLongPress = (category) => {
-  selectedCategory.value = category;
-  categoryOptionsModal.value?.showModal();
+  // selectedCategory.value = category;
+  // categoryOptionsModal.value?.showModal();
 };
 
-const handleUntickAll = async () => {
-  if (!selectedCategory.value) return;
-  const updatedCategory = {
-    ...selectedCategory.value,
-    items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
-  };
-  await saveCategory(updatedCategory);
-};
+// const handleUntickAll = async () => {
+//   if (!selectedCategory.value) return;
+//   const updatedCategory = {
+//     ...selectedCategory.value,
+//     items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
+//   };
+//   await saveCategory(updatedCategory);
+// };
 
-const handleTickAll = async () => {
-  if (!selectedCategory.value) return;
-  const updatedCategory = {
-    ...selectedCategory.value,
-    items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
-  };
-  await saveCategory(updatedCategory);
-};
+// const handleTickAll = async () => {
+//   if (!selectedCategory.value) return;
+//   const updatedCategory = {
+//     ...selectedCategory.value,
+//     items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
+//   };
+//   await saveCategory(updatedCategory);
+// };
 
 const handleDeleteGroup = async () => {
   if (!selectedCategory.value) return;
@@ -127,18 +122,9 @@ const handleDeleteGroup = async () => {
   }
 };
 
-const saveNewCategory = async () => {
-  if (newCategoryName.value === '') {
-    return;
-  }
-  await shoppingListStore.addCategory(userStore.user?.family_group_id, newCategoryName.value);
-  newCategoryName.value = '';
-  add_category_modal.close();
-}
-
-const saveCategory = async (category, event) => {
-  await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
-}
+// const saveCategory = async (category, event) => {
+//   await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
+// }
 
 const handleDragStart = (categoryName) => {
   draggedCategory.value = categoryName;
@@ -216,7 +202,8 @@ onMounted(async () => {
       // Start all requests in parallel
       await Promise.all([
         shoppingListStore.fetchShoppingList().catch(handleError),
-        userStore.fetchUser().catch(handleError)
+        userStore.fetchUser().catch(handleError),
+        shoppingListStore.fetchItemCategories().catch(handleError)
       ]);
     } catch (error) {
       handleError(error);
