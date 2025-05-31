@@ -298,9 +298,25 @@ export const useShoppingListStore = defineStore('shoppingList', {
           }
         }) as ShoppingListCategoryWithItems;
 
+        // Create a complete category object with the itemCategory data
+        const completeCategory: ShoppingListCategoryWithItems = {
+          ...response,
+          itemCategory: category,
+          items: response.items || []
+        };
+
         // Add the new category to the shopping list
-        this.shoppingList.categories.push(response);
+        if (this.shoppingList.categories) {
+          this.shoppingList.categories.push(completeCategory);
+        } else {
+          this.shoppingList.categories = [completeCategory];
+        }
+        
+        // Save to local storage
         await this.saveToLocalStorage();
+        
+        // Fetch the updated shopping list to ensure we have the latest data
+        await this.fetchShoppingList();
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to add category';
         throw err;

@@ -22,8 +22,8 @@
         >
           <CollapseListSection
             class="m-4"
-            :categoryTitle="category.itemCategory.name"
-            :categoryItems="category.items"
+            :categoryTitle="category?.itemCategory?.name || ''"
+            :categoryItems="category?.items || []"
             @addItem="saveCategory(category, $event)"
             @updateItem="saveCategory(category, $event)"
             @longPress="handleLongPress(category)"
@@ -79,11 +79,6 @@ const draggedCategory = ref(null);
 const dragOverCategory = ref(null);
 const dragOverPosition = ref(null);
 const hasData = computed(() => {
-  console.log('Checking hasData:', {
-    shoppingList: shoppingListStore.shoppingList,
-    categories: shoppingListStore.shoppingList?.categories,
-    length: shoppingListStore.shoppingList?.categories?.length
-  });
   return !!shoppingListStore.shoppingList?.categories?.length;
 });
 
@@ -169,7 +164,7 @@ const isDragOverBottom = (category) => {
 };
 
 const handleDragOver = (event, category) => {
-  if (!draggedCategory.value || draggedCategory.value === category.itemCategory.name) return;
+  if (!draggedCategory.value || !category?.itemCategory?.name || draggedCategory.value === category.itemCategory.name) return;
   
   const rect = event.currentTarget.getBoundingClientRect();
   const y = event.clientY - rect.top;
@@ -180,6 +175,7 @@ const handleDragOver = (event, category) => {
 };
 
 const handleDragLeave = (category) => {
+  if (!category?.itemCategory?.name) return;
   if (dragOverCategory.value === category.itemCategory.name) {
     dragOverCategory.value = null;
     dragOverPosition.value = null;
@@ -187,11 +183,11 @@ const handleDragLeave = (category) => {
 };
 
 const handleDrop = async (event, targetCategory) => {
-  if (!draggedCategory.value || draggedCategory.value === targetCategory.itemCategory.name) return;
+  if (!draggedCategory.value || !targetCategory?.itemCategory?.name || draggedCategory.value === targetCategory.itemCategory.name) return;
   
   const categories = [...shoppingCategories.value];
-  const draggedIndex = categories.findIndex(c => c.itemCategory.name === draggedCategory.value);
-  const targetIndex = categories.findIndex(c => c.itemCategory.name === targetCategory.itemCategory.name);
+  const draggedIndex = categories.findIndex(c => c.itemCategory?.name === draggedCategory.value);
+  const targetIndex = categories.findIndex(c => c.itemCategory?.name === targetCategory.itemCategory.name);
   
   if (draggedIndex === -1 || targetIndex === -1) return;
   

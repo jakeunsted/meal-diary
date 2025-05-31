@@ -107,7 +107,35 @@ export const addCategory = async (req: Request, res: Response) => {
       { transaction: t }
     );
 
-    return shoppingListCategory;
+    // Fetch the complete category data with items
+    const completeCategory = await ShoppingListCategory.findOne({
+      where: { id: Number(shoppingListCategory.get('id')) },
+      include: [
+        {
+          model: ItemCategory,
+          as: 'itemCategory',
+          attributes: ['id', 'name', 'icon']
+        },
+        {
+          model: ShoppingListItem,
+          as: 'items',
+          where: { deleted: false },
+          required: false
+        }
+      ],
+      transaction: t
+    }) as any; // Type assertion to handle the included associations
+
+    if (!completeCategory) {
+      throw new Error('Failed to fetch complete category data');
+    }
+
+    // Ensure we have the itemCategory data
+    if (!completeCategory.itemCategory) {
+      completeCategory.itemCategory = itemCategory;
+    }
+
+    return completeCategory;
   });
 
   res.json(result);
