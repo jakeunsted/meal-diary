@@ -238,9 +238,6 @@ onMounted(async () => {
         userStore.fetchUser().catch(handleError),
         shoppingListStore.fetchItemCategories().catch(handleError)
       ]);
-
-      console.log('shoppingListStore.shoppingList', JSON.stringify(shoppingListStore.shoppingList, null, 2));
-      console.log('shoppingCategories', shoppingCategories.value);
     } catch (error) {
       handleError(error);
     }
