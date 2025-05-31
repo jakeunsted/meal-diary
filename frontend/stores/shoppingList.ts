@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { ShoppingList, ShoppingListCategory, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
+import type { ShoppingList, ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
 
 /**
  * State interface for the shopping list store
@@ -8,8 +8,6 @@ import type { ShoppingList, ShoppingListCategory, ShoppingListItem, ItemCategory
  */
 export interface ShoppingListState {
   shoppingList: ShoppingList | null;
-  categories: ShoppingListCategory[];
-  items: ShoppingListItem[];
   itemCategories: ItemCategory[];
   isLoading: boolean;
   error: string | null;
@@ -21,8 +19,6 @@ export interface ShoppingListState {
 export const useShoppingListStore = defineStore('shoppingList', {
   state: (): ShoppingListState => ({
     shoppingList: null,
-    categories: [],
-    items: [],
     itemCategories: [],
     isLoading: false,
     error: null,
@@ -35,7 +31,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @returns A function that takes a categoryId and returns filtered items
      */
     getItemsByCategory: (state) => (categoryId: number) => {
-      return state.items.filter(item => item.shopping_list_categories === categoryId);
+      const category = state.shoppingList?.categories.find(c => c.id === categoryId);
+      return category?.items || [];
     },
 
     /**
@@ -44,7 +41,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @returns A function that takes a categoryId and returns the matching category
      */
     getCategoryById: (state) => (categoryId: number) => {
-      return state.categories.find(category => category.id === categoryId);
+      return state.shoppingList?.categories.find(category => category.id === categoryId);
     },
 
     /**
@@ -59,7 +56,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
   actions: {
     /**
-     * Save the current shopping list state to local storage
+     * Save the current state to local storage
      */
     async saveToLocalStorage() {
       if (import.meta.client) {
@@ -67,8 +64,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
           key: 'shoppingList',
           value: JSON.stringify({
             shoppingList: this.shoppingList,
-            categories: this.categories,
-            items: this.items,
             itemCategories: this.itemCategories
           })
         });
@@ -86,8 +81,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
           try {
             const data = JSON.parse(value);
             this.shoppingList = data.shoppingList;
-            this.categories = data.categories;
-            this.items = data.items;
             this.itemCategories = data.itemCategories;
             return true;
           } catch (error) {
@@ -101,15 +94,16 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
     /**
      * Fetch the shopping list for a family group
-     * @param familyGroupId - The ID of the family group
      * @param forceRefresh - Whether to force a refresh from the server
      */
-    async fetchShoppingList(familyGroupId: number, forceRefresh = false) {
+    async fetchShoppingList(forceRefresh = false) {
+      const authStore = useAuthStore();
       try {
         if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
-          const response = await $fetch<ShoppingList>(`/api/shopping-list/${familyGroupId}`);
+          console.log('fetching shopping list from store');
+          const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}`) as ShoppingList;
           this.shoppingList = response;
           await this.saveToLocalStorage();
         }
@@ -132,12 +126,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ItemCategory[]>('/api/item-categories', {
+        const response = await $fetch('/api/item-categories', {
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        });
+        }) as ItemCategory[];
         this.itemCategories = response;
         await this.saveToLocalStorage();
       } catch (err) {
@@ -150,24 +144,28 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
     /**
      * Add a new item to the shopping list
-     * @param familyGroupId - The ID of the family group
      * @param item - The item data to add
      */
-    async addItem(familyGroupId: number, item: { name: string, shopping_list_categories: number }) {
+    async addItem(item: { name: string, shopping_list_categories: number }) {
       const authStore = useAuthStore();
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ShoppingListItem>(`/api/shopping-list/${familyGroupId}/items`, {
+        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items`, {
           method: 'POST',
           body: item,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        });
-        this.items.push(response);
-        await this.saveToLocalStorage();
+        }) as ShoppingListItem;
+
+        // Update the category's items array
+        const category = this.shoppingList?.categories.find(c => c.id === item.shopping_list_categories);
+        if (category) {
+          category.items.push(response);
+          await this.saveToLocalStorage();
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to add item';
         throw err;
@@ -178,27 +176,33 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
     /**
      * Update an existing item in the shopping list
-     * @param familyGroupId - The ID of the family group
      * @param itemId - The ID of the item to update
      * @param updates - The updates to apply to the item
      */
-    async updateItem(familyGroupId: number, itemId: number, updates: Partial<ShoppingListItem>) {
+    async updateItem(itemId: number, updates: Partial<ShoppingListItem>) {
       const authStore = useAuthStore();
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ShoppingListItem>(`/api/shopping-list/${familyGroupId}/items/${itemId}`, {
+        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${itemId}`, {
           method: 'PUT',
           body: updates,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        });
-        const index = this.items.findIndex(item => item.id === itemId);
-        if (index !== -1) {
-          this.items[index] = response;
-          await this.saveToLocalStorage();
+        }) as ShoppingListItem;
+
+        // Update the item in the category's items array
+        if (this.shoppingList) {
+          for (const category of this.shoppingList.categories) {
+            const index = category.items.findIndex(item => item.id === itemId);
+            if (index !== -1) {
+              category.items[index] = response;
+              await this.saveToLocalStorage();
+              break;
+            }
+          }
         }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to update item';
@@ -210,23 +214,32 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
     /**
      * Delete an item from the shopping list
-     * @param familyGroupId - The ID of the family group
      * @param itemId - The ID of the item to delete
      */
-    async deleteItem(familyGroupId: number, itemId: number) {
+    async deleteItem(itemId: number) {
       const authStore = useAuthStore();
       try {
         this.isLoading = true;
         this.error = null;
-        await $fetch(`/api/shopping-list/${familyGroupId}/items/${itemId}`, {
+        await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${itemId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
         });
-        this.items = this.items.filter(item => item.id !== itemId);
-        await this.saveToLocalStorage();
+
+        // Remove the item from the category's items array
+        if (this.shoppingList) {
+          for (const category of this.shoppingList.categories) {
+            const index = category.items.findIndex(item => item.id === itemId);
+            if (index !== -1) {
+              category.items.splice(index, 1);
+              await this.saveToLocalStorage();
+              break;
+            }
+          }
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to delete item';
         throw err;
@@ -237,24 +250,29 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
     /**
      * Delete a category from the shopping list
-     * @param familyGroupId - The ID of the family group
      * @param categoryId - The ID of the category to delete
      */
-    async deleteCategory(familyGroupId: number, categoryId: number) {
+    async deleteCategory(categoryId: number) {
       const authStore = useAuthStore();
       try {
         this.isLoading = true;
         this.error = null;
-        await $fetch(`/api/shopping-list/${familyGroupId}/categories/${categoryId}`, {
+        await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/categories/${categoryId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
         });
-        this.categories = this.categories.filter(category => category.id !== categoryId);
-        this.items = this.items.filter(item => item.shopping_list_categories !== categoryId);
-        await this.saveToLocalStorage();
+
+        // Remove the category from the shopping list
+        if (this.shoppingList) {
+          const index = this.shoppingList.categories.findIndex(category => category.id === categoryId);
+          if (index !== -1) {
+            this.shoppingList.categories.splice(index, 1);
+            await this.saveToLocalStorage();
+          }
+        }
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to delete category';
         throw err;
@@ -270,20 +288,20 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async addCategory(category: ItemCategory) {
       if (!this.shoppingList) throw new Error('No shopping list found');
       const authStore = useAuthStore();
+      console.log('adding category to shopping list', category);
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<ShoppingListCategory>(`/api/shopping-list/${this.shoppingList.family_group_id}/categories`, {
+        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/categories/${category.id}`, {
           method: 'POST',
-          body: {
-            item_categories_id: category.id
-          },
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        });
-        this.categories.push(response);
+        }) as ShoppingListCategoryWithItems;
+
+        // Add the new category to the shopping list
+        this.shoppingList.categories.push(response);
         await this.saveToLocalStorage();
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to add category';
@@ -291,6 +309,30 @@ export const useShoppingListStore = defineStore('shoppingList', {
       } finally {
         this.isLoading = false;
       }
+    },
+
+    /**
+     * Update the order of categories in the shopping list
+     * @param familyGroupId - The ID of the family group
+     * @param categories - The new order of categories
+     */
+    async updateCategoryOrder(familyGroupId: number, categories: ShoppingListCategoryWithItems[]) {
+      if (!this.shoppingList) throw new Error('No shopping list found');
+      try {
+        this.isLoading = true;
+        this.error = null;
+        await $fetch(`/api/shopping-list/${familyGroupId}/categories/order`, {
+          method: 'PUT',
+          body: { categories }
+        });
+        this.shoppingList.categories = categories;
+        await this.saveToLocalStorage();
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to update category order';
+        throw err;
+      } finally {
+        this.isLoading = false;
+      }
     }
   }
-})
+});

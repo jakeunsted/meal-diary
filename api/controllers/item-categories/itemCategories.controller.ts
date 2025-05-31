@@ -3,7 +3,6 @@ import ItemCategory from '../../db/models/ItemCategory.model.ts';
 
 export const getAllItemCategories = async (req: Request, res: Response) => {
   try {
-    console.log('fetching item categories');
     const categories = await ItemCategory.findAll({
       order: [['name', 'ASC']]
     });

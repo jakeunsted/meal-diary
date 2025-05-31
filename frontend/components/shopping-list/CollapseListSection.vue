@@ -118,39 +118,18 @@ const toggleCollapse = () => {
 const addItem = (name) => {
   if (!name.trim()) return;
   
-  props.categoryItems.push({
-    id: props.categoryItems.length + 1,
-    name: name,
-    checked: false,
-  });
-  newItemName.value = '';
-
   emit('addItem', {
     category: props.categoryTitle,
     itemName: name,
   });
+  newItemName.value = '';
 };
 
 const handleItemUpdate = (itemData) => {
-  updateItem(itemData.id, itemData.name, itemData.checked);
-};
-
-const updateItem = (id, name, checked) => {
-  const item = props.categoryItems.find(item => item.id === id);
-  if (!item) return;
-  
-  if (checked !== undefined) {
-    item.checked = !item.checked;
-  } else {
-    item.name = name;
-  }
-  
-  props.categoryItems.splice(props.categoryItems.indexOf(item), 1, item);
-
   emit('updateItem', {
     category: props.categoryTitle,
-    itemName: name,
-    itemChecked: item.checked
+    itemName: itemData.name,
+    itemChecked: itemData.checked
   });
 };
 
@@ -158,8 +137,6 @@ const removeItem = (id) => {
   const item = props.categoryItems.find(item => item.id === id);
   if (!item) return;
   
-  props.categoryItems.splice(props.categoryItems.indexOf(item), 1);
-
   emit('updateItem', {
     category: props.categoryTitle,
     itemName: item.name,

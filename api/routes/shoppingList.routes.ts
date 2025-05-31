@@ -241,22 +241,10 @@ router.get('/:family_group_id', async (req, res, next) => {
  *         in: path
  *         required: true
  *         description: The id of the family group
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - icon
- *             properties:
- *               name:
- *                 type: string
- *                 description: The name of the new category
- *               icon:
- *                 type: string
- *                 description: The icon identifier for the category
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The id of the category to add
  *     responses:
  *       200:
  *         description: The newly created category
@@ -287,8 +275,9 @@ router.get('/:family_group_id', async (req, res, next) => {
  *       500:
  *         description: Failed to add new category
  */
-router.post('/:family_group_id/categories', async (req, res, next) => {
+router.post('/:family_group_id/categories/:category_id', async (req, res, next) => {
   try {
+    console.log('adding category to shopping list');
     await shoppingListController.addCategory(req, res);
   } catch (error) {
     next(error);

@@ -74,11 +74,10 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
  * @returns {Promise<void>} - Returns the newly created category
  */
 export const addCategory = async (req: Request, res: Response) => {
-  const { family_group_id } = req.params;
-  const { name, icon = null } = req.body;
+  const { family_group_id, category_id } = req.params;
 
-  if (!name) {
-    return res.status(412).json({ message: 'Name is required' });
+  if (!category_id) {
+    return res.status(412).json({ message: 'Category ID is required' });
   }
 
   const result = await sequelize.transaction(async (t: Transaction) => {
@@ -91,10 +90,14 @@ export const addCategory = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Shopping list not found' });
     }
 
-    const itemCategory = await ItemCategory.create(
-      { name, icon },
-      { transaction: t }
-    );
+    const itemCategory = await ItemCategory.findOne({
+      where: { id: Number(category_id) },
+      transaction: t,
+    });
+
+    if (!itemCategory) {
+      return res.status(404).json({ message: 'Item category not found' });
+    }
 
     const shoppingListCategory = await ShoppingListCategory.create(
       {
