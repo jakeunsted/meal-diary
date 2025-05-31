@@ -102,7 +102,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
         if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
-          console.log('fetching shopping list from store');
           const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}`) as ShoppingList;
           this.shoppingList = response;
           await this.saveToLocalStorage();
@@ -288,7 +287,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async addCategory(category: ItemCategory) {
       if (!this.shoppingList) throw new Error('No shopping list found');
       const authStore = useAuthStore();
-      console.log('adding category to shopping list', category);
       try {
         this.isLoading = true;
         this.error = null;
