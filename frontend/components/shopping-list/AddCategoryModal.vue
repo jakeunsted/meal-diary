@@ -15,7 +15,7 @@
           :class="{ 'select-error': hasError }"
         >
           <option :value="null">{{ $t('Select Category') }}</option>
-          <option v-for="category in itemCategories" :key="category.id" :value="category">
+          <option v-for="category in availableCategories" :key="category.id" :value="category">
             {{ category.name }}
           </option>
         </select>
@@ -33,6 +33,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useShoppingListStore } from '../../stores/shoppingList';
 
 interface ItemCategory {
   id: number;
@@ -44,12 +45,17 @@ const props = defineProps<{
   itemCategories: ItemCategory[];
 }>();
 
-console.log('props.itemCategories', props.itemCategories);
-
+const shoppingListStore = useShoppingListStore();
 const dialog = ref<HTMLDialogElement | null>(null);
 const selectedCategory = ref<ItemCategory | null>(null);
 const hasAttemptedSubmit = ref(false);
 const hasError = computed(() => hasAttemptedSubmit.value && !selectedCategory.value);
+
+// Filter out categories that are already in the shopping list
+const availableCategories = computed(() => {
+  const existingCategoryIds = shoppingListStore.shoppingList?.categories.map(c => c.item_categories_id) || [];
+  return props.itemCategories.filter(category => !existingCategoryIds.includes(category.id));
+});
 
 const emit = defineEmits<{
   (e: 'addCategory', category: ItemCategory): void;
