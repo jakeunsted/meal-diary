@@ -40,7 +40,7 @@
     </div>
     <AddCategoryModal
       ref="addCategoryModal"
-      :itemCategories="shoppingListStore.itemCategories.data"
+      :itemCategories="shoppingListStore.itemCategories?.data || []"
       @addCategory="handleAddCategory"
     />
     <CategoryOptionsModal
@@ -161,11 +161,11 @@ const handleDragEnd = () => {
 };
 
 const isDragOverTop = (category) => {
-  return dragOverCategory.value === category.itemCategory.name && dragOverPosition.value === 'top';
+  return dragOverCategory.value === category?.itemCategory?.name && dragOverPosition.value === 'top';
 };
 
 const isDragOverBottom = (category) => {
-  return dragOverCategory.value === category.itemCategory.name && dragOverPosition.value === 'bottom';
+  return dragOverCategory.value === category?.itemCategory?.name && dragOverPosition.value === 'bottom';
 };
 
 const handleDragOver = (event, category) => {
@@ -220,7 +220,7 @@ const handleAddCategory = async (category) => {
   try {
     console.log('handleAddCategory', category);
     await shoppingListStore.addCategory(category);
-    addCategoryModal.value?.close();
+    addCategoryModal.value?.closeModal();
   } catch (error) {
     console.error('Error adding category:', error);
   }

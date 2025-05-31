@@ -53,7 +53,8 @@ const hasError = computed(() => hasAttemptedSubmit.value && !selectedCategory.va
 
 // Filter out categories that are already in the shopping list
 const availableCategories = computed(() => {
-  const existingCategoryIds = shoppingListStore.shoppingList?.categories.map(c => c.item_categories_id) || [];
+  if (!props.itemCategories) return [];
+  const existingCategoryIds = shoppingListStore.shoppingList?.categories?.map(c => c.item_categories_id) || [];
   return props.itemCategories.filter(category => !existingCategoryIds.includes(category.id));
 });
 
@@ -75,7 +76,12 @@ const showModal = () => {
   hasAttemptedSubmit.value = false;
 };
 
+const closeModal = () => {
+  dialog.value?.close();
+};
+
 defineExpose({
-  showModal
+  showModal,
+  closeModal
 });
 </script>
