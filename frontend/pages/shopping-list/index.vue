@@ -129,9 +129,11 @@ const saveCategory = async (category, event) => {
     // Handle item update
     const item = category.items.find(i => i.name === event.itemName);
     if (item) {
+      // Only update name and checked status
       await shoppingListStore.updateItem(item.id, {
         name: event.itemName,
-        checked: event.itemChecked
+        checked: event.itemChecked,
+        shopping_list_categories: category.id
       });
     } else {
       await shoppingListStore.addItem({

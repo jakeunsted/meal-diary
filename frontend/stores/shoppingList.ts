@@ -200,22 +200,25 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'x-refresh-token': authStore.refreshToken || ''
           }
         });
-
         const updatedItem = response.data as ShoppingListItem;
 
         // Update the item in the category's items array
         if (this.shoppingList) {
+          let itemUpdated = false;
           for (const category of this.shoppingList.categories) {
             const index = category.items.findIndex(item => item.id === itemId);
             if (index !== -1) {
               category.items[index] = updatedItem;
-              await this.saveToLocalStorage();
+              itemUpdated = true;
               break;
             }
           }
+          await this.saveToLocalStorage();
         }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to update item';
+
+        return updatedItem;
+      } catch (err: any) {
+        this.error = err.data?.message || err.message || 'Failed to update item';
         throw err;
       } finally {
         this.isLoading = false;
@@ -360,3 +363,4 @@ export const useShoppingListStore = defineStore('shoppingList', {
     }
   }
 });
+

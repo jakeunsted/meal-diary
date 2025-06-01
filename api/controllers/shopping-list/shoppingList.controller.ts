@@ -259,14 +259,37 @@ export const addItem = async (req: Request, res: Response) => {
 };
 
 /**
- * Updates an existing item in a shopping list
+ * Updates an existing item in a shopping list category
  * @param {Request} req - Express request object containing updated item details
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the updated item
  */
 export const updateItem = async (req: Request, res: Response) => {
   const { family_group_id, item_id } = req.params;
-  const { name, checked, shopping_list_categories } = req.body;
+  const { name, checked } = req.body;
+
+  // Validate required parameters
+  if (!item_id || isNaN(Number(item_id))) {
+    return res.status(400).json({ message: 'Valid item ID is required' });
+  }
+
+  if (!family_group_id || isNaN(Number(family_group_id))) {
+    return res.status(400).json({ message: 'Valid family group ID is required' });
+  }
+
+  // Validate required fields
+  if (name === undefined || checked === undefined) {
+    return res.status(400).json({ message: 'Name and checked status are required' });
+  }
+
+  // Validate field types
+  if (typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ message: 'Name must be a non-empty string' });
+  }
+
+  if (typeof checked !== 'boolean') {
+    return res.status(400).json({ message: 'Checked status must be a boolean' });
+  }
 
   const result = await sequelize.transaction(async (t: Transaction) => {
     const item = await ShoppingListItem.findOne({
@@ -284,28 +307,17 @@ export const updateItem = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    if (shopping_list_categories) {
-      const category = await ShoppingListCategory.findOne({
-        where: { id: Number(shopping_list_categories) },
-        transaction: t,
-      });
-
-      if (!category) {
-        return res.status(404).json({ message: 'Category not found' });
-      }
-    }
-
     await item.update(
-      { 
-        name, 
-        checked, 
-        shopping_list_categories: shopping_list_categories ? Number(shopping_list_categories) : undefined 
-      },
+      { name, checked },
       { transaction: t }
     );
 
     return item;
   });
+
+  if (!result) {
+    return res.status(500).json({ message: 'Failed to update item' });
+  }
 
   res.json(result);
 };
