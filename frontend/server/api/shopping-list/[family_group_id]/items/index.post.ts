@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       body: JSON.stringify({ name, shopping_list_categories }),
     });
-    return result;
+    return result.data;
   } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,

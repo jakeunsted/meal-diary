@@ -1,7 +1,9 @@
-import { apiFetch } from '~/server/utils/fetch';
+import { authenticatedFetch } from '~/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
   const { family_group_id } = getRouterParams(event);
-  const shoppingList = await apiFetch(`/shopping-list/${family_group_id}`, {}, event);
+  const shoppingList = await authenticatedFetch(event, `/shopping-list/${family_group_id}`, {
+    method: 'GET',
+  });
   return shoppingList;
 });

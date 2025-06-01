@@ -102,8 +102,14 @@ export const useShoppingListStore = defineStore('shoppingList', {
         if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
-          const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}`) as ShoppingList;
-          this.shoppingList = response;
+          const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}`, {
+            headers: {
+              'Authorization': `Bearer ${authStore.accessToken}`,
+              'x-refresh-token': authStore.refreshToken || ''
+            }
+          });
+          const shoppingList = response.data as ShoppingList;
+          this.shoppingList = shoppingList;
           await this.saveToLocalStorage();
         }
       } catch (err) {
@@ -130,8 +136,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        }) as ItemCategory[];
-        this.itemCategories = response;
+        })
+        const itemCategories = response.data as ItemCategory[];
+        this.itemCategories = itemCategories;
         await this.saveToLocalStorage();
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch item categories';
@@ -157,12 +164,14 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        }) as ShoppingListItem;
+        });
+
+        const newItem = response.data as ShoppingListItem;
 
         // Update the category's items array
         const category = this.shoppingList?.categories.find(c => c.id === item.shopping_list_categories);
         if (category) {
-          category.items.push(response);
+          category.items.push(newItem);
           await this.saveToLocalStorage();
         }
       } catch (err) {
@@ -190,14 +199,16 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        }) as ShoppingListItem;
+        });
+
+        const updatedItem = response.data as ShoppingListItem;
 
         // Update the item in the category's items array
         if (this.shoppingList) {
           for (const category of this.shoppingList.categories) {
             const index = category.items.findIndex(item => item.id === itemId);
             if (index !== -1) {
-              category.items[index] = response;
+              category.items[index] = updatedItem;
               await this.saveToLocalStorage();
               break;
             }
@@ -227,7 +238,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'x-refresh-token': authStore.refreshToken || ''
           }
         });
-
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete item';
+        throw err;
+      } finally {
         // Remove the item from the category's items array
         if (this.shoppingList) {
           for (const category of this.shoppingList.categories) {
@@ -239,10 +253,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
             }
           }
         }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to delete item';
-        throw err;
-      } finally {
         this.isLoading = false;
       }
     },
@@ -263,7 +273,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'x-refresh-token': authStore.refreshToken || ''
           }
         });
-
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to delete category';
+        throw err;
+      } finally {
         // Remove the category from the shopping list
         if (this.shoppingList) {
           const index = this.shoppingList.categories.findIndex(category => category.id === categoryId);
@@ -272,10 +285,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
             await this.saveToLocalStorage();
           }
         }
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to delete category';
-        throw err;
-      } finally {
         this.isLoading = false;
       }
     },
@@ -296,13 +305,14 @@ export const useShoppingListStore = defineStore('shoppingList', {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
           }
-        }) as ShoppingListCategoryWithItems;
+        });
+        const newCategory = response.data as ShoppingListCategoryWithItems;
 
         // Create a complete category object with the itemCategory data
         const completeCategory: ShoppingListCategoryWithItems = {
-          ...response,
+          ...newCategory,
           itemCategory: category,
-          items: response.items || []
+          items: newCategory.items || []
         };
 
         // Add the new category to the shopping list
