@@ -14,11 +14,6 @@
         <div 
           v-for="category in shoppingCategories" 
           :key="category.id"
-          class=""
-          :class="{ 'drag-over-top': isDragOverTop(category), 'drag-over-bottom': isDragOverBottom(category) }"
-          @dragover.prevent="handleDragOver($event, category)"
-          @dragleave.prevent="handleDragLeave(category)"
-          @drop="handleDrop($event, category)"
         >
           <CollapseListSection
             class="m-4"
@@ -28,8 +23,6 @@
             @updateItem="saveItem(category, $event)"
             @removeItem="deleteItem(category, $event)"
             @longPress="handleLongPress(category)"
-            @dragStart="handleDragStart"
-            @dragEnd="handleDragEnd"
             @inputFocus="handleInputFocus"
           />
         </div>
@@ -76,9 +69,6 @@ const loading = ref(false);
 const selectedCategory = ref(null);
 const categoryOptionsModal = ref(null);
 const addCategoryModal = ref(null);
-const draggedCategory = ref(null);
-const dragOverCategory = ref(null);
-const dragOverPosition = ref(null);
 const hasData = computed(() => {
   return !!shoppingListStore.shoppingList?.categories?.length;
 });
@@ -157,65 +147,6 @@ const deleteItem = async (category, event) => {
   }
 }
 
-const handleDragStart = (categoryName) => {
-  draggedCategory.value = categoryName;
-};
-
-const handleDragEnd = () => {
-  draggedCategory.value = null;
-  dragOverCategory.value = null;
-  dragOverPosition.value = null;
-};
-
-const isDragOverTop = (category) => {
-  return dragOverCategory.value === category?.itemCategory?.name && dragOverPosition.value === 'top';
-};
-
-const isDragOverBottom = (category) => {
-  return dragOverCategory.value === category?.itemCategory?.name && dragOverPosition.value === 'bottom';
-};
-
-const handleDragOver = (event, category) => {
-  if (!draggedCategory.value || !category?.itemCategory?.name || draggedCategory.value === category.itemCategory.name) return;
-  
-  const rect = event.currentTarget.getBoundingClientRect();
-  const y = event.clientY - rect.top;
-  const threshold = rect.height / 2;
-  
-  dragOverCategory.value = category.itemCategory.name;
-  dragOverPosition.value = y < threshold ? 'top' : 'bottom';
-};
-
-const handleDragLeave = (category) => {
-  if (!category?.itemCategory?.name) return;
-  if (dragOverCategory.value === category.itemCategory.name) {
-    dragOverCategory.value = null;
-    dragOverPosition.value = null;
-  }
-};
-
-const handleDrop = async (event, targetCategory) => {
-  if (!draggedCategory.value || !targetCategory?.itemCategory?.name || draggedCategory.value === targetCategory.itemCategory.name) return;
-  
-  const categories = [...shoppingCategories.value];
-  const draggedIndex = categories.findIndex(c => c.itemCategory?.name === draggedCategory.value);
-  const targetIndex = categories.findIndex(c => c.itemCategory?.name === targetCategory.itemCategory.name);
-  
-  if (draggedIndex === -1 || targetIndex === -1) return;
-  
-  // Reorder the categories
-  const [movedCategory] = categories.splice(draggedIndex, 1);
-  const newIndex = dragOverPosition.value === 'top' ? targetIndex : targetIndex + 1;
-  categories.splice(newIndex, 0, movedCategory);
-  
-  // Update the store with the new order
-  await shoppingListStore.updateCategoryOrder(userStore.user?.family_group_id, categories);
-  
-  // Reset drag state
-  dragOverCategory.value = null;
-  dragOverPosition.value = null;
-};
-
 // Add function to handle input focus
 const handleInputFocus = (event) => {
   // Add a small delay to ensure the keyboard has opened
@@ -269,16 +200,6 @@ onMounted(async () => {
 
 .list-move {
   transition: transform 0.3s ease;
-}
-
-.drag-over-top {
-  border-top: 2px solid #3b82f6;
-  margin-top: -2px;
-}
-
-.drag-over-bottom {
-  border-bottom: 2px solid #3b82f6;
-  margin-bottom: -2px;
 }
 
 .list-item {

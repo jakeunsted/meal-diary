@@ -16,21 +16,7 @@
         @mouseleave="handlePressEnd"
       >
         <div class="flex items-center gap-2">
-          <div
-            class="cursor-move w-6 h-6 flex items-center justify-center relative z-10"
-            draggable="true"
-            @dragstart="handleDragStart"
-            @dragend="handleDragEnd"
-            @mousedown.stop
-            @touchstart.stop
-            @click.stop
-          >
-            <fa 
-              icon="grip-vertical"
-              class="text-lg text-gray-600"
-            />
-          </div>
-          <div class="font-semibold">{{ categoryTitle }}</div>
+          <div class="font-semibold ml-2">{{ categoryTitle }}</div>
         </div>
         <fa :icon="isOpen ? 'chevron-up' : 'chevron-down'" class="pr-1" />
       </div>
@@ -70,7 +56,7 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['addItem', 'updateItem', 'longPress', 'dragStart', 'dragEnd', 'inputFocus']);
+const emit = defineEmits(['addItem', 'updateItem', 'longPress', 'inputFocus']);
 
 const props = defineProps({
   categoryTitle: {
@@ -142,15 +128,6 @@ const removeItem = (id) => {
     itemName: item.name,
     itemChecked: false
   });
-};
-
-const handleDragStart = (event) => {
-  event.dataTransfer.setData('text/plain', props.categoryTitle);
-  emit('dragStart', props.categoryTitle);
-};
-
-const handleDragEnd = () => {
-  emit('dragEnd');
 };
 </script>
 
