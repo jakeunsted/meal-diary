@@ -24,8 +24,9 @@
             class="m-4"
             :categoryTitle="category?.itemCategory?.name || ''"
             :categoryItems="category?.items || []"
-            @addItem="saveCategory(category, $event)"
-            @updateItem="saveCategory(category, $event)"
+            @addItem="saveItem(category, $event)"
+            @updateItem="saveItem(category, $event)"
+            @removeItem="deleteItem(category, $event)"
             @longPress="handleLongPress(category)"
             @dragStart="handleDragStart"
             @dragEnd="handleDragEnd"
@@ -102,7 +103,7 @@ const handleUntickAll = async () => {
     ...selectedCategory.value,
     items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
   };
-  await saveCategory(updatedCategory);
+  await saveItem(updatedCategory);
 };
 
 const handleTickAll = async () => {
@@ -111,7 +112,7 @@ const handleTickAll = async () => {
     ...selectedCategory.value,
     items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
   };
-  await saveCategory(updatedCategory);
+  await saveItem(updatedCategory);
 };
 
 const handleDeleteGroup = async () => {
@@ -124,7 +125,7 @@ const handleDeleteGroup = async () => {
   }
 };
 
-const saveCategory = async (category, event) => {
+const saveItem = async (category, event) => {
   if (event?.itemName) {
     // Handle item update
     const item = category.items.find(i => i.name === event.itemName);
@@ -146,6 +147,15 @@ const saveCategory = async (category, event) => {
     await shoppingListStore.updateCategoryOrder(userStore.user?.family_group_id, [category]);
   }
 };
+
+const deleteItem = async (category, event) => {
+  if (event?.itemName) {
+    const item = category.items.find(i => i.name === event.itemName);
+    if (item) {
+      await shoppingListStore.deleteItem(item.id);
+    }
+  }
+}
 
 const handleDragStart = (categoryName) => {
   draggedCategory.value = categoryName;
@@ -216,7 +226,6 @@ const handleInputFocus = (event) => {
 
 const handleAddCategory = async (category) => {
   try {
-    console.log('handleAddCategory', category);
     await shoppingListStore.addCategory(category);
     addCategoryModal.value?.closeModal();
   } catch (error) {

@@ -137,7 +137,7 @@ const removeItem = (id) => {
   const item = props.categoryItems.find(item => item.id === id);
   if (!item) return;
   
-  emit('updateItem', {
+  emit('removeItem', {
     category: props.categoryTitle,
     itemName: item.name,
     itemChecked: false

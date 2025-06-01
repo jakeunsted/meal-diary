@@ -2,7 +2,6 @@ import { defineStore } from 'pinia';
 import { useUserStore } from './user';
 import { Preferences } from '@capacitor/preferences';
 import type { MealDiaryState, DailyMeal } from '~/types/MealDiary';
-
 export const useMealDiaryStore = defineStore('mealDiary', {
   state: (): MealDiaryState => ({
     weeklyMeals: [],
@@ -104,10 +103,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           this.currentWeekStart = weekStartDateStr;
           
           const familyGroupId = userStore.user.family_group_id;
-          const response = await $fetch<DailyMeal[]>(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
+          const response = await $fetch(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
           
           // Add week_start_date to each meal
-          this.weeklyMeals = response.map(meal => ({
+          this.weeklyMeals = response.map((meal: DailyMeal) => ({
             ...meal,
             week_start_date: weekStartDateStr
           }));
@@ -219,10 +218,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
 
       // Only process updates for the current week being viewed
       if (dailyMeal.week_start_date !== this.currentWeekStart) {
-        console.log('Ignoring update for different week:', {
-          receivedWeek: dailyMeal.week_start_date,
-          currentWeek: this.currentWeekStart
-        });
         return;
       }
 

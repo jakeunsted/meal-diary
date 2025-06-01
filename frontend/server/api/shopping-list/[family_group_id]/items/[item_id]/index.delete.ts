@@ -2,7 +2,6 @@ import { authenticatedFetch } from '~/server/utils/auth';
 
 export default defineEventHandler(async (event) => {
   try {
-    console.log('reaching delete item')
     const familyGroupId = getRouterParam(event, 'family_group_id');
     const itemId = getRouterParam(event, 'item_id');
     const result = await authenticatedFetch(event, `/shopping-list/${familyGroupId}/items/${itemId}`, {

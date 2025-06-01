@@ -277,7 +277,6 @@ router.get('/:family_group_id', async (req, res, next) => {
  */
 router.post('/:family_group_id/categories/:category_id', async (req, res, next) => {
   try {
-    console.log('adding category to shopping list');
     await shoppingListController.addCategory(req, res);
   } catch (error) {
     next(error);
