@@ -166,7 +166,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
           }
         });
 
-        const newItem = response.data as ShoppingListItem;
+        const newItem = response as ShoppingListItem;
 
         // Update the category's items array
         const category = this.shoppingList?.categories.find(c => c.id === item.shopping_list_categories);
