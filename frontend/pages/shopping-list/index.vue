@@ -41,7 +41,7 @@
     </div>
     <AddCategoryModal
       ref="addCategoryModal"
-      :itemCategories="shoppingListStore.itemCategories?.data || []"
+      :itemCategories="shoppingListStore.itemCategories || []"
       @addCategory="handleAddCategory"
     />
     <CategoryOptionsModal
