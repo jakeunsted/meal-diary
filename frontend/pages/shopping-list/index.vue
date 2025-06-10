@@ -65,12 +65,12 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
-const loading = ref(false);
+const loading = ref(true);
 const selectedCategory = ref(null);
 const categoryOptionsModal = ref(null);
 const addCategoryModal = ref(null);
 const hasData = computed(() => {
-  return !!shoppingListStore.shoppingList?.categories?.length;
+  return !loading.value && shoppingListStore.shoppingList?.categories !== undefined;
 });
 
 const handleError = (error) => {
@@ -178,6 +178,8 @@ onMounted(async () => {
       ]);
     } catch (error) {
       handleError(error);
+    } finally {
+      loading.value = false;
     }
   };
 
