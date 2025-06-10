@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import type { ShoppingListCategory } from '../db/models/ShoppingList.model.ts';
+// import type { ShoppingListCategory } from '../db/models/ShoppingList.model.ts';
 import DailyMeal from '../db/models/DailyMeal.model.ts';
 
 dotenv.config();
@@ -24,26 +24,26 @@ if (!WEBHOOK_BASE_URL) {
  * @param {ShoppingListCategory} categoryContents - The contents of the category
  * @param {string} eventType - The type of the event
  */
-export const sendShoppingListWebhook = async (
-  familyGroupId: number, 
-  categoryName: string, 
-  categoryContents: ShoppingListCategory | null, 
-  eventType: string
-) => {
-  try {
-    const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list`;
+// export const sendShoppingListWebhook = async (
+//   familyGroupId: number, 
+//   categoryName: string, 
+//   categoryContents: ShoppingListCategory | null, 
+//   eventType: string
+// ) => {
+//   try {
+//     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list`;
 
-    await axios.post(webHookUrl, {
-      eventType,
-      familyGroupId,
-      categoryName,
-      categoryContents,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error sending webhook: ', error);
-  }
-}
+//     await axios.post(webHookUrl, {
+//       eventType,
+//       familyGroupId,
+//       categoryName,
+//       categoryContents,
+//       timestamp: new Date().toISOString()
+//     });
+//   } catch (error) {
+//     console.error('Error sending webhook: ', error);
+//   }
+// }
 
 /**
  * Sends a webhook for a meal diary event
