@@ -2,28 +2,32 @@ import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
 
-export interface ShoppingListAttributes {
+export interface ItemCategoryAttributes {
   id: number;
-  family_group_id: number;
+  name: string;
+  icon?: string;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface ShoppingListCreationAttributes extends Optional<ShoppingListAttributes, 'id' | 'created_at' | 'updated_at'> {}
+interface ItemCategoryCreationAttributes extends Optional<ItemCategoryAttributes, 'id' | 'icon' | 'created_at' | 'updated_at'> {}
 
-class ShoppingList extends Model<ShoppingListAttributes, ShoppingListCreationAttributes> {}
+class ItemCategory extends Model<ItemCategoryAttributes, ItemCategoryCreationAttributes> {}
 
-ShoppingList.init(
+ItemCategory.init(
   {
     id: {
       type: DataTypes.INTEGER,
       autoIncrement: true,
       primaryKey: true,
     },
-    family_group_id: {
-      type: DataTypes.INTEGER,
-      unique: true,
+    name: {
+      type: DataTypes.STRING(100),
       allowNull: false,
+    },
+    icon: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
     },
     created_at: {
       type: DataTypes.DATE,
@@ -38,11 +42,11 @@ ShoppingList.init(
   },
   {
     sequelize,
-    tableName: 'shopping_lists',
+    tableName: 'item_categories',
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   }
 );
 
-export default ShoppingList;
+export default ItemCategory;

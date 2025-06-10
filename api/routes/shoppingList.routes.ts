@@ -11,7 +11,6 @@ const router = express.Router();
  *       type: object
  *       required:
  *         - family_group_id
- *         - content
  *       properties:
  *         id:
  *           type: integer
@@ -19,23 +18,6 @@ const router = express.Router();
  *         family_group_id:
  *           type: integer
  *           description: The id of the family group the shopping list belongs to
- *         content:
- *           type: object
- *           description: The contents of the shopping list. This is JSONB and is dynamic to the users preferences.
- *           properties:
- *             categories:
- *               type: array
- *               description: The categories in the shopping list
- *               items:
- *                 type: object
- *                 description: The items in the shopping list
- *                 properties:
- *                   name:
- *                     type: string
- *                     description: The name of the item
- *                   checked:
- *                     type: boolean
- *                     description: Whether the item has been checked off
  *         created_at:  
  *           type: string
  *           format: date-time
@@ -44,45 +26,124 @@ const router = express.Router();
  *           type: string
  *           format: date-time
  *           description: The date and time the shopping list was last updated
- * 
- *     ShoppingListContent:
- *       type: object
- *       required:
- *         - categories
- *       properties:
  *         categories:
  *           type: array
  *           description: The categories in the shopping list
  *           items:
- *             $ref: '#/components/schemas/ShoppingListCategory'
+ *             $ref: '#/components/schemas/ShoppingListCategoryWithItems'
+ * 
+ *     ShoppingListCategoryWithItems:
+ *       type: object
+ *       required:
+ *         - id
+ *         - shopping_list_id
+ *         - item_categories_id
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the shopping list category
+ *         shopping_list_id:
+ *           type: integer
+ *           description: The id of the shopping list
+ *         item_categories_id:
+ *           type: integer
+ *           description: The id of the item category
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the category was created
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the category was last updated
+ *         itemCategory:
+ *           $ref: '#/components/schemas/ItemCategory'
+ *         items:
+ *           type: array
+ *           description: The items in this category
+ *           items:
+ *             $ref: '#/components/schemas/ShoppingListItem'
+ * 
+ *     ItemCategory:
+ *       type: object
+ *       required:
+ *         - name
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the item category
+ *         name:
+ *           type: string
+ *           description: The name of the category
+ *         icon:
+ *           type: string
+ *           description: The icon identifier for the category
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the category was created
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the category was last updated
  *     
  *     ShoppingListCategory:
  *       type: object
  *       required:
- *         - name
- *         - items
+ *         - shopping_list_id
+ *         - item_categories_id
  *       properties:
- *         name:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the shopping list category
+ *         shopping_list_id:
+ *           type: integer
+ *           description: The id of the shopping list
+ *         item_categories_id:
+ *           type: integer
+ *           description: The id of the item category
+ *         created_at:
  *           type: string
- *           description: The name of the category
- *         items:
- *           type: array
- *           description: The items in the category
- *           items:
- *             $ref: '#/components/schemas/ShoppingListItem'
+ *           format: date-time
+ *           description: The date and time the category was created
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the category was last updated
  * 
  *     ShoppingListItem:
  *       type: object
  *       required:
+ *         - shopping_list_id
+ *         - shopping_list_categories
  *         - name
- *         - checked
  *       properties:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the shopping list item
+ *         shopping_list_id:
+ *           type: integer
+ *           description: The id of the shopping list
+ *         shopping_list_categories:
+ *           type: integer
+ *           description: The id of the shopping list category
  *         name:
  *           type: string
  *           description: The name of the item
  *         checked:
  *           type: boolean
  *           description: Whether the item has been checked off
+ *         deleted:
+ *           type: boolean
+ *           description: Whether the item has been deleted
+ *         created_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the item was created
+ *         updated_at:
+ *           type: string
+ *           format: date-time
+ *           description: The date and time the item was last updated
  */
 
 /**
@@ -121,25 +182,43 @@ router.post('/:family_group_id/create-shopping-list', async (req, res, next) => 
  * /shopping-list/{family_group_id}:
  *   get:
  *     summary: Get the entire shopping list
- *     description: Retrieves all shopping lists for a family group
+ *     description: Retrieves the shopping list with all its categories and items for a family group
  *     parameters:
  *       - name: family_group_id
  *         in: path
  *         required: true
  *         description: The id of the family group
+ *         schema:
+ *           type: integer
  *     tags:
  *       - Shopping List
  *     responses:
  *       200:
- *         description: A list of shopping lists
+ *         description: The shopping list with all its categories and items
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/ShoppingList'
+ *               $ref: '#/components/schemas/ShoppingList'
+ *       404:
+ *         description: Shopping list not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shopping list not found
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to get shopping list
  */
 router.get('/:family_group_id', async (req, res, next) => {
   try {
@@ -151,29 +230,21 @@ router.get('/:family_group_id', async (req, res, next) => {
 
 /**
  * @openapi
- * /shopping-list/{family_group_id}/new-category:
+ * /shopping-list/{family_group_id}/categories:
  *   post:
  *     summary: Add a new category to a shopping list
- *     description: Creates a new empty category in the shopping list
+ *     description: Creates a new category in the shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
- *       - name: Family Group ID
+ *       - name: family_group_id
  *         in: path
  *         required: true
  *         description: The id of the family group
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - category_name
- *             properties:
- *               category_name:
- *                 type: string
- *                 description: The name of the new category
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         description: The id of the category to add
  *     responses:
  *       200:
  *         description: The newly created category
@@ -181,10 +252,30 @@ router.get('/:family_group_id', async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ShoppingListCategory'
+ *       404:
+ *         description: Shopping list category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shopping list not found
+ *       412:
+ *         description: Name is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Name is required
  *       500:
  *         description: Failed to add new category
  */
-router.post('/:family_group_id/new-category', async (req, res, next) => {
+router.post('/:family_group_id/categories/:category_id', async (req, res, next) => {
   try {
     await shoppingListController.addCategory(req, res);
   } catch (error) {
@@ -194,45 +285,60 @@ router.post('/:family_group_id/new-category', async (req, res, next) => {
 
 /**
  * @openapi
- * /shopping-list/{family_group_id}/save-category:
- *   post:
- *     summary: Save a category in the shopping list
- *     description: Replaces a category's contents with new values
+ * /shopping-list/{family_group_id}/categories:
+ *   get:
+ *     summary: Get all categories for a shopping list
+ *     description: Retrieves all categories for a shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
- *       - name: Family Group ID
+ *       - name: family_group_id
  *         in: path
  *         required: true
  *         description: The id of the family group
- *     requestBody:
- *       required: true
- *       content:
-*         application/json:
-*           schema:
-*             type: object
-*             required:
-*               - category_name
-*               - category_contents
-*             properties:
-*               category_name:
-*                 type: string
-*                 description: The name of the category to update
-*               category_contents:
-*                 $ref: '#/components/schemas/ShoppingListCategory'
-*     responses:
-*       200:
-*         description: The updated category
-*         content:
-*           application/json:
-*             schema:
-*               $ref: '#/components/schemas/ShoppingListCategory'
-*       500:
-*         description: Failed to save category
-*/
-router.post('/:family_group_id/save-category', async (req, res, next) => {
+ *     responses:
+ *       200:
+ *         description: The categories for the shopping list
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/ShoppingListCategoryWithItems'
+ *       404:
+ *         description: Categories not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Categories not found
+ *       412:
+ *         description: Family group ID is required
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Family group ID is required
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to get categories
+ */
+router.get('/:family_group_id/categories', async (req, res, next) => {
   try {
-    await shoppingListController.saveCategory(req, res);
+    await shoppingListController.getFamilyCategories(req, res);
   } catch (error) {
     next(error);
   }
@@ -240,40 +346,30 @@ router.post('/:family_group_id/save-category', async (req, res, next) => {
 
 /**
  * @openapi
- * /shopping-list/{family_group_id}/delete-category:
+ * /shopping-list/{family_group_id}/categories/{category_id}:
  *   delete:
- *     summary: Delete a category from the shopping list
- *     description: Deletes a category from the shopping list
+ *     summary: Delete a category from the family shopping list
+ *     description: Deletes a category and all its items from the family shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
- *       - name: Family Group ID
+ *       - name: family_group_id
  *         in: path
  *         required: true
  *         description: The id of the family group
- *     query:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - category_name
- *             properties:
- *               category_name:
- *                 type: string
- *                 description: The name of the category to delete
+ *       - name: category_id
+ *         in: path
+ *         required: true
+ *         description: The id of the category to delete
  *     responses:
  *       200:
  *         description: The deleted category
  *       404:
  *         description: Category not found
- *       412:
- *         description: Family group ID and category name are required
  *       500:
  *         description: Failed to delete category
  */
-router.delete('/:family_group_id/delete-category', async (req, res, next) => {
+router.delete('/:family_group_id/categories/:category_id', async (req, res, next) => {
   try {
     await shoppingListController.deleteCategory(req, res);
   } catch (error) {
@@ -283,14 +379,14 @@ router.delete('/:family_group_id/delete-category', async (req, res, next) => {
 
 /**
  * @openapi
- * /shopping-list/{family_group_id}/update-order:
+ * /shopping-list/{family_group_id}/items:
  *   post:
- *     summary: Update the order of categories in a shopping list
- *     description: Updates the order of categories in the shopping list
+ *     summary: Add a new item to a shopping list
+ *     description: Creates a new item in a specific category of the shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
- *       - name: Family Group ID
+ *       - name: family_group_id
  *         in: path
  *         required: true
  *         description: The id of the family group
@@ -301,26 +397,132 @@ router.delete('/:family_group_id/delete-category', async (req, res, next) => {
  *           schema:
  *             type: object
  *             required:
- *               - categories
+ *               - name
+ *               - shopping_list_categories
  *             properties:
- *               categories:
- *                 type: array
- *                 description: The ordered list of categories
- *                 items:
- *                   $ref: '#/components/schemas/ShoppingListCategory'
+ *               name:
+ *                 type: string
+ *                 description: The name of the new item
+ *               shopping_list_categories:
+ *                 type: integer
+ *                 description: The id of the category to add the item to
  *     responses:
  *       200:
- *         description: The updated shopping list
+ *         description: The newly created item
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ShoppingList'
+ *               $ref: '#/components/schemas/ShoppingListItem'
+ *       404:
+ *         description: Not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Shopping list or category not found
  *       500:
- *         description: Failed to update category order
+ *         description: Failed to add new item
  */
-router.post('/:family_group_id/update-order', async (req, res, next) => {
+router.post('/:family_group_id/items', async (req, res, next) => {
   try {
-    await shoppingListController.updateCategoryOrder(req, res);
+    await shoppingListController.addItem(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/{item_id}:
+ *   put:
+ *     summary: Update a shopping list item
+ *     description: Updates an existing item in the shopping list
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *       - name: item_id
+ *         in: path
+ *         required: true
+ *         description: The id of the item to update
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The new name of the item
+ *               checked:
+ *                 type: boolean
+ *                 description: Whether the item is checked
+ *               shopping_list_categories:
+ *                 type: integer
+ *                 description: The id of the category to move the item to
+ *     responses:
+ *       200:
+ *         description: The updated item
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ShoppingListItem'
+ *       404:
+ *         description: Item or category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item or category not found
+ *       500:
+ *         description: Failed to update item
+ */
+router.put('/:family_group_id/items/:item_id', async (req, res, next) => {
+  try {
+    await shoppingListController.updateItem(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/{item_id}:
+ *   delete:
+ *     summary: Delete a shopping list item
+ *     description: Soft deletes an item from the shopping list
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *       - name: item_id
+ *         in: path
+ *         required: true
+ *         description: The id of the item to delete
+ *     responses:
+ *       200:
+ *         description: The deleted item
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to delete item
+ */
+router.delete('/:family_group_id/items/:item_id', async (req, res, next) => {
+  try {
+    await shoppingListController.deleteItem(req, res);
   } catch (error) {
     next(error);
   }

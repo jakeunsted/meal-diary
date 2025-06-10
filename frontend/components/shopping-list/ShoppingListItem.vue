@@ -35,11 +35,11 @@ const props = defineProps({
   }
 });
 
-const handleCheckboxChange = () => {
+const handleCheckboxChange = (event) => {
   emit('update', {
     id: props.item.id,
     name: props.item.name,
-    checked: props.item.checked
+    checked: event.target.checked
   });
 };
 

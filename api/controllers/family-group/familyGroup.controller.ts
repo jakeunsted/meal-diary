@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { FamilyGroup, User } from '../../db/models/associations.ts';
-import { createBaseShoppingList } from '../../services/shoppingList.service.ts';
+import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 
 // Generate a random identifier (three 4-letter words separated by hyphens)
@@ -38,7 +38,7 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
       await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: created_by } });
     }
 
-    await createBaseShoppingList(familyGroup.dataValues.id);
+    await ShoppingList.create({ family_group_id: Number(familyGroup.dataValues.id) });
 
     return res.status(201).json(familyGroup);
   } catch (error) {

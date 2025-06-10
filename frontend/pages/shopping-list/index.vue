@@ -13,22 +13,16 @@
       >
         <div 
           v-for="category in shoppingCategories" 
-          :key="category.name"
-          class=""
-          :class="{ 'drag-over-top': isDragOverTop(category), 'drag-over-bottom': isDragOverBottom(category) }"
-          @dragover.prevent="handleDragOver($event, category)"
-          @dragleave.prevent="handleDragLeave(category)"
-          @drop="handleDrop($event, category)"
+          :key="category.id"
         >
           <CollapseListSection
             class="m-4"
-            :categoryTitle="category.name"
-            :categoryItems="category.items"
-            @addItem="saveCategory(category, $event)"
-            @updateItem="saveCategory(category, $event)"
+            :categoryTitle="category?.itemCategory?.name || ''"
+            :categoryItems="category?.items || []"
+            @addItem="saveItem(category, $event)"
+            @updateItem="saveItem(category, $event)"
+            @removeItem="deleteItem(category, $event)"
             @longPress="handleLongPress(category)"
-            @dragStart="handleDragStart"
-            @dragEnd="handleDragEnd"
             @inputFocus="handleInputFocus"
           />
         </div>
@@ -36,17 +30,17 @@
     </div>
 
     <div class="flex justify-center" v-if="hasData">
-      <button class="btn btn-primary rounded-2xl" onclick="add_category_modal.showModal()">{{ $t('Add Category') }}</button>
+      <button class="btn btn-primary rounded-2xl" @click="addCategoryModal?.showModal()">{{ $t('Add Category') }}</button>
     </div>
     <AddCategoryModal
-      :newCategoryName="newCategoryName"
-      :saveNewCategory="saveNewCategory"
-      @update:newCategoryName="newCategoryName = $event"
+      ref="addCategoryModal"
+      :itemCategories="shoppingListStore.itemCategories || []"
+      @addCategory="handleAddCategory"
     />
     <CategoryOptionsModal
       ref="categoryOptionsModal"
       v-if="selectedCategory"
-      :categoryName="selectedCategory.name"
+      :categoryName="selectedCategory.itemCategory.name"
       @untickAll="handleUntickAll"
       @tickAll="handleTickAll"
       @deleteGroup="handleDeleteGroup"
@@ -71,14 +65,13 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
 
-const newCategoryName = ref('');
 const loading = ref(false);
 const selectedCategory = ref(null);
 const categoryOptionsModal = ref(null);
-const draggedCategory = ref(null);
-const dragOverCategory = ref(null);
-const dragOverPosition = ref(null);
-const hasData = computed(() => !!shoppingListStore.getShoppingListContent);
+const addCategoryModal = ref(null);
+const hasData = computed(() => {
+  return !!shoppingListStore.shoppingList?.categories?.length;
+});
 
 const handleError = (error) => {
   console.error('Error in shopping list page:', error);
@@ -86,7 +79,7 @@ const handleError = (error) => {
 
 // Use computed property to ensure reactivity to store changes
 const shoppingCategories = computed(() => 
-  shoppingListStore.getShoppingListContent?.categories || []
+  shoppingListStore.shoppingList?.categories || []
 );
 
 const handleLongPress = (category) => {
@@ -100,7 +93,7 @@ const handleUntickAll = async () => {
     ...selectedCategory.value,
     items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
   };
-  await saveCategory(updatedCategory);
+  await saveItem(updatedCategory);
 };
 
 const handleTickAll = async () => {
@@ -109,95 +102,50 @@ const handleTickAll = async () => {
     ...selectedCategory.value,
     items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
   };
-  await saveCategory(updatedCategory);
+  await saveItem(updatedCategory);
 };
 
 const handleDeleteGroup = async () => {
   if (!selectedCategory.value) return;
   try {
-    await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/delete-category`, {
-      method: 'DELETE',
-      params: {
-        category_name: selectedCategory.value.name
-      }
-    });
-    await shoppingListStore.fetchShoppingList(userStore.user?.family_group_id);
+    await shoppingListStore.deleteCategory(selectedCategory.value.id);
+    categoryOptionsModal.value?.close();
   } catch (error) {
     console.error('Error deleting category:', error);
   }
 };
 
-const saveNewCategory = async () => {
-  if (newCategoryName.value === '') {
-    return;
-  }
-  await shoppingListStore.addCategory(userStore.user?.family_group_id, newCategoryName.value);
-  newCategoryName.value = '';
-  add_category_modal.close();
-}
-
-const saveCategory = async (category, event) => {
-  await shoppingListStore.saveCategory(userStore.user?.family_group_id, category.name, category);
-}
-
-const handleDragStart = (categoryName) => {
-  draggedCategory.value = categoryName;
-};
-
-const handleDragEnd = () => {
-  draggedCategory.value = null;
-  dragOverCategory.value = null;
-  dragOverPosition.value = null;
-  emit('dragEnd');
-};
-
-const isDragOverTop = (category) => {
-  return dragOverCategory.value === category.name && dragOverPosition.value === 'top';
-};
-
-const isDragOverBottom = (category) => {
-  return dragOverCategory.value === category.name && dragOverPosition.value === 'bottom';
-};
-
-const handleDragOver = (event, category) => {
-  if (!draggedCategory.value || draggedCategory.value === category.name) return;
-  
-  const rect = event.currentTarget.getBoundingClientRect();
-  const y = event.clientY - rect.top;
-  const threshold = rect.height / 2;
-  
-  dragOverCategory.value = category.name;
-  dragOverPosition.value = y < threshold ? 'top' : 'bottom';
-};
-
-const handleDragLeave = (category) => {
-  if (dragOverCategory.value === category.name) {
-    dragOverCategory.value = null;
-    dragOverPosition.value = null;
+const saveItem = async (category, event) => {
+  if (event?.itemName) {
+    // Handle item update
+    const item = category.items.find(i => i.name === event.itemName);
+    if (item) {
+      // Only update name and checked status
+      await shoppingListStore.updateItem(item.id, {
+        name: event.itemName,
+        checked: event.itemChecked,
+        shopping_list_categories: category.id
+      });
+    } else {
+      await shoppingListStore.addItem({
+        name: event.itemName,
+        shopping_list_categories: category.id
+      });
+    }
+  } else {
+    // Handle category update
+    await shoppingListStore.updateCategoryOrder(userStore.user?.family_group_id, [category]);
   }
 };
 
-const handleDrop = async (event, targetCategory) => {
-  if (!draggedCategory.value || draggedCategory.value === targetCategory.name) return;
-  
-  const categories = [...shoppingCategories.value];
-  const draggedIndex = categories.findIndex(c => c.name === draggedCategory.value);
-  const targetIndex = categories.findIndex(c => c.name === targetCategory.name);
-  
-  if (draggedIndex === -1 || targetIndex === -1) return;
-  
-  // Reorder the categories
-  const [movedCategory] = categories.splice(draggedIndex, 1);
-  const newIndex = dragOverPosition.value === 'top' ? targetIndex : targetIndex + 1;
-  categories.splice(newIndex, 0, movedCategory);
-  
-  // Update the store with the new order
-  await shoppingListStore.updateCategoryOrder(userStore.user?.family_group_id, categories);
-  
-  // Reset drag state
-  dragOverCategory.value = null;
-  dragOverPosition.value = null;
-};
+const deleteItem = async (category, event) => {
+  if (event?.itemName) {
+    const item = category.items.find(i => i.name === event.itemName);
+    if (item) {
+      await shoppingListStore.deleteItem(item.id);
+    }
+  }
+}
 
 // Add function to handle input focus
 const handleInputFocus = (event) => {
@@ -205,6 +153,15 @@ const handleInputFocus = (event) => {
   setTimeout(() => {
     event.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, 100);
+};
+
+const handleAddCategory = async (category) => {
+  try {
+    await shoppingListStore.addCategory(category);
+    addCategoryModal.value?.closeModal();
+  } catch (error) {
+    console.error('Error adding category:', error);
+  }
 };
 
 onMounted(async () => {
@@ -216,7 +173,8 @@ onMounted(async () => {
       // Start all requests in parallel
       await Promise.all([
         shoppingListStore.fetchShoppingList().catch(handleError),
-        userStore.fetchUser().catch(handleError)
+        userStore.fetchUser().catch(handleError),
+        shoppingListStore.fetchItemCategories().catch(handleError)
       ]);
     } catch (error) {
       handleError(error);
@@ -242,16 +200,6 @@ onMounted(async () => {
 
 .list-move {
   transition: transform 0.3s ease;
-}
-
-.drag-over-top {
-  border-top: 2px solid #3b82f6;
-  margin-top: -2px;
-}
-
-.drag-over-bottom {
-  border-bottom: 2px solid #3b82f6;
-  margin-bottom: -2px;
 }
 
 .list-item {
