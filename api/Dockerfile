@@ -9,10 +9,8 @@ COPY . ./
 RUN npm install
 RUN npm rebuild bcrypt --build-from-source
 
-COPY . .
-
-# Add type: module to package.json to fix the warning
-RUN npm pkg set type=module
+# Build the TypeScript code
+RUN npm run build
 
 EXPOSE 3001
 
