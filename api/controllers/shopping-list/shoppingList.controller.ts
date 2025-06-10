@@ -5,7 +5,7 @@ import ShoppingListCategory from '../../db/models/ShoppingListCategory.model.ts'
 import ShoppingListItem from '../../db/models/ShoppingListItem.model.ts';
 import sequelize from '../../db/models/index.ts';
 import { Transaction } from 'sequelize';
-import { sendShoppingListWebhook } from '../../services/webhook.service.ts';
+// import { sendShoppingListWebhook } from '../../services/webhook.service.ts';
 
 /**
  * Creates a base shopping list for a family group
