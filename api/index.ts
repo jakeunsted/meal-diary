@@ -1,4 +1,5 @@
 import express from 'express';
+import type { Request, Response } from 'express';
 import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
@@ -9,6 +10,7 @@ import itemCategoriesRoutes from './routes/itemCategories.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
+import newrelic from 'newrelic';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -29,7 +31,7 @@ app.use('/auth', authRoutes);
 app.use('/item-categories', itemCategoriesRoutes);
 
 // health check
-app.get('/health', (req, res) => {
+app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ message: 'OK' });
 });
 
