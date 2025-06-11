@@ -4,6 +4,9 @@ import { Capacitor } from '@capacitor/core';
 const config = useRuntimeConfig()
 
 export default defineNuxtPlugin(() => {
+  // Only run on client side
+  if (!import.meta.client) return;
+
   var appToken: string = '';
   if (Capacitor.getPlatform() === 'ios') {
     appToken = config.public.newRelicIosAppToken as string;
