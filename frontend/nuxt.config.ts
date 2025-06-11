@@ -7,6 +7,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       baseUrl: process.env.BASE_URL,
+      newRelicIosAppToken: process.env.NEW_RELIC_IOS_APP_TOKEN,
+      newRelicAndroidAppToken: process.env.NEW_RELIC_ANDROID_APP_TOKEN,
     }
   },
   app: {
@@ -17,6 +19,9 @@ export default defineNuxtConfig({
       ]
     }
   },
+  plugins: [
+    '~/plugins/newrelic.client.ts'
+  ],
   css: [
     '~/assets/css/main.css',
     '~/assets/css/main.scss',
