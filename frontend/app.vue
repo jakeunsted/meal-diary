@@ -20,7 +20,7 @@ onMounted(async () => {
     // Only load browser New Relic if we're not in a Capacitor environment
     if (!Capacitor.isNativePlatform()) {
       console.log('New Relic browser script loaded');
-      const { BrowserAgent } = await import('@newrelic/browser-agent');
+      const { BrowserAgent, Interaction } = await import('@newrelic/browser-agent');
       
       new BrowserAgent({
         accountID: "6817137",
@@ -46,7 +46,23 @@ onMounted(async () => {
           fix_stylesheets: true,
           preload: false,
           mask_input_options: {}
+        },
+        pageViewTiming: {
+          enabled: true
+        },
+        spa: {
+          enabled: true,
+          harvestTimeSeconds: 10
         }
+      });
+
+      // Track page views
+      const router = useRouter();
+      router.afterEach((to) => {
+        Interaction.startInteraction('PageView', () => {
+          Interaction.setName(to.path);
+          Interaction.endInteraction();
+        });
       });
     }
   }
