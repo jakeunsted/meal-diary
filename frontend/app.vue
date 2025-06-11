@@ -12,27 +12,43 @@ const mealDiaryStore = useMealDiaryStore();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 const { $sse } = useNuxtApp();
-// Add New Relic script
-onMounted(() => {
+
+// Add New Relic script for web browsers only
+onMounted(async () => {
   if (process.client) {
-    console.log('New Relic script loaded');
-    useHead({
-      script: [
-        {
-          innerHTML: `
-            window.NREUM||(NREUM={});NREUM.init={session_replay:{enabled:true,block_selector:'',mask_text_selector:'*',sampling_rate:10.0,error_sampling_rate:100.0,mask_all_inputs:true,collect_fonts:true,inline_images:false,inline_stylesheet:true,fix_stylesheets:true,preload:false,mask_input_options:{}},distributed_tracing:{enabled:true},privacy:{cookies_enabled:true},ajax:{deny_list:["bam.eu01.nr-data.net"]}};
-            NREUM.loader_config={accountID:"6817137",trustKey:"6817137",agentID:"538727353",licenseKey:"NRJS-5bdc2fe008beea400a1",applicationID:"538727353"};
-            NREUM.info={beacon:"bam.eu01.nr-data.net",errorBeacon:"bam.eu01.nr-data.net",licenseKey:"NRJS-5bdc2fe008beea400a1",applicationID:"538727353",sa:1};
-          `,
-          type: 'text/javascript'
-        },
-        {
-          src: 'https://js-agent.newrelic.com/nr-spa-1216.min.js',
-          type: 'text/javascript',
-          async: true
+    const { Capacitor } = await import('@capacitor/core');
+    // Only load browser New Relic if we're not in a Capacitor environment
+    if (!Capacitor.isNativePlatform()) {
+      console.log('New Relic browser script loaded');
+      const { BrowserAgent } = await import('@newrelic/browser-agent');
+      
+      new BrowserAgent({
+        accountID: "6817137",
+        trustKey: "6817137",
+        agentID: "538727353",
+        licenseKey: "NRJS-5bdc2fe008beea400a1",
+        applicationID: "538727353",
+        beacon: "bam.eu01.nr-data.net",
+        errorBeacon: "bam.eu01.nr-data.net",
+        distributedTracing: { enabled: true },
+        privacy: { cookies_enabled: true },
+        ajax: { deny_list: ["bam.eu01.nr-data.net"] },
+        sessionReplay: {
+          enabled: true,
+          block_selector: '',
+          mask_text_selector: '*',
+          sampling_rate: 10.0,
+          error_sampling_rate: 100.0,
+          mask_all_inputs: true,
+          collect_fonts: true,
+          inline_images: false,
+          inline_stylesheet: true,
+          fix_stylesheets: true,
+          preload: false,
+          mask_input_options: {}
         }
-      ]
-    });
+      });
+    }
   }
 });
 
