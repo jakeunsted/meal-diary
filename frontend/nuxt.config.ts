@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     }
   },
   plugins: [
-    '~/plugins/newrelic.client.ts'
+    '~/plugins/newrelic.ts'
   ],
   css: [
     '~/assets/css/main.css',
