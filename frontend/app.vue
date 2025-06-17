@@ -22,7 +22,7 @@ onMounted(async () => {
       console.log('New Relic browser script loaded');
       const { BrowserAgent, Interaction } = await import('@newrelic/browser-agent');
       
-      new BrowserAgent({
+      const browserAgent = new BrowserAgent({
         accountID: "6817137",
         trustKey: "6817137",
         agentID: "538727353",
@@ -56,13 +56,18 @@ onMounted(async () => {
         }
       });
 
+      // Wait for browser agent to initialize
+      await browserAgent.ready;
+
       // Track page views
       const router = useRouter();
       router.afterEach((to) => {
-        Interaction.startInteraction('PageView', () => {
-          Interaction.setName(to.path);
-          Interaction.endInteraction();
-        });
+        if (Interaction) {
+          Interaction.startInteraction('PageView', () => {
+            Interaction.setName(to.path);
+            Interaction.endInteraction();
+          });
+        }
       });
     }
   }
