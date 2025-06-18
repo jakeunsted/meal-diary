@@ -33,9 +33,6 @@ export const useShoppingListSSE = () => {
         }
       },
       'delete-item': (data: SSEItemData) => {
-        // Ignore events from the current user
-        if (data.item.created_by === authStore.user?.id) return;
-
         // Directly remove the item from the category without making an API call
         const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category.id);
         if (category) {
@@ -47,9 +44,6 @@ export const useShoppingListSSE = () => {
         }
       },
       'check-item': (data: SSEItemData) => {
-        // Ignore events from the current user
-        if (data.item.created_by === authStore.user?.id) return;
-
         // Directly update the item in the category without making an API call
         const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.item.shopping_list_categories);
         if (category) {
@@ -61,9 +55,6 @@ export const useShoppingListSSE = () => {
         }
       },
       'uncheck-item': (data: SSEItemData) => {
-        // Ignore events from the current user
-        if (data.item.created_by === authStore.user?.id) return;
-
         // Directly update the item in the category without making an API call
         const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category.id);
         if (category) {
@@ -90,9 +81,6 @@ export const useShoppingListSSE = () => {
         }
       },
       'delete-category': (data: SSECategoryData) => {
-        // Ignore events from the current user
-        if (data.category.created_by === authStore.user?.id) return;
-
         // Directly remove the category from the shopping list without making an API call
         if (shoppingListStore.shoppingList) {
           const index = shoppingListStore.shoppingList.categories.findIndex(c => c.id === data.category.id);
