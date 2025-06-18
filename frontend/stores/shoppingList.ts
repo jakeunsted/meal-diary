@@ -141,12 +141,19 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @param forceRefresh - Whether to force a refresh from the server
      */
     async fetchShoppingList(forceRefresh = false) {
+      const userStore = useUserStore();
       const authStore = useAuthStore();
       try {
         if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
-          const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}`, {
+          let familyGroupId = userStore.user?.family_group_id;
+          if (!familyGroupId) {
+            console.error('no family group id found, fetching user');
+            throw new Error('No family group ID found');
+          }
+          console.log('fetching shopping list for family group:', familyGroupId);
+          const response = await $fetch(`/api/shopping-list/${familyGroupId}`, {
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,
               'x-refresh-token': authStore.refreshToken || ''
@@ -198,8 +205,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async addItem(item: { name: string, shopping_list_categories: number }) {
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       const tempId = this.generateTempId();
-      const createdById = authStore.user?.id || 0;
+      const createdById = userStore.user?.id || 0;
       
       // Create a temporary item
       const tempItem: ShoppingListItem = {
@@ -226,7 +234,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items`, {
+        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
           method: 'POST',
           body: item,
           headers: {
@@ -260,6 +268,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async updateItem(itemId: number | string, updates: Partial<ShoppingListItem>) {
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       const isTemp = this.isTempId(itemId);
       
       // Update local state immediately
@@ -291,7 +300,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${itemId}`, {
+        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'PUT',
           body: updates,
           headers: {
@@ -330,6 +339,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async deleteItem(itemId: number | string) {
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       const isTemp = this.isTempId(itemId);
       
       // Remove from local state immediately
@@ -355,7 +365,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${itemId}`, {
+        await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -376,10 +386,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async deleteCategory(categoryId: number) {
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       try {
         this.isLoading = true;
         this.error = null;
-        await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/categories/${categoryId}`, {
+        await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${categoryId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -409,10 +420,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async addCategory(category: ItemCategory) {
       if (!this.shoppingList) throw new Error('No shopping list found');
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/categories/${category.id}`, {
+        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${category.id}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -477,6 +489,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async syncPendingChanges() {
       const authStore = useAuthStore();
+      const userStore = useUserStore();
       const { checkConnection } = useConnection();
       
       // Check connection first
@@ -489,7 +502,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync additions
       for (const item of [...this.pendingChanges.add]) {
         try {
-          const response = await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items`, {
+          const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
             method: 'POST',
             body: {
               name: item.name,
@@ -528,7 +541,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync updates
       for (const item of [...this.pendingChanges.update]) {
         try {
-          await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${item.id}`, {
+          await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
             method: 'PUT',
             body: item,
             headers: {
@@ -551,7 +564,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync deletes
       for (const itemId of [...this.pendingChanges.delete]) {
         try {
-          await $fetch(`/api/shopping-list/${authStore.user?.family_group_id}/items/${itemId}`, {
+          await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
             method: 'DELETE' as any,
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,

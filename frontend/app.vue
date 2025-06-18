@@ -81,6 +81,9 @@ onMounted(async () => {
   // Try to load user data from storage first
   if (authStore.isAuthenticated) {
     await userStore.loadFromStorage();
+    if (!userStore.user) {
+      await userStore.fetchUser();
+    }
   }
 });
 
@@ -89,7 +92,7 @@ watch(() => userStore.isAuthenticated, async (isAuthenticated) => {
   if (isAuthenticated && userStore.user?.family_group_id) {
     // Initialize stores
     await mealDiaryStore.initialize();
-    await shoppingListStore.fetchShoppingList(userStore.user.family_group_id);
+    await shoppingListStore.fetchShoppingList();
 
     // Setup global SSE connection for meal diary and shopping list
     if (!sseConnection) {
