@@ -1,4 +1,4 @@
-import { SSE_EMITTER } from '~/server/api/server-sent-events/[family_group_id].get';
+import { SSE_EMITTER } from '~/server/plugins/sse';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');
@@ -11,6 +11,8 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
 
+  console.log('got item webhook:', body.eventType);
+
   // Only emit the event to connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
     type: body.eventType,
@@ -19,4 +21,4 @@ export default defineEventHandler(async (event) => {
   });
 
   return { success: true };
-}); 
+});

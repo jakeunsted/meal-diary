@@ -1,10 +1,6 @@
-import { getLatestEvents, addWebhookEvent } from '~/server/utils/shoppingListState';
+import { getLatestEvents } from '~/server/utils/shoppingListState';
 import { getLatestMealDiaryEvents } from '~/server/utils/mealDiaryState';
-import { EventEmitter } from 'events';
-
-// Create a global event emitter for SSE
-const SSE_EMITTER = new EventEmitter();
-SSE_EMITTER.setMaxListeners(100); // max 100 listeners
+import { SSE_EMITTER } from '~/server/plugins/sse';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');
@@ -64,6 +60,3 @@ export default defineEventHandler(async (event) => {
     clearInterval(pingInterval);
   });
 });
-
-// Export the emitter so webhook handler can use it
-export { SSE_EMITTER };

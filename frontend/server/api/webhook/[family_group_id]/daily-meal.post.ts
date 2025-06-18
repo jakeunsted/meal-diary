@@ -1,5 +1,5 @@
 import { addMealDiaryEvent } from '~/server/utils/mealDiaryState';
-import { SSE_EMITTER } from '~/server/api/server-sent-events/[family_group_id].get';
+import { SSE_EMITTER } from '~/server/plugins/sse';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');
