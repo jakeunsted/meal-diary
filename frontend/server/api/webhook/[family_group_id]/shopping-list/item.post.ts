@@ -1,4 +1,3 @@
-import { addWebhookEvent } from '~/server/utils/shoppingListState';
 import { SSE_EMITTER } from '~/server/api/server-sent-events/[family_group_id].get';
 
 export default defineEventHandler(async (event) => {
@@ -12,18 +11,14 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
   
-  // Store the event
-  addWebhookEvent(Number(familyGroupId), body.eventType, {
-    categoryName: body.categoryName,
-    categoryContents: body.categoryContents
-  });
-  
-  // Emit the event to all connected clients
+  console.log('got item webhook:', body.item);
+
+  // Only emit the event to connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
     type: body.eventType,
-    categoryName: body.categoryName,
-    categoryContents: body.categoryContents
+    item: body.item,
+    category: body.category
   });
 
   return { success: true };
-});
+}); 

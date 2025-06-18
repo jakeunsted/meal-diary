@@ -4,6 +4,7 @@ export default defineEventHandler(async (event) => {
   try {
     const familyGroupId = getRouterParam(event, 'family_group_id');
     const { name, shopping_list_categories } = await readBody(event);
+
     if (!name || !shopping_list_categories) {
       throw createError({
         statusCode: 400,

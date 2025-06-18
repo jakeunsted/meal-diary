@@ -1,7 +1,9 @@
 import express from 'express';
 import * as shoppingListController from '../controllers/shopping-list/shoppingList.controller.ts';
+import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
+router.use(authenticateToken);
 
 /**
  * @openapi
@@ -92,6 +94,7 @@ const router = express.Router();
  *       required:
  *         - shopping_list_id
  *         - item_categories_id
+ *         - created_by
  *       properties:
  *         id:
  *           type: integer
@@ -102,6 +105,9 @@ const router = express.Router();
  *         item_categories_id:
  *           type: integer
  *           description: The id of the item category
+ *         created_by:
+ *           type: integer
+ *           description: The id of the user who created the category
  *         created_at:
  *           type: string
  *           format: date-time
@@ -117,6 +123,7 @@ const router = express.Router();
  *         - shopping_list_id
  *         - shopping_list_categories
  *         - name
+ *         - created_by
  *       properties:
  *         id:
  *           type: integer
@@ -136,6 +143,9 @@ const router = express.Router();
  *         deleted:
  *           type: boolean
  *           description: Whether the item has been deleted
+ *         created_by:
+ *           type: integer
+ *           description: The id of the user who created the item
  *         created_at:
  *           type: string
  *           format: date-time

@@ -1,6 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
+import ShoppingListCategory from './ShoppingListCategory.model.ts';
 
 export interface ShoppingListItemAttributes {
   id: number;
@@ -9,13 +10,16 @@ export interface ShoppingListItemAttributes {
   name: string;
   checked: boolean;
   deleted: boolean;
+  created_by: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
 interface ShoppingListItemCreationAttributes extends Optional<ShoppingListItemAttributes, 'id' | 'checked' | 'deleted' | 'created_at' | 'updated_at'> {}
 
-class ShoppingListItem extends Model<ShoppingListItemAttributes, ShoppingListItemCreationAttributes> {}
+class ShoppingListItem extends Model<ShoppingListItemAttributes, ShoppingListItemCreationAttributes> {
+  declare category: ShoppingListCategory;
+}
 
 ShoppingListItem.init(
   {
@@ -45,6 +49,10 @@ ShoppingListItem.init(
       type: DataTypes.BOOLEAN,
       allowNull: false,
       defaultValue: false,
+    },
+    created_by: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
     },
     created_at: {
       type: DataTypes.DATE,

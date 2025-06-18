@@ -59,11 +59,12 @@ import CategoryOptionsModal from '~/components/shopping-list/CategoryOptionsModa
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
+import { useShoppingListSSE } from '~/composables/useShoppingListSSE';
 
 const { $sse } = useNuxtApp();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
-const { handleRemoteCategoryAdded, handleRemoteCategorySaved, handleRemoteCategoryDeleted } = useShoppingListSSE();
+const { setupShoppingListSSE, closeShoppingListSSE } = useShoppingListSSE();
 
 const loading = ref(true);
 const selectedCategory = ref(null);
@@ -176,6 +177,11 @@ onMounted(async () => {
         userStore.fetchUser().catch(handleError),
         shoppingListStore.fetchItemCategories().catch(handleError)
       ]);
+
+      // Set up SSE connection after data is loaded
+      if (userStore.user?.family_group_id) {
+        setupShoppingListSSE(userStore.user.family_group_id);
+      }
     } catch (error) {
       handleError(error);
     } finally {
@@ -185,6 +191,10 @@ onMounted(async () => {
 
   // Start loading data
   loadData();
+});
+
+onUnmounted(() => {
+  closeShoppingListSSE();
 });
 </script>
 

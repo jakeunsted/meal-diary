@@ -13,6 +13,7 @@ export interface ShoppingListItem {
   name: string;
   checked: boolean;
   deleted: boolean;
+  created_by: number;
   created_at: string;
   updated_at: string;
 }
@@ -21,6 +22,7 @@ export interface ShoppingListCategory {
   id: number;
   shopping_list_id: number;
   item_categories_id: number;
+  created_by: number;
   created_at?: Date;
   updated_at?: Date;
   itemCategory: ItemCategory;
@@ -39,6 +41,7 @@ export interface ShoppingListCategoryWithItems {
   id: number;
   shopping_list_id: number;
   item_categories_id: number;
+  created_by: number;
   created_at: string;
   updated_at: string;
   itemCategory: ItemCategory;

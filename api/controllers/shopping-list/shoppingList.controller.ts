@@ -5,7 +5,8 @@ import ShoppingListCategory from '../../db/models/ShoppingListCategory.model.ts'
 import ShoppingListItem from '../../db/models/ShoppingListItem.model.ts';
 import sequelize from '../../db/models/index.ts';
 import { Transaction } from 'sequelize';
-// import { sendShoppingListWebhook } from '../../services/webhook.service.ts';
+import { sendShoppingListItemWebhook, sendShoppingListCategoryWebhook } from '../../services/webhook.service.ts';
+import { User } from '../../db/models/associations.ts';
 
 /**
  * Creates a base shopping list for a family group
@@ -79,6 +80,8 @@ export const addCategory = async (req: Request, res: Response) => {
   if (!category_id) {
     return res.status(412).json({ message: 'Category ID is required' });
   }
+  
+  const user = req.user as User;
 
   const result = await sequelize.transaction(async (t: Transaction) => {
     const shoppingList = await ShoppingList.findOne({
@@ -103,6 +106,7 @@ export const addCategory = async (req: Request, res: Response) => {
       {
         shopping_list_id: Number(shoppingList.get('id')),
         item_categories_id: Number(itemCategory.get('id')),
+        created_by: Number(user.dataValues.id),
       },
       { transaction: t }
     );
@@ -124,16 +128,23 @@ export const addCategory = async (req: Request, res: Response) => {
         }
       ],
       transaction: t
-    }) as any; // Type assertion to handle the included associations
+    }) as any;
 
     if (!completeCategory) {
-      throw new Error('Failed to fetch complete category data');
+      return res.status(500).json({ message: 'Failed to create category' });
     }
 
     // Ensure we have the itemCategory data
     if (!completeCategory.itemCategory) {
       completeCategory.itemCategory = itemCategory;
     }
+
+    // Send webhook for category addition
+    await sendShoppingListCategoryWebhook(
+      Number(family_group_id),
+      'add-category',
+      completeCategory
+    );
 
     return completeCategory;
   });
@@ -177,6 +188,13 @@ export const deleteCategory = async (req: Request, res: Response) => {
 
     // Delete the category
     await shoppingListCategory.destroy({ transaction: t });
+
+    // Send webhook for category deletion
+    await sendShoppingListCategoryWebhook(
+      Number(family_group_id),
+      'delete-category',
+      shoppingListCategory
+    );
 
     return shoppingListCategory;
   });
@@ -224,6 +242,8 @@ export const addItem = async (req: Request, res: Response) => {
   const { family_group_id } = req.params;
   const { name, shopping_list_categories } = req.body;
 
+  const user = req.user as User;
+
   const result = await sequelize.transaction(async (t: Transaction) => {
     const shoppingList = await ShoppingList.findOne({
       where: { family_group_id: Number(family_group_id) },
@@ -248,8 +268,17 @@ export const addItem = async (req: Request, res: Response) => {
         shopping_list_id: Number(shoppingList.get('id')),
         shopping_list_categories: Number(shopping_list_categories),
         name,
+        created_by: Number(user.dataValues.id),
       },
       { transaction: t }
+    );
+
+    // Send webhook for item addition
+    await sendShoppingListItemWebhook(
+      Number(family_group_id),
+      'add-item',
+      item,
+      shoppingListCategory
     );
 
     return item;
@@ -299,6 +328,10 @@ export const updateItem = async (req: Request, res: Response) => {
           model: ShoppingList,
           where: { family_group_id: Number(family_group_id) },
         },
+        {
+          model: ShoppingListCategory,
+          required: true
+        }
       ],
       transaction: t,
     });
@@ -307,10 +340,21 @@ export const updateItem = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Item not found' });
     }
 
+    const previousChecked = item.get('checked');
     await item.update(
       { name, checked },
       { transaction: t }
     );
+
+    // Send webhook for item check/uncheck
+    if (checked !== previousChecked) {
+      await sendShoppingListItemWebhook(
+        Number(family_group_id),
+        checked ? 'check-item' : 'uncheck-item',
+        item,
+        item.category
+      );
+    }
 
     return item;
   });
@@ -339,6 +383,10 @@ export const deleteItem = async (req: Request, res: Response) => {
           model: ShoppingList,
           where: { family_group_id: Number(family_group_id) },
         },
+        {
+          model: ShoppingListCategory,
+          required: true
+        }
       ],
       transaction: t,
     });
@@ -348,6 +396,14 @@ export const deleteItem = async (req: Request, res: Response) => {
     }
 
     await item.update({ deleted: true }, { transaction: t });
+
+    // Send webhook for item deletion
+    await sendShoppingListItemWebhook(
+      Number(family_group_id),
+      'delete-item',
+      item,
+      item.category
+    );
 
     return item;
   });

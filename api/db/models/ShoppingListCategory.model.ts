@@ -6,6 +6,7 @@ export interface ShoppingListCategoryAttributes {
   id: number;
   shopping_list_id: number;
   item_categories_id: number;
+  created_by: number;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -26,6 +27,10 @@ ShoppingListCategory.init(
       allowNull: false,
     },
     item_categories_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
+    created_by: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },

@@ -19,7 +19,6 @@ onMounted(async () => {
     const { Capacitor } = await import('@capacitor/core');
     // Only load browser New Relic if we're not in a Capacitor environment
     if (!Capacitor.isNativePlatform()) {
-      console.log('New Relic browser script loaded');
       const { BrowserAgent, Interaction } = await import('@newrelic/browser-agent');
       
       const browserAgent = new BrowserAgent({

@@ -5,7 +5,7 @@ const router = express.Router();
 /**
  * @openapi
  * /api/health:
- *   head:
+ *   get:
  *     tags:
  *       - Health
  *     summary: Check API health
@@ -13,7 +13,7 @@ const router = express.Router();
  *       200:
  *         description: API is healthy
  */
-router.head('/', (req, res) => {
+router.get('/', (req, res) => {
   res.status(200).end();
 });
 

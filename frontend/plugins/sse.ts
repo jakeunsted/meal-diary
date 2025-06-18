@@ -15,9 +15,7 @@ export default defineNuxtPlugin(() => {
         const data = JSON.parse(event.data);
         
         // Call the appropriate handler if it exists
-        if (data.type === 'delete-category' && handlers['delete-category']) {
-          handlers['delete-category']({ categoryName: data.data.categoryName });
-        } else if (handlers[data.type]) {
+        if (handlers[data.type]) {
           handlers[data.type](data.data);
         }
       };

@@ -127,7 +127,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async checkConnection(): Promise<boolean> {
       try {
         const response = await $fetch('/api/health', { 
-          method: 'HEAD',
+          method: 'GET',
           timeout: 5000 // 5 second timeout
         });
         return true;
@@ -199,6 +199,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async addItem(item: { name: string, shopping_list_categories: number }) {
       const authStore = useAuthStore();
       const tempId = this.generateTempId();
+      const createdById = authStore.user?.id || 0;
       
       // Create a temporary item
       const tempItem: ShoppingListItem = {
@@ -209,7 +210,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         checked: false,
         deleted: false,
         created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        created_by: createdById
       };
 
       // Add to local state immediately
@@ -457,7 +459,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.isLoading = true;
         this.error = null;
         await $fetch(`/api/shopping-list/${familyGroupId}/categories/order`, {
-          method: 'PUT',
+          method: 'PUT' as any,
           body: { categories }
         });
         this.shoppingList.categories = categories;
