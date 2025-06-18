@@ -10,8 +10,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  
-  console.log('got item webhook:', body.item);
 
   // Only emit the event to connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
