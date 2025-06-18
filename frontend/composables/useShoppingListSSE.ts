@@ -51,7 +51,7 @@ export const useShoppingListSSE = () => {
         if (data.item.created_by === authStore.user?.id) return;
 
         // Directly update the item in the category without making an API call
-        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category.id);
+        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.item.shopping_list_categories);
         if (category) {
           const index = category.items.findIndex(item => item.id === data.item.id);
           if (index !== -1) {
