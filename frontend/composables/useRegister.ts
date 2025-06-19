@@ -32,6 +32,21 @@ export const useRegister = () => {
     });
   }
 
+  /**
+   * Delete the register string from the capacitor storage
+   */
+  const deleteRegisterString = async () => {
+    await Preferences.remove({
+      key: 'registerString'
+    });
+  }
+
+  /**
+   * Perform the registration
+   * @param registrationData 
+   * @returns 
+   */
+
   const performRegistration = async (registrationData: RegisterData) => {
     let hasErrors = false;
     const errors = ref({
@@ -124,6 +139,7 @@ export const useRegister = () => {
   return {
     storeRegisterString,
     getRegisterString,
-    performRegistration
+    deleteRegisterString,
+    performRegistration,
   }
 }

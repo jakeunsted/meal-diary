@@ -113,7 +113,7 @@ definePageMeta({
   layout: false
 });
 
-const { performRegistration, storeRegisterString } = useRegister();
+const { performRegistration, storeRegisterString, deleteRegisterString } = useRegister();
 
 const username = ref('');
 const first_name = ref('');
@@ -148,7 +148,6 @@ onMounted(async () => {
   // get code query param
   const code = useRoute().query.code;
   if (code) {
-    console.log('code: ', code);
     await storeRegisterString(code);
   }
 });
@@ -168,7 +167,7 @@ const handleRegistration = async () => {
     errors.value = result.errors;
   } else {
     if (result.response && result.response.ok) {
-      console.log('registration successful: ', result.response);
+      deleteRegisterString();
       navigateTo('/registration/step-2');
     } else {
       errors.value.general = result.response?.statusText || 'Registration failed';
