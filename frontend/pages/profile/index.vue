@@ -18,9 +18,15 @@
       :members="familyMembers"
       :is-loading="!hasFamilyData"
       :error="error"
+      @add-family-member="handleAddFamilyMember"
     />
 
     <LogoutButton />
+
+    <InviteModal
+      ref="inviteModal"
+      :family-group-code="familyGroup?.random_identifier || ''"
+    />
   </div>
 </template>
 
@@ -54,11 +60,13 @@ import ProfileHeader from '~/components/profile/ProfileHeader.vue';
 import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
 import LogoutButton from '~/components/profile/LogoutButton.vue';
-import { computed, onMounted, nextTick } from 'vue';
+import InviteModal from '~/components/profile/InviteModal.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
-const { familyGroup, members: familyMembers, isLoading, error } = storeToRefs(familyStore);
+const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
+
+const inviteModal = ref(null);
 
 const hasUserData = computed(() => !!userStore.user);
 const hasFamilyData = computed(() => !!familyGroup.value);
@@ -67,10 +75,13 @@ const handleError = (error) => {
   console.error('Error in profile page:', error);
 };
 
+const handleAddFamilyMember = () => {
+  inviteModal.value?.showModal();
+};
+
 onMounted(async () => {
   await nextTick();
   
-  // Start loading data after skeleton is visible
   const loadData = async () => {
     try {
       // Start all requests in parallel

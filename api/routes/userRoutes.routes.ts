@@ -81,6 +81,10 @@ const router = express.Router();
  *           type: integer
  *           nullable: true
  *           description: The id of the family group the user belongs to
+ *         family_group_code:
+ *           type: string
+ *           nullable: true
+ *           description: The code of the family group the user belongs to
  *         avatar_url:
  *           type: string
  *           nullable: true

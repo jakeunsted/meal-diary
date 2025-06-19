@@ -44,5 +44,12 @@
   "Confirm password": "Confirm password",
   "Family code copied to clipboard!": "Family code copied to clipboard!",
   "Failed to copy family code to clipboard!": "Failed to copy family code to clipboard!",
-  "Your family details": "Your family details"
+  "Your family details": "Your family details",
+  "Wow its empty here!": "Wow its empty here!",
+  "Invite Family Member": "Invite Family Member",
+  "Share this invite link with your family members to join your family group": "Share this invite link with your family members to join your family group",
+  "Invite Link": "Invite Link",
+  "Invite link copied to clipboard!": "Invite link copied to clipboard!",
+  "Failed to copy invite link": "Failed to copy invite link",
+  "Close": "Close"
 }
