@@ -44,7 +44,7 @@
           <input 
             type="text"
             :placeholder="$t('Enter new item')"
-            class="input input-ghost"
+            class="input input-ghost w-full pr-5"
             v-model="newItemName"
             v-on:keyup.enter="addItem(newItemName)"
             @focus="$emit('inputFocus', $event)"
