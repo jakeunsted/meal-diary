@@ -15,14 +15,11 @@ export const createUser = async (req: Request, res: Response) => {
     }
 
     if (family_group_code) {
-      console.log('family_group_code: ', family_group_code);
       const familyGroup = await FamilyGroup.findOne({ where: { random_identifier: family_group_code } });
-      console.log('familyGroup: ', familyGroup);
       if (!familyGroup) {
         return res.status(404).json({ message: 'Family group not found' });
       }
       family_group_id = familyGroup.dataValues.id;
-      console.log('family_group_id: ', family_group_id);
     }
 
     // Hash password
