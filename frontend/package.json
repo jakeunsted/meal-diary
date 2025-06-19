@@ -13,17 +13,17 @@
     "start": "node .output/server/index.mjs"
   },
   "dependencies": {
-    "@capacitor/android": "^7.2.0",
-    "@capacitor/core": "^7.2.0",
-    "@capacitor/ios": "^7.2.0",
+    "@capacitor/android": "^7.4.0",
+    "@capacitor/core": "^7.4.0",
+    "@capacitor/ios": "^7.4.0",
     "@capacitor/preferences": "^7.0.1",
     "@formkit/auto-animate": "^0.8.2",
-    "@newrelic/browser-agent": "^1.291.1",
+    "@newrelic/browser-agent": "^1.292.0",
     "@newrelic/newrelic-capacitor-plugin": "^1.5.8",
     "@nuxtjs/dotenv": "^1.4.2",
-    "@nuxtjs/i18n": "^9.5.3",
+    "@nuxtjs/i18n": "^9.5.5",
     "@pinia/nuxt": "^0.11.0",
-    "@tailwindcss/vite": "^4.1.4",
+    "@tailwindcss/vite": "^4.1.10",
     "@vesp/nuxt-fontawesome": "^1.2.1",
     "nuxt": "^3.16.2",
     "pinia": "^3.0.1",
@@ -32,13 +32,13 @@
     "vue-router": "latest"
   },
   "devDependencies": {
-    "@capacitor/cli": "^7.2.0",
+    "@capacitor/cli": "^7.4.0",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@nuxtjs/style-resources": "^1.2.2",
-    "daisyui": "^5.0.23",
-    "sass": "^1.85.1",
-    "sass-loader": "^10.5.2"
+    "daisyui": "^5.0.43",
+    "sass": "^1.89.2",
+    "sass-loader": "^16.0.5"
   }
 }
