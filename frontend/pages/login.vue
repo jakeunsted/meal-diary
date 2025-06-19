@@ -1,6 +1,6 @@
 <template>
-  <div class="min-h-screen w-full flex items-center justify-center fixed inset-0">
-    <div class="card w-96 bg-base-200">
+  <div class="absolute inset-0 flex items-center justify-center bg-base-100">
+    <div class="card w-96 bg-base-200 shadow-xl">
       <div class="card-body">
         <div class="card-title">
           <h1>{{ $t('Welcome to meal diary') }}</h1>
