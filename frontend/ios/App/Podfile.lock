@@ -1,7 +1,9 @@
 PODS:
-  - Capacitor (7.2.0):
+  - Capacitor (7.4.0):
     - CapacitorCordova
-  - CapacitorCordova (7.2.0)
+  - CapacitorClipboard (7.0.1):
+    - Capacitor
+  - CapacitorCordova (7.4.0)
   - CapacitorPreferences (7.0.1):
     - Capacitor
   - NewRelicAgent (7.5.6)
@@ -11,6 +13,7 @@ PODS:
 
 DEPENDENCIES:
   - "Capacitor (from `../../node_modules/@capacitor/ios`)"
+  - "CapacitorClipboard (from `../../node_modules/@capacitor/clipboard`)"
   - "CapacitorCordova (from `../../node_modules/@capacitor/ios`)"
   - "CapacitorPreferences (from `../../node_modules/@capacitor/preferences`)"
   - "NewrelicNewrelicCapacitorPlugin (from `../../node_modules/@newrelic/newrelic-capacitor-plugin`)"
@@ -22,6 +25,8 @@ SPEC REPOS:
 EXTERNAL SOURCES:
   Capacitor:
     :path: "../../node_modules/@capacitor/ios"
+  CapacitorClipboard:
+    :path: "../../node_modules/@capacitor/clipboard"
   CapacitorCordova:
     :path: "../../node_modules/@capacitor/ios"
   CapacitorPreferences:
@@ -30,12 +35,13 @@ EXTERNAL SOURCES:
     :path: "../../node_modules/@newrelic/newrelic-capacitor-plugin"
 
 SPEC CHECKSUMS:
-  Capacitor: 03bc7cbdde6a629a8b910a9d7d78c3cc7ed09ea7
-  CapacitorCordova: 5967b9ba03915ef1d585469d6e31f31dc49be96f
+  Capacitor: 10feab36396883c55373328124a677f118cd4b5f
+  CapacitorClipboard: 70bfdb42b877b320a6e511ab94fa7a6a55d57ecb
+  CapacitorCordova: 723e017d8a80ab2ede9959fbe37556c35ac860d5
   CapacitorPreferences: 6c98117d4d7508034a4af9db64d6b26fc75d7b94
   NewRelicAgent: d5628f58fa2928b1377fe866c6f52750d21c1a4b
   NewrelicNewrelicCapacitorPlugin: 7295be35d05d0f8aa645a43479ddc93daea041c2
 
-PODFILE CHECKSUM: e0d8cea34e236feae601586c5afef817adb424ea
+PODFILE CHECKSUM: c86cc6a1c24d56f88a9c1bbe03a9f41f8b575293
 
 COCOAPODS: 1.16.2

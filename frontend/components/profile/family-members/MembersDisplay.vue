@@ -18,7 +18,7 @@
   </div>
   <div v-else class="flex flex-col items-center justify-center mx-auto p-4 rounded-xl">
     <h3 class="font-semibold">{{ $t('Wow its empty here!') }}</h3>
-    <button class="btn btn-primary mt-4">{{ $t('Add family member') }}</button>
+    <button class="btn btn-primary mt-4" @click="handleAddFamilyMember">{{ $t('Add family member') }}</button>
   </div>
 </template>
 
@@ -28,6 +28,14 @@ import type { DisplayMember } from '../../../types/FamilyGroup';
 defineProps<{
   members: DisplayMember[];
 }>();
+
+const emit = defineEmits<{
+  (e: 'addFamilyMember'): void;
+}>();
+
+const handleAddFamilyMember = () => {
+  emit('addFamilyMember');
+};
 </script>
 
 <script lang="ts">

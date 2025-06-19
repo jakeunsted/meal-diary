@@ -13,7 +13,7 @@
           {{ error }}
         </div>
         <div v-else>
-          <MembersDisplay :members="members" />
+          <MembersDisplay :members="members" @addFamilyMember="$emit('addFamilyMember')" />
         </div>
       </div>
     </div>
@@ -30,6 +30,10 @@ defineProps<{
   members: DisplayMember[];
   isLoading: boolean;
   error: string | null;
+}>();
+
+defineEmits<{
+  (e: 'addFamilyMember'): void;
 }>();
 </script>
 
