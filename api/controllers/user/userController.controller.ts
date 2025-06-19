@@ -1,16 +1,28 @@
 import type { Request, Response } from 'express';
-import { User } from '../../db/models/associations.ts';
+import { FamilyGroup, User } from '../../db/models/associations.ts';
 import { Op } from 'sequelize';
 import bcrypt from 'bcrypt';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, first_name, last_name, family_group_id } = req.body;
+    const { username, email, password, first_name, last_name, family_group_code } = req.body;
+    let { family_group_id } = req.body;
     
     // Validate required fields
     if (!username || !email || !password) {
       return res.status(400).json({ message: 'Username, email, and password are required' });
+    }
+
+    if (family_group_code) {
+      console.log('family_group_code: ', family_group_code);
+      const familyGroup = await FamilyGroup.findOne({ where: { random_identifier: family_group_code } });
+      console.log('familyGroup: ', familyGroup);
+      if (!familyGroup) {
+        return res.status(404).json({ message: 'Family group not found' });
+      }
+      family_group_id = familyGroup.dataValues.id;
+      console.log('family_group_id: ', family_group_id);
     }
 
     // Hash password

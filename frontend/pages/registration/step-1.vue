@@ -113,6 +113,8 @@ definePageMeta({
   layout: false
 });
 
+const { performRegistration, storeRegisterString } = useRegister();
+
 const username = ref('');
 const first_name = ref('');
 const last_name = ref('');
@@ -142,74 +144,35 @@ const clearErrors = () => {
   };
 };
 
+onMounted(async () => {
+  // get code query param
+  const code = useRoute().query.code;
+  if (code) {
+    console.log('code: ', code);
+    await storeRegisterString(code);
+  }
+});
+
 const handleRegistration = async () => {
   clearErrors();
-  let hasErrors = false;
+  const result = await performRegistration({
+    username: username.value,
+    email: email.value,
+    first_name: first_name.value,
+    last_name: last_name.value,
+    password: password.value,
+    confirm_password: confirm_password.value
+  });
 
-  // validate form inputs
-  if (!username.value) {
-    errors.value.username = 'Username is required';
-    hasErrors = true;
-  }
-
-  if (!email.value) {
-    errors.value.email = 'Email is required';
-    hasErrors = true;
-  }
-
-  if (!first_name.value) {
-    errors.value.first_name = 'First name is required';
-    hasErrors = true;
-  }
-
-  if (!last_name.value) {
-    errors.value.last_name = 'Last name is required';
-    hasErrors = true;
-  }
-
-  if (!password.value) {
-    errors.value.password = 'Password is required';
-    hasErrors = true;
-  }
-
-  if (!confirm_password.value) {
-    errors.value.confirm_password = 'You need to confirm your password';
-    hasErrors = true;
-  }
-
-  if (password.value !== confirm_password.value) {
-    errors.value.confirm_password = 'Passwords do not match';
-    hasErrors = true;
-  }
-
-  if (hasErrors) {
-    return;
-  }
-
-  try {
-    const response = await fetch('/api/user', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ 
-        username: username.value, 
-        email: email.value, 
-        first_name: first_name.value, 
-        last_name: last_name.value, 
-        password: password.value 
-      }),
-    });
-
-    if (response.ok) {
+  if (result.hasErrors) {
+    errors.value = result.errors;
+  } else {
+    if (result.response && result.response.ok) {
+      console.log('registration successful: ', result.response);
       navigateTo('/registration/step-2');
     } else {
-      const data = await response.json();
-      errors.value.general = data.message || 'Failed to register user';
+      errors.value.general = result.response?.statusText || 'Registration failed';
     }
-  } catch (error) {
-    console.error('Error registering user:', error);
-    errors.value.general = 'Failed to register user';
   }
 };
 </script>
