@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
+import { hasFamilyGroup } from '~/composables/useAuth';
 
 interface AuthState {
   user: User | null;
@@ -28,7 +29,10 @@ export const useAuthStore = defineStore('auth', () => {
       hasUser: !!authData.user,
       hasAccessToken: !!authData.accessToken,
       hasRefreshToken: !!authData.refreshToken,
-      userId: authData.user?.id
+      userId: authData.user?.id,
+      userEmail: authData.user?.email,
+      family_group_id: authData.user?.family_group_id,
+      hasFamilyGroup: hasFamilyGroup(authData.user)
     });
     
     user.value = authData.user;
@@ -43,7 +47,12 @@ export const useAuthStore = defineStore('auth', () => {
         refreshToken: authData.refreshToken,
         isAuthenticated: true
       };
-      console.log('[Auth Store] Saving auth state to storage');
+      console.log('[Auth Store] Saving auth state to storage:', {
+        hasUser: !!authState.user,
+        userId: authState.user?.id,
+        family_group_id: authState.user?.family_group_id,
+        hasFamilyGroup: hasFamilyGroup(authState.user)
+      });
       await Preferences.set({
         key: 'authState',
         value: JSON.stringify(authState)
@@ -91,7 +100,10 @@ export const useAuthStore = defineStore('auth', () => {
           hasUser: !!authState.user,
           hasAccessToken: !!authState.accessToken,
           hasRefreshToken: !!authState.refreshToken,
-          userId: authState.user?.id
+          userId: authState.user?.id,
+          userEmail: authState.user?.email,
+          family_group_id: authState.user?.family_group_id,
+          hasFamilyGroup: hasFamilyGroup(authState.user)
         });
         // Only restore if we have all required data
         if (authState.user && authState.accessToken && authState.refreshToken) {

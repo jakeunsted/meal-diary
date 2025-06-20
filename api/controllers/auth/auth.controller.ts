@@ -89,6 +89,15 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Generate tokens
     const { accessToken, refreshToken } = await generateTokens(user.id);
     
+    // Log user data for debugging
+    console.log('[Login] User data:', {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      family_group_id: user.family_group_id,
+      hasFamilyGroup: !!user.family_group_id
+    });
+    
     // Return user data and tokens
     res.status(200).json({
       user,
