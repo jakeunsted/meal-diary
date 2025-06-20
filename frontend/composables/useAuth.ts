@@ -32,6 +32,15 @@ interface TokenResponse {
 }
 
 /**
+ * Utility function to check if a user has a family group
+ * @param {any} user - The user object to check
+ * @returns {boolean} True if the user has a family group, false otherwise
+ */
+export const hasFamilyGroup = (user: any): boolean => {
+  return user?.family_group_id != null && user.family_group_id !== undefined;
+};
+
+/**
  * Composable function for handling authentication.
  * @returns An object containing login, logout, refreshTokens, isLoading, error, isAuthenticated, and user properties.
  */
@@ -61,13 +70,27 @@ export const useAuth = () => {
         }
       });
       
+      // Log response data for debugging
+      console.log('[useAuth] Login response:', {
+        hasUser: !!response.user,
+        userId: response.user?.id,
+        userEmail: response.user?.email,
+        family_group_id: response.user?.family_group_id,
+        hasFamilyGroup: !!response.user?.family_group_id,
+        hasAccessToken: !!response.accessToken,
+        hasRefreshToken: !!response.refreshToken
+      });
+      
       // Only store auth data if we have a valid response with tokens
       if (response && response.accessToken && response.refreshToken) {
         authStore.setAuth(response);
-        // if no family group id, redirect to registration step 2
-        if (!response.user.family_group_id) {
+        
+        // Determine redirect based on family group status
+        if (!hasFamilyGroup(response.user)) {
+          console.log('[useAuth] No family group, redirecting to step-2');
           response.redirect = '/registration/step-2';
         } else {
+          console.log('[useAuth] Has family group, redirecting to diary');
           response.redirect = '/diary';
         }
         return response;
