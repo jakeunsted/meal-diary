@@ -1,5 +1,4 @@
 import { apiFetch } from '~/server/utils/fetch';
-import { useAuthStore } from '~/stores/auth';
 import { User } from '~/types/User';
 
 // Define the expected response type from the API
@@ -27,19 +26,8 @@ export default defineEventHandler(async (event) => {
       body: JSON.stringify({ email, password }),
     }, event);
 
-    // Save values to the store
-    const authStore = useAuthStore();
-    authStore.setAuth({
-      accessToken: response.accessToken,
-      refreshToken: response.refreshToken,
-      user: response.user
-    });
-    
-    // Only return redirect on successful login
-    return {
-      ...response,
-      redirect: '/diary'
-    };
+    // Return the response without hardcoded redirect or server-side store usage
+    return response;
   } catch (error: any) {
     // If the error is from the API, pass through the status code and message
     if (error.statusCode) {
