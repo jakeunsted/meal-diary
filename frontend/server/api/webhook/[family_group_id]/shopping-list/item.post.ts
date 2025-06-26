@@ -15,7 +15,6 @@ export default defineEventHandler(async (event) => {
 
   // Only emit the event to connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
-    type: body.eventType,
     item: body.item,
     category: body.category
   });
