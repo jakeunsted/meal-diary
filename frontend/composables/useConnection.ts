@@ -10,7 +10,7 @@ export const useConnection = () => {
   const checkConnection = async (timeout = 5000): Promise<boolean> => {
     try {
       const response = await $fetch('/api/health', { 
-        method: 'HEAD',
+        method: 'get',
         timeout
       });
       return true;
