@@ -41,6 +41,33 @@ export const hasFamilyGroup = (user: any): boolean => {
 };
 
 /**
+ * Handles automatic logout when token refresh fails
+ * This function clears auth state and redirects to login
+ */
+export const handleAutoLogout = async () => {
+  console.log('[Auto Logout] Handling automatic logout due to failed token refresh');
+  
+  const authStore = useAuthStore();
+  const router = useRouter();
+  
+  try {
+    // Clear auth state
+    await authStore.logout();
+    
+    // Redirect to login page
+    await router.push('/login');
+    
+    console.log('[Auto Logout] Successfully logged out and redirected to login');
+  } catch (error) {
+    console.error('[Auto Logout] Error during automatic logout:', error);
+    // Fallback: force page reload to login
+    if (import.meta.client) {
+      window.location.href = '/login';
+    }
+  }
+};
+
+/**
  * Composable function for handling authentication.
  * @returns An object containing login, logout, refreshTokens, isLoading, error, isAuthenticated, and user properties.
  */
@@ -162,8 +189,9 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
-      // If refresh fails, log out the user
-      authStore.logout();
+      // If refresh fails, trigger automatic logout
+      console.log('[useAuth] Token refresh failed, triggering automatic logout');
+      await handleAutoLogout();
       throw err;
     }
   };

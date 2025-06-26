@@ -129,17 +129,28 @@ export const useAuthStore = defineStore('auth', () => {
     await clearAuth();
   };
 
+  /**
+   * Handles automatic logout when token refresh fails
+   * This method clears auth state and can be called from error handlers
+   */
+  const autoLogout = async () => {
+    console.log('[Auth Store] Performing automatic logout due to failed token refresh');
+    await clearAuth();
+  };
+
   const setAccessToken = async (token: string) => {
     accessToken.value = token;
     console.log('[Auth Store] Setting access token:', token);
     // update authState
     if (import.meta.client) {
       const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
+      console.log('initial authState', authState);
       authState.accessToken = token;
       await Preferences.set({
         key: 'authState',
         value: JSON.stringify(authState)
       });
+      console.log('updated authState', authState);
     }
 
   };
@@ -171,6 +182,7 @@ export const useAuthStore = defineStore('auth', () => {
     setAuth,
     clearAuth,
     logout,
+    autoLogout,
     initializeAuth,
     setAccessToken,
     setRefreshToken
