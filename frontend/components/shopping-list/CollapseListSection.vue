@@ -113,6 +113,7 @@ const addItem = (name) => {
 
 const handleItemUpdate = (itemData) => {
   emit('updateItem', {
+    id: itemData.id,
     category: props.categoryTitle,
     itemName: itemData.name,
     itemChecked: itemData.checked

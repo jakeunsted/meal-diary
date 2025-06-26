@@ -118,13 +118,11 @@ const handleDeleteGroup = async () => {
 
 const saveItem = async (category, event) => {
   if (event?.itemName) {
-    // Handle item update
-    const item = category.items.find(i => i.name === event.itemName);
-    if (item) {
+    if (event.id) {
       // Only update name and checked status
-      await shoppingListStore.updateItem(item.id, {
+      await shoppingListStore.updateItem(event.id, {
         name: event.itemName,
-        checked: event.itemChecked,
+        checked: event.itemChecked || false,
         shopping_list_categories: category.id
       });
     } else {

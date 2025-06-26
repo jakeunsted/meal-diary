@@ -541,9 +541,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync updates
       for (const item of [...this.pendingChanges.update]) {
         try {
+          // Only send name and checked fields to the API
+          const apiUpdates = {
+            name: item.name,
+            checked: item.checked
+          };
+          
           await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
             method: 'PUT',
-            body: item,
+            body: apiUpdates,
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,
               'x-refresh-token': authStore.refreshToken || ''

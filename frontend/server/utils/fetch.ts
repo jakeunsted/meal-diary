@@ -1,4 +1,5 @@
 import { H3Event } from 'h3';
+import { useAuthStore } from '~/stores/auth';
 
 /**
  * Custom fetch export to use baseUrl from .env and return json
@@ -78,6 +79,13 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
           console.log('[Token Refresh] Token refresh successful');
+
+          console.log('[Token Refresh] New tokens:', data);
+
+          // Update the auth store with new token
+          const authStore = useAuthStore();
+          authStore.setAccessToken(data.accessToken);
+          authStore.setRefreshToken(data.refreshToken);
 
           // Retry the original request with new token
           console.log('[Token Refresh] Retrying original request with new token');

@@ -7,13 +7,26 @@
         :checked="item.checked"
         @change="handleCheckboxChange"
       />
+      <div 
+        v-if="!isEditing" 
+        class="flex-1 px-3 py-2 cursor-pointer"
+        :class="{ 'line-through text-gray-400': item.checked }"
+        @click="startEditing"
+      >
+        {{ item.name }}
+      </div>
       <input 
+        v-else
         type="text"
         :placeholder="$t('Enter item name')"
         class="input input-ghost flex-1"
         :class="{ 'line-through text-gray-400': item.checked }"
         :value="item.name"
         @change="handleNameChange($event.target.value)"
+        @blur="stopEditing"
+        @keyup.enter="stopEditing"
+        @keyup.escape="cancelEditing"
+        ref="editInput"
       />
     </div>
     <button 
@@ -35,6 +48,33 @@ const props = defineProps({
   }
 });
 
+const isEditing = ref(false);
+const editInput = ref(null);
+const originalName = ref('');
+
+const startEditing = () => {
+  isEditing.value = true;
+  originalName.value = props.item.name;
+  nextTick(() => {
+    editInput.value?.focus();
+    editInput.value?.select();
+  });
+};
+
+const stopEditing = () => {
+  isEditing.value = false;
+};
+
+const cancelEditing = () => {
+  if (originalName.value !== props.item.name) {
+    emit('update', {
+      id: props.item.id,
+      name: originalName.value
+    });
+  }
+  stopEditing();
+};
+
 const handleCheckboxChange = (event) => {
   emit('update', {
     id: props.item.id,
@@ -48,6 +88,8 @@ const handleNameChange = (newName) => {
     id: props.item.id,
     name: newName
   });
+  // Exit editing mode after update
+  stopEditing();
 };
 
 const handleRemove = () => {
