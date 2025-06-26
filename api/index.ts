@@ -20,7 +20,9 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 
 // Apply rate limiting to all routes
-app.use(apiLimiter);
+if (process.env.NODE_ENV !== 'development') {
+  app.use(apiLimiter);
+}
 
 // Routes
 app.use('/users', userRoutes);
