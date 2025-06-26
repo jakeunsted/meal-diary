@@ -17,6 +17,7 @@
                 v-model="username" 
                 placeholder="Username" 
                 class="input input-bordered" 
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.username" class="text-error text-sm mt-1">
@@ -31,6 +32,7 @@
                 v-model="email" 
                 placeholder="Email" 
                 class="input input-bordered" 
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.email" class="text-error text-sm mt-1">
@@ -45,6 +47,7 @@
                 v-model="first_name" 
                 placeholder="First name" 
                 class="input input-bordered" 
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.first_name" class="text-error text-sm mt-1">
@@ -59,6 +62,7 @@
                 v-model="last_name" 
                 placeholder="Last name"
                 class="input input-bordered"
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.last_name" class="text-error text-sm mt-1">
@@ -73,6 +77,7 @@
                 v-model="password" 
                 placeholder="Password"
                 class="input input-bordered"
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.password" class="text-error text-sm mt-1">
@@ -87,6 +92,7 @@
                 v-model="confirm_password" 
                 placeholder="Confirm password"
                 class="input input-bordered"
+                :disabled="isLoading"
                 required
               />
               <div v-if="errors.confirm_password" class="text-error text-sm mt-1">
@@ -97,8 +103,13 @@
                 {{ errors.general }}
               </div>
 
-              <button type="submit" class="btn btn-primary w-full mt-4">
-                {{ $t('Register') }}
+              <button 
+                type="submit" 
+                class="btn btn-primary w-full mt-4"
+                :disabled="isLoading"
+              >
+                <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
+                <span v-else>{{ $t('Register') }}</span>
               </button>
             </div> 
           </form>
@@ -121,6 +132,7 @@ const last_name = ref('');
 const password = ref('');
 const confirm_password = ref('');
 const email = ref('');
+const isLoading = ref(false);
 
 const errors = ref({
   username: '',
@@ -154,24 +166,33 @@ onMounted(async () => {
 
 const handleRegistration = async () => {
   clearErrors();
-  const result = await performRegistration({
-    username: username.value,
-    email: email.value,
-    first_name: first_name.value,
-    last_name: last_name.value,
-    password: password.value,
-    confirm_password: confirm_password.value
-  });
+  isLoading.value = true;
+  
+  try {
+    const result = await performRegistration({
+      username: username.value,
+      email: email.value,
+      first_name: first_name.value,
+      last_name: last_name.value,
+      password: password.value,
+      confirm_password: confirm_password.value
+    });
 
-  if (result.hasErrors) {
-    errors.value = result.errors;
-  } else {
-    if (result.response && result.response.ok) {
-      deleteRegisterString();
-      navigateTo('/registration/step-2');
+    if (result.hasErrors) {
+      errors.value = result.errors;
     } else {
-      errors.value.general = result.response?.statusText || 'Registration failed';
+      if (result.response && result.response.ok) {
+        deleteRegisterString();
+        navigateTo('/registration/step-2');
+      } else {
+        errors.value.general = result.response?.statusText || 'Registration failed';
+      }
     }
+  } catch (error) {
+    console.error('Registration error:', error);
+    errors.value.general = 'Registration failed. Please try again.';
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>
