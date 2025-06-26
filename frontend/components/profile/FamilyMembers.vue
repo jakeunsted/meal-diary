@@ -5,7 +5,7 @@
         <h2 class="card-title text-xl font-bold">{{ $t('Your family members') }}</h2>
       </div>
       <div class="card-body rounded-b-lg">
-        <div v-if="isLoading" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div v-if="isLoading">
           <MemberSkeleton />
         </div>
         <div v-else-if="error" class="alert alert-error">
