@@ -2,6 +2,24 @@ import { H3Event } from 'h3';
 import type { TokenResponse } from '~/types/Auth';
 import type { ApiResponse } from '~/types/Api';
 
+/**
+ * Handles automatic logout when token refresh fails
+ * This function clears auth state and redirects to login
+ */
+export const handleAutoLogout = () => {
+  // Clear auth state from storage
+  if (process.client) {
+    try {
+      localStorage.removeItem('auth');
+      // Also clear any other auth-related storage
+      localStorage.removeItem('mealDiary');
+      localStorage.removeItem('shoppingList');
+    } catch (error) {
+      console.error('[Auto Logout] Failed to clear localStorage:', error);
+    }
+  }
+};
+
 export async function authenticatedFetch<T>(
   event: H3Event,
   url: string,
@@ -74,8 +92,29 @@ export async function authenticatedFetch<T>(
               'x-new-refresh-token': data.refreshToken
             }
           };
+        } else {
+          // If refresh fails, trigger automatic logout
+          console.log('[Authenticated Fetch] Token refresh failed, triggering automatic logout');
+          if (process.client) {
+            // Import and call the auto logout function
+            const { handleAutoLogout } = await import('~/composables/useAuth');
+            await handleAutoLogout();
+          }
+          
+          throw createError({
+            statusCode: 401,
+            message: 'Failed to refresh token'
+          });
         }
       } catch (refreshError) {
+        // If refresh fails, trigger automatic logout
+        console.log('[Authenticated Fetch] Token refresh failed, triggering automatic logout');
+        if (process.client) {
+          // Import and call the auto logout function
+          const { handleAutoLogout } = await import('~/composables/useAuth');
+          await handleAutoLogout();
+        }
+        
         throw createError({
           statusCode: 401,
           message: 'Failed to refresh token'

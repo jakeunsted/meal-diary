@@ -109,9 +109,27 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         }
         console.error('[Token Refresh] Refresh request failed:', refreshResponse.status);
         const error = await refreshResponse.json().catch(() => ({ message: 'Unknown error' }));
+        
+        // If refresh fails, trigger automatic logout
+        console.log('[Token Refresh] Token refresh failed, triggering automatic logout');
+        if (process.client) {
+          // Import and call the auto logout function
+          const { handleAutoLogout } = await import('~/composables/useAuth');
+          await handleAutoLogout();
+        }
+        
         throw error;
       } catch (error) {
         console.error('[Token Refresh] Error during token refresh:', error);
+        
+        // If refresh fails, trigger automatic logout
+        console.log('[Token Refresh] Token refresh failed, triggering automatic logout');
+        if (process.client) {
+          // Import and call the auto logout function
+          const { handleAutoLogout } = await import('~/composables/useAuth');
+          await handleAutoLogout();
+        }
+        
         throw error;
       }
     }
