@@ -13,6 +13,7 @@
               class="tab" 
               :class="{ 'tab-active': activeTab === 'create' }"
               @click="activeTab = 'create'"
+              :disabled="isLoading"
             >
               {{ $t('Create New') }}
             </button>
@@ -20,6 +21,7 @@
               class="tab" 
               :class="{ 'tab-active': activeTab === 'join' }"
               @click="activeTab = 'join'"
+              :disabled="isLoading"
             >
               {{ $t('Join Existing') }}
             </button>
@@ -36,6 +38,7 @@
                 v-model="familyName" 
                 :placeholder="$t('Enter family group name')" 
                 class="input input-bordered" 
+                :disabled="isLoading"
                 required
               />
             </div>
@@ -50,12 +53,18 @@
                 v-model="familyKey" 
                 :placeholder="$t('Enter family key')" 
                 class="input input-bordered" 
+                :disabled="isLoading"
                 required
               />
             </div>
 
-            <button type="submit" class="btn btn-primary w-full mt-4">
-              {{ activeTab === 'create' ? $t('Create Family Group') : $t('Join Family Group') }}
+            <button 
+              type="submit" 
+              class="btn btn-primary w-full mt-4"
+              :disabled="isLoading"
+            >
+              <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
+              <span v-else>{{ activeTab === 'create' ? $t('Create Family Group') : $t('Join Family Group') }}</span>
             </button>
 
             <div v-if="errorMessage" class="text-error text-center mt-2">
@@ -78,12 +87,14 @@ const activeTab = ref('create');
 const familyName = ref('');
 const familyKey = ref('');
 const errorMessage = ref('');
+const isLoading = ref(false);
 
 const authStore = useAuthStore();
 
 const handleSubmit = async () => {
   // Clear any existing error message
   errorMessage.value = '';
+  isLoading.value = true;
 
   const user = authStore.user;
 
@@ -138,6 +149,8 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('Error:', error);
     errorMessage.value = 'An error occurred';
+  } finally {
+    isLoading.value = false;
   }
 };
 </script>

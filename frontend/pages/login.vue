@@ -16,6 +16,7 @@
               v-model="email" 
               placeholder="your@email.com" 
               class="input input-bordered" 
+              :disabled="isLoading"
               required
             />
           </div>
@@ -28,6 +29,7 @@
               v-model="password" 
               placeholder="••••••••" 
               class="input input-bordered" 
+              :disabled="isLoading"
               required
             />
           </div>
