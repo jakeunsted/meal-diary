@@ -140,24 +140,19 @@ export const useAuthStore = defineStore('auth', () => {
 
   const setAccessToken = async (token: string) => {
     accessToken.value = token;
-    console.log('[Auth Store] Setting access token:', token);
     // update authState
     if (import.meta.client) {
       const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
-      console.log('initial authState', authState);
       authState.accessToken = token;
       await Preferences.set({
         key: 'authState',
         value: JSON.stringify(authState)
       });
-      console.log('updated authState', authState);
     }
-
   };
 
   const setRefreshToken = async (token: string) => {
     refreshToken.value = token;
-    console.log('[Auth Store] Setting refresh token:', token);
     // update authState
     if (import.meta.client) {
       const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
@@ -166,6 +161,45 @@ export const useAuthStore = defineStore('auth', () => {
         key: 'authState',
         value: JSON.stringify(authState)
       });
+    }
+  };
+
+  /**
+   * Updates tokens from SSE events (when server refreshes tokens)
+   * This method is called when the server emits a token-refresh event
+   */
+  const updateTokensFromSSE = async (tokens: { accessToken: string; refreshToken: string; userId: number }) => {
+    // Validate input
+    if (!tokens.accessToken || !tokens.refreshToken || !tokens.userId) {
+      console.error('[Auth Store] Invalid token data received from SSE:', tokens);
+      return;
+    }
+
+    // Only update if the tokens are for the current user
+    if (user.value?.id !== tokens.userId) {
+      return;
+    }
+    
+    try {
+      // Update store state
+      accessToken.value = tokens.accessToken;
+      refreshToken.value = tokens.refreshToken;
+      
+      // Update local storage
+      if (import.meta.client) {
+        const { value } = await Preferences.get({ key: 'authState' });
+        if (value) {
+          const authState: AuthState = JSON.parse(value);
+          authState.accessToken = tokens.accessToken;
+          authState.refreshToken = tokens.refreshToken;
+          await Preferences.set({
+            key: 'authState',
+            value: JSON.stringify(authState)
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[Auth Store] Failed to update auth state from SSE:', error);
     }
   };
   
@@ -185,6 +219,7 @@ export const useAuthStore = defineStore('auth', () => {
     autoLogout,
     initializeAuth,
     setAccessToken,
-    setRefreshToken
+    setRefreshToken,
+    updateTokensFromSSE
   };
 }); 

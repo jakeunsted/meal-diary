@@ -1,8 +1,13 @@
 import { apiFetch } from '~/server/utils/fetch';
+import { SSE_EMITTER } from '~/server/plugins/sse';
 
 interface TokenResponse {
   accessToken: string;
   refreshToken: string;
+  user: {
+    id: number;
+    family_group_id?: number;
+  };
 }
 
 export default defineEventHandler(async (event) => {
@@ -21,6 +26,15 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     }, event);
+    
+    // Emit SSE event for token refresh if user has a family group
+    if (response.user?.family_group_id) {
+      SSE_EMITTER.emit(`family-${response.user.family_group_id}`, 'token-refresh', {
+        accessToken: response.accessToken,
+        refreshToken: response.refreshToken,
+        userId: response.user.id
+      });
+    }
     
     return response;
   } catch (error: any) {

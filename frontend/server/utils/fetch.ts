@@ -1,5 +1,6 @@
 import { H3Event } from 'h3';
 import { useAuthStore } from '~/stores/auth';
+import { SSE_EMITTER } from '~/server/plugins/sse';
 
 /**
  * Custom fetch export to use baseUrl from .env and return json
@@ -63,9 +64,7 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
   if (response.status === 401 && event) {
     const refreshToken = getHeader(event, 'x-refresh-token');
     if (refreshToken) {
-      console.log('[Token Refresh] Attempting to refresh token after 401 response');
       try {
-        console.log('[Token Refresh] Making refresh token request to:', `${baseUrl}/auth/refresh-token`);
         const refreshResponse = await fetch(`${baseUrl}/auth/refresh-token`, {
           method: 'POST',
           headers: {
@@ -73,22 +72,25 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
           },
           body: JSON.stringify({ refreshToken }),
         });
-
-        console.log('[Token Refresh] Refresh response status:', refreshResponse.status);
         
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
-          console.log('[Token Refresh] Token refresh successful');
-
-          console.log('[Token Refresh] New tokens:', data);
-
+          
           // Update the auth store with new token
           const authStore = useAuthStore();
           authStore.setAccessToken(data.accessToken);
           authStore.setRefreshToken(data.refreshToken);
 
+          // Emit SSE event for token refresh if user has a family group
+          if (data.user?.family_group_id) {
+            SSE_EMITTER.emit(`family-${data.user.family_group_id}`, 'token-refresh', {
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              userId: data.user.id
+            });
+          }
+
           // Retry the original request with new token
-          console.log('[Token Refresh] Retrying original request with new token');
           fetchOptions.headers = {
             ...fetchOptions.headers,
             'Authorization': `Bearer ${data.accessToken}`,
@@ -104,14 +106,12 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
             };
           }
           
-          console.log('[Token Refresh] Retry request successful');
           return retryResponse.json();
         }
         console.error('[Token Refresh] Refresh request failed:', refreshResponse.status);
         const error = await refreshResponse.json().catch(() => ({ message: 'Unknown error' }));
         
         // If refresh fails, trigger automatic logout
-        console.log('[Token Refresh] Token refresh failed, triggering automatic logout');
         if (process.client) {
           // Import and call the auto logout function
           const { handleAutoLogout } = await import('~/composables/useAuth');
@@ -123,7 +123,6 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         console.error('[Token Refresh] Error during token refresh:', error);
         
         // If refresh fails, trigger automatic logout
-        console.log('[Token Refresh] Token refresh failed, triggering automatic logout');
         if (process.client) {
           // Import and call the auto logout function
           const { handleAutoLogout } = await import('~/composables/useAuth');

@@ -24,13 +24,15 @@ export default defineEventHandler(async (event) => {
   const initialShoppingEvents = getLatestEvents(Number(familyGroupId));
   const initialMealDiaryEvents = getLatestMealDiaryEvents(Number(familyGroupId));
   
-  response.write(`data: ${JSON.stringify({ 
+  const initialData = { 
     type: 'initial', 
     data: {
       shoppingList: initialShoppingEvents,
       mealDiary: initialMealDiaryEvents
     }
-  })}\n\n`);
+  };
+  
+  response.write(`data: ${JSON.stringify(initialData)}\n\n`);
   
   // Function to send new events
   const sendEvent = (eventType: string, data: any) => {

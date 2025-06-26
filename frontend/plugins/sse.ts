@@ -11,6 +11,10 @@ export default defineNuxtPlugin(() => {
     if (import.meta.client) {
       eventSource = new EventSource(`/api/server-sent-events/${familyGroupId}`);
       
+      eventSource.onopen = () => {
+        // Connection established
+      };
+      
       eventSource.onmessage = (event) => {
         const data = JSON.parse(event.data);
         
@@ -21,7 +25,7 @@ export default defineNuxtPlugin(() => {
       };
       
       eventSource.onerror = (error) => {
-        console.error('SSE Error:', error);
+        console.error('[SSE Plugin] SSE Error:', error);
         eventSource?.close();
         // Try to reconnect after a delay
         setTimeout(() => setupSSE(familyGroupId, handlers), 5000);
@@ -42,7 +46,7 @@ export default defineNuxtPlugin(() => {
     provide: {
       sse: {
         setup: setupSSE,
-        close: closeSSE,
+        close: closeSSE
       }
     }
   }
