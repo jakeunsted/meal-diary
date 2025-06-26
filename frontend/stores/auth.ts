@@ -128,6 +128,35 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = async () => {
     await clearAuth();
   };
+
+  const setAccessToken = async (token: string) => {
+    accessToken.value = token;
+    console.log('[Auth Store] Setting access token:', token);
+    // update authState
+    if (import.meta.client) {
+      const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
+      authState.accessToken = token;
+      await Preferences.set({
+        key: 'authState',
+        value: JSON.stringify(authState)
+      });
+    }
+
+  };
+
+  const setRefreshToken = async (token: string) => {
+    refreshToken.value = token;
+    console.log('[Auth Store] Setting refresh token:', token);
+    // update authState
+    if (import.meta.client) {
+      const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
+      authState.refreshToken = token;
+      await Preferences.set({
+        key: 'authState',
+        value: JSON.stringify(authState)
+      });
+    }
+  };
   
   return {
     // State
@@ -142,6 +171,8 @@ export const useAuthStore = defineStore('auth', () => {
     setAuth,
     clearAuth,
     logout,
-    initializeAuth
+    initializeAuth,
+    setAccessToken,
+    setRefreshToken
   };
 }); 
