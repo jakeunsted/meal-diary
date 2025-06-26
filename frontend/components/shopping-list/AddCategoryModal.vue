@@ -13,6 +13,7 @@
           v-model="selectedCategory" 
           class="select select-bordered w-full"
           :class="{ 'select-error': hasError }"
+          :disabled="loading"
         >
           <option :value="null">{{ $t('Select Category') }}</option>
           <option v-for="category in availableCategories" :key="category.id" :value="category">
@@ -25,7 +26,14 @@
       </div>
       
       <div class="modal-action">
-        <button class="btn btn-primary" @click="handleSubmit">{{ $t('Add') }}</button>
+        <button 
+          class="btn btn-primary" 
+          @click="handleSubmit"
+          :disabled="loading"
+        >
+          <span v-if="loading" class="loading loading-spinner loading-sm"></span>
+          {{ $t('Add') }}
+        </button>
       </div>
     </div>
   </dialog>
@@ -43,6 +51,7 @@ interface ItemCategory {
 
 const props = defineProps<{
   itemCategories: ItemCategory[];
+  loading?: boolean;
 }>();
 
 const shoppingListStore = useShoppingListStore();
