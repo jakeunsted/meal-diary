@@ -35,6 +35,7 @@
     <AddCategoryModal
       ref="addCategoryModal"
       :itemCategories="shoppingListStore.itemCategories || []"
+      :loading="shoppingListStore.isLoading"
       @addCategory="handleAddCategory"
     />
     <CategoryOptionsModal
