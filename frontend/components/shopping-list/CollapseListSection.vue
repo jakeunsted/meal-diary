@@ -47,7 +47,7 @@
             class="input input-ghost w-full pr-5"
             v-model="newItemName"
             v-on:keyup.enter="addItem(newItemName)"
-            @focus="$emit('inputFocus', $event)"
+            @focus="handleNewItemInputFocus"
           />
         </div>
       </div>
@@ -75,6 +75,9 @@ const isOpen = ref(true);
 const newItemName = ref('');
 let pressTimer = null;
 const LONG_PRESS_DURATION = 500; // 500ms for long press
+
+// Add mobile input scroll functionality
+const { handleInputFocus } = useMobileInputScroll();
 
 const handlePressStart = () => {
   pressTimer = setTimeout(() => {
@@ -129,6 +132,11 @@ const removeItem = (id) => {
     itemName: item.name,
     itemChecked: false
   });
+};
+
+const handleNewItemInputFocus = (event) => {
+  handleInputFocus(event);
+  emit('inputFocus', event);
 };
 </script>
 

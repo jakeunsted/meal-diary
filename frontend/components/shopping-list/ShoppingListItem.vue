@@ -26,6 +26,7 @@
         @blur="stopEditing"
         @keyup.enter="stopEditing"
         @keyup.escape="cancelEditing"
+        @focus="scrollToInput($event.target)"
         ref="editInput"
       />
     </div>
@@ -52,12 +53,17 @@ const isEditing = ref(false);
 const editInput = ref(null);
 const originalName = ref('');
 
+// Add mobile input scroll functionality
+const { scrollToInput } = useMobileInputScroll();
+
 const startEditing = () => {
   isEditing.value = true;
   originalName.value = props.item.name;
   nextTick(() => {
     editInput.value?.focus();
     editInput.value?.select();
+    // Scroll to the input when editing starts
+    scrollToInput(editInput.value);
   });
 };
 

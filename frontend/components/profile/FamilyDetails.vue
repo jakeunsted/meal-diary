@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import type { FamilyGroup } from '~/types/FamilyGroup';
+import type { FamilyGroup } from '../../types/FamilyGroup';
 
 defineProps<{
   familyGroup: FamilyGroup | null;
