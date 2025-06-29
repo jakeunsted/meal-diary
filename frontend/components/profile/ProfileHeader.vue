@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center mb-8">
-    <div v-if="isLoading" class="flex justify-center">
+    <div v-if="isLoading" class="contents">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
     <div v-else-if="error" class="alert alert-error w-full max-w-md">
