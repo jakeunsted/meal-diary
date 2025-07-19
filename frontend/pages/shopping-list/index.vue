@@ -149,10 +149,9 @@ const deleteItem = async (category, event) => {
 
 // Add function to handle input focus
 const handleInputFocus = (event) => {
-  // Add a small delay to ensure the keyboard has opened
-  setTimeout(() => {
-    event.target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 100);
+  // Use the improved mobile input scroll functionality
+  const { scrollToInput } = useMobileInputScroll();
+  scrollToInput(event.target);
 };
 
 const handleAddCategory = async (category) => {
