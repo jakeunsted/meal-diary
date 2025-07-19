@@ -148,10 +148,29 @@ const deleteItem = async (category, event) => {
 }
 
 // Add function to handle input focus
-const handleInputFocus = (event) => {
+const handleInputFocus = async (event) => {
   // Use the improved mobile input scroll functionality
   const { scrollToInput } = useMobileInputScroll();
   scrollToInput(event.target);
+  
+  // For Capacitor Android, also ensure the input is visible
+  if (import.meta.client) {
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
+        // Additional scroll to ensure input is visible
+        setTimeout(() => {
+          event.target.scrollIntoView({ 
+            behavior: 'auto', 
+            block: 'center',
+            inline: 'nearest'
+          });
+        }, 600);
+      }
+    } catch (error) {
+      console.warn('Could not import Capacitor:', error);
+    }
+  }
 };
 
 const handleAddCategory = async (category) => {
@@ -189,6 +208,47 @@ onMounted(async () => {
 
   // Start loading data
   loadData();
+  
+  // Add viewport resize listener for keyboard handling
+  if (import.meta.client) {
+    try {
+      const { Capacitor } = await import('@capacitor/core');
+      if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
+        let initialViewportHeight = window.innerHeight;
+        
+        const handleViewportResize = () => {
+          const currentHeight = window.innerHeight;
+          const heightDifference = initialViewportHeight - currentHeight;
+          
+          // If viewport height decreased significantly, keyboard likely opened
+          if (heightDifference > 150) {
+            // Find focused input and scroll to it
+            const focusedElement = document.activeElement;
+            if (focusedElement && focusedElement.tagName === 'INPUT') {
+              setTimeout(() => {
+                focusedElement.scrollIntoView({ 
+                  behavior: 'auto', 
+                  block: 'center',
+                  inline: 'nearest'
+                });
+              }, 100);
+            }
+          }
+          
+          initialViewportHeight = currentHeight;
+        };
+        
+        window.addEventListener('resize', handleViewportResize);
+        
+        // Cleanup on unmount
+        onUnmounted(() => {
+          window.removeEventListener('resize', handleViewportResize);
+        });
+      }
+    } catch (error) {
+      console.warn('Could not set up viewport resize listener:', error);
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -214,5 +274,18 @@ onUnmounted(() => {
 
 .list-item {
   transition: all 0.2s ease;
+}
+
+/* Ensure the page is scrollable and handles keyboard properly */
+.max-w-4xl {
+  min-height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure inputs are properly positioned when keyboard opens */
+.input:focus {
+  position: relative;
+  z-index: 10;
 }
 </style>
