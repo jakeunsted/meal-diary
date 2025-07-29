@@ -1,6 +1,6 @@
 import { H3Event } from 'h3';
-import type { TokenResponse } from '~/types/Auth';
-import type { ApiResponse } from '~/types/Api';
+import type { TokenResponse } from '../../types/Auth';
+import type { ApiResponse } from '../../types/Api';
 
 /**
  * Handles automatic logout when token refresh fails

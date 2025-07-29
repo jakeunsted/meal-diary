@@ -1,6 +1,6 @@
 import { H3Event } from 'h3';
-import { useAuthStore } from '~/stores/auth';
-import { SSE_EMITTER } from '~/server/plugins/sse';
+import { useAuthStore } from '../../stores/auth';
+import { SSE_EMITTER } from '../plugins/sse';
 
 /**
  * Custom fetch export to use baseUrl from .env and return json
