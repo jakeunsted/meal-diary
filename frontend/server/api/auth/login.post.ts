@@ -1,5 +1,5 @@
-import { apiFetch } from '~/server/utils/fetch';
-import { User } from '~/types/User';
+import { apiFetch } from '../../utils/fetch';
+import { User } from '../../../types/User';
 
 // Define the expected response type from the API
 interface LoginResponse {

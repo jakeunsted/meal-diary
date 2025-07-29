@@ -1,5 +1,5 @@
-import { apiFetch } from '~/server/utils/fetch';
-import { SSE_EMITTER } from '~/server/plugins/sse';
+import { apiFetch } from '../../utils/fetch';
+import { SSE_EMITTER } from '../../plugins/sse';
 
 interface TokenResponse {
   accessToken: string;

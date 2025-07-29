@@ -1,6 +1,6 @@
-import { getLatestEvents } from '~/server/utils/shoppingListState';
-import { getLatestMealDiaryEvents } from '~/server/utils/mealDiaryState';
-import { SSE_EMITTER } from '~/server/plugins/sse';
+import { getLatestEvents } from '../../utils/shoppingListState';
+import { getLatestMealDiaryEvents } from '../../utils/mealDiaryState';
+import { SSE_EMITTER } from '../../plugins/sse';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');

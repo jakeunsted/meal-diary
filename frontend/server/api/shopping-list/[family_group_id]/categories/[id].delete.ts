@@ -1,4 +1,4 @@
-import { authenticatedFetch } from '~/server/utils/auth';
+import { authenticatedFetch } from '../../../../utils/auth';
 
 export default defineEventHandler(async (event) => {
   try {

@@ -1,4 +1,4 @@
-import { SSE_EMITTER } from '~/server/plugins/sse';
+import { SSE_EMITTER } from '../../../../plugins/sse';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');

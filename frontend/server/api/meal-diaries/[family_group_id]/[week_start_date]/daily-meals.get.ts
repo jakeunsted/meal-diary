@@ -1,4 +1,4 @@
-import { apiFetch } from '~/server/utils/fetch';
+import { apiFetch } from '../../../../utils/fetch';
 
 export default defineEventHandler(async (event) => {
   const { family_group_id, week_start_date } = getRouterParams(event);
