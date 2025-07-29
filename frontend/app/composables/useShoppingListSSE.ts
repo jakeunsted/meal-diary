@@ -1,6 +1,6 @@
-import { useShoppingListStore } from '~/stores/shoppingList';
-import type { ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '~/types/ShoppingList';
-import { useAuthStore } from '~/stores/auth';
+import { useShoppingListStore } from '../../stores/shoppingList';
+import type { ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '../../types/ShoppingList';
+import { useAuthStore } from '../../stores/auth';
 
 interface SSEItemData {
   item: ShoppingListItem;
@@ -23,8 +23,8 @@ export const useShoppingListSSE = () => {
         if (data.item.created_by === authStore.user?.id) return;
 
         // Check if item with same name already exists in the category
-        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category?.id);
-        const itemExists = category?.items.some(item => item.name.toLowerCase() === data.item?.name?.toLowerCase());
+        const category = shoppingListStore.shoppingList?.categories.find((c: ShoppingListCategoryWithItems) => c.id === data.category?.id);
+        const itemExists = category?.items.some((item: ShoppingListItem) => item.name.toLowerCase() === data.item?.name?.toLowerCase());
         
         if (!itemExists && category && data.item) {
           // Directly add the item to the category without making an API call
@@ -37,9 +37,9 @@ export const useShoppingListSSE = () => {
         if (data.item.created_by === authStore.user?.id) return;
 
         // Directly remove the item from the category without making an API call
-        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category?.id);
+        const category = shoppingListStore.shoppingList?.categories.find((c: ShoppingListCategoryWithItems) => c.id === data.category?.id);
         if (category && data.item?.id) {
-          const index = category.items.findIndex(item => item.id === data.item.id);
+          const index = category.items.findIndex((item: ShoppingListItem) => item.id === data.item.id);
           if (index !== -1) {
             category.items.splice(index, 1);
             shoppingListStore.saveToLocalStorage();
@@ -48,22 +48,22 @@ export const useShoppingListSSE = () => {
       },
       'check-item': (data: SSEItemData) => {
         // Directly update the item in the category without making an API call
-        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.item?.shopping_list_categories);
+        const category = shoppingListStore.shoppingList?.categories.find((c: ShoppingListCategoryWithItems) => c.id === data.item?.shopping_list_categories);
         if (category && data.item?.id) {
-          const index = category.items.findIndex(item => item.id === data.item.id);
+          const index = category.items.findIndex((item: ShoppingListItem) => item.id === data.item.id);
           if (index !== -1) {
-            category.items[index] = { ...category.items[index], checked: true };
+            category.items[index] = { ...category.items[index], checked: true } as ShoppingListItem;
             shoppingListStore.saveToLocalStorage();
           }
         }
       },
       'uncheck-item': (data: SSEItemData) => {
         // Directly update the item in the category without making an API call
-        const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category?.id);
+        const category = shoppingListStore.shoppingList?.categories.find((c: ShoppingListCategoryWithItems) => c.id === data.category?.id);
         if (category && data.item?.id) {
-          const index = category.items.findIndex(item => item.id === data.item.id);
+          const index = category.items.findIndex((item: ShoppingListItem) => item.id === data.item.id);
           if (index !== -1) {
-            category.items[index] = { ...category.items[index], checked: false };
+            category.items[index] = { ...category.items[index], checked: false } as ShoppingListItem;
             shoppingListStore.saveToLocalStorage();
           }
         }
@@ -86,7 +86,7 @@ export const useShoppingListSSE = () => {
       'delete-category': (data: SSECategoryData) => {
         // Directly remove the category from the shopping list without making an API call
         if (shoppingListStore.shoppingList && data.category?.id) {
-          const index = shoppingListStore.shoppingList.categories.findIndex(c => c.id === data.category.id);
+          const index = shoppingListStore.shoppingList.categories.findIndex((c: ShoppingListCategoryWithItems) => c.id === data.category.id);
           if (index !== -1) {
             shoppingListStore.shoppingList.categories.splice(index, 1);
             shoppingListStore.saveToLocalStorage();

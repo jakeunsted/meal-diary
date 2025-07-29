@@ -1,6 +1,7 @@
 import { ref } from 'vue';
-import { useAuthStore } from '~/stores/auth';
+import { useAuthStore } from '../../stores/auth';
 import { useRouter } from 'vue-router';
+import { hasFamilyGroup } from '../utils/authUtils';
 
 /**
  * Interface for the authentication response.
@@ -31,14 +32,7 @@ interface TokenResponse {
   refreshToken: string;
 }
 
-/**
- * Utility function to check if a user has a family group
- * @param {any} user - The user object to check
- * @returns {boolean} True if the user has a family group, false otherwise
- */
-export const hasFamilyGroup = (user: any): boolean => {
-  return user?.family_group_id != null && user.family_group_id !== undefined;
-};
+
 
 /**
  * Handles automatic logout when token refresh fails

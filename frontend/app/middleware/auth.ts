@@ -1,5 +1,5 @@
-import { useAuthStore } from '~/stores/auth';
-import { hasFamilyGroup } from '~/composables/useAuth';
+import { useAuthStore } from '../../stores/auth';
+import { hasFamilyGroup } from '../utils/authUtils';
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore();

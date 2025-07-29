@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { ShoppingList, ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
+import type { ShoppingList, ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '../types/ShoppingList'
+import { useUserStore } from './user';
+import { useAuthStore } from './auth';
 
 // Temporary ID prefix for offline items
 const TEMP_ID_PREFIX = 'temp_';
@@ -277,7 +279,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         for (const category of this.shoppingList.categories) {
           const index = category.items.findIndex(item => item.id === itemId);
           if (index !== -1) {
-            category.items[index] = { ...category.items[index], ...updates };
+            category.items[index] = { ...category.items[index], ...updates } as ShoppingListItem;
             itemUpdated = true;
             break;
           }

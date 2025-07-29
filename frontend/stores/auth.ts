@@ -3,7 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
-import { hasFamilyGroup } from '~/composables/useAuth';
+import { hasFamilyGroup } from '../app/utils/authUtils';
 
 interface AuthState {
   user: User | null;

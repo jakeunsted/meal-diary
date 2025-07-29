@@ -83,6 +83,8 @@ definePageMeta({
   middleware: ['auth']
 });
 
+import { useAuthStore } from '../../../stores/auth';
+
 const activeTab = ref('create');
 const familyName = ref('');
 const familyKey = ref('');

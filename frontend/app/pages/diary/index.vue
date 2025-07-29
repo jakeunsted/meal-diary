@@ -34,8 +34,8 @@ definePageMeta({
   middleware: 'auth'
 });
 
-import { useMealDiaryStore } from '~/stores/mealDiary';
-import { useUserStore } from '~/stores/user';
+import { useMealDiaryStore } from '../../../stores/mealDiary';
+import { useUserStore } from '../../../stores/user';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';

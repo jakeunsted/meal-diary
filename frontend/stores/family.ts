@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
-import type { ApiResponse } from '~/types/Api';
+import type { FamilyMember, DisplayMember, FamilyGroup } from '../types/FamilyGroup';
+import type { ApiResponse } from '../types/Api';
+import { useUserStore } from './user';
+import { useAuthStore } from './auth';
 
 const CACHE_NAME = 'avatar-cache-v1';
 

@@ -7,6 +7,11 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '../stores/auth';
+import { useMealDiaryStore } from '../stores/mealDiary';
+import { useShoppingListStore } from '../stores/shoppingList';
+import { useUserStore } from '../stores/user';
+
 const authStore = useAuthStore();
 const mealDiaryStore = useMealDiaryStore();
 const shoppingListStore = useShoppingListStore();

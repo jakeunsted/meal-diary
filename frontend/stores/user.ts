@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
-import type { User } from '~/types/User'
-import { useAuthStore } from '~/stores/auth';
+import type { User } from '../types/User'
+import { useAuthStore } from './auth';
 import { Preferences } from '@capacitor/preferences';
 
 interface UserState {

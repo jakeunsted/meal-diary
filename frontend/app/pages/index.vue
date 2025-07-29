@@ -10,6 +10,8 @@ definePageMeta({
   middleware: 'auth'
 });
 
+import { useAuthStore } from '../../stores/auth';
+
 // Redirect based on authentication status
 const authStore = useAuthStore();
 const isRedirecting = ref(false);
