@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
 import type { ShoppingList, ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
+import { useApi } from '~/composables/useApi';
 
 // Temporary ID prefix for offline items
 const TEMP_ID_PREFIX = 'temp_';
@@ -126,7 +127,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async checkConnection(): Promise<boolean> {
       try {
-        const response = await $fetch('/api/health', { 
+        const { api } = useApi();
+        await api('/api/health', { 
           method: 'GET',
           timeout: 5000 // 5 second timeout
         });
@@ -153,7 +155,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
             throw new Error('No family group ID found');
           }
           console.log('fetching shopping list for family group:', familyGroupId);
-          const response = await $fetch(`/api/shopping-list/${familyGroupId}`, {
+          const { api } = useApi();
+          const response = await api(`/api/shopping-list/${familyGroupId}`, {
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,
               'x-refresh-token': authStore.refreshToken || ''
@@ -182,7 +185,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch('/api/item-categories', {
+        const { api } = useApi();
+        const response = await api('/api/item-categories', {
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
@@ -234,7 +238,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
+        const { api } = useApi();
+        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
           method: 'POST',
           body: item,
           headers: {
@@ -300,7 +305,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
+        const { api } = useApi();
+        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'PUT',
           body: updates,
           headers: {
@@ -365,7 +371,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Try to sync with server
       try {
-        await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
+        const { api } = useApi();
+        await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -390,7 +397,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
       try {
         this.isLoading = true;
         this.error = null;
-        await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${categoryId}`, {
+        const { api } = useApi();
+        await api(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${categoryId}`, {
           method: 'DELETE' as any,
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -424,7 +432,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
       try {
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${category.id}`, {
+        const { api } = useApi();
+        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${category.id}`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
@@ -470,7 +479,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
       try {
         this.isLoading = true;
         this.error = null;
-        await $fetch(`/api/shopping-list/${familyGroupId}/categories/order`, {
+        const { api } = useApi();
+        await api(`/api/shopping-list/${familyGroupId}/categories/order`, {
           method: 'PUT' as any,
           body: { categories }
         });
@@ -500,9 +510,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
       }
 
       // Sync additions
+      const { api } = useApi();
       for (const item of [...this.pendingChanges.add]) {
         try {
-          const response = await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
+          const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
             method: 'POST',
             body: {
               name: item.name,
@@ -547,7 +558,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
             checked: item.checked
           };
           
-          await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
+          await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
             method: 'PUT',
             body: apiUpdates,
             headers: {
@@ -570,7 +581,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync deletes
       for (const itemId of [...this.pendingChanges.delete]) {
         try {
-          await $fetch(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
+          await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
             method: 'DELETE' as any,
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,

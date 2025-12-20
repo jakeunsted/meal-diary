@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import type { User } from '~/types/User'
 import { useAuthStore } from '~/stores/auth';
 import { Preferences } from '@capacitor/preferences';
+import { useApi } from '~/composables/useApi';
 
 interface UserState {
   user: User | null;
@@ -50,7 +51,8 @@ export const useUserStore = defineStore('user', {
         
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<User>(`/api/user/${authStore.user.id}`);
+        const { api } = useApi();
+        const response = await api<User>(`/api/user/${authStore.user.id}`);
         this.user = response;
         this.lastFetchTime = now;
 
@@ -101,7 +103,8 @@ export const useUserStore = defineStore('user', {
 
         this.isLoading = true;
         this.error = null;
-        const response = await $fetch<User>(`/api/user/${authStore.user.id}`, {
+        const { api } = useApi();
+        const response = await api<User>(`/api/user/${authStore.user.id}`, {
           method: 'PUT',
           body: userData,
         });

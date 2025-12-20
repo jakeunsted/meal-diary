@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
 import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
+import { useApi } from '~/composables/useApi';
 
 const CACHE_NAME = 'avatar-cache-v1';
 
@@ -67,7 +68,8 @@ export const useFamilyStore = defineStore('family', {
       this.error = null;
       
       try {
-        const response = await $fetch<ApiResponse<FamilyMember[]>>(`/api/family-groups/${userStore.user.family_group_id}/members`, {
+        const { api } = useApi();
+        const response = await api<ApiResponse<FamilyMember[]>>(`/api/family-groups/${userStore.user.family_group_id}/members`, {
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
@@ -168,7 +170,8 @@ export const useFamilyStore = defineStore('family', {
       this.error = null;
 
       try {
-        const response = await $fetch<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
+        const { api } = useApi();
+        const response = await api<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''

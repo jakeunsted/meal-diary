@@ -21,6 +21,7 @@ export default defineEventHandler(async (event) => {
       });
     }
     
+    console.log('trying to get api');
     const response = await apiFetch<LoginResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),

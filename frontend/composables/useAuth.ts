@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useAuthStore } from '~/stores/auth';
 import { useRouter } from 'vue-router';
+import { useApi } from '~/composables/useApi';
 
 /**
  * Interface for the authentication response.
@@ -89,7 +90,8 @@ export const useAuth = () => {
       isLoading.value = true;
       error.value = null;
       
-      const response = await $fetch<AuthResponse & { redirect?: string }>('/api/auth/login', {
+      const { api } = useApi();
+      const response = await api<AuthResponse & { redirect?: string }>('/api/auth/login', {
         method: 'POST',
         body: {
           email,
@@ -142,7 +144,8 @@ export const useAuth = () => {
       
       // Call logout endpoint if we have a token
       if (authStore.accessToken) {
-        await $fetch('/api/auth/logout', {
+        const { api } = useApi();
+        await api('/api/auth/logout', {
           method: 'POST',
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`
@@ -173,7 +176,8 @@ export const useAuth = () => {
         throw new Error('No refresh token available');
       }
       
-      const response = await $fetch<TokenResponse>('/api/auth/refresh-token', {
+      const { api } = useApi();
+      const response = await api<TokenResponse>('/api/auth/refresh-token', {
         method: 'POST',
         body: {
           refreshToken: authStore.refreshToken

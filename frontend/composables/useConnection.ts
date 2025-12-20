@@ -1,3 +1,5 @@
+import { useApi } from "./useApi";
+
 /**
  * Composable for checking internet connection status
  */
@@ -9,7 +11,8 @@ export const useConnection = () => {
    */
   const checkConnection = async (timeout = 5000): Promise<boolean> => {
     try {
-      const response = await $fetch('/api/health', { 
+      const { api } = useApi();
+      await api('/api/health', { 
         method: 'get',
         timeout
       });

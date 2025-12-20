@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { useUserStore } from './user';
 import { Preferences } from '@capacitor/preferences';
 import type { MealDiaryState, DailyMeal } from '~/types/MealDiary';
+import { useApi } from '~/composables/useApi';
 export const useMealDiaryStore = defineStore('mealDiary', {
   state: (): MealDiaryState => ({
     weeklyMeals: [],
@@ -103,7 +104,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           this.currentWeekStart = weekStartDateStr;
           
           const familyGroupId = userStore.user.family_group_id;
-          const response = await $fetch(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
+          const { api } = useApi();
+          const response = await api(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
           
           // Add week_start_date to each meal
           this.weeklyMeals = response.map((meal: DailyMeal) => ({
@@ -176,7 +178,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         // Update the specific meal type that changed
         mealData[this.selectedMeal.type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] = this.selectedMeal.name;
 
-        await $fetch(`/api/meal-diaries/${userStore.user.family_group_id}/daily-meals`, {
+        const { api } = useApi();
+        await api(`/api/meal-diaries/${userStore.user.family_group_id}/daily-meals`, {
           method: 'PATCH',
           body: mealData
         });

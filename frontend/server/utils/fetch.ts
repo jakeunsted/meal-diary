@@ -15,6 +15,7 @@ interface ApiFetchOptions extends RequestInit {
 export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}, event?: H3Event): Promise<T> {
   const config = useRuntimeConfig();
   const baseUrl = config.public.baseUrl;
+  console.log('baseUrl', baseUrl);
   let finalUrl = `${baseUrl}${path}`;
 
   if (options.query) {

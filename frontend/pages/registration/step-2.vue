@@ -90,6 +90,7 @@ const errorMessage = ref('');
 const isLoading = ref(false);
 
 const authStore = useAuthStore();
+const { api } = useApi();
 
 const handleSubmit = async () => {
   // Clear any existing error message
@@ -101,7 +102,7 @@ const handleSubmit = async () => {
   try {
     if (activeTab.value === 'create') {
       try {
-        const response = await $fetch('/api/family-groups/create', {
+        const response = await api('/api/family-groups/create', {
           method: 'POST',
           body: { 
             name: familyName.value,
@@ -122,7 +123,7 @@ const handleSubmit = async () => {
       }
     } else {
       try {
-        const response = await $fetch('/api/family-groups/join', {
+        const response = await api('/api/family-groups/join', {
           method: 'POST',
           body: { 
             random_identifier: familyKey.value,
