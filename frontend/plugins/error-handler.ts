@@ -48,27 +48,10 @@ const isAuthError = (error: any): boolean => {
 };
 
 export default defineNuxtPlugin(() => {
-  // Handle global fetch errors
-  if (process.client) {
-    // Override the global fetch to catch authentication errors
-    const originalFetch = window.fetch;
-    window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
-      try {
-        const response = await originalFetch(input, init);
-        
-        // If we get a 401 or 403 response, trigger automatic logout
-        if (response.status === 401 || response.status === 403) {
-          console.log('[Global Error Handler] Authentication error detected (status: ' + response.status + '), triggering automatic logout');
-          await handleAutoLogout();
-        }
-        
-        return response;
-      } catch (error) {
-        console.error('[Global Error Handler] Fetch error:', error);
-        throw error;
-      }
-    };
-  }
+  // Note: We don't override global fetch here because:
+  // 1. Requests through $fetch (used by useApi) go through Nuxt server which handles token refresh
+  // 2. The useApi composable will handle auth errors and trigger logout if needed
+  // 3. We only handle unhandled promise rejections below
   
   // Handle Nuxt $fetch errors
   addRouteMiddleware('global-error-handler', (to, from) => {

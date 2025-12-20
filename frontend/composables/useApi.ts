@@ -1,6 +1,7 @@
 import type { FetchOptions } from 'ofetch';
 import { useToast } from '~/composables/useToast';
 import { handleAutoLogout } from '~/composables/useAuth';
+import { useAuthStore } from '~/stores/auth';
 
 /**
  * Extract error message from various error formats
@@ -123,16 +124,56 @@ const isAuthError = (error: any, errorMessage: string): boolean => {
  */
 export const useApi = () => {
   const { showError } = useToast();
+  const authStore = useAuthStore();
 
   /**
    * Make an API call with automatic error handling
+   * Automatically adds authentication headers if available
    * @param url - The URL to fetch
    * @param options - Fetch options
    * @returns The response data
    */
   const api = async <T = any>(url: string, options?: FetchOptions): Promise<T> => {
     try {
-      return await $fetch<T>(url, options as any);
+      // Automatically add auth headers if available and not already provided
+      const existingHeaders = options?.headers;
+      const headers: Record<string, string> = {};
+
+      // Check if auth headers already exist
+      let hasAuthHeader = false;
+      let hasRefreshHeader = false;
+
+      if (existingHeaders) {
+        if (existingHeaders instanceof Headers) {
+          hasAuthHeader = existingHeaders.has('Authorization') || existingHeaders.has('authorization');
+          hasRefreshHeader = existingHeaders.has('x-refresh-token') || existingHeaders.has('X-Refresh-Token');
+        } else if (Array.isArray(existingHeaders)) {
+          hasAuthHeader = existingHeaders.some(([key]) => key.toLowerCase() === 'authorization');
+          hasRefreshHeader = existingHeaders.some(([key]) => key.toLowerCase() === 'x-refresh-token');
+        } else {
+          const headerObj = existingHeaders as Record<string, string>;
+          hasAuthHeader = !!(headerObj['Authorization'] || headerObj['authorization']);
+          hasRefreshHeader = !!(headerObj['x-refresh-token'] || headerObj['X-Refresh-Token']);
+        }
+      }
+
+      // Add auth headers if not present
+      if (authStore.accessToken && !hasAuthHeader) {
+        headers['Authorization'] = `Bearer ${authStore.accessToken}`;
+      }
+      if (authStore.refreshToken && !hasRefreshHeader) {
+        headers['x-refresh-token'] = authStore.refreshToken;
+      }
+
+      // Merge headers
+      const finalHeaders = Object.keys(headers).length > 0
+        ? { ...(existingHeaders as Record<string, string> || {}), ...headers }
+        : existingHeaders;
+
+      return await $fetch<T>(url, {
+        ...options,
+        headers: finalHeaders
+      } as any);
     } catch (error: any) {
       // Extract meaningful error message
       const errorMessage = extractErrorMessage(error);

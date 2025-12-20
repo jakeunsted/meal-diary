@@ -49,19 +49,30 @@ export const handleAutoLogout = async () => {
   console.log('[Auto Logout] Handling automatic logout due to failed token refresh');
   
   const authStore = useAuthStore();
-  const router = useRouter();
   
   try {
     // Clear auth state
     await authStore.logout();
     
-    // Redirect to login page
-    await router.push('/login');
-    
-    console.log('[Auto Logout] Successfully logged out and redirected to login');
+    // Try to use router if available, otherwise use window.location
+    if (import.meta.client) {
+      try {
+        const router = useRouter();
+        if (router && router.push) {
+          await router.push('/login');
+          console.log('[Auto Logout] Successfully logged out and redirected to login');
+          return;
+        }
+      } catch (routerError) {
+        console.warn('[Auto Logout] Router not available, using window.location:', routerError);
+      }
+      
+      // Fallback: force page reload to login
+      window.location.href = '/login';
+    }
   } catch (error) {
     console.error('[Auto Logout] Error during automatic logout:', error);
-    // Fallback: force page reload to login
+    // Final fallback: force page reload to login
     if (import.meta.client) {
       window.location.href = '/login';
     }
