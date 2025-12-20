@@ -21,7 +21,8 @@ import { useAuthStore } from '../../../stores/auth';
 
 // Nuxt auto-imports: definePageMeta, useRoute, useRouter, ref, onMounted
 definePageMeta({
-  layout: false
+  layout: false,
+  middleware: []
 });
 
 const authStore = useAuthStore();

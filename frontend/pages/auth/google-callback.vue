@@ -18,10 +18,14 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '../../stores/auth';
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 // Nuxt auto-imports: definePageMeta, useRoute, useRouter, ref, onMounted
 definePageMeta({
-  layout: false
+  layout: false,
+  middleware: [],
+  ssr: false
 });
 
 const authStore = useAuthStore();
