@@ -32,7 +32,7 @@ passport.use(
           displayName: profile.displayName,
         });
       } catch (error) {
-        return done(error, null);
+        return done(error, undefined);
       }
     }
   )
