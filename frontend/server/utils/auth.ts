@@ -93,6 +93,11 @@ export async function authenticatedFetch<T>(
             }
           };
         } else {
+          // If refresh fails, preserve the original status code and message from the API
+          const errorData = await refreshResponse.json().catch(() => ({ message: 'Failed to refresh token' }));
+          const originalStatusCode = refreshResponse.status;
+          const originalMessage = errorData.message || 'Failed to refresh token';
+          
           // If refresh fails, trigger automatic logout
           console.log('[Authenticated Fetch] Token refresh failed, triggering automatic logout');
           if (process.client) {
@@ -101,12 +106,13 @@ export async function authenticatedFetch<T>(
             await handleAutoLogout();
           }
           
+          // Preserve the original status code (e.g., 403 for invalid/expired token)
           throw createError({
-            statusCode: 401,
-            message: 'Failed to refresh token'
+            statusCode: originalStatusCode,
+            message: originalMessage
           });
         }
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         // If refresh fails, trigger automatic logout
         console.log('[Authenticated Fetch] Token refresh failed, triggering automatic logout');
         if (process.client) {
@@ -115,9 +121,13 @@ export async function authenticatedFetch<T>(
           await handleAutoLogout();
         }
         
+        // Preserve the original error status code if available, otherwise use 401
+        const statusCode = refreshError?.statusCode || refreshError?.response?.status || 401;
+        const message = refreshError?.message || refreshError?.data?.message || 'Failed to refresh token';
+        
         throw createError({
-          statusCode: 401,
-          message: 'Failed to refresh token'
+          statusCode,
+          message
         });
       }
     }

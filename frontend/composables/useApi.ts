@@ -1,5 +1,6 @@
 import type { FetchOptions } from 'ofetch';
 import { useToast } from '~/composables/useToast';
+import { handleAutoLogout } from '~/composables/useAuth';
 
 /**
  * Extract error message from various error formats
@@ -92,6 +93,31 @@ const getDefaultMessage = (statusCode: number): string => {
 };
 
 /**
+ * Check if an error is an authentication error based on status code or message
+ */
+const isAuthError = (error: any, errorMessage: string): boolean => {
+  // Check status codes
+  if (error?.statusCode === 401 || error?.statusCode === 403) {
+    return true;
+  }
+  
+  // Check for auth-related error messages (even in 500 errors)
+  const authErrorMessages = [
+    'Invalid or expired refresh token',
+    'Failed to refresh token',
+    'Token refresh failed',
+    'Unauthorized',
+    'Forbidden',
+    'Invalid token',
+    'Expired token',
+    'No token provided'
+  ];
+  
+  const lowerMessage = errorMessage.toLowerCase();
+  return authErrorMessages.some(msg => lowerMessage.includes(msg.toLowerCase()));
+};
+
+/**
  * Composable for making API calls with automatic error handling
  * Wraps $fetch and automatically shows error toasts
  */
@@ -111,8 +137,15 @@ export const useApi = () => {
       // Extract meaningful error message
       const errorMessage = extractErrorMessage(error);
 
-      // Show error toast (except for 401 which may trigger auto-logout)
-      if (error?.statusCode !== 401) {
+      // Check if this is an authentication error (by status code or message)
+      const isAuth = isAuthError(error, errorMessage);
+      
+      if (isAuth) {
+        // Trigger automatic logout for auth errors
+        console.log('[useApi] Authentication error detected, triggering automatic logout');
+        await handleAutoLogout();
+      } else {
+        // Show error toast for non-auth errors
         showError(errorMessage);
       }
 

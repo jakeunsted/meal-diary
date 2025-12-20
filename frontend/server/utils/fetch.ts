@@ -110,7 +110,16 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
           return retryResponse.json();
         }
         console.error('[Token Refresh] Refresh request failed:', refreshResponse.status);
-        const error = await refreshResponse.json().catch(() => ({ message: 'Unknown error' }));
+        const errorData = await refreshResponse.json().catch(() => ({ message: 'Unknown error' }));
+        
+        // Preserve the original status code and message from the API
+        const error = {
+          statusCode: refreshResponse.status,
+          message: errorData.message || 'Token refresh failed',
+          error: true,
+          url: `${baseUrl}/auth/refresh-token`,
+          statusMessage: refreshResponse.statusText
+        };
         
         // If refresh fails, trigger automatic logout
         if (process.client) {
@@ -120,8 +129,19 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         }
         
         throw error;
-      } catch (error) {
+      } catch (error: any) {
         console.error('[Token Refresh] Error during token refresh:', error);
+        
+        // Ensure error has proper structure if it doesn't already
+        if (!error.statusCode) {
+          error.statusCode = 500;
+        }
+        if (!error.message) {
+          error.message = 'Token refresh failed';
+        }
+        if (!error.error) {
+          error.error = true;
+        }
         
         // If refresh fails, trigger automatic logout
         if (process.client) {
