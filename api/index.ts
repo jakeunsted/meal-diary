@@ -1,5 +1,6 @@
 import express from 'express';
 import type { Request, Response } from 'express';
+import cookieParser from 'cookie-parser';
 import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
@@ -18,6 +19,7 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(express.json());
+app.use(cookieParser());
 
 // Apply rate limiting to all routes
 if (process.env.NODE_ENV !== 'development') {

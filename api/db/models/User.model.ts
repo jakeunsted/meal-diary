@@ -6,7 +6,8 @@ export interface UserAttributes {
   id: number;
   username: string;
   email: string;
-  password_hash: string;
+  password_hash?: string;
+  google_id?: string;
   first_name?: string;
   last_name?: string;
   family_group_id?: number;
@@ -38,7 +39,12 @@ User.init(
     },
     password_hash: {
       type: DataTypes.STRING(255),
-      allowNull: false,
+      allowNull: true,
+    },
+    google_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
     },
     first_name: {
       type: DataTypes.STRING(50),

@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { login, refreshToken, logout, validateToken } from '../controllers/auth/auth.controller.ts';
+import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback } from '../controllers/auth/auth.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
 import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter } from '../middleware/rateLimit.middleware.ts';
 
@@ -189,5 +189,48 @@ router.post('/logout', logoutLimiter, authenticateToken, wrapHandler(logout));
  *                   description: Error message.
  */
 router.get('/validate', validateTokenLimiter, authenticateToken, wrapHandler(validateToken));
+
+/**
+ * Google OAuth initiation route
+ * @swagger
+ * /google:
+ *   get:
+ *     summary: Initiate Google OAuth flow
+ *     description: Redirects user to Google OAuth consent screen
+ *     responses:
+ *       302:
+ *         description: Redirect to Google OAuth
+ *       500:
+ *         description: Server error
+ */
+router.get('/google', loginLimiter, wrapHandler(initiateGoogleAuth));
+
+/**
+ * Google OAuth callback route
+ * @swagger
+ * /google/callback:
+ *   get:
+ *     summary: Handle Google OAuth callback
+ *     description: Processes Google OAuth callback and authenticates user
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Authorization code from Google
+ *       - in: query
+ *         name: state
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: State parameter for CSRF protection
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with tokens
+ *       500:
+ *         description: Server error
+ */
+router.get('/google/callback', loginLimiter, wrapHandler(handleGoogleCallback));
 
 export default router; 

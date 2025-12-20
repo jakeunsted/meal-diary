@@ -5,6 +5,7 @@ import User, { type UserAttributes } from '../../db/models/User.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
 import { Op } from 'sequelize';
 import crypto from 'crypto';
+import axios from 'axios';
 
 /**
  * Generate JWT tokens
@@ -76,6 +77,12 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     const user = await User.findOne({ where: { email: email.toLowerCase() } }) as User & UserAttributes;
     if (!user) {
       res.status(401).json({ message: 'Invalid credentials' });
+      return;
+    }
+    
+    // Check if user has a password (not a Google-only account)
+    if (!user.password_hash) {
+      res.status(401).json({ message: 'Invalid credentials. Please sign in with Google.' });
       return;
     }
     
@@ -172,12 +179,13 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       ...tokens,
       user
     });
-  } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError) {
-      console.error('[Refresh Token] JWT verification failed:', error.message);
+  } catch (err) {
+    if (err instanceof jwt.JsonWebTokenError) {
+      console.error('[Refresh Token] JWT verification failed:', err.message);
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       return;
     }
+    const error = err as Error;
     console.error('[Refresh Token] Server error:', error);
     res.status(500).json({ message: 'Server error during token refresh' });
   }
@@ -229,5 +237,196 @@ export const validateToken = async (req: Request, res: Response): Promise<void> 
       valid: false,
       message: 'Invalid token'
     });
+  }
+};
+
+/**
+ * Initiate Google OAuth flow
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ * @returns {Promise<void>}
+ */
+export const initiateGoogleAuth = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/auth/google/callback';
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+
+    if (!GOOGLE_CLIENT_ID) {
+      res.status(500).json({ message: 'Google OAuth not configured' });
+      return;
+    }
+
+    // Generate state parameter for CSRF protection
+    const state = crypto.randomBytes(32).toString('hex');
+    
+    // Store state in a cookie or return it to be stored client-side
+    // For simplicity, we'll include it in the redirect URL and validate it in callback
+    const redirectUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${GOOGLE_CLIENT_ID}&` +
+      `redirect_uri=${encodeURIComponent(GOOGLE_CALLBACK_URL)}&` +
+      `response_type=code&` +
+      `scope=openid email profile&` +
+      `state=${state}&` +
+      `access_type=offline&` +
+      `prompt=consent`;
+
+    // Store state in response cookie for validation
+    res.cookie('oauth_state', state, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 600000 // 10 minutes
+    });
+
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('Google OAuth initiation error:', error);
+    res.status(500).json({ message: 'Server error during Google OAuth initiation' });
+  }
+};
+
+/**
+ * Handle Google OAuth callback
+ * @param {Request} req - The request object
+ * @param {Response} res - The response object
+ * @returns {Promise<void>}
+ */
+export const handleGoogleCallback = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { code, state } = req.query;
+    const storedState = req.cookies?.oauth_state;
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+
+    // Validate state parameter for CSRF protection
+    if (!state || state !== storedState) {
+      console.error('[Google OAuth] Invalid state parameter');
+      res.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
+      return;
+    }
+
+    // Clear state cookie
+    res.clearCookie('oauth_state');
+
+    if (!code) {
+      console.error('[Google OAuth] No authorization code received');
+      res.redirect(`${FRONTEND_URL}/login?error=no_code`);
+      return;
+    }
+
+    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+    const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/auth/google/callback';
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+      console.error('[Google OAuth] OAuth credentials not configured');
+      res.redirect(`${FRONTEND_URL}/login?error=server_error`);
+      return;
+    }
+
+    // Exchange authorization code for access token
+    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: GOOGLE_CALLBACK_URL,
+      grant_type: 'authorization_code',
+    });
+
+    const { access_token } = tokenResponse.data;
+
+    // Fetch user profile from Google
+    const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    const googleProfile = profileResponse.data;
+    const googleId = googleProfile.id;
+    const email = googleProfile.email?.toLowerCase();
+    const firstName = googleProfile.given_name;
+    const lastName = googleProfile.family_name;
+    const avatarUrl = googleProfile.picture;
+    const displayName = googleProfile.name;
+
+    if (!email) {
+      console.error('[Google OAuth] No email in Google profile');
+      res.redirect(`${FRONTEND_URL}/login?error=no_email`);
+      return;
+    }
+
+    // Find or create user
+    let user = await User.findOne({ where: { email } }) as User & UserAttributes;
+
+    if (user) {
+      // User exists - update Google ID if not set
+      if (!user.google_id) {
+        await user.update({ google_id: googleId });
+      }
+      // Update avatar if available
+      if (avatarUrl && !user.avatar_url) {
+        await user.update({ avatar_url: avatarUrl });
+      }
+    } else {
+      // Create new user
+      // Generate username from email (before @)
+      const usernameBase = email.split('@')[0];
+      let username = usernameBase;
+      let counter = 1;
+
+      // Ensure username is unique
+      while (await User.findOne({ where: { username } })) {
+        username = `${usernameBase}${counter}`;
+        counter++;
+      }
+
+      user = await User.create({
+        email,
+        username,
+        google_id: googleId,
+        first_name: firstName,
+        last_name: lastName,
+        avatar_url: avatarUrl,
+        password_hash: undefined, // Google-only account
+      }) as User & UserAttributes;
+    }
+
+    // Generate JWT tokens
+    const { accessToken, refreshToken } = await generateTokens(user.id);
+
+    // Prepare user data (exclude password_hash)
+    const userData = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      family_group_id: user.family_group_id,
+      avatar_url: user.avatar_url,
+      created_at: user.created_at,
+      updated_at: user.updated_at
+    };
+
+    // Log user data for debugging
+    console.log('[Google OAuth] User authenticated:', {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      family_group_id: user.family_group_id,
+      hasFamilyGroup: !!user.family_group_id
+    });
+
+    // Redirect to frontend callback page with tokens and user data
+    const redirectUrl = `${FRONTEND_URL}/auth/google-callback?` +
+      `accessToken=${encodeURIComponent(accessToken)}&` +
+      `refreshToken=${encodeURIComponent(refreshToken)}&` +
+      `user=${encodeURIComponent(JSON.stringify(userData))}`;
+
+    res.redirect(redirectUrl);
+  } catch (error) {
+    console.error('[Google OAuth] Callback error:', error);
+    const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+    res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
   }
 };
