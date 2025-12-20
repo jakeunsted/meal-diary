@@ -48,7 +48,7 @@ onMounted(async () => {
       const baseUrl = config.public.baseUrl;
       
       // Forward to API backend callback endpoint
-      // The API will process the OAuth callback and redirect back to /auth/google-callback with tokens
+      // The API will process the OAuth callback and redirect back to /auth/google/callback with tokens
       window.location.href = `${baseUrl}/auth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
       return;
     }

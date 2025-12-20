@@ -418,7 +418,7 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
     });
 
     // Redirect to frontend callback page with tokens and user data
-    const redirectUrl = `${FRONTEND_URL}/auth/google-callback?` +
+    const redirectUrl = `${FRONTEND_URL}/auth/google/callback?` +
       `accessToken=${encodeURIComponent(accessToken)}&` +
       `refreshToken=${encodeURIComponent(refreshToken)}&` +
       `user=${encodeURIComponent(JSON.stringify(userData))}`;
