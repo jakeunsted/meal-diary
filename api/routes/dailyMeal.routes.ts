@@ -1,5 +1,6 @@
 import express from 'express';
 import * as dailyMealController from '../controllers/daily-meal/dailyMeal.controller.ts';
+import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -73,7 +74,7 @@ const router = express.Router();
  *       500:
  *         description: Failed to get daily meals
  */
-router.get('/:meal_diary_id', async (req, res, next) => {
+router.get('/:meal_diary_id', authenticateToken, async (req, res, next) => {
   try {
     await dailyMealController.getDailyMealsByMealDiaryId(req, res);
   } catch (error) {
@@ -122,7 +123,7 @@ router.get('/:meal_diary_id', async (req, res, next) => {
  *       500:
  *         description: Failed to update daily meal
  */
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
     await dailyMealController.updateDailyMealById(req, res);
   } catch (error) {

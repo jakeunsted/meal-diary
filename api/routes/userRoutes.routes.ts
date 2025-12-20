@@ -1,5 +1,6 @@
 import express from 'express';
 import * as userController from '../controllers/user/userController.controller.ts';
+import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -143,7 +144,7 @@ router.post('/', async (req, res, next) => {
  *       500:
  *         description: Failed to fetch users
  */
-router.get('/', async (req, res, next) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     await userController.getAllUsers(req, res);
   } catch (error) {
@@ -176,7 +177,7 @@ router.get('/', async (req, res, next) => {
  *       500:
  *         description: Failed to fetch user
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     await userController.getUserById(req, res);
   } catch (error) {
@@ -241,7 +242,7 @@ router.get('/:id', async (req, res, next) => {
  *       500:
  *         description: Failed to update user
  */
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
     await userController.updateUser(req, res);
   } catch (error) {
@@ -278,7 +279,7 @@ router.put('/:id', async (req, res, next) => {
  *       500:
  *         description: Failed to delete user
  */
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', authenticateToken, async (req, res, next) => {
   try {
     await userController.deleteUser(req, res);
   } catch (error) {

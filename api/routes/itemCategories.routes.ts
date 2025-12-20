@@ -1,5 +1,6 @@
 import express from 'express';
 import * as itemCategoriesController from '../controllers/item-categories/itemCategories.controller.ts';
+import { authenticateToken } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -51,7 +52,7 @@ const router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/', async (req, res, next) => {
+router.get('/', authenticateToken, async (req, res, next) => {
   try {
     await itemCategoriesController.getAllItemCategories(req, res);
   } catch (error) {
@@ -86,7 +87,7 @@ router.get('/', async (req, res, next) => {
  *       500:
  *         description: Server error
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
     await itemCategoriesController.getItemCategoryById(req, res);
   } catch (error) {
@@ -129,7 +130,7 @@ router.get('/:id', async (req, res, next) => {
  *       500:
  *         description: Server error
  */
-router.post('/', async (req, res, next) => {
+router.post('/', authenticateToken, async (req, res, next) => {
   try {
     await itemCategoriesController.createItemCategory(req, res);
   } catch (error) {
@@ -177,7 +178,7 @@ router.post('/', async (req, res, next) => {
  *       500:
  *         description: Server error
  */
-router.put('/:id', async (req, res, next) => {
+router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
     await itemCategoriesController.updateItemCategory(req, res);
   } catch (error) {
@@ -208,7 +209,7 @@ router.put('/:id', async (req, res, next) => {
  *       500:
  *         description: Server error
  */
-router.delete('/:id', async (req, res, next) => {
+router.delete('/:id', authenticateToken, async (req, res, next) => {
   try {
     await itemCategoriesController.deleteItemCategory(req, res);
   } catch (error) {
