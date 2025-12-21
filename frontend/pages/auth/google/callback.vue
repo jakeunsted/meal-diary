@@ -19,6 +19,18 @@
 <script setup lang="ts">
 import { useAuthStore } from '../../../stores/auth';
 
+/**
+ * Google OAuth Callback Page
+ * 
+ * NOTE: This page is only used for web OAuth flow (browser-based authentication).
+ * Native apps (Android/iOS) use the Capacitor Social Login plugin which handles
+ * authentication in-app and doesn't redirect to this callback page.
+ * 
+ * Flow:
+ * 1. Web: User clicks "Sign in with Google" → Redirects to Google → Google redirects here
+ * 2. Native: User clicks "Sign in with Google" → Native SDK opens → Tokens handled directly in useGoogleAuth composable
+ */
+
 // Nuxt auto-imports: definePageMeta, useRoute, useRouter, ref, onMounted
 definePageMeta({
   layout: false,

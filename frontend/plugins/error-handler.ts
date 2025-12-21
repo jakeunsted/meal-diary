@@ -53,12 +53,6 @@ export default defineNuxtPlugin(() => {
   // 2. The useApi composable will handle auth errors and trigger logout if needed
   // 3. We only handle unhandled promise rejections below
   
-  // Handle Nuxt $fetch errors
-  addRouteMiddleware('global-error-handler', (to, from) => {
-    // This middleware will run on every route change
-    // We can use it to check for authentication errors
-  });
-  
   // Handle unhandled promise rejections
   if (process.client) {
     window.addEventListener('unhandledrejection', async (event) => {

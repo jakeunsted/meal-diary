@@ -77,9 +77,13 @@ definePageMeta({
   middleware: ['auth']
 });
 
-const { login, isLoading, error } = useAuth();
+const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
+const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
 const email = ref('');
 const password = ref('');
+
+const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
+const error = computed(() => emailLoginError.value || googleLoginError.value);
 
 const handleLogin = async () => {
   try {
@@ -92,8 +96,11 @@ const handleLogin = async () => {
   }
 };
 
-const handleGoogleLogin = () => {
-  // Redirect to backend Google OAuth endpoint
-  window.location.href = '/api/auth/google';
+const handleGoogleLogin = async () => {
+  try {
+    await signInWithGoogle();
+  } catch (err) {
+    console.error('Google login error:', err);
+  }
 };
 </script>

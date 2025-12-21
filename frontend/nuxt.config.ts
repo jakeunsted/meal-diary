@@ -4,10 +4,15 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
+  devServer: {
+    host: '0.0.0.0', // Listen on all interfaces so Android emulator can connect
+    port: 3000,
+  },
   runtimeConfig: {
     public: {
       baseUrl: process.env.BASE_URL,
       origin: process.env.ORIGIN,
+      googleClientId: process.env.GOOGLE_CLIENT_ID,
     }
   },
   app: {

@@ -13,6 +13,7 @@ def capacitor_pods
   pod 'CapacitorCordova', :path => '../../node_modules/@capacitor/ios'
   pod 'CapacitorClipboard', :path => '../../node_modules/@capacitor/clipboard'
   pod 'CapacitorPreferences', :path => '../../node_modules/@capacitor/preferences'
+  pod 'CapgoCapacitorSocialLogin', :path => '../../node_modules/@capgo/capacitor-social-login'
 end
 
 target 'App' do

@@ -8,5 +8,5 @@ project(':capacitor-clipboard').projectDir = new File('../node_modules/@capacito
 include ':capacitor-preferences'
 project(':capacitor-preferences').projectDir = new File('../node_modules/@capacitor/preferences/android')
 
-include ':newrelic-newrelic-capacitor-plugin'
-project(':newrelic-newrelic-capacitor-plugin').projectDir = new File('../node_modules/@newrelic/newrelic-capacitor-plugin/android')
+include ':capgo-capacitor-social-login'
+project(':capgo-capacitor-social-login').projectDir = new File('../node_modules/@capgo/capacitor-social-login/android')

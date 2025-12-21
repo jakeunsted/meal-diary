@@ -8,11 +8,73 @@ import crypto from 'crypto';
 import axios from 'axios';
 
 /**
+ * Find or create user from Google profile data
+ * @param {Object} googleProfile - Google profile data
+ * @returns {Promise<User & UserAttributes>} The user object
+ */
+export const findOrCreateGoogleUser = async (googleProfile: {
+  id: string;
+  email?: string;
+  given_name?: string;
+  family_name?: string;
+  picture?: string;
+  name?: string;
+}) => {
+  const googleId = googleProfile.id;
+  const email = googleProfile.email?.toLowerCase();
+  const firstName = googleProfile.given_name;
+  const lastName = googleProfile.family_name;
+  const avatarUrl = googleProfile.picture;
+
+  if (!email) {
+    throw new Error('No email in Google profile');
+  }
+
+  // Find or create user
+  let user = await User.findOne({ where: { email } }) as User & UserAttributes;
+
+  if (user) {
+    // User exists - update Google ID if not set
+    if (!user.google_id) {
+      await user.update({ google_id: googleId });
+    }
+    // Update avatar if available
+    if (avatarUrl && !user.avatar_url) {
+      await user.update({ avatar_url: avatarUrl });
+    }
+  } else {
+    // Create new user
+    // Generate username from email (before @)
+    const usernameBase = email.split('@')[0];
+    let username = usernameBase;
+    let counter = 1;
+
+    // Ensure username is unique
+    while (await User.findOne({ where: { username } })) {
+      username = `${usernameBase}${counter}`;
+      counter++;
+    }
+
+    user = await User.create({
+      email,
+      username,
+      google_id: googleId,
+      first_name: firstName,
+      last_name: lastName,
+      avatar_url: avatarUrl,
+      password_hash: undefined, // Google-only account
+    }) as User & UserAttributes;
+  }
+
+  return user;
+};
+
+/**
  * Generate JWT tokens
  * @param {number} userId - The user id
  * @returns {Promise<{ accessToken: string, refreshToken: string }>} The generated tokens
  */
-const generateTokens = async (userId: number) => {
+export const generateTokens = async (userId: number) => {
   const accessSecret = process.env.JWT_ACCESS_SECRET;
   const refreshSecret = process.env.JWT_REFRESH_SECRET;
   
@@ -343,54 +405,9 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
     });
 
     const googleProfile = profileResponse.data;
-    const googleId = googleProfile.id;
-    const email = googleProfile.email?.toLowerCase();
-    const firstName = googleProfile.given_name;
-    const lastName = googleProfile.family_name;
-    const avatarUrl = googleProfile.picture;
-    const displayName = googleProfile.name;
 
-    if (!email) {
-      console.error('[Google OAuth] No email in Google profile');
-      res.redirect(`${FRONTEND_URL}/login?error=no_email`);
-      return;
-    }
-
-    // Find or create user
-    let user = await User.findOne({ where: { email } }) as User & UserAttributes;
-
-    if (user) {
-      // User exists - update Google ID if not set
-      if (!user.google_id) {
-        await user.update({ google_id: googleId });
-      }
-      // Update avatar if available
-      if (avatarUrl && !user.avatar_url) {
-        await user.update({ avatar_url: avatarUrl });
-      }
-    } else {
-      // Create new user
-      // Generate username from email (before @)
-      const usernameBase = email.split('@')[0];
-      let username = usernameBase;
-      let counter = 1;
-
-      // Ensure username is unique
-      while (await User.findOne({ where: { username } })) {
-        username = `${usernameBase}${counter}`;
-        counter++;
-      }
-
-      user = await User.create({
-        email,
-        username,
-        google_id: googleId,
-        first_name: firstName,
-        last_name: lastName,
-        avatar_url: avatarUrl,
-        password_hash: undefined, // Google-only account
-      }) as User & UserAttributes;
-    }
+    // Find or create user using shared function
+    const user = await findOrCreateGoogleUser(googleProfile);
 
     // Generate JWT tokens
     const { accessToken, refreshToken } = await generateTokens(user.id);

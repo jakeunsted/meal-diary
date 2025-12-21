@@ -1,5 +1,6 @@
 import { Router, type RequestHandler } from 'express';
 import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback } from '../controllers/auth/auth.controller.ts';
+import { verifyGoogleToken } from '../controllers/auth/googleTokenVerification.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
 import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter } from '../middleware/rateLimit.middleware.ts';
 
@@ -232,5 +233,51 @@ router.get('/google', loginLimiter, wrapHandler(initiateGoogleAuth));
  *         description: Server error
  */
 router.get('/google/callback', loginLimiter, wrapHandler(handleGoogleCallback));
+
+/**
+ * Google OAuth ID token verification route (for native apps)
+ * @swagger
+ * /google/verify-token:
+ *   post:
+ *     summary: Verify Google ID token and authenticate user
+ *     description: Verifies a Google ID token from native app and authenticates the user
+ *     requestBody:
+ *       description: Google ID token
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Google ID token from native authentication
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                   description: User data
+ *                 accessToken:
+ *                   type: string
+ *                   description: The access token
+ *                 refreshToken:
+ *                   type: string
+ *                   description: The refresh token
+ *       400:
+ *         description: Invalid token or missing email
+ *       401:
+ *         description: Invalid token
+ *       500:
+ *         description: Server error
+ */
+router.post('/google/verify-token', loginLimiter, wrapHandler(verifyGoogleToken));
 
 export default router; 
