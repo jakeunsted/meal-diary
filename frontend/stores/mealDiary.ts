@@ -71,6 +71,17 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     },
 
     async initialize() {
+      const userStore = useUserStore();
+      const authStore = useAuthStore();
+
+      if (!authStore.user?.family_group_id) {
+        return;
+      }
+
+      if (!userStore.user?.family_group_id) {
+        return;
+      }
+      
       // Try to load from Preferences first
       const loadedFromStorage = await this.loadFromLocalStorage();
       
@@ -117,11 +128,15 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           // Save to Preferences after successful fetch
           await this.saveToLocalStorage();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error fetching weekly meals:', error);
         // If fetch fails, try to load from Preferences
         const loadedFromStorage = await this.loadFromLocalStorage();
         if (!loadedFromStorage) {
+          if (error?.statusCode === 500 || error?.status === 500) {
+            console.warn('Meal diary may not exist yet, skipping fetch');
+            return;
+          }
           throw error;
         }
       } finally {

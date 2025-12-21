@@ -90,6 +90,7 @@ const errorMessage = ref('');
 const isLoading = ref(false);
 
 const authStore = useAuthStore();
+const userStore = useUserStore();
 const { api } = useApi();
 
 const handleSubmit = async () => {
@@ -115,6 +116,16 @@ const handleSubmit = async () => {
         });
 
         if (response) {
+          // Refresh user data to get updated family_group_id
+          const updatedUser = await userStore.fetchUser(true);
+          if (updatedUser && authStore.accessToken && authStore.refreshToken) {
+            // Update auth store with refreshed user data
+            await authStore.setAuth({
+              user: updatedUser,
+              accessToken: authStore.accessToken,
+              refreshToken: authStore.refreshToken
+            });
+          }
           navigateTo('/diary');
         }
       } catch (error) {
@@ -136,6 +147,16 @@ const handleSubmit = async () => {
         });
 
         if (response) {
+          // Refresh user data to get updated family_group_id
+          const updatedUser = await userStore.fetchUser(true);
+          if (updatedUser && authStore.accessToken && authStore.refreshToken) {
+            // Update auth store with refreshed user data
+            await authStore.setAuth({
+              user: updatedUser,
+              accessToken: authStore.accessToken,
+              refreshToken: authStore.refreshToken
+            });
+          }
           navigateTo('/diary');
         }
       } catch (error) {

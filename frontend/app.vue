@@ -84,12 +84,30 @@ onMounted(async () => {
 // Initialize stores and SSE when user is authenticated
 watch(() => authStore.isAuthenticated, async (isAuthenticated) => {
   if (isAuthenticated) {
+    const router = useRouter();
+    const currentRoute = router.currentRoute.value;
+    
+    // Don't initialize stores on registration pages
+    if (currentRoute.path?.startsWith('/registration')) {
+      return;
+    }
+    
+    // Check auth store first - if user doesn't have family_group_id, don't initialize
+    if (!authStore.user?.family_group_id) {
+      return;
+    }
+    
     // Ensure user data is loaded
     if (!userStore.user) {
       await userStore.loadFromStorage();
       if (!userStore.user) {
         await userStore.fetchUser();
       }
+    }
+    
+    // Double-check user store has family_group_id (should match auth store)
+    if (!userStore.user?.family_group_id) {
+      return;
     }
     
     // Setup SSE connection if user has a family group

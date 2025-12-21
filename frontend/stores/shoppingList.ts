@@ -145,14 +145,33 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async fetchShoppingList(forceRefresh = false) {
       const userStore = useUserStore();
       const authStore = useAuthStore();
+      
+      if (!authStore.user?.family_group_id) {
+        return;
+      }
+      
       try {
         if (!this.shoppingList || forceRefresh) {
           this.isLoading = true;
           this.error = null;
-          let familyGroupId = userStore.user?.family_group_id;
+          let familyGroupId = userStore.user?.family_group_id || authStore.user?.family_group_id;
           if (!familyGroupId) {
-            console.error('no family group id found, fetching user');
-            throw new Error('No family group ID found');
+            const updatedUser = await userStore.fetchUser(true);
+            if (updatedUser?.family_group_id) {
+              familyGroupId = updatedUser.family_group_id;
+              // Update auth store with refreshed user data
+              if (authStore.accessToken && authStore.refreshToken) {
+                await authStore.setAuth({
+                  user: updatedUser,
+                  accessToken: authStore.accessToken,
+                  refreshToken: authStore.refreshToken
+                });
+              }
+            } else {
+              // Don't throw error, just return silently if no family group
+              this.isLoading = false;
+              return;
+            }
           }
           console.log('fetching shopping list for family group:', familyGroupId);
           const { api } = useApi();
