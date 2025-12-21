@@ -8,8 +8,6 @@ export default defineNuxtConfig({
     public: {
       baseUrl: process.env.BASE_URL,
       origin: process.env.ORIGIN,
-      newRelicIosAppToken: process.env.NEW_RELIC_IOS_APP_TOKEN,
-      newRelicAndroidAppToken: process.env.NEW_RELIC_ANDROID_APP_TOKEN,
     }
   },
   app: {

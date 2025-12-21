@@ -7,7 +7,7 @@
     "test:coverage": "vitest run --coverage",
     "dev": "node --experimental-strip-types --experimental-transform-types --watch index.ts",
     "build": "tsc && tsc-alias",
-    "start": "NEW_RELIC_ENABLED=true NEW_RELIC_APP_NAME=meal-diary-api-prod node --experimental-strip-types --experimental-transform-types index.ts"
+    "start": "node --experimental-strip-types --experimental-transform-types index.ts"
   },
   "author": "Jake Unsted",
   "license": "ISC",
@@ -17,7 +17,6 @@
     "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.6",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/newrelic": "^9.14.8",
     "@types/node": "^24.10.4",
     "@types/passport": "^1.0.17",
     "@types/passport-google-oauth20": "^2.0.17",
@@ -40,7 +39,6 @@
     "express-rate-limit": "^7.5.1",
     "express-session": "^1.18.2",
     "jsonwebtoken": "^9.0.3",
-    "newrelic": "^12.25.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.16.3",

@@ -11,7 +11,6 @@ import itemCategoriesRoutes from './routes/itemCategories.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
-import newrelic from 'newrelic';
 
 const __dirname = path.resolve('./api');
 const app = express();

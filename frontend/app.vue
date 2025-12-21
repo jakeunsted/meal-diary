@@ -15,65 +15,6 @@ const userStore = useUserStore();
 const { $sse } = useNuxtApp();
 const { handleTokenRefresh } = useTokenRefreshSSE();
 
-// Add New Relic script for web browsers only
-onMounted(async () => {
-  if (process.client) {
-    const { Capacitor } = await import('@capacitor/core');
-    // Only load browser New Relic if we're not in a Capacitor environment
-    if (!Capacitor.isNativePlatform()) {
-      const { BrowserAgent, Interaction } = await import('@newrelic/browser-agent');
-      
-      const browserAgent = new BrowserAgent({
-        accountID: "6817137",
-        trustKey: "6817137",
-        agentID: "538727353",
-        licenseKey: "NRJS-5bdc2fe008beea400a1",
-        applicationID: "538727353",
-        beacon: "bam.eu01.nr-data.net",
-        errorBeacon: "bam.eu01.nr-data.net",
-        distributedTracing: { enabled: true },
-        privacy: { cookies_enabled: true },
-        ajax: { deny_list: ["bam.eu01.nr-data.net"] },
-        sessionReplay: {
-          enabled: true,
-          block_selector: '',
-          mask_text_selector: '*',
-          sampling_rate: 10.0,
-          error_sampling_rate: 100.0,
-          mask_all_inputs: true,
-          collect_fonts: true,
-          inline_images: false,
-          inline_stylesheet: true,
-          fix_stylesheets: true,
-          preload: false,
-          mask_input_options: {}
-        },
-        pageViewTiming: {
-          enabled: true
-        },
-        spa: {
-          enabled: true,
-          harvestTimeSeconds: 10
-        }
-      });
-
-      // Wait for browser agent to initialize
-      await browserAgent.ready;
-
-      // Track page views
-      const router = useRouter();
-      router.afterEach((to) => {
-        if (Interaction) {
-          Interaction.startInteraction('PageView', () => {
-            Interaction.setName(to.path);
-            Interaction.endInteraction();
-          });
-        }
-      });
-    }
-  }
-});
-
 let sseConnection = null;
 
 // Initialize auth store
