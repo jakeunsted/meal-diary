@@ -1,5 +1,4 @@
 import { H3Event } from 'h3';
-import { useAuthStore } from '~/stores/auth';
 import { SSE_EMITTER } from '~/server/plugins/sse';
 
 /**
@@ -76,13 +75,9 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
         
         if (refreshResponse.ok) {
           const data = await refreshResponse.json();
-          
-          // Update the auth store with new token
-          const authStore = useAuthStore();
-          authStore.setAccessToken(data.accessToken);
-          authStore.setRefreshToken(data.refreshToken);
 
           // Emit SSE event for token refresh if user has a family group
+          // Clients will update their stores via updateTokensFromSSE when they receive this event
           if (data.user?.family_group_id) {
             SSE_EMITTER.emit(`family-${data.user.family_group_id}`, 'token-refresh', {
               accessToken: data.accessToken,
