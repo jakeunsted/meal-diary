@@ -36,9 +36,12 @@ export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate:
   });
 
   for (const day of days) {
+    const dayOfWeek = day.date.getDay();
+    // Convert JavaScript day (0-6, Sunday=0) to our format (1-7, Monday=1, Sunday=7)
+    const normalizedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
     await DailyMeal.create({
       meal_diary_id: mealDiary.dataValues.id,
-      day_of_week: day.date.getDay(),
+      day_of_week: normalizedDayOfWeek,
       breakfast: day.breakfast || '',
       lunch: day.lunch || '',
       dinner: day.dinner || ''

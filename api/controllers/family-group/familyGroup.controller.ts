@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { FamilyGroup, User } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
+import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
 
 // Generate a random identifier (three 4-letter words separated by hyphens)
 const generateRandomIdentifier = (): string => {
@@ -39,6 +40,12 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
     }
 
     await ShoppingList.create({ family_group_id: Number(familyGroup.dataValues.id) });
+
+    // Create initial meal diary for the current week
+    const monday = new Date();
+    monday.setDate(monday.getDate() - (monday.getDay() || 7) + 1);
+    monday.setHours(0, 0, 0, 0);
+    await createNewWeeklyMeals(Number(familyGroup.dataValues.id), monday);
 
     return res.status(201).json(familyGroup);
   } catch (error) {
