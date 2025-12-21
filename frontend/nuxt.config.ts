@@ -10,9 +10,9 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     public: {
-      baseUrl: process.env.BASE_URL,
+      baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,
-      googleClientId: process.env.GOOGLE_CLIENT_ID,
+      googleClientId: process.env.GOOGLE_CLIENT_ID || '',
     }
   },
   app: {
