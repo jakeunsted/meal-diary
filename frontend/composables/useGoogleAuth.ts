@@ -124,8 +124,8 @@ export const useGoogleAuth = () => {
           throw new Error('No ID token received from Google');
         }
 
-        // Verify token with backend
-        const authResponse = await api<GoogleAuthResponse>('/auth/google/verify-token', {
+        // Verify token with backend via Nuxt server route
+        const authResponse = await api<GoogleAuthResponse>('/api/auth/google/verify-token', {
           method: 'POST',
           body: {
             idToken: idToken,
