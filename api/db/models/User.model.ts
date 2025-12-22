@@ -30,12 +30,10 @@ User.init(
     username: {
       type: DataTypes.STRING(50),
       allowNull: false,
-      unique: true,
     },
     email: {
       type: DataTypes.STRING(100),
       allowNull: false,
-      unique: true,
     },
     password_hash: {
       type: DataTypes.STRING(255),
@@ -44,7 +42,6 @@ User.init(
     google_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
-      unique: true,
     },
     first_name: {
       type: DataTypes.STRING(50),
@@ -79,6 +76,26 @@ User.init(
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      {
+        fields: ['family_group_id'],
+      },
+      {
+        unique: true,
+        name: 'users_username_unique',
+        fields: ['username'],
+      },
+      {
+        unique: true,
+        name: 'users_email_unique',
+        fields: ['email'],
+      },
+      {
+        unique: true,
+        name: 'users_google_id_unique',
+        fields: ['google_id'],
+      },
+    ],
   }
 );
 

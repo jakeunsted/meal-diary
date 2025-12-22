@@ -70,24 +70,21 @@ export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate:
  */
 export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
   // First, find or create the meal diary for this week
-  let mealDiary = await MealDiary.findOne({
+  const [mealDiary] = await MealDiary.findOrCreate({
     where: {
+      family_group_id: familyGroupId,
+      week_start_date: weekStartDate
+    },
+    defaults: {
       family_group_id: familyGroupId,
       week_start_date: weekStartDate
     }
   });
 
-  if (!mealDiary) {
-    // Create a new meal diary if it doesn't exist
-    mealDiary = await MealDiary.create({
-      family_group_id: familyGroupId,
-      week_start_date: weekStartDate
-    });
-  }
-
   // Get all daily meals for this week
   const dailyMeals = await DailyMeal.findAll({
     where: { meal_diary_id: mealDiary.dataValues.id },
+    attributes: ['day_of_week', 'breakfast', 'lunch', 'dinner'],
     order: [['day_of_week', 'ASC']]
   });
   
@@ -135,7 +132,8 @@ export const updateDailyMeal = async (
     where: {
       family_group_id: familyGroupId,
       week_start_date: weekStartDate
-    }
+    },
+    attributes: ['id']
   });
 
   if (!mealDiary) {
@@ -143,20 +141,16 @@ export const updateDailyMeal = async (
   }
 
   // Find or create the daily meal
-  let dailyMeal = await DailyMeal.findOne({
+  const [dailyMeal] = await DailyMeal.findOrCreate({
     where: {
+      meal_diary_id: mealDiary.dataValues.id,
+      day_of_week: dayOfWeek
+    },
+    defaults: {
       meal_diary_id: mealDiary.dataValues.id,
       day_of_week: dayOfWeek
     }
   });
-
-  if (!dailyMeal) {
-    // Create a new daily meal if it doesn't exist
-    dailyMeal = await DailyMeal.create({
-      meal_diary_id: mealDiary.dataValues.id,
-      day_of_week: dayOfWeek
-    });
-  }
 
   // Update the daily meal
   await dailyMeal.update(updates);

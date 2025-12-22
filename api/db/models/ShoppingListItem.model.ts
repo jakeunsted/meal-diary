@@ -71,6 +71,17 @@ ShoppingListItem.init(
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    indexes: [
+      {
+        fields: ['shopping_list_id'],
+      },
+      {
+        fields: ['shopping_list_categories'],
+      },
+      {
+        fields: ['shopping_list_categories', 'deleted'],
+      },
+    ],
   }
 );
 

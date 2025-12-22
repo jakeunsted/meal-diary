@@ -70,6 +70,9 @@ DailyMeal.init(
         unique: true,
         fields: ['meal_diary_id', 'day_of_week'],
       },
+      {
+        fields: ['meal_diary_id'],
+      },
     ],
   }
 );

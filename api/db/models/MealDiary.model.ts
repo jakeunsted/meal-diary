@@ -51,6 +51,9 @@ MealDiary.init(
         unique: true,
         fields: ['family_group_id', 'week_start_date'],
       },
+      {
+        fields: ['family_group_id'],
+      },
     ],
   }
 );

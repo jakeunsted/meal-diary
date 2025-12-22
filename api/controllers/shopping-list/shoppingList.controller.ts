@@ -41,20 +41,24 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
   // Joining the shopping list with its categories and items
   const shoppingList = await ShoppingList.findOne({
     where: { family_group_id: Number(family_group_id) },
+    attributes: ['id', 'family_group_id', 'created_at', 'updated_at'],
     include: [
       {
         model: ShoppingListCategory,
         as: 'categories',
+        attributes: ['id', 'shopping_list_id', 'item_categories_id', 'created_by', 'created_at', 'updated_at'],
         include: [
           {
             model: ItemCategory,
             as: 'itemCategory',
+            attributes: ['id', 'name', 'icon'],
           },
           {
             model: ShoppingListItem,
             as: 'items',
             where: { deleted: false },
             required: false,
+            attributes: ['id', 'shopping_list_id', 'shopping_list_categories', 'name', 'checked', 'deleted', 'created_by', 'created_at', 'updated_at'],
           },
         ],
       },
@@ -217,10 +221,12 @@ export const getFamilyCategories = async (req: Request, res: Response) => {
 
   const categories = await ShoppingListCategory.findAll({
     where: { shopping_list_id: Number(family_group_id) },
+    attributes: ['id', 'shopping_list_id', 'item_categories_id', 'created_by', 'created_at', 'updated_at'],
     include: [
       {
         model: ItemCategory,
         as: 'itemCategory',
+        attributes: ['id', 'name', 'icon'],
       },
     ],
   });
