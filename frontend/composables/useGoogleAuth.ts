@@ -125,7 +125,7 @@ export const useGoogleAuth = () => {
         }
 
         // Verify token with backend
-        const authResponse = await api<GoogleAuthResponse>('/api/auth/google/verify-token', {
+        const authResponse = await api<GoogleAuthResponse>('/auth/google/verify-token', {
           method: 'POST',
           body: {
             idToken: idToken,
