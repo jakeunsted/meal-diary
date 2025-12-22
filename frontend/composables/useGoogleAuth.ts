@@ -34,6 +34,12 @@ export const useGoogleAuth = () => {
   /**
    * Initialize the Social Login plugin with Google configuration
    * This should be called early in the app lifecycle
+   * 
+   * IMPORTANT: For Android native Google Sign-In:
+   * - Use the Web Client ID (OAuth 2.0 Client ID of type "Web application") from Google Cloud Console
+   * - This is the SAME client ID used for web OAuth (GOOGLE_CLIENT_ID from backend)
+   * - You also need to create an Android OAuth client in Google Cloud Console and link it to your app's package name
+   * - The Android client is configured in Google Cloud Console, not in this code
    */
   const initialize = async () => {
     if (isInitialized || !Capacitor.isNativePlatform()) {
@@ -44,11 +50,12 @@ export const useGoogleAuth = () => {
       const config = useRuntimeConfig();
       
       // For native platforms, we need the webClientId
-      // This should match GOOGLE_CLIENT_ID from backend
+      // This should be the Web application OAuth client ID (same as GOOGLE_CLIENT_ID from backend)
       const webClientId = config.public.googleClientId || '';
 
       if (!webClientId) {
-        console.warn('[Google Auth] GOOGLE_CLIENT_ID not configured. Native Google Sign-In may not work.');
+        console.error('[Google Auth] GOOGLE_CLIENT_ID not configured. Native Google Sign-In will not work.');
+        console.error('[Google Auth] Please set GOOGLE_CLIENT_ID environment variable during build.');
         return;
       }
 
@@ -59,9 +66,10 @@ export const useGoogleAuth = () => {
       });
 
       isInitialized = true;
-      console.log('[Google Auth] Plugin initialized successfully');
+      console.log('[Google Auth] Plugin initialized successfully with webClientId:', webClientId.substring(0, 20) + '...');
     } catch (err) {
       console.error('[Google Auth] Failed to initialize plugin:', err);
+      isInitialized = false;
     }
   };
 
@@ -78,6 +86,17 @@ export const useGoogleAuth = () => {
       if (Capacitor.isNativePlatform()) {
         // Initialize if not already done
         await initialize();
+
+        // Check if initialization was successful
+        if (!isInitialized) {
+          const config = useRuntimeConfig();
+          const webClientId = config.public.googleClientId || '';
+          if (!webClientId) {
+            throw new Error('Google Sign-In is not configured. GOOGLE_CLIENT_ID environment variable is missing. Please set it during the build process.');
+          } else {
+            throw new Error('Google Sign-In plugin failed to initialize. Please check the configuration.');
+          }
+        }
 
         // Use native Google Sign-In
         const result = await SocialLogin.login({

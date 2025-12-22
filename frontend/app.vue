@@ -8,6 +8,8 @@
 </template>
 
 <script setup>
+import { Capacitor } from '@capacitor/core';
+
 const authStore = useAuthStore();
 const mealDiaryStore = useMealDiaryStore();
 const shoppingListStore = useShoppingListStore();
@@ -17,9 +19,15 @@ const { handleTokenRefresh } = useTokenRefreshSSE();
 
 let sseConnection = null;
 
-// Initialize auth store
+// Initialize auth store and Google Auth (for native platforms)
 onMounted(async () => {
   await authStore.initializeAuth();
+
+  // Initialize Google Auth early for native platforms
+  if (Capacitor.isNativePlatform()) {
+    const { initialize } = useGoogleAuth();
+    await initialize();
+  }
 });
 
 // Initialize stores and SSE when user is authenticated
