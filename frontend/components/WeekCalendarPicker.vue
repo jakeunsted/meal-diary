@@ -35,7 +35,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watchEffect } from 'vue';
+import { ref, computed, watchEffect, watch } from 'vue';
+
+const props = defineProps({
+  initialWeekStartDate: {
+    type: Date,
+    default: null
+  }
+});
 
 // Calculate the start date of a given week and year.
 const normalizeDate = (date) => {
@@ -53,40 +60,71 @@ const getFirstDayOfWeek = (year, week) => {
   return normalizeDate(startDate);
 };
 
-// get the current week number
-const getCurrentWeekNumber = () => {
-  const today = normalizeDate(new Date());
-  const year = today.getFullYear();
+// Get week number for a given date
+const getWeekNumberForDate = (date) => {
+  const normalizedDate = normalizeDate(new Date(date));
+  const year = normalizedDate.getFullYear();
   const firstDayOfYear = new Date(year, 0, 1);
   const dayOfWeek = firstDayOfYear.getDay();
   const firstMonday = new Date(year, 0, 1 + (8 - dayOfWeek) % 7);
-  const diff = today - firstMonday;
-  const weekNumber = Math.ceil(diff / (1000 * 60 * 60 * 24 * 7))
+  const diff = normalizedDate - firstMonday;
+  const weekNumber = Math.ceil(diff / (1000 * 60 * 60 * 24 * 7));
   return weekNumber;
 };
 
-const selectedYear = ref(new Date().getFullYear());
-const selectedWeek = ref(getCurrentWeekNumber());
+// get the current week number
+const getCurrentWeekNumber = () => {
+  const today = normalizeDate(new Date());
+  return getWeekNumberForDate(today);
+};
+
+// Initialize selected week based on prop or current week
+const getInitialWeekNumber = () => {
+  if (props.initialWeekStartDate) {
+    return getWeekNumberForDate(props.initialWeekStartDate);
+  }
+  return getCurrentWeekNumber();
+};
+
+// Initialize year based on prop or current year
+const getInitialYear = () => {
+  if (props.initialWeekStartDate) {
+    return new Date(props.initialWeekStartDate).getFullYear();
+  }
+  return new Date().getFullYear();
+};
+
+const selectedYear = ref(getInitialYear());
+const selectedWeek = ref(getInitialWeekNumber());
 const weeks = ref([]);
 
-// Calculate the current week number for comparison
-const currentWeekNumber = getCurrentWeekNumber();
-
-// Filter weeks to only show 3 weeks before and after the current week
-// TODO: Might want to make it paid only to show more than current and previous weeks
+// Filter weeks to only show 3 weeks before and after the selected week
+// This ensures that when viewing a future date, weeks around that date are shown
 const filteredWeeks = computed(() => {
-  return weeks.value.filter(week => {
-    const weekDiff = Math.abs(week.number - currentWeekNumber);
+  if (weeks.value.length === 0) return [];
+  const referenceWeek = selectedWeek.value;
+  const filtered = weeks.value.filter(week => {
+    const weekDiff = Math.abs(week.number - referenceWeek);
     return weekDiff <= 3;
   });
+  // Ensure the selected week is always in the list, even if it's outside the 3-week range
+  if (filtered.length === 0 || !filtered.some(w => w.number === referenceWeek)) {
+    const selectedWeekData = weeks.value.find(w => w.number === referenceWeek);
+    if (selectedWeekData) {
+      return [selectedWeekData];
+    }
+  }
+  return filtered;
 });
 
 // Navigation controls
 const canGoBack = computed(() => {
+  if (filteredWeeks.value.length === 0) return false;
   return selectedWeek.value > Math.min(...filteredWeeks.value.map(w => w.number));
 });
 
 const canGoForward = computed(() => {
+  if (filteredWeeks.value.length === 0) return false;
   return selectedWeek.value < Math.max(...filteredWeeks.value.map(w => w.number));
 });
 
@@ -127,13 +165,37 @@ const updateWeeks = () => {
 
   // Ensure selectedWeek is valid for the current year
   if (!weeks.value.some(w => w.number === selectedWeek.value)) {
-    selectedWeek.value = getCurrentWeekNumber(); // Reset to the current week of selected year.
-    //If current week doesn't exist, then default to the last week of the year
-    if (!weeks.value.some(w => w.number === selectedWeek.value)){
-      selectedWeek.value = weeks.value[weeks.value.length - 1].number
+    // Try to use the initial week if provided
+    const initialWeek = getInitialWeekNumber();
+    if (weeks.value.some(w => w.number === initialWeek)) {
+      selectedWeek.value = initialWeek;
+    } else {
+      // Otherwise use current week
+      const currentWeek = getCurrentWeekNumber();
+      if (weeks.value.some(w => w.number === currentWeek)) {
+        selectedWeek.value = currentWeek;
+      } else {
+        // If current week doesn't exist, default to the last week of the year
+        selectedWeek.value = weeks.value[weeks.value.length - 1].number;
+      }
     }
   }
 };
+
+// Update year when initialWeekStartDate changes
+watch(() => props.initialWeekStartDate, (newDate) => {
+  if (newDate) {
+    const date = normalizeDate(new Date(newDate));
+    const year = date.getFullYear();
+    if (year !== selectedYear.value) {
+      selectedYear.value = year;
+    }
+    const weekNumber = getWeekNumberForDate(date);
+    if (weeks.value.some(w => w.number === weekNumber)) {
+      selectedWeek.value = weekNumber;
+    }
+  }
+}, { immediate: true });
 
 watchEffect(() => {
   updateWeeks();
@@ -143,7 +205,9 @@ watchEffect(() => {
 const emit = defineEmits(['weekChange']);
 
 watch(selectedWeek, () => {
-  const weekStartDate = normalizeDate(getFirstDayOfWeek(selectedYear.value, selectedWeek.value));
-  emit('weekChange', weekStartDate);
-});
+  if (weeks.value.length > 0 && weeks.value.some(w => w.number === selectedWeek.value)) {
+    const weekStartDate = normalizeDate(getFirstDayOfWeek(selectedYear.value, selectedWeek.value));
+    emit('weekChange', weekStartDate);
+  }
+}, { immediate: false });
 </script>

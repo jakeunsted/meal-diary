@@ -4,7 +4,10 @@
 
     <MealDiarySkeleton v-if="!hasMealData" />
     <div v-else>
-      <WeekCalendarPicker @weekChange="handleWeekChange" />
+      <WeekCalendarPicker 
+        :initialWeekStartDate="currentWeekStartDate"
+        @weekChange="handleWeekChange" 
+      />
       <DayFoodPlanCard
         v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
         :key="index"
@@ -49,6 +52,14 @@ const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 // Make mealDiaryStore reactive as a computed property
 const mealDiaryStoreComputed = computed(() => mealDiaryStore);
 const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.length > 0);
+
+// Get current week start date for the calendar picker
+const currentWeekStartDate = computed(() => {
+  if (mealDiaryStoreComputed.value.currentWeekStart) {
+    return new Date(mealDiaryStoreComputed.value.currentWeekStart);
+  }
+  return mealDiaryStoreComputed.value.getWeekStartDate();
+});
 
 // Handle opening the meal modal
 const handleSetMeal = (mealType, dayOfWeek) => {
