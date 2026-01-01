@@ -147,9 +147,8 @@ export const useGoogleAuth = () => {
         }
       } else {
         // Web platform - use existing OAuth redirect flow
-        const config = useRuntimeConfig();
-        const baseUrl = config.public.baseUrl || '';
-        window.location.href = `${baseUrl}/api/auth/google`;
+        // Navigate to Nuxt server route which will proxy to backend
+        window.location.href = '/api/auth/google';
       }
     } catch (err: any) {
       console.error('[Google Auth] Sign in error:', err);

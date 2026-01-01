@@ -60,16 +60,45 @@ const getFirstDayOfWeek = (year, week) => {
   return normalizeDate(startDate);
 };
 
-// Get week number for a given date
-const getWeekNumberForDate = (date) => {
+// Get week number and year for a given date
+// Returns { year, weekNumber } to handle cross-year weeks
+const getWeekInfoForDate = (date) => {
   const normalizedDate = normalizeDate(new Date(date));
   const year = normalizedDate.getFullYear();
   const firstDayOfYear = new Date(year, 0, 1);
   const dayOfWeek = firstDayOfYear.getDay();
   const firstMonday = new Date(year, 0, 1 + (8 - dayOfWeek) % 7);
+  
+  // If the date is before the first Monday of the year, it belongs to the last week of the previous year
+  if (normalizedDate < firstMonday) {
+    const previousYear = year - 1;
+    const prevYearFirstDay = new Date(previousYear, 0, 1);
+    const prevYearDayOfWeek = prevYearFirstDay.getDay();
+    const prevYearFirstMonday = new Date(previousYear, 0, 1 + (8 - prevYearDayOfWeek) % 7);
+    const prevYearLastDay = new Date(previousYear, 11, 31);
+    const daysInPrevYear = (prevYearLastDay - prevYearFirstMonday) / (1000 * 60 * 60 * 24);
+    const prevYearNumWeeks = Math.ceil(daysInPrevYear / 7) + 1;
+    
+    return {
+      year: previousYear,
+      weekNumber: prevYearNumWeeks
+    };
+  }
+  
+  // Otherwise, calculate the week number normally
+  // Week 1 starts on the first Monday (diff = 0)
+  // Days 0-6 are week 1, days 7-13 are week 2, etc.
   const diff = normalizedDate - firstMonday;
-  const weekNumber = Math.ceil(diff / (1000 * 60 * 60 * 24 * 7));
-  return weekNumber;
+  const weekNumber = Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1;
+  return {
+    year: year,
+    weekNumber: weekNumber
+  };
+};
+
+// Get week number for a given date (backward compatibility)
+const getWeekNumberForDate = (date) => {
+  return getWeekInfoForDate(date).weekNumber;
 };
 
 // get the current week number
@@ -78,20 +107,23 @@ const getCurrentWeekNumber = () => {
   return getWeekNumberForDate(today);
 };
 
+// Initialize selected week and year based on prop or current week
+const getInitialWeekInfo = () => {
+  if (props.initialWeekStartDate) {
+    return getWeekInfoForDate(props.initialWeekStartDate);
+  }
+  const today = normalizeDate(new Date());
+  return getWeekInfoForDate(today);
+};
+
 // Initialize selected week based on prop or current week
 const getInitialWeekNumber = () => {
-  if (props.initialWeekStartDate) {
-    return getWeekNumberForDate(props.initialWeekStartDate);
-  }
-  return getCurrentWeekNumber();
+  return getInitialWeekInfo().weekNumber;
 };
 
 // Initialize year based on prop or current year
 const getInitialYear = () => {
-  if (props.initialWeekStartDate) {
-    return new Date(props.initialWeekStartDate).getFullYear();
-  }
-  return new Date().getFullYear();
+  return getInitialWeekInfo().year;
 };
 
 const selectedYear = ref(getInitialYear());
@@ -166,9 +198,16 @@ const updateWeeks = () => {
   // Ensure selectedWeek is valid for the current year
   if (!weeks.value.some(w => w.number === selectedWeek.value)) {
     // Try to use the initial week if provided
-    const initialWeek = getInitialWeekNumber();
-    if (weeks.value.some(w => w.number === initialWeek)) {
-      selectedWeek.value = initialWeek;
+    if (props.initialWeekStartDate) {
+      const initialWeekInfo = getWeekInfoForDate(props.initialWeekStartDate);
+      // Only use initial week if it's for the current year
+      if (initialWeekInfo.year === year && weeks.value.some(w => w.number === initialWeekInfo.weekNumber)) {
+        selectedWeek.value = initialWeekInfo.weekNumber;
+      } else {
+        // If initial week is for a different year, we'll handle it in the watch
+        // For now, default to the last week of the year
+        selectedWeek.value = weeks.value[weeks.value.length - 1].number;
+      }
     } else {
       // Otherwise use current week
       const currentWeek = getCurrentWeekNumber();
@@ -182,17 +221,27 @@ const updateWeeks = () => {
   }
 };
 
-// Update year when initialWeekStartDate changes
+// Update year and week when initialWeekStartDate changes
 watch(() => props.initialWeekStartDate, (newDate) => {
   if (newDate) {
-    const date = normalizeDate(new Date(newDate));
-    const year = date.getFullYear();
-    if (year !== selectedYear.value) {
-      selectedYear.value = year;
+    const weekInfo = getWeekInfoForDate(newDate);
+    if (weekInfo.year !== selectedYear.value) {
+      selectedYear.value = weekInfo.year;
     }
-    const weekNumber = getWeekNumberForDate(date);
-    if (weeks.value.some(w => w.number === weekNumber)) {
-      selectedWeek.value = weekNumber;
+    // The week will be set after updateWeeks runs (via watchEffect)
+    // We'll set it here as well to ensure it's set correctly
+    if (weeks.value.length > 0 && weeks.value.some(w => w.number === weekInfo.weekNumber)) {
+      selectedWeek.value = weekInfo.weekNumber;
+    }
+  }
+}, { immediate: true });
+
+// Also watch for when weeks are updated to set the correct week from initial date
+watch(weeks, () => {
+  if (props.initialWeekStartDate && weeks.value.length > 0) {
+    const weekInfo = getWeekInfoForDate(props.initialWeekStartDate);
+    if (weekInfo.year === selectedYear.value && weeks.value.some(w => w.number === weekInfo.weekNumber)) {
+      selectedWeek.value = weekInfo.weekNumber;
     }
   }
 }, { immediate: true });
