@@ -16,11 +16,31 @@ import { User } from '../../db/models/associations.ts';
  */
 export const createBaseShoppingList = async (req: Request, res: Response) => {
   const { family_group_id } = req.params;
+  const user = req.user as User;
 
   const result = await sequelize.transaction(async (t: Transaction) => {
     const shoppingList = await ShoppingList.create(
       { family_group_id: Number(family_group_id) },
       { transaction: t }
+    );
+
+    // Get all item categories to seed as default shopping list categories
+    const itemCategories = await ItemCategory.findAll({
+      transaction: t,
+    });
+
+    // Create shopping list categories for each item category
+    const shoppingListCategories = await Promise.all(
+      itemCategories.map((itemCategory) =>
+        ShoppingListCategory.create(
+          {
+            shopping_list_id: Number(shoppingList.get('id')),
+            item_categories_id: Number(itemCategory.get('id')),
+            created_by: Number(user.dataValues.id),
+          },
+          { transaction: t }
+        )
+      )
     );
 
     return shoppingList;
