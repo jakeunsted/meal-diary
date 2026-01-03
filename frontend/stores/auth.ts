@@ -85,6 +85,31 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (error) {
         // zzz
       }
+      try {
+        await Preferences.remove({ key: 'userData' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'family_members' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'family_group' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'family_members_last_fetched' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'family_group_last_fetched' });
+      } catch (error) {
+        // zzz
+      }
     }
   };
   
