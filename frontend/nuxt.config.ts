@@ -13,6 +13,9 @@ export default defineNuxtConfig({
       baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,
       googleClientId: process.env.GOOGLE_CLIENT_ID || '',
+      posthogPublicKey: 'phc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN',
+      posthogHost: 'https://eu.i.posthog.com',
+      posthogDefaults: '2025-11-30'
     }
   },
   app: {

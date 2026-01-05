@@ -7,6 +7,7 @@ import sequelize from '../../db/models/index.ts';
 import { Transaction } from 'sequelize';
 import { sendShoppingListItemWebhook, sendShoppingListCategoryWebhook } from '../../services/webhook.service.ts';
 import { User } from '../../db/models/associations.ts';
+import { trackEvent } from '../../utils/posthog.ts';
 
 /**
  * Creates a base shopping list for a family group
@@ -57,6 +58,7 @@ export const createBaseShoppingList = async (req: Request, res: Response) => {
  */
 export const getEntireShoppingList = async (req: Request, res: Response) => {
   const { family_group_id } = req.params;
+  const user = req.user as User;
 
   // Joining the shopping list with its categories and items
   const shoppingList = await ShoppingList.findOne({
@@ -87,6 +89,13 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
 
   if (!shoppingList) {
     return res.status(404).json({ message: 'Shopping list not found' });
+  }
+  // Track shopping list loaded event
+  if (user) {
+    trackEvent(user.dataValues.id.toString(), 'shopping_list_loaded', {
+      family_group_id: Number(family_group_id),
+      shopping_list_id: shoppingList.get('id'),
+    });
   }
 
   res.json(shoppingList);
