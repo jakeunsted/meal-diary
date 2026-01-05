@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from '../../services/mealDiary.service.ts';
 import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
+import { trackEvent } from '../../utils/posthog.ts';
+import { User } from '../../db/models/associations.ts';
 
 // Create a new meal diary
 export const createMealDiary = async (req: Request, res: Response) => {
@@ -64,6 +66,7 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
   try {
     const { family_group_id } = req.params;
     const { week_start_date } = req.query;
+    const user = req.user as User;
 
     if (!family_group_id || !week_start_date) {
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
@@ -80,6 +83,20 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
         parseInt(family_group_id),
         new Date(week_start_date as string)
       );
+    }
+
+    // Track diary loaded event
+    if (user) {
+      const mealsWithContent = weeklyMeals.filter(meal => 
+        meal.breakfast || meal.lunch || meal.dinner
+      ).length;
+      
+      trackEvent(user.dataValues.id.toString(), 'diary_loaded', {
+        family_group_id: parseInt(family_group_id),
+        week_start_date: week_start_date as string,
+        meals_with_content: mealsWithContent,
+        total_days: weeklyMeals.length,
+      });
     }
 
     return res.status(200).json(weeklyMeals);

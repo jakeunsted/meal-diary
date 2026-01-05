@@ -9,6 +9,17 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   if (to.path === '/registration/step-2' && from.path === '/registration/step-2') {
     return navigateTo('/logout');
   }
+
+  // Track page view
+  if (process.client) {
+    const { $posthog } = useNuxtApp();
+    ($posthog as any).capture('$pageview', {
+      path: to.path,
+      fullPath: to.fullPath,
+      name: to.name,
+      source: 'frontend',
+    });
+  }
   
   // Only run client-side checks to avoid SSR issues
   if (import.meta.client) {

@@ -11,10 +11,17 @@ import itemCategoriesRoutes from './routes/itemCategories.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
+import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Initialise PostHog
+if (process.env.POSTHOG_KEY) {
+  getPostHog();
+  console.log('PostHog initialized');
+}
 
 // Middleware
 app.use(express.json());
@@ -57,3 +64,16 @@ app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
     console.error('Failed to initialize database, server not started');
   }
 })();
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+  console.log('SIGTERM received, shutting down gracefully...');
+  await shutdownPostHog();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  console.log('SIGINT received, shutting down gracefully...');
+  await shutdownPostHog();
+  process.exit(0);
+});
