@@ -45,11 +45,14 @@ export const trackEvent = async (
   event: string,
   properties?: Record<string, any>
 ): Promise<void> => {
+  // Log that trackEvent was called (helps debug if events aren't reaching PostHog)
+  if (process.env.NODE_ENV === 'production') {
+    console.log(`PostHog: trackEvent called for "${event}" (user: ${distinctId})`);
+  }
+
   const posthog = getPostHog();
   if (!posthog) {
-    if (process.env.NODE_ENV !== 'production') {
-      console.warn(`PostHog: Skipping event "${event}" - client not initialized`);
-    }
+    console.warn(`PostHog: Skipping event "${event}" - client not initialized`);
     return;
   }
 
@@ -70,14 +73,19 @@ export const trackEvent = async (
     // Explicitly flush to ensure event is sent immediately
     await posthog.flush();
     
-    if (process.env.NODE_ENV !== 'production') {
+    // Log in production too (but less verbose) to verify events are being sent
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`PostHog: Event "${event}" sent for user ${distinctId}`);
+    } else {
       console.log(`PostHog: Event "${event}" captured for user ${distinctId}`);
     }
   } catch (err) {
-    // Log detailed error for debugging Railway issues
+    // Log detailed error for debugging Railway issues - always log errors
     const errorMessage = err instanceof Error ? err.message : String(err);
+    const errorStack = err instanceof Error ? err.stack : undefined;
     console.error(`PostHog: Error capturing event "${event}":`, {
       error: errorMessage,
+      stack: errorStack,
       distinctId,
       event,
       // Don't log full properties to avoid sensitive data
