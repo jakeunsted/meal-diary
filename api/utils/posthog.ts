@@ -6,12 +6,30 @@ let posthogClient: PostHog | null = null;
  * Get or create PostHog client instance
  */
 export const getPostHog = (): PostHog | null => {
-  if (!posthogClient && process.env.POSTHOG_KEY) {
-    posthogClient = new PostHog(process.env.POSTHOG_KEY, {
-      host: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
-      flushAt: 1,
-      flushInterval: 10000 // Flush every 10 seconds
-    });
+  if (!posthogClient) {
+    if (!process.env.POSTHOG_KEY) {
+      if (process.env.NODE_ENV !== 'production') {
+        console.warn('PostHog: POSTHOG_KEY environment variable not set');
+      }
+      return null;
+    }
+
+    const host = process.env.POSTHOG_HOST || 'https://eu.i.posthog.com';
+    
+    try {
+      posthogClient = new PostHog(process.env.POSTHOG_KEY, {
+        host,
+        flushAt: 1,
+        flushInterval: 10000, // Flush every 10 seconds
+      });
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`PostHog: Client initialized with host ${host}`);
+      }
+    } catch (err) {
+      console.error('PostHog: Failed to initialize client:', err);
+      return null;
+    }
   }
   return posthogClient;
 };
@@ -28,21 +46,43 @@ export const trackEvent = async (
   properties?: Record<string, any>
 ): Promise<void> => {
   const posthog = getPostHog();
-  if (posthog && distinctId) {
-    try {
-      await posthog.capture({
-        distinctId,
-        event,
-        properties: {
-          ...properties,
-          source: 'backend',
-        },
-      });
-      // Explicitly flush to ensure event is sent immediately
-      await posthog.flush();
-    } catch (err) {
-      console.error('Error capturing PostHog event:', err);
+  if (!posthog) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`PostHog: Skipping event "${event}" - client not initialized`);
     }
+    return;
+  }
+
+  if (!distinctId) {
+    console.warn(`PostHog: Skipping event "${event}" - missing distinctId`);
+    return;
+  }
+
+  try {
+    await posthog.capture({
+      distinctId,
+      event,
+      properties: {
+        ...properties,
+        source: 'backend',
+      },
+    });
+    // Explicitly flush to ensure event is sent immediately
+    await posthog.flush();
+    
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`PostHog: Event "${event}" captured for user ${distinctId}`);
+    }
+  } catch (err) {
+    // Log detailed error for debugging Railway issues
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error(`PostHog: Error capturing event "${event}":`, {
+      error: errorMessage,
+      distinctId,
+      event,
+      // Don't log full properties to avoid sensitive data
+      hasProperties: !!properties,
+    });
   }
 };
 
