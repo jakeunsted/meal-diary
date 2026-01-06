@@ -85,7 +85,6 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       );
     }
 
-    // Track diary loaded event
     if (user) {
       const mealsWithContent = weeklyMeals.filter(meal => 
         meal.breakfast || meal.lunch || meal.dinner
@@ -96,6 +95,8 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
         week_start_date: week_start_date as string,
         meals_with_content: mealsWithContent,
         total_days: weeklyMeals.length,
+      }).catch(err => {
+        console.error('Failed to track PostHog event:', err);
       });
     }
 

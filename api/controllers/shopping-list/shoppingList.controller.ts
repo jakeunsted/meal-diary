@@ -90,11 +90,12 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
   if (!shoppingList) {
     return res.status(404).json({ message: 'Shopping list not found' });
   }
-  // Track shopping list loaded event
   if (user) {
     trackEvent(user.dataValues.id.toString(), 'shopping_list_loaded', {
       family_group_id: Number(family_group_id),
       shopping_list_id: shoppingList.get('id'),
+    }).catch(err => {
+      console.error('Failed to track PostHog event:', err);
     });
   }
 
