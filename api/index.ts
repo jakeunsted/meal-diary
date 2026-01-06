@@ -26,6 +26,9 @@ if (posthog) {
 }
 
 // Middleware
+// Trust proxy for Railway (needed for rate limiting and correct IP addresses)
+// Railway uses 1 proxy, so we trust only the first proxy
+app.set('trust proxy', 1);
 app.use(express.json());
 app.use(cookieParser());
 

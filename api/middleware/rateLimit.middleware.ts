@@ -53,7 +53,7 @@ export const validateTokenLimiter = createRateLimiter({
 // Rate limit for general API endpoints
 export const apiLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // 100 requests per window
+  max: 200, // 200 requests per window
   message: { message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
