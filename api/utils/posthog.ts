@@ -7,8 +7,10 @@ let posthogClient: PostHog | null = null;
  */
 export const getPostHog = (): PostHog | null => {
   if (!posthogClient && process.env.POSTHOG_KEY) {
-    posthogClient = new PostHog(process.env.POSTHOG_KEY, {
+    posthogClient = new PostHog('hc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN', {
       host: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
+      flushAt: 1,
+      flushInterval: 0
     });
   }
   return posthogClient;
@@ -27,14 +29,18 @@ export const trackEvent = (
 ): void => {
   const posthog = getPostHog();
   if (posthog && distinctId) {
-    posthog.capture({
-      distinctId,
-      event,
-      properties: {
-        ...properties,
-        source: 'backend',
-      },
-    });
+    try {
+      posthog.capture({
+        distinctId,
+        event,
+        properties: {
+          ...properties,
+          source: 'backend',
+        },
+      });
+    } catch (err) {
+      console.error('Error capturing PostHog event:', err);
+    }
   }
 };
 
