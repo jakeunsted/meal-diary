@@ -34,8 +34,8 @@ export const logoutLimiter = createRateLimiter({
 
 // Rate limit for token refresh
 export const refreshTokenLimiter = createRateLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 attempts per hour
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 60, // 60 attempts per 5 minutes per IP
   message: { message: 'Too many token refresh attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,

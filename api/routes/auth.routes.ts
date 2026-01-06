@@ -117,7 +117,10 @@ router.post('/login', loginLimiter, wrapHandler(login));
  *                   type: string
  *                   description: Error message.
  */
-router.post('/refresh-token', refreshTokenLimiter, wrapHandler(refreshToken));
+// NOTE: Refresh token route currently has NO rate limiting applied.
+// Nuxt SSR can trigger multiple refreshes during normal navigation,
+// so we temporarily disable the limiter here to avoid 429s.
+router.post('/refresh-token', wrapHandler(refreshToken));
 
 /**
  * Logout route to invalidate tokens.
