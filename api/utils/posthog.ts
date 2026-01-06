@@ -7,10 +7,10 @@ let posthogClient: PostHog | null = null;
  */
 export const getPostHog = (): PostHog | null => {
   if (!posthogClient && process.env.POSTHOG_KEY) {
-    posthogClient = new PostHog('hc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN', {
+    posthogClient = new PostHog(process.env.POSTHOG_KEY, {
       host: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
       flushAt: 1,
-      flushInterval: 0
+      flushInterval: 10000 // Flush every 10 seconds
     });
   }
   return posthogClient;
@@ -22,15 +22,15 @@ export const getPostHog = (): PostHog | null => {
  * @param event - Event name
  * @param properties - Event properties
  */
-export const trackEvent = (
+export const trackEvent = async (
   distinctId: string,
   event: string,
   properties?: Record<string, any>
-): void => {
+): Promise<void> => {
   const posthog = getPostHog();
   if (posthog && distinctId) {
     try {
-      posthog.capture({
+      await posthog.capture({
         distinctId,
         event,
         properties: {
@@ -38,6 +38,8 @@ export const trackEvent = (
           source: 'backend',
         },
       });
+      // Explicitly flush to ensure event is sent immediately
+      await posthog.flush();
     } catch (err) {
       console.error('Error capturing PostHog event:', err);
     }
@@ -49,19 +51,25 @@ export const trackEvent = (
  * @param distinctId - User identifier
  * @param properties - User properties
  */
-export const identifyUser = (
+export const identifyUser = async (
   distinctId: string,
   properties?: Record<string, any>
-): void => {
+): Promise<void> => {
   const posthog = getPostHog();
   if (posthog && distinctId) {
-    posthog.identify({
-      distinctId,
-      properties: {
-        ...properties,
-        source: 'backend',
-      },
-    });
+    try {
+      await posthog.identify({
+        distinctId,
+        properties: {
+          ...properties,
+          source: 'backend',
+        },
+      });
+      // Explicitly flush to ensure event is sent immediately
+      await posthog.flush();
+    } catch (err) {
+      console.error('Error identifying user in PostHog:', err);
+    }
   }
 };
 
