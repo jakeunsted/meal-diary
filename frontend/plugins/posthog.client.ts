@@ -7,7 +7,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   // If localhost or dev.mealdiary.co.uk, skip PostHog
   if (process.client) {
     if (config.public.baseUrl.includes('localhost') || config.public.baseUrl.includes('dev.mealdiary.co.uk')) {
-      console.log('Skipping PostHog in development');
       nuxtApp.provide('posthog', {
         capture: () => {},
         identify: () => {},
@@ -20,11 +19,6 @@ export default defineNuxtPlugin((nuxtApp) => {
   if (process.client && config.public.posthogPublicKey) {
     posthog.init(config.public.posthogPublicKey as string, {
       api_host: config.public.posthogHost as string || 'https://eu.i.posthog.com',
-      loaded: (posthog) => {
-        if (import.meta.dev) {
-          console.log('PostHog loaded');
-        }
-      },
       capture_pageview: false, // We'll handle this manually
       capture_pageleave: true,
     });

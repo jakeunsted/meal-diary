@@ -95,8 +95,8 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
         week_start_date: week_start_date as string,
         meals_with_content: mealsWithContent,
         total_days: weeklyMeals.length,
-      }).catch(err => {
-        console.error('Failed to track PostHog event:', err);
+      }).catch(() => {
+        // Silently fail
       });
     }
 

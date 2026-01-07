@@ -94,8 +94,8 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
     trackEvent(user.dataValues.id.toString(), 'shopping_list_loaded', {
       family_group_id: Number(family_group_id),
       shopping_list_id: shoppingList.get('id'),
-    }).catch(err => {
-      console.error('Failed to track PostHog event:', err);
+    }).catch(() => {
+      // Silently fail
     });
   }
 

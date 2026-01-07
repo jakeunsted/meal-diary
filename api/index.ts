@@ -19,12 +19,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Initialise PostHog
-const posthog = getPostHog();
-if (posthog) {
-  console.log('PostHog initialized successfully');
-} else if (process.env.NODE_ENV === 'production') {
-  console.warn('PostHog: Not initialized - POSTHOG_KEY may be missing or invalid');
-}
+getPostHog();
 
 // Middleware
 // Trust proxy for Railway (needed for rate limiting and correct IP addresses)

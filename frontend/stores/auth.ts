@@ -50,7 +50,7 @@ export const useAuthStore = defineStore('auth', () => {
           });
         }
       } catch (error) {
-        console.warn('[Auth Store] Failed to identify user in PostHog:', error);
+        // Silently fail
       }
     }
     
@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
           ($posthog as any).reset();
         }
       } catch (error) {
-        console.warn('[Auth Store] Failed to reset PostHog:', error);
+        // Silently fail
       }
     }
     
@@ -176,7 +176,7 @@ export const useAuthStore = defineStore('auth', () => {
                 });
               }
             } catch (error) {
-              console.warn('[Auth Store] Failed to identify user in PostHog:', error);
+              // Silently fail
             }
           }
         } else {

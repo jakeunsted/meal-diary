@@ -9,9 +9,6 @@ let posthogClient: PostHog | null = null;
 export const getPostHog = (): PostHog | null => {
   if (!posthogClient) {
     if (!process.env.POSTHOG_KEY) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.warn('PostHog: POSTHOG_KEY environment variable not set');
-      }
       return null;
     }
 
@@ -23,12 +20,7 @@ export const getPostHog = (): PostHog | null => {
         flushAt: 1,
         flushInterval: 10000, // Flush every 10 seconds
       });
-
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`PostHog: Client initialized with host ${host}`);
-      }
     } catch (err) {
-      console.error('PostHog: Failed to initialize client:', err);
       return null;
     }
   }
@@ -46,19 +38,12 @@ export const trackEvent = async (
   event: string,
   properties?: Record<string, any>
 ): Promise<void> => {
-  // Log that trackEvent was called (helps debug if events aren't reaching PostHog)
-  if (process.env.NODE_ENV === 'production') {
-    console.log(`PostHog: trackEvent called for "${event}" (user: ${distinctId})`);
-  }
-
   const posthog = getPostHog();
   if (!posthog) {
-    console.warn(`PostHog: Skipping event "${event}" - client not initialized`);
     return;
   }
 
   if (!distinctId) {
-    console.warn(`PostHog: Skipping event "${event}" - missing distinctId`);
     return;
   }
 
@@ -73,25 +58,8 @@ export const trackEvent = async (
     });
     // Explicitly flush to ensure event is sent immediately
     await posthog.flush();
-    
-    // Log in production too (but less verbose) to verify events are being sent
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`PostHog: Event "${event}" sent for user ${distinctId}`);
-    } else {
-      console.log(`PostHog: Event "${event}" captured for user ${distinctId}`);
-    }
   } catch (err) {
-    // Log detailed error for debugging Railway issues - always log errors
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    const errorStack = err instanceof Error ? err.stack : undefined;
-    console.error(`PostHog: Error capturing event "${event}":`, {
-      error: errorMessage,
-      stack: errorStack,
-      distinctId,
-      event,
-      // Don't log full properties to avoid sensitive data
-      hasProperties: !!properties,
-    });
+    // Silently fail - don't log PostHog errors
   }
 };
 
@@ -117,7 +85,7 @@ export const identifyUser = async (
       // Explicitly flush to ensure event is sent immediately
       await posthog.flush();
     } catch (err) {
-      console.error('Error identifying user in PostHog:', err);
+      // Silently fail - don't log PostHog errors
     }
   }
 };
