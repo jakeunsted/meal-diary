@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
-import { DailyMeal } from '../../db/models/associations.ts';
+import { DailyMeal, User } from '../../db/models/associations.ts';
 import { Op } from 'sequelize';
+import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 
 // Create a new daily meal
 export const createDailyMeal = async (req: Request, res: Response) => {
@@ -20,6 +21,21 @@ export const createDailyMeal = async (req: Request, res: Response) => {
       lunch,
       dinner
     });
+
+    // Track daily meal created
+    const user = req.user as User;
+    if (user) {
+      const mealTypes: string[] = [];
+      if (breakfast) mealTypes.push('breakfast');
+      if (lunch) mealTypes.push('lunch');
+      if (dinner) mealTypes.push('dinner');
+      
+      await trackEvent(user.dataValues.id.toString(), 'daily_meal_created', {
+        meal_diary_id,
+        day_of_week,
+        meal_types: mealTypes,
+      });
+    }
 
     return res.status(201).json(dailyMeal);
   } catch (error) {
@@ -67,6 +83,21 @@ export const updateDailyMealById = async (req: Request, res: Response) => {
     dailyMeal.dataValues.dinner = dinner;
 
     await dailyMeal.save();
+
+    // Track daily meal updated
+    const user = req.user as User;
+    if (user) {
+      const mealTypes: string[] = [];
+      if (breakfast) mealTypes.push('breakfast');
+      if (lunch) mealTypes.push('lunch');
+      if (dinner) mealTypes.push('dinner');
+      
+      await trackEvent(user.dataValues.id.toString(), 'daily_meal_updated', {
+        daily_meal_id: id,
+        day_of_week: dailyMeal.dataValues.day_of_week,
+        meal_types: mealTypes,
+      });
+    }
 
     return res.status(200).json(dailyMeal);
   } catch (error) {

@@ -3,6 +3,7 @@ import { FamilyGroup, User } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
+import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 
 // Generate a random identifier (three 4-letter words separated by hyphens)
 const generateRandomIdentifier = (): string => {
@@ -47,6 +48,11 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
     monday.setHours(0, 0, 0, 0);
     await createNewWeeklyMeals(Number(familyGroup.dataValues.id), monday);
 
+    // Track family group creation
+    await trackEvent(created_by.toString(), 'family_group_created', {
+      family_group_id: familyGroup.dataValues.id,
+    });
+
     return res.status(201).json(familyGroup);
   } catch (error) {
     console.error('Error creating family group:', error);
@@ -59,6 +65,10 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
     const { random_identifier, user_id } = req.body;
 
     if (!random_identifier || !user_id) {
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'family_group_join_failure', {
+        reason: 'missing_fields',
+      });
       return res.status(412).json({ message: 'Random identifier and user id are required' });
     }
 
@@ -67,10 +77,18 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
     });
 
     if (!familyGroup) {
+      await trackEvent(user_id.toString(), 'family_group_join_failure', {
+        reason: 'not_found',
+      });
       return res.status(404).json({ message: 'Family group not found' });
     }
 
     await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: user_id } });
+
+    // Track successful family group join
+    await trackEvent(user_id.toString(), 'family_group_join_success', {
+      family_group_id: familyGroup.dataValues.id,
+    });
 
     return res.status(200).json({ message: 'Successfully joined family group' });
   } catch (error) {

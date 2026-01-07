@@ -180,6 +180,12 @@ export const addCategory = async (req: Request, res: Response) => {
       completeCategory
     );
 
+    // Track shopping list category added
+    await trackEvent(user.dataValues.id.toString(), 'shopping_list_category_added', {
+      family_group_id: Number(family_group_id),
+      category_id: Number(category_id),
+    });
+
     return completeCategory;
   });
 
@@ -317,6 +323,13 @@ export const addItem = async (req: Request, res: Response) => {
       shoppingListCategory
     );
 
+    // Track shopping list item added
+    await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_added', {
+      family_group_id: Number(family_group_id),
+      item_id: item.get('id'),
+      category_id: Number(shopping_list_categories),
+    });
+
     return item;
   });
 
@@ -399,6 +412,15 @@ export const updateItem = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to update item' });
   }
 
+  // Track shopping list item updated
+  const user = req.user as User;
+  if (user) {
+    await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_updated', {
+      family_group_id: Number(family_group_id),
+      item_id: Number(item_id),
+    });
+  }
+
   res.json(result);
 };
 
@@ -440,6 +462,15 @@ export const deleteItem = async (req: Request, res: Response) => {
       item,
       item.category
     );
+
+    // Track shopping list item deleted
+    const user = req.user as User;
+    if (user) {
+      await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_deleted', {
+        family_group_id: Number(family_group_id),
+        item_id: Number(item_id),
+      });
+    }
 
     return item;
   });

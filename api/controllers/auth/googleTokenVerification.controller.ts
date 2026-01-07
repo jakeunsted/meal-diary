@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import axios from 'axios';
 import { generateTokens, findOrCreateGoogleUser } from './auth.controller.ts';
+import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
+import User from '../../db/models/User.model.ts';
 
 /**
  * Verify Google ID token and authenticate user
@@ -14,6 +16,10 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
 
     if (!idToken) {
       res.status(400).json({ message: 'ID token is required' });
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'google_token_verification_failure', {
+        reason: 'missing_token',
+      });
       return;
     }
 
@@ -22,6 +28,10 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     if (!GOOGLE_CLIENT_ID) {
       console.error('[Google Token Verification] OAuth credentials not configured');
       res.status(500).json({ message: 'Server configuration error' });
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'google_token_verification_failure', {
+        reason: 'server_error',
+      });
       return;
     }
 
@@ -38,6 +48,10 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {
       console.error('[Google Token Verification] Token audience mismatch');
       res.status(401).json({ message: 'Invalid token' });
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'google_token_verification_failure', {
+        reason: 'invalid_token',
+      });
       return;
     }
 
@@ -54,14 +68,32 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     if (!googleProfile.email) {
       console.error('[Google Token Verification] No email in token');
       res.status(400).json({ message: 'No email in Google profile' });
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'google_token_verification_failure', {
+        reason: 'no_email',
+      });
       return;
     }
+
+    // Check if user exists before creating
+    const existingUser = await User.findOne({ where: { email: googleProfile.email.toLowerCase() } });
+    const isNewUser = !existingUser;
 
     // Find or create user
     const user = await findOrCreateGoogleUser(googleProfile);
 
     // Generate JWT tokens
     const { accessToken, refreshToken } = await generateTokens(user.id);
+
+    // Track successful Google token verification
+    await trackEvent(user.id.toString(), 'google_token_verification_success', {
+      is_new_user: isNewUser,
+    });
+
+    // Also track as login success
+    await trackEvent(user.id.toString(), 'login_success', {
+      auth_method: 'google',
+    });
 
     // Prepare user data (exclude password_hash)
     const userData = {
@@ -97,9 +129,17 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     
     if (errorObj.response?.status === 400) {
       res.status(400).json({ message: 'Invalid ID token' });
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'google_token_verification_failure', {
+        reason: 'invalid_token',
+      });
       return;
     }
     
     res.status(500).json({ message: 'Server error during token verification' });
+    const distinctId = getDistinctId(req);
+    await trackEvent(distinctId, 'google_token_verification_failure', {
+      reason: 'server_error',
+    });
   }
 };
