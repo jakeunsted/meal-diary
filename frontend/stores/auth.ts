@@ -39,6 +39,21 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
     
+    // Identify user in PostHog (must match backend distinct_id format)
+    if (import.meta.client && authData.user?.id) {
+      try {
+        const { $posthog } = useNuxtApp();
+        if ($posthog && typeof ($posthog as any).identify === 'function') {
+          ($posthog as any).identify(authData.user.id.toString(), {
+            email: authData.user.email,
+            name: `${authData.user.first_name} ${authData.user.last_name}`,
+          });
+        }
+      } catch (error) {
+        console.warn('[Auth Store] Failed to identify user in PostHog:', error);
+      }
+    }
+    
     // Save to Preferences
     if (import.meta.client) {
       const authState: AuthState = {
@@ -62,6 +77,19 @@ export const useAuthStore = defineStore('auth', () => {
   
   const clearAuth = async () => {
     console.log('[Auth Store] Clearing auth data');
+    
+    // Reset PostHog user identification
+    if (import.meta.client) {
+      try {
+        const { $posthog } = useNuxtApp();
+        if ($posthog && typeof ($posthog as any).reset === 'function') {
+          ($posthog as any).reset();
+        }
+      } catch (error) {
+        console.warn('[Auth Store] Failed to reset PostHog:', error);
+      }
+    }
+    
     // Clear state first
     user.value = null;
     accessToken.value = null;
@@ -136,6 +164,21 @@ export const useAuthStore = defineStore('auth', () => {
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
           console.log('[Auth Store] Successfully restored auth state');
+          
+          // Identify user in PostHog after restoring auth state
+          if (authState.user?.id) {
+            try {
+              const { $posthog } = useNuxtApp();
+              if ($posthog && typeof ($posthog as any).identify === 'function') {
+                ($posthog as any).identify(authState.user.id.toString(), {
+                  email: authState.user.email,
+                  name: `${authState.user.first_name} ${authState.user.last_name}`,
+                });
+              }
+            } catch (error) {
+              console.warn('[Auth Store] Failed to identify user in PostHog:', error);
+            }
+          }
         } else {
           console.log('[Auth Store] Incomplete auth state, clearing');
           // If data is incomplete, clear it
