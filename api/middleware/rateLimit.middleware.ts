@@ -1,8 +1,10 @@
 import rateLimit from 'express-rate-limit';
-import type { Options } from 'express-rate-limit';
+import type { Options, RateLimitRequestHandler } from 'express-rate-limit';
+import type { Request, Response, NextFunction } from 'express';
+import { trackEvent } from '../utils/posthog.ts';
 
 // Function to create rate limiters with environment-based configuration
-const createRateLimiter = (options: Options) => {
+const createRateLimiter = (options: Options, limiterType: string): RateLimitRequestHandler => {
   const environment = process.env.NODE_ENV;
   if (environment === 'development') {
     // No rate limits in development environment
@@ -11,7 +13,25 @@ const createRateLimiter = (options: Options) => {
       max: Infinity,
     });
   }
-  return rateLimit(options);
+  
+  // Add PostHog tracking when rate limit is exceeded
+  // Using type assertion since onLimitReached may not be in type definitions
+  const limiterOptions = {
+    ...options,
+    onLimitReached: (req: Request, res: Response) => {
+      const ip = req.ip || req.socket.remoteAddress || 'unknown';
+      trackEvent(ip, 'rate_limit_exceeded', {
+        endpoint: req.path,
+        method: req.method,
+        ip,
+        limiter_type: limiterType,
+      }).catch(trackErr => {
+        console.error('Error tracking rate limit event:', trackErr);
+      });
+    },
+  } as Options & { onLimitReached?: (req: Request, res: Response) => void };
+  
+  return rateLimit(limiterOptions);
 };
 
 // Rate limit for login attempts
@@ -21,7 +41,7 @@ export const loginLimiter = createRateLimiter({
   message: { message: 'Too many login attempts, please try again after 15 minutes' },
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
-} as Options);
+} as Options, 'login');
 
 // Rate limit for logout
 export const logoutLimiter = createRateLimiter({
@@ -30,7 +50,7 @@ export const logoutLimiter = createRateLimiter({
   message: { message: 'Too many logout attempts, please try again after 15 minutes' },
   standardHeaders: true,
   legacyHeaders: false,
-} as Options);
+} as Options, 'logout');
 
 // Rate limit for token refresh
 export const refreshTokenLimiter = createRateLimiter({
@@ -39,7 +59,7 @@ export const refreshTokenLimiter = createRateLimiter({
   message: { message: 'Too many token refresh attempts, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-} as Options);
+} as Options, 'refresh');
 
 // Rate limit for token validation
 export const validateTokenLimiter = createRateLimiter({
@@ -48,7 +68,7 @@ export const validateTokenLimiter = createRateLimiter({
   message: { message: 'Too many token validation requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-} as Options);
+} as Options, 'validate');
 
 // Rate limit for general API endpoints
 export const apiLimiter = createRateLimiter({
@@ -57,4 +77,4 @@ export const apiLimiter = createRateLimiter({
   message: { message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-} as Options); 
+} as Options, 'api'); 

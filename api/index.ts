@@ -12,6 +12,7 @@ import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
+import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -55,6 +56,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 // server api test coverage
 app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
+
+// Error tracking middleware (must be after routes)
+app.use(errorTrackingMiddleware);
 
 // Initialize the database
 (async () => {

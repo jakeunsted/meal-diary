@@ -1,4 +1,5 @@
 import { PostHog } from 'posthog-node';
+import type { Request } from 'express';
 
 let posthogClient: PostHog | null = null;
 
@@ -119,6 +120,53 @@ export const identifyUser = async (
       console.error('Error identifying user in PostHog:', err);
     }
   }
+};
+
+/**
+ * Get distinct ID from request (user ID or IP address)
+ * @param req - Express request object
+ * @returns distinct ID string
+ */
+export const getDistinctId = (req: Request): string => {
+  // Try to get user ID if authenticated
+  if (req.user && (req.user as any).dataValues?.id) {
+    return (req.user as any).dataValues.id.toString();
+  }
+  if (req.user && (req.user as any).id) {
+    return (req.user as any).id.toString();
+  }
+  
+  // Fall back to IP address
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  return ip;
+};
+
+/**
+ * Track an error event in PostHog
+ * @param req - Express request object
+ * @param error - Error object
+ * @param statusCode - HTTP status code
+ * @param additionalProperties - Additional properties to include
+ */
+export const trackError = async (
+  req: Request,
+  error: Error | unknown,
+  statusCode: number,
+  additionalProperties?: Record<string, any>
+): Promise<void> => {
+  const distinctId = getDistinctId(req);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : undefined;
+  
+  await trackEvent(distinctId, 'api_error', {
+    status_code: statusCode,
+    path: req.path,
+    method: req.method,
+    error_message: errorMessage,
+    error_stack: errorStack,
+    user_id: req.user ? getDistinctId(req) : undefined,
+    ...additionalProperties,
+  });
 };
 
 /**

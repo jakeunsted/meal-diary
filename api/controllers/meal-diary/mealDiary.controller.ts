@@ -132,6 +132,22 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       updatedMeal.dataValues as unknown as DailyMeal
     );
 
+    // Track meal updated
+    const user = req.user as User;
+    if (user) {
+      const mealTypes: string[] = [];
+      if (breakfast) mealTypes.push('breakfast');
+      if (lunch) mealTypes.push('lunch');
+      if (dinner) mealTypes.push('dinner');
+      
+      await trackEvent(user.dataValues.id.toString(), 'meal_updated', {
+        family_group_id: parseInt(family_group_id),
+        week_start_date: week_start_date as string,
+        day_of_week: parseInt(day_of_week),
+        meal_types: mealTypes,
+      });
+    }
+
     return res.status(200).json(updatedMeal);
   } catch (error) {
     console.error('Error updating daily meal:', error);

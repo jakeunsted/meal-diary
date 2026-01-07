@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { FamilyGroup, User } from '../../db/models/associations.ts';
 import { Op } from 'sequelize';
 import bcrypt from 'bcrypt';
+import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
@@ -11,12 +12,20 @@ export const createUser = async (req: Request, res: Response) => {
     
     // Validate required fields
     if (!username || !email || !password) {
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'user_registration_failed', {
+        reason: 'missing_fields',
+      });
       return res.status(400).json({ message: 'Username, email, and password are required' });
     }
 
     if (family_group_code) {
       const familyGroup = await FamilyGroup.findOne({ where: { random_identifier: family_group_code } });
       if (!familyGroup) {
+        const distinctId = getDistinctId(req);
+        await trackEvent(distinctId, 'user_registration_failed', {
+          reason: 'family_group_not_found',
+        });
         return res.status(404).json({ message: 'Family group not found' });
       }
       family_group_id = familyGroup.dataValues.id;
@@ -37,6 +46,10 @@ export const createUser = async (req: Request, res: Response) => {
     });
     
     if (existingUser) {
+      const distinctId = getDistinctId(req);
+      await trackEvent(distinctId, 'user_registration_failed', {
+        reason: 'user_exists',
+      });
       return res.status(409).json({ message: 'User with this username or email already exists' });
     }
     
@@ -50,6 +63,12 @@ export const createUser = async (req: Request, res: Response) => {
       family_group_id
     });
     
+    // Track user registration
+    await trackEvent(newUser.dataValues.id.toString(), 'user_registered', {
+      has_family_group_code: !!family_group_code,
+      family_group_id: family_group_id || null,
+    });
+    
     // Remove password hash from response
     const userResponse = newUser.toJSON();
     delete (userResponse as any).password_hash;
@@ -57,6 +76,10 @@ export const createUser = async (req: Request, res: Response) => {
     return res.status(201).json(userResponse);
   } catch (error) {
     console.error('Error creating user:', error);
+    const distinctId = getDistinctId(req);
+    await trackEvent(distinctId, 'user_registration_failed', {
+      reason: 'server_error',
+    });
     return res.status(500).json({ message: 'Failed to create user' });
   }
 };
