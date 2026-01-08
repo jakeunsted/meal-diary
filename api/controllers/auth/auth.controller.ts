@@ -212,13 +212,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
     const { refreshToken } = req.body;
-    console.log('[Refresh Token] Request received:', { 
-      hasRefreshToken: !!refreshToken,
-      tokenLength: refreshToken?.length
-    });
     
     if (!refreshToken) {
-      console.log('[Refresh Token] No refresh token provided');
       res.status(400).json({ message: 'Refresh token is required' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -229,7 +224,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     
     const refreshSecret = process.env.JWT_REFRESH_SECRET;
     if (!refreshSecret) {
-      console.error('[Refresh Token] JWT_REFRESH_SECRET is not defined');
       res.status(500).json({ message: 'Server configuration error' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -239,12 +233,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     // Verify refresh token
-    console.log('[Refresh Token] Verifying token');
     let decoded: { userId: number };
     try {
       decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
     } catch (jwtError) {
-      console.error('[Refresh Token] JWT verification failed:', jwtError);
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -253,10 +245,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
     
-    console.log('[Refresh Token] Token verified:', { userId: decoded.userId });
-    
     // Check if token exists and is not revoked
-    console.log('[Refresh Token] Checking stored token');
     const storedToken = await RefreshToken.findOne({
       where: {
         token: refreshToken,
@@ -276,10 +265,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     // Find user
-    console.log('[Refresh Token] Finding user:', { userId: decoded.userId });
     const user = await User.findByPk(decoded.userId) as User & UserAttributes;
     if (!user) {
-      console.log('[Refresh Token] User not found');
       res.status(401).json({ message: 'User not found' });
       await trackEvent(decoded.userId.toString(), 'token_refresh_failure', {
         reason: 'user_not_found',
@@ -288,9 +275,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     // Generate new tokens (this will automatically delete the old one)
-    console.log('[Refresh Token] Generating new tokens');
     const tokens = await generateTokens(user.id);
-    console.log('[Refresh Token] New tokens generated successfully');
     
     // Track successful token refresh
     await trackEvent(user.id.toString(), 'token_refresh_success', {});
@@ -301,7 +286,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     });
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
-      console.error('[Refresh Token] JWT verification failed:', err.message);
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -310,7 +294,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
     const error = err as Error;
-    console.error('[Refresh Token] Server error:', error);
     res.status(500).json({ message: 'Server error during token refresh' });
     const distinctId = getDistinctId(req);
     await trackEvent(distinctId, 'token_refresh_failure', {
@@ -344,7 +327,6 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     
     res.status(200).json({ message: 'Logged out successfully' });
   } catch (error) {
-    console.error('Logout error:', error);
     res.status(500).json({ message: 'Server error during logout' });
     const user = req.user as User & UserAttributes;
     if (user) {
