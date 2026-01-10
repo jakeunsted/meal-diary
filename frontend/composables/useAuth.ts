@@ -174,12 +174,12 @@ export const useAuth = () => {
       
       // Use $fetch directly instead of useApi to prevent recursion
       // The refresh endpoint doesn't require an access token, only the refresh token in the body
-      const response = await $fetch<TokenResponse>('/api/auth/refresh-token', {
+      const response = await $fetch('/api/auth/refresh-token', {
         method: 'POST',
         body: {
           refreshToken: authStore.refreshToken
         }
-      });
+      }) as TokenResponse;
       
       // Update tokens in store
       authStore.setAuth({

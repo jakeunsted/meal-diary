@@ -230,10 +230,10 @@ export const useApi = () => {
         ? { ...(existingHeaders as Record<string, string> || {}), ...headers }
         : existingHeaders;
 
-      return await $fetch<T>(url, {
+      return await $fetch(url, {
         ...options,
         headers: finalHeaders
-      } as any);
+      } as any) as T;
     } catch (error: any) {
       // Extract meaningful error message
       const errorMessage = extractErrorMessage(error);
