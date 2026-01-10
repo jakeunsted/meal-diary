@@ -46,8 +46,6 @@ export const hasFamilyGroup = (user: any): boolean => {
  * This function clears auth state and redirects to login
  */
 export const handleAutoLogout = async () => {
-  console.log('[Auto Logout] Handling automatic logout due to failed token refresh');
-  
   const authStore = useAuthStore();
   
   try {
@@ -60,7 +58,6 @@ export const handleAutoLogout = async () => {
         const router = useRouter();
         if (router && router.push) {
           await router.push('/login');
-          console.log('[Auto Logout] Successfully logged out and redirected to login');
           return;
         }
       } catch (routerError) {
@@ -110,27 +107,14 @@ export const useAuth = () => {
         }
       });
       
-      // Log response data for debugging
-      console.log('[useAuth] Login response:', {
-        hasUser: !!response.user,
-        userId: response.user?.id,
-        userEmail: response.user?.email,
-        family_group_id: response.user?.family_group_id,
-        hasFamilyGroup: !!response.user?.family_group_id,
-        hasAccessToken: !!response.accessToken,
-        hasRefreshToken: !!response.refreshToken
-      });
-      
       // Only store auth data if we have a valid response with tokens
       if (response && response.accessToken && response.refreshToken) {
         authStore.setAuth(response);
         
         // Determine redirect based on family group status
         if (!hasFamilyGroup(response.user)) {
-          console.log('[useAuth] No family group, redirecting to step-2');
           response.redirect = '/registration/step-2';
         } else {
-          console.log('[useAuth] Has family group, redirecting to diary');
           response.redirect = '/diary';
         }
         return response;
@@ -179,6 +163,7 @@ export const useAuth = () => {
   
   /**
    * Refreshes the user's tokens.
+   * Uses $fetch directly to avoid recursion through useApi
    * @returns {Promise<TokenResponse>} A promise that resolves to the token response.
    */
   const refreshTokens = async () => {
@@ -187,8 +172,9 @@ export const useAuth = () => {
         throw new Error('No refresh token available');
       }
       
-      const { api } = useApi();
-      const response = await api<TokenResponse>('/api/auth/refresh-token', {
+      // Use $fetch directly instead of useApi to prevent recursion
+      // The refresh endpoint doesn't require an access token, only the refresh token in the body
+      const response = await $fetch<TokenResponse>('/api/auth/refresh-token', {
         method: 'POST',
         body: {
           refreshToken: authStore.refreshToken
@@ -204,8 +190,11 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
+      console.error('[useAuth] Token refresh failed:', {
+        statusCode: err.statusCode,
+        message: err.message
+      });
       // If refresh fails, trigger automatic logout
-      console.log('[useAuth] Token refresh failed, triggering automatic logout');
       await handleAutoLogout();
       throw err;
     }

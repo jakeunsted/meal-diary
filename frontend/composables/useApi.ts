@@ -2,6 +2,8 @@ import type { FetchOptions } from 'ofetch';
 import { useToast } from '~/composables/useToast';
 import { handleAutoLogout } from '~/composables/useAuth';
 import { useAuthStore } from '~/stores/auth';
+import { isTokenExpired } from '~/composables/useJWT';
+import { useAuth } from '~/composables/useAuth';
 
 /**
  * Extract error message from various error formats
@@ -95,11 +97,28 @@ const getDefaultMessage = (statusCode: number): string => {
 
 /**
  * Check if an error is an authentication error based on status code or message
+ * Note: 403 might not always be an auth error - could be permission-based
  */
 const isAuthError = (error: any, errorMessage: string): boolean => {
-  // Check status codes
-  if (error?.statusCode === 401 || error?.statusCode === 403) {
+  // 401 is always an auth error
+  if (error?.statusCode === 401 || error?.status === 401) {
     return true;
+  }
+  
+  // 403 might be auth or permission - check the message
+  if (error?.statusCode === 403 || error?.status === 403) {
+    const lowerMessage = errorMessage.toLowerCase();
+    const authRelatedMessages = [
+      'invalid token',
+      'expired token',
+      'no token provided',
+      'unauthorized',
+      'token refresh failed',
+      'failed to refresh token',
+      'invalid or expired refresh token'
+    ];
+    // Only treat 403 as auth error if the message indicates token issues
+    return authRelatedMessages.some(msg => lowerMessage.includes(msg));
   }
   
   // Check for auth-related error messages (even in 500 errors)
@@ -107,8 +126,6 @@ const isAuthError = (error: any, errorMessage: string): boolean => {
     'Invalid or expired refresh token',
     'Failed to refresh token',
     'Token refresh failed',
-    'Unauthorized',
-    'Forbidden',
     'Invalid token',
     'Expired token',
     'No token provided'
@@ -118,6 +135,10 @@ const isAuthError = (error: any, errorMessage: string): boolean => {
   return authErrorMessages.some(msg => lowerMessage.includes(msg.toLowerCase()));
 };
 
+// Flag to prevent recursive refresh attempts
+let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
+
 /**
  * Composable for making API calls with automatic error handling
  * Wraps $fetch and automatically shows error toasts
@@ -125,16 +146,55 @@ const isAuthError = (error: any, errorMessage: string): boolean => {
 export const useApi = () => {
   const { showError } = useToast();
   const authStore = useAuthStore();
+  const { refreshTokens } = useAuth();
 
   /**
    * Make an API call with automatic error handling
    * Automatically adds authentication headers if available
+   * Checks token expiration and refreshes if needed before making requests
    * @param url - The URL to fetch
    * @param options - Fetch options
    * @returns The response data
    */
   const api = async <T = any>(url: string, options?: FetchOptions): Promise<T> => {
     try {
+      // Skip token expiration check if this is the refresh endpoint itself
+      const isRefreshEndpoint = url.includes('/auth/refresh-token');
+      
+      // Check if access token is expired and refresh if needed (client-side check)
+      if (!isRefreshEndpoint && authStore.accessToken && authStore.refreshToken) {
+        if (isTokenExpired(authStore.accessToken)) {
+          // If refresh is already in progress, wait for it to complete
+          if (isRefreshing && refreshPromise) {
+            try {
+              await refreshPromise;
+            } catch (refreshError: any) {
+              console.error('[useApi] Refresh failed while waiting:', refreshError);
+              await handleAutoLogout();
+              throw refreshError;
+            }
+          } else if (!isRefreshing) {
+            // Start refresh
+            isRefreshing = true;
+            refreshPromise = (async () => {
+              try {
+                await refreshTokens();
+              } catch (refreshError: any) {
+                console.error('[useApi] Failed to refresh token:', refreshError);
+                await handleAutoLogout();
+                throw refreshError;
+              } finally {
+                isRefreshing = false;
+                refreshPromise = null;
+              }
+            })();
+            
+            // Wait for refresh to complete
+            await refreshPromise;
+          }
+        }
+      }
+
       // Automatically add auth headers if available and not already provided
       const existingHeaders = options?.headers;
       const headers: Record<string, string> = {};
@@ -157,7 +217,7 @@ export const useApi = () => {
         }
       }
 
-      // Add auth headers if not present
+      // Add auth headers if not present (use updated tokens after potential refresh)
       if (authStore.accessToken && !hasAuthHeader) {
         headers['Authorization'] = `Bearer ${authStore.accessToken}`;
       }
@@ -182,8 +242,11 @@ export const useApi = () => {
       const isAuth = isAuthError(error, errorMessage);
       
       if (isAuth) {
-        // Trigger automatic logout for auth errors
-        console.log('[useApi] Authentication error detected, triggering automatic logout');
+        console.error('[useApi] Authentication error detected:', {
+          url,
+          statusCode: error.statusCode,
+          message: errorMessage
+        });
         await handleAutoLogout();
       } else {
         // Show error toast for non-auth errors
