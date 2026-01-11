@@ -38,17 +38,14 @@ async function refreshAccessToken(refreshToken: string, baseUrl: string): Promis
 
   if (!refreshResponse.ok) {
     const errorData = await refreshResponse.json().catch(() => ({ message: 'Failed to refresh token' }));
-    console.error('[authenticatedFetch] Token refresh failed:', {
-      status: refreshResponse.status,
-      error: errorData.message || 'Failed to refresh token'
-    });
     throw {
       statusCode: refreshResponse.status,
       message: errorData.message || 'Failed to refresh token'
     };
   }
 
-  return await refreshResponse.json() as TokenResponse;
+  const tokenData = await refreshResponse.json() as TokenResponse;
+  return tokenData;
 }
 
 export async function authenticatedFetch<T>(
@@ -71,8 +68,9 @@ export async function authenticatedFetch<T>(
 
   // Check if token is expired before making the request
   // Only check if we have a refresh token available
+  // Use a smaller buffer (30 seconds) on server-side to reduce unnecessary refresh attempts
   if (refreshToken) {
-    const expired = isTokenExpired(accessToken);
+    const expired = isTokenExpired(accessToken, 30);
 
     if (expired) {
       try {
@@ -81,19 +79,41 @@ export async function authenticatedFetch<T>(
         const tokenData = await refreshAccessToken(refreshToken, baseUrl);
         accessToken = tokenData.accessToken;
       } catch (error: any) {
-        console.error('[authenticatedFetch] Failed to refresh token:', {
-          error: error.message,
-          statusCode: error.statusCode
-        });
-        // If refresh fails, trigger automatic logout
-        if (process.client) {
-          const { handleAutoLogout } = await import('~/composables/useAuth');
-          await handleAutoLogout();
+        // If refresh fails with 403, it might be because the token was just rotated by client
+        // Check if the access token in the request is actually still valid (not expired)
+        const { decodeJWT, isTokenExpired } = await import('~/server/utils/jwt');
+        const decoded = decodeJWT(accessToken);
+        const issuedAt = decoded?.iat ? decoded.iat * 1000 : null;
+        const tokenAge = issuedAt ? Date.now() - issuedAt : null;
+        
+        // Check if token is actually expired (without buffer) - if not, it's still valid
+        const actuallyExpired = isTokenExpired(accessToken, 0); // No buffer for actual expiration check
+        
+        // If the access token is still valid (not actually expired) and refresh failed with 403, 
+        // the client likely just refreshed and the old refresh token was deleted
+        // Proceed with the access token from the request (it's the new one from client refresh)
+        if (!actuallyExpired && error.statusCode === 403) {
+          // Don't throw error, proceed with the access token from the request
+        } else if (actuallyExpired && error.statusCode === 403) {
+          // If token is actually expired and refresh failed, it means the refresh token was rotated
+          // Return 401 instead of 403 so client knows to retry with its new tokens
+          throw createError({
+            statusCode: 401,
+            message: 'Token expired and refresh token was rotated. Please retry with new tokens.'
+          });
+        } else {
+          // On server-side, don't trigger logout - let the error propagate to client
+          // The client will handle the error appropriately
+          // Only trigger logout if we're actually on the client
+          if (process.client) {
+            const { handleAutoLogout } = await import('~/composables/useAuth');
+            await handleAutoLogout();
+          }
+          throw createError({
+            statusCode: error.statusCode || 401,
+            message: error.message || 'Failed to refresh token'
+          });
         }
-        throw createError({
-          statusCode: error.statusCode || 401,
-          message: error.message || 'Failed to refresh token'
-        });
       }
     }
   }

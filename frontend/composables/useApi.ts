@@ -163,13 +163,14 @@ export const useApi = () => {
       
       // Check if access token is expired and refresh if needed (client-side check)
       if (!isRefreshEndpoint && authStore.accessToken && authStore.refreshToken) {
-        if (isTokenExpired(authStore.accessToken)) {
+        const expired = isTokenExpired(authStore.accessToken);
+        
+        if (expired) {
           // If refresh is already in progress, wait for it to complete
           if (isRefreshing && refreshPromise) {
             try {
               await refreshPromise;
             } catch (refreshError: any) {
-              console.error('[useApi] Refresh failed while waiting:', refreshError);
               await handleAutoLogout();
               throw refreshError;
             }
@@ -180,7 +181,6 @@ export const useApi = () => {
               try {
                 await refreshTokens();
               } catch (refreshError: any) {
-                console.error('[useApi] Failed to refresh token:', refreshError);
                 await handleAutoLogout();
                 throw refreshError;
               } finally {
@@ -196,6 +196,7 @@ export const useApi = () => {
       }
 
       // Automatically add auth headers if available and not already provided
+      // IMPORTANT: Always use the latest tokens from the store, especially after refresh
       const existingHeaders = options?.headers;
       const headers: Record<string, string> = {};
 
@@ -217,18 +218,19 @@ export const useApi = () => {
         }
       }
 
-      // Add auth headers if not present (use updated tokens after potential refresh)
-      if (authStore.accessToken && !hasAuthHeader) {
+      // Always override with latest tokens from store (especially after refresh)
+      // This ensures we use the new tokens even if headers were provided
+      if (authStore.accessToken) {
         headers['Authorization'] = `Bearer ${authStore.accessToken}`;
       }
-      if (authStore.refreshToken && !hasRefreshHeader) {
+      if (authStore.refreshToken) {
         headers['x-refresh-token'] = authStore.refreshToken;
       }
 
-      // Merge headers
-      const finalHeaders = Object.keys(headers).length > 0
+      // Merge headers - new tokens from store take precedence
+      const finalHeaders = existingHeaders
         ? { ...(existingHeaders as Record<string, string> || {}), ...headers }
-        : existingHeaders;
+        : headers;
 
       return await $fetch(url, {
         ...options,
