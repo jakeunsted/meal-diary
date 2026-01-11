@@ -60,12 +60,9 @@ import CategoryOptionsModal from '~/components/shopping-list/CategoryOptionsModa
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
-import { useShoppingListSSE } from '~/composables/useShoppingListSSE';
 
-const { $sse } = useNuxtApp();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
-const { setupShoppingListSSE, closeShoppingListSSE } = useShoppingListSSE();
 
 const loading = ref(true);
 const selectedCategory = ref(null);
@@ -195,10 +192,6 @@ onMounted(async () => {
         shoppingListStore.fetchItemCategories().catch(handleError)
       ]);
 
-      // Set up SSE connection after data is loaded
-      if (userStore.user?.family_group_id) {
-        setupShoppingListSSE(userStore.user.family_group_id);
-      }
     } catch (error) {
       handleError(error);
     } finally {
@@ -249,10 +242,6 @@ onMounted(async () => {
       console.warn('Could not set up viewport resize listener:', error);
     }
   }
-});
-
-onUnmounted(() => {
-  closeShoppingListSSE();
 });
 </script>
 

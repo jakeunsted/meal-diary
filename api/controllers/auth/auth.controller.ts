@@ -105,17 +105,35 @@ export const generateTokens = async (userId: number) => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
   
+  console.log('[generateTokens] Generating tokens for user:', {
+    userId,
+    tokenId,
+    expiresAt: expiresAt.toISOString()
+  });
+  
   // Delete any existing refresh token for this user
-  await RefreshToken.destroy({
+  const deletedCount = await RefreshToken.destroy({
     where: { user_id: userId }
   });
   
+  console.log('[generateTokens] Deleted existing refresh tokens:', {
+    userId,
+    deletedCount
+  });
+  
   // Create new refresh token
-  await RefreshToken.create({
+  const newRefreshToken = await RefreshToken.create({
     token: refreshToken,
     user_id: userId,
     expires_at: expiresAt,
     is_revoked: false
+  });
+  
+  console.log('[generateTokens] Created new refresh token:', {
+    userId,
+    tokenId: newRefreshToken.get('id'),
+    expiresAt: expiresAt.toISOString(),
+    refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
   });
   
   return { accessToken, refreshToken };
@@ -213,7 +231,14 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
   try {
     const { refreshToken } = req.body;
     
+    console.log('[Refresh Token Controller] Received refresh request:', {
+      hasToken: !!refreshToken,
+      tokenLength: refreshToken?.length,
+      tokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'none'
+    });
+    
     if (!refreshToken) {
+      console.error('[Refresh Token Controller] No refresh token provided');
       res.status(400).json({ message: 'Refresh token is required' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -224,6 +249,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     
     const refreshSecret = process.env.JWT_REFRESH_SECRET;
     if (!refreshSecret) {
+      console.error('[Refresh Token Controller] JWT_REFRESH_SECRET not configured');
       res.status(500).json({ message: 'Server configuration error' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -236,7 +262,14 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     let decoded: { userId: number };
     try {
       decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
+      console.log('[Refresh Token Controller] JWT verification successful:', {
+        userId: decoded.userId
+      });
     } catch (jwtError) {
+      console.error('[Refresh Token Controller] JWT verification failed:', {
+        error: jwtError instanceof Error ? jwtError.message : 'Unknown error',
+        errorName: jwtError instanceof Error ? jwtError.name : 'Unknown'
+      });
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -246,6 +279,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     // Check if token exists and is not revoked
+    console.log('[Refresh Token Controller] Checking stored token in database:', {
+      userId: decoded.userId,
+      tokenPreview: `${refreshToken.substring(0, 20)}...`
+    });
+    
     const storedToken = await RefreshToken.findOne({
       where: {
         token: refreshToken,
@@ -256,7 +294,20 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       }
     });
     
+    console.log('[Refresh Token Controller] Database lookup result:', {
+      found: !!storedToken,
+      userId: decoded.userId,
+      tokenId: storedToken?.get('id'),
+      isRevoked: storedToken?.get('is_revoked'),
+      expiresAt: storedToken?.get('expires_at') ? new Date(storedToken.get('expires_at') as Date).toISOString() : 'N/A',
+      now: new Date().toISOString()
+    });
+    
     if (!storedToken) {
+      console.error('[Refresh Token Controller] Token not found or invalid in database:', {
+        userId: decoded.userId,
+        reason: 'Token may be revoked, expired, or not found'
+      });
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       await trackEvent(decoded.userId.toString(), 'token_refresh_failure', {
         reason: 'expired_token',
@@ -267,6 +318,9 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     // Find user
     const user = await User.findByPk(decoded.userId) as User & UserAttributes;
     if (!user) {
+      console.error('[Refresh Token Controller] User not found:', {
+        userId: decoded.userId
+      });
       res.status(401).json({ message: 'User not found' });
       await trackEvent(decoded.userId.toString(), 'token_refresh_failure', {
         reason: 'user_not_found',
@@ -274,8 +328,20 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
     
+    console.log('[Refresh Token Controller] Generating new tokens for user:', {
+      userId: user.id,
+      familyGroupId: user.family_group_id
+    });
+    
     // Generate new tokens (this will automatically delete the old one)
     const tokens = await generateTokens(user.id);
+    
+    console.log('[Refresh Token Controller] Token refresh successful:', {
+      userId: user.id,
+      hasAccessToken: !!tokens.accessToken,
+      hasRefreshToken: !!tokens.refreshToken,
+      oldTokenId: storedToken.get('id')
+    });
     
     // Track successful token refresh
     await trackEvent(user.id.toString(), 'token_refresh_success', {});
@@ -286,6 +352,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     });
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
+      console.error('[Refresh Token Controller] JWT error in catch block:', {
+        error: err.message,
+        name: err.name
+      });
       res.status(403).json({ message: 'Invalid or expired refresh token' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -294,6 +364,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
     const error = err as Error;
+    console.error('[Refresh Token Controller] Unexpected error:', {
+      error: error.message,
+      stack: error.stack
+    });
     res.status(500).json({ message: 'Server error during token refresh' });
     const distinctId = getDistinctId(req);
     await trackEvent(distinctId, 'token_refresh_failure', {

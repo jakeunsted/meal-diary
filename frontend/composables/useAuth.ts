@@ -169,6 +169,7 @@ export const useAuth = () => {
   const refreshTokens = async () => {
     try {
       if (!authStore.refreshToken) {
+        console.error('[useAuth Client] No refresh token available');
         throw new Error('No refresh token available');
       }
       
@@ -190,10 +191,6 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
-      console.error('[useAuth] Token refresh failed:', {
-        statusCode: err.statusCode,
-        message: err.message
-      });
       // If refresh fails, trigger automatic logout
       await handleAutoLogout();
       throw err;
