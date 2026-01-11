@@ -234,8 +234,18 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     handleDailyMealUpdate(dailyMeal: DailyMeal) {
       if (!dailyMeal) return;
 
+      // Normalize week_start_date for comparison (handle both Date objects and strings)
+      const incomingWeekStart = dailyMeal.week_start_date 
+        ? (typeof dailyMeal.week_start_date === 'string' 
+            ? dailyMeal.week_start_date 
+            : new Date(dailyMeal.week_start_date).toISOString())
+        : null;
+      
+      const currentWeekStart = this.currentWeekStart;
+
       // Only process updates for the current week being viewed
-      if (dailyMeal.week_start_date !== this.currentWeekStart) {
+      // Compare normalized ISO strings
+      if (incomingWeekStart && currentWeekStart && incomingWeekStart !== currentWeekStart) {
         return;
       }
 
@@ -256,7 +266,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         // Add new meal
         this.weeklyMeals.push({
           ...dailyMeal,
-          week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString()
+          week_start_date: currentWeekStart || this.getWeekStartDate().toISOString()
         });
       }
 

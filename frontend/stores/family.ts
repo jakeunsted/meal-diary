@@ -3,6 +3,8 @@ import { Preferences } from '@capacitor/preferences';
 import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 import { useApi } from '~/composables/useApi';
+import { useUserStore } from '~/stores/user';
+import { useAuthStore } from '~/stores/auth';
 
 const CACHE_NAME = 'avatar-cache-v1';
 
