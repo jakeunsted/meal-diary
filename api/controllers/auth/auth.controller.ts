@@ -1,143 +1,8 @@
 import type { Request, Response } from 'express';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../../db/models/User.model.ts';
-import RefreshToken from '../../db/models/RefreshToken.model.ts';
-import { Op } from 'sequelize';
-import crypto from 'crypto';
-import axios from 'axios';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
-
-/**
- * Find or create user from Google profile data
- * @param {Object} googleProfile - Google profile data
- * @returns {Promise<User & UserAttributes>} The user object
- */
-export const findOrCreateGoogleUser = async (googleProfile: {
-  id: string;
-  email?: string;
-  given_name?: string;
-  family_name?: string;
-  picture?: string;
-  name?: string;
-}) => {
-  const googleId = googleProfile.id;
-  const email = googleProfile.email?.toLowerCase();
-  const firstName = googleProfile.given_name;
-  const lastName = googleProfile.family_name;
-  const avatarUrl = googleProfile.picture;
-
-  if (!email) {
-    throw new Error('No email in Google profile');
-  }
-
-  // Find or create user
-  let user = await User.findOne({ where: { email } }) as User & UserAttributes;
-
-  if (user) {
-    // User exists - update Google ID if not set
-    if (!user.google_id) {
-      await user.update({ google_id: googleId });
-    }
-    // Update avatar if available
-    if (avatarUrl && !user.avatar_url) {
-      await user.update({ avatar_url: avatarUrl });
-    }
-  } else {
-    // Create new user
-    // Generate username from email (before @)
-    const usernameBase = email.split('@')[0];
-    let username = usernameBase;
-    let counter = 1;
-
-    // Ensure username is unique
-    while (await User.findOne({ where: { username } })) {
-      username = `${usernameBase}${counter}`;
-      counter++;
-    }
-
-    user = await User.create({
-      email,
-      username,
-      google_id: googleId,
-      first_name: firstName,
-      last_name: lastName,
-      avatar_url: avatarUrl,
-      password_hash: undefined, // Google-only account
-    }) as User & UserAttributes;
-  }
-
-  return user;
-};
-
-/**
- * Generate JWT tokens
- * @param {number} userId - The user id
- * @returns {Promise<{ accessToken: string, refreshToken: string }>} The generated tokens
- */
-export const generateTokens = async (userId: number) => {
-  const accessSecret = process.env.JWT_ACCESS_SECRET;
-  const refreshSecret = process.env.JWT_REFRESH_SECRET;
-  
-  if (!accessSecret || !refreshSecret) {
-    throw new Error('JWT secrets not configured');
-  }
-  
-  const accessToken = jwt.sign(
-    { userId },
-    accessSecret,
-    { expiresIn: '15m' } // Short-lived access token
-  );
-  
-  // Generate a unique identifier for the refresh token
-  const tokenId = crypto.randomUUID();
-  
-  const refreshToken = jwt.sign(
-    { 
-      userId,
-      tokenId // Add unique identifier to prevent token collisions
-    },
-    refreshSecret,
-    { expiresIn: '7d' } // 7-day refresh token
-  );
-  
-  // Store refresh token in database
-  const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
-  
-  console.log('[generateTokens] Generating tokens for user:', {
-    userId,
-    tokenId,
-    expiresAt: expiresAt.toISOString()
-  });
-  
-  // Delete any existing refresh token for this user
-  const deletedCount = await RefreshToken.destroy({
-    where: { user_id: userId }
-  });
-  
-  console.log('[generateTokens] Deleted existing refresh tokens:', {
-    userId,
-    deletedCount
-  });
-  
-  // Create new refresh token
-  const newRefreshToken = await RefreshToken.create({
-    token: refreshToken,
-    user_id: userId,
-    expires_at: expiresAt,
-    is_revoked: false
-  });
-  
-  console.log('[generateTokens] Created new refresh token:', {
-    userId,
-    tokenId: newRefreshToken.get('id'),
-    expiresAt: expiresAt.toISOString(),
-    refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
-  });
-  
-  return { accessToken, refreshToken };
-};
+import * as AuthService from '../../services/auth.service.ts';
 
 /**
  * Login controller
@@ -158,59 +23,50 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
     
-    // Find user by email
-    const user = await User.findOne({ where: { email: email.toLowerCase() } }) as User & UserAttributes;
-    if (!user) {
-      res.status(401).json({ message: 'Invalid credentials' });
+    try {
+      const { user, tokens } = await AuthService.authenticateUser({ email, password });
+      
+      // Track successful login
+      await trackEvent(user.id.toString(), 'login_success', {
+        auth_method: 'email',
+      });
+      
+      // Log user data for debugging
+      console.log('[Login] User data:', {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        family_group_id: user.family_group_id,
+        hasFamilyGroup: !!user.family_group_id
+      });
+      
+      // Return user data and tokens
+      res.status(200).json({
+        user,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken
+      });
+    } catch (authError) {
+      const errorMessage = authError instanceof Error ? authError.message : 'Invalid credentials';
+      const statusCode = errorMessage.includes('required') ? 400 : 401;
+      
+      res.status(statusCode).json({ message: errorMessage });
+      
+      // Determine failure reason for tracking
+      let reason = 'invalid_credentials';
+      if (errorMessage.includes('required')) {
+        reason = 'missing_fields';
+      } else if (errorMessage.includes('Google')) {
+        reason = 'no_password';
+      } else if (errorMessage.includes('not found')) {
+        reason = 'user_not_found';
+      }
+      
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'login_failure', {
-        reason: 'user_not_found',
+        reason,
       });
-      return;
     }
-    
-    // Check if user has a password (not a Google-only account)
-    if (!user.password_hash) {
-      res.status(401).json({ message: 'Invalid credentials. Please sign in with Google.' });
-      await trackEvent(user.id.toString(), 'login_failure', {
-        reason: 'no_password',
-      });
-      return;
-    }
-    
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-    if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid credentials' });
-      await trackEvent(user.id.toString(), 'login_failure', {
-        reason: 'invalid_credentials',
-      });
-      return;
-    }
-    
-    // Generate tokens
-    const { accessToken, refreshToken } = await generateTokens(user.id);
-    
-    // Track successful login
-    await trackEvent(user.id.toString(), 'login_success', {
-      auth_method: 'email',
-    });
-    
-    // Log user data for debugging
-    console.log('[Login] User data:', {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      family_group_id: user.family_group_id,
-      hasFamilyGroup: !!user.family_group_id
-    });
-    
-    // Return user data and tokens
-    res.status(200).json({
-      user,
-      accessToken,
-      refreshToken
-    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Server error during login' });
@@ -247,109 +103,66 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       return;
     }
     
-    const refreshSecret = process.env.JWT_REFRESH_SECRET;
-    if (!refreshSecret) {
-      console.error('[Refresh Token Controller] JWT_REFRESH_SECRET not configured');
-      res.status(500).json({ message: 'Server configuration error' });
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'token_refresh_failure', {
-        reason: 'server_error',
-      });
-      return;
-    }
-    
-    // Verify refresh token
-    let decoded: { userId: number };
     try {
-      decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
-      console.log('[Refresh Token Controller] JWT verification successful:', {
-        userId: decoded.userId
+      const { user, tokens } = await AuthService.refreshUserTokens(refreshToken);
+      
+      console.log('[Refresh Token Controller] Token refresh successful:', {
+        userId: user.id,
+        hasAccessToken: !!tokens.accessToken,
+        hasRefreshToken: !!tokens.refreshToken
       });
-    } catch (jwtError) {
-      console.error('[Refresh Token Controller] JWT verification failed:', {
-        error: jwtError instanceof Error ? jwtError.message : 'Unknown error',
-        errorName: jwtError instanceof Error ? jwtError.name : 'Unknown'
+      
+      // Track successful token refresh
+      await trackEvent(user.id.toString(), 'token_refresh_success', {});
+      
+      res.status(200).json({
+        ...tokens,
+        user
       });
-      res.status(403).json({ message: 'Invalid or expired refresh token' });
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'token_refresh_failure', {
-        reason: 'invalid_token',
-      });
-      return;
-    }
-    
-    // Check if token exists and is not revoked
-    console.log('[Refresh Token Controller] Checking stored token in database:', {
-      userId: decoded.userId,
-      tokenPreview: `${refreshToken.substring(0, 20)}...`
-    });
-    
-    const storedToken = await RefreshToken.findOne({
-      where: {
-        token: refreshToken,
-        is_revoked: false,
-        expires_at: {
-          [Op.gt]: new Date() // Token hasn't expired
-        }
+    } catch (serviceError) {
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Invalid or expired refresh token';
+      
+      // Determine failure reason for tracking
+      let reason = 'invalid_token';
+      let statusCode = 403;
+      
+      if (errorMessage.includes('required')) {
+        reason = 'missing_token';
+        statusCode = 400;
+      } else if (errorMessage.includes('not configured')) {
+        reason = 'server_error';
+        statusCode = 500;
+      } else if (errorMessage.includes('User not found')) {
+        reason = 'user_not_found';
+        statusCode = 401;
+      } else if (errorMessage.includes('expired')) {
+        reason = 'expired_token';
       }
-    });
-    
-    console.log('[Refresh Token Controller] Database lookup result:', {
-      found: !!storedToken,
-      userId: decoded.userId,
-      tokenId: storedToken?.get('id'),
-      isRevoked: storedToken?.get('is_revoked'),
-      expiresAt: storedToken?.get('expires_at') ? new Date(storedToken.get('expires_at') as Date).toISOString() : 'N/A',
-      now: new Date().toISOString()
-    });
-    
-    if (!storedToken) {
-      console.error('[Refresh Token Controller] Token not found or invalid in database:', {
-        userId: decoded.userId,
-        reason: 'Token may be revoked, expired, or not found'
+      
+      console.error('[Refresh Token Controller] Service error:', {
+        error: errorMessage,
+        reason,
+        statusCode
       });
-      res.status(403).json({ message: 'Invalid or expired refresh token' });
-      await trackEvent(decoded.userId.toString(), 'token_refresh_failure', {
-        reason: 'expired_token',
+      
+      res.status(statusCode).json({ message: errorMessage });
+      
+      // Try to get userId from token for tracking
+      let distinctId = getDistinctId(req);
+      try {
+        const refreshSecret = process.env.JWT_REFRESH_SECRET;
+        if (refreshSecret) {
+          const decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
+          distinctId = decoded.userId.toString();
+        }
+      } catch {
+        // Use request distinctId if token decode fails
+      }
+      
+      await trackEvent(distinctId, 'token_refresh_failure', {
+        reason,
       });
-      return;
     }
-    
-    // Find user
-    const user = await User.findByPk(decoded.userId) as User & UserAttributes;
-    if (!user) {
-      console.error('[Refresh Token Controller] User not found:', {
-        userId: decoded.userId
-      });
-      res.status(401).json({ message: 'User not found' });
-      await trackEvent(decoded.userId.toString(), 'token_refresh_failure', {
-        reason: 'user_not_found',
-      });
-      return;
-    }
-    
-    console.log('[Refresh Token Controller] Generating new tokens for user:', {
-      userId: user.id,
-      familyGroupId: user.family_group_id
-    });
-    
-    // Generate new tokens (this will automatically delete the old one)
-    const tokens = await generateTokens(user.id);
-    
-    console.log('[Refresh Token Controller] Token refresh successful:', {
-      userId: user.id,
-      hasAccessToken: !!tokens.accessToken,
-      hasRefreshToken: !!tokens.refreshToken,
-      oldTokenId: storedToken.get('id')
-    });
-    
-    // Track successful token refresh
-    await trackEvent(user.id.toString(), 'token_refresh_success', {});
-    
-    res.status(200).json({
-      ...tokens,
-      user
-    });
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
       console.error('[Refresh Token Controller] JWT error in catch block:', {
@@ -387,12 +200,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     const user = req.user as User & UserAttributes;
     const refreshToken = req.body.refreshToken;
     
-    if (refreshToken) {
-      // Delete the refresh token
-      await RefreshToken.destroy({
-        where: { token: refreshToken }
-      });
-    }
+    await AuthService.revokeRefreshToken(refreshToken);
     
     // Track successful logout
     if (user) {
@@ -467,7 +275,7 @@ export const initiateGoogleAuth = async (req: Request, res: Response): Promise<v
     await trackEvent(distinctId, 'google_oauth_initiated', {});
 
     // Generate state parameter for CSRF protection
-    const state = crypto.randomBytes(32).toString('hex');
+    const state = AuthService.generateOAuthState();
     
     // Store state in a cookie or return it to be stored client-side
     // For simplicity, we'll include it in the redirect URL and validate it in callback
@@ -531,89 +339,68 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
       return;
     }
 
-    const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-    const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-    const GOOGLE_CALLBACK_URL = process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3001/auth/google/callback';
+    try {
+      // Exchange authorization code for access token and fetch profile
+      const { profile } = await AuthService.exchangeGoogleCode(code as string);
 
-    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
-      console.error('[Google OAuth] OAuth credentials not configured');
+      // Check if user exists before creating
+      const existingUser = await User.findOne({ where: { email: profile.email?.toLowerCase() } });
+      const isNewUser = !existingUser;
+
+      // Find or create user using service
+      const user = await AuthService.findOrCreateGoogleUser(profile);
+
+      // Generate JWT tokens
+      const tokens = await AuthService.generateTokens(user.id);
+
+      // Track successful Google OAuth callback
+      await trackEvent(user.id.toString(), 'google_oauth_callback_success', {
+        is_new_user: isNewUser,
+      });
+
+      // Also track as login success
+      await trackEvent(user.id.toString(), 'login_success', {
+        auth_method: 'google',
+      });
+
+      // Prepare user data (exclude password_hash)
+      const userData = {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        family_group_id: user.family_group_id,
+        avatar_url: user.avatar_url,
+        created_at: user.created_at,
+        updated_at: user.updated_at
+      };
+
+      // Log user data for debugging
+      console.log('[Google OAuth] User authenticated:', {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        family_group_id: user.family_group_id,
+        hasFamilyGroup: !!user.family_group_id
+      });
+
+      // Redirect to frontend callback page with tokens and user data
+      const redirectUrl = `${FRONTEND_URL}/auth/google/callback?` +
+        `accessToken=${encodeURIComponent(tokens.accessToken)}&` +
+        `refreshToken=${encodeURIComponent(tokens.refreshToken)}&` +
+        `user=${encodeURIComponent(JSON.stringify(userData))}`;
+
+      res.redirect(redirectUrl);
+    } catch (serviceError) {
+      console.error('[Google OAuth] Service error:', serviceError);
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'OAuth failed';
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'google_oauth_callback_failure', {
         reason: 'server_error',
       });
-      res.redirect(`${FRONTEND_URL}/login?error=server_error`);
-      return;
+      res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
     }
-
-    // Exchange authorization code for access token
-    const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-      code,
-      client_id: GOOGLE_CLIENT_ID,
-      client_secret: GOOGLE_CLIENT_SECRET,
-      redirect_uri: GOOGLE_CALLBACK_URL,
-      grant_type: 'authorization_code',
-    });
-
-    const { access_token } = tokenResponse.data;
-
-    // Fetch user profile from Google
-    const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: {
-        Authorization: `Bearer ${access_token}`,
-      },
-    });
-
-    const googleProfile = profileResponse.data;
-
-    // Check if user exists before creating
-    const existingUser = await User.findOne({ where: { email: googleProfile.email?.toLowerCase() } });
-    const isNewUser = !existingUser;
-
-    // Find or create user using shared function
-    const user = await findOrCreateGoogleUser(googleProfile);
-
-    // Generate JWT tokens
-    const { accessToken, refreshToken } = await generateTokens(user.id);
-
-    // Track successful Google OAuth callback
-    await trackEvent(user.id.toString(), 'google_oauth_callback_success', {
-      is_new_user: isNewUser,
-    });
-
-    // Also track as login success
-    await trackEvent(user.id.toString(), 'login_success', {
-      auth_method: 'google',
-    });
-
-    // Prepare user data (exclude password_hash)
-    const userData = {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      family_group_id: user.family_group_id,
-      avatar_url: user.avatar_url,
-      created_at: user.created_at,
-      updated_at: user.updated_at
-    };
-
-    // Log user data for debugging
-    console.log('[Google OAuth] User authenticated:', {
-      id: user.id,
-      email: user.email,
-      username: user.username,
-      family_group_id: user.family_group_id,
-      hasFamilyGroup: !!user.family_group_id
-    });
-
-    // Redirect to frontend callback page with tokens and user data
-    const redirectUrl = `${FRONTEND_URL}/auth/google/callback?` +
-      `accessToken=${encodeURIComponent(accessToken)}&` +
-      `refreshToken=${encodeURIComponent(refreshToken)}&` +
-      `user=${encodeURIComponent(JSON.stringify(userData))}`;
-
-    res.redirect(redirectUrl);
   } catch (error) {
     console.error('[Google OAuth] Callback error:', error);
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
