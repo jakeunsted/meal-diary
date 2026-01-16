@@ -261,7 +261,7 @@ router.get('/:family_group_id', async (req, res, next) => {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ShoppingListCategory'
+ *               $ref: '#/components/schemas/ShoppingListCategoryWithItems'
  *       404:
  *         description: Shopping list category not found
  *         content:
@@ -273,7 +273,7 @@ router.get('/:family_group_id', async (req, res, next) => {
  *                   type: string
  *                   example: Shopping list not found
  *       412:
- *         description: Name is required
+ *         description: Category ID is required
  *         content:
  *           application/json:
  *             schema:
@@ -281,7 +281,7 @@ router.get('/:family_group_id', async (req, res, next) => {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Name is required
+ *                   example: Category ID is required
  *       500:
  *         description: Failed to add new category
  */
@@ -308,23 +308,13 @@ router.post('/:family_group_id/categories/:category_id', async (req, res, next) 
  *         description: The id of the family group
  *     responses:
  *       200:
- *         description: The categories for the shopping list
+ *         description: The categories for the shopping list (returns empty array if shopping list not found)
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/ShoppingListCategoryWithItems'
- *       404:
- *         description: Categories not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Categories not found
  *       412:
  *         description: Family group ID is required
  *         content:
@@ -467,6 +457,9 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - checked
  *             properties:
  *               name:
  *                 type: string
@@ -474,9 +467,6 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *               checked:
  *                 type: boolean
  *                 description: Whether the item is checked
- *               shopping_list_categories:
- *                 type: integer
- *                 description: The id of the category to move the item to
  *     responses:
  *       200:
  *         description: The updated item
@@ -484,8 +474,8 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ShoppingListItem'
- *       404:
- *         description: Item or category not found
+ *       400:
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
@@ -493,7 +483,22 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Item or category not found
+ *                   examples:
+ *                     - Valid item ID is required
+ *                     - Valid family group ID is required
+ *                     - Name and checked status are required
+ *                     - Name must be a non-empty string
+ *                     - Checked status must be a boolean
+ *       404:
+ *         description: Item not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item not found
  *       500:
  *         description: Failed to update item
  */
