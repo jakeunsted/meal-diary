@@ -112,11 +112,45 @@ const router = express.Router();
  *             schema:
  *               $ref: '#/components/schemas/User'
  *       400:
- *         description: Username, email, and password are required
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Username, email, and password are required
+ *       404:
+ *         description: Family group not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Family group not found
  *       409:
  *         description: User with this username or email already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User with this username or email already exists
  *       500:
  *         description: Failed to create user
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to create user
  */
 router.post('/', async (req, res, next) => {
   try {
@@ -228,6 +262,10 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *                 type: integer
  *                 nullable: true
  *                 description: The id of the family group the user belongs to
+ *               avatar_url:
+ *                 type: string
+ *                 nullable: true
+ *                 description: The url of the user's avatar
  *     responses:
  *       200:
  *         description: The updated user

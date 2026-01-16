@@ -36,12 +36,13 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *           schema:
  *             type: object
  *             required:
- *               - username
+ *               - email
  *               - password
  *             properties:
- *               username:
+ *               email:
  *                 type: string
- *                 description: The user's username.
+ *                 format: email
+ *                 description: The user's email address.
  *               password:
  *                 type: string
  *                 description: The user's password.
@@ -53,12 +54,25 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *             schema:
  *               type: object
  *               properties:
+ *                 user:
+ *                   type: object
+ *                   description: User data
  *                 accessToken:
  *                   type: string
  *                   description: The access token.
  *                 refreshToken:
  *                   type: string
  *                   description: The refresh token.
+ *       400:
+ *         description: Missing required fields
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Email and password are required
  *       401:
  *         description: Authentication failed.
  *         content:
@@ -69,6 +83,19 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                 message:
  *                   type: string
  *                   description: Error message.
+ *                   examples:
+ *                     - Invalid credentials
+ *                     - Invalid credentials. Please sign in with Google.
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error during login
  */
 router.post('/login', loginLimiter, wrapHandler(login));
 
@@ -100,14 +127,17 @@ router.post('/login', loginLimiter, wrapHandler(login));
  *             schema:
  *               type: object
  *               properties:
+ *                 user:
+ *                   type: object
+ *                   description: User data
  *                 accessToken:
  *                   type: string
  *                   description: The new access token.
  *                 refreshToken:
  *                   type: string
  *                   description: The new refresh token.
- *       401:
- *         description: Token refresh failed.
+ *       400:
+ *         description: Missing refresh token
  *         content:
  *           application/json:
  *             schema:
@@ -115,7 +145,37 @@ router.post('/login', loginLimiter, wrapHandler(login));
  *               properties:
  *                 message:
  *                   type: string
- *                   description: Error message.
+ *                   example: Refresh token is required
+ *       401:
+ *         description: User not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       403:
+ *         description: Invalid or expired refresh token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid or expired refresh token
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error during token refresh
  */
 // NOTE: Refresh token route currently has NO rate limiting applied.
 // Nuxt SSR can trigger multiple refreshes during normal navigation,
@@ -203,9 +263,17 @@ router.get('/validate', validateTokenLimiter, authenticateToken, wrapHandler(val
  *     description: Redirects user to Google OAuth consent screen
  *     responses:
  *       302:
- *         description: Redirect to Google OAuth
+ *         description: Redirect to Google OAuth consent screen
  *       500:
- *         description: Server error
+ *         description: Server error or OAuth not configured
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Google OAuth not configured
  */
 router.get('/google', loginLimiter, wrapHandler(initiateGoogleAuth));
 
@@ -231,7 +299,15 @@ router.get('/google', loginLimiter, wrapHandler(initiateGoogleAuth));
  *         description: State parameter for CSRF protection
  *     responses:
  *       302:
- *         description: Redirect to frontend with tokens
+ *         description: Redirect to frontend with tokens or error
+ *         headers:
+ *           Location:
+ *             description: Redirect URL with tokens (success) or error query param (failure)
+ *             schema:
+ *               type: string
+ *               examples:
+ *                 success: /auth/google/callback?accessToken=...&refreshToken=...&user=...
+ *                 error: /login?error=invalid_state
  *       500:
  *         description: Server error
  */
@@ -276,10 +352,36 @@ router.get('/google/callback', loginLimiter, wrapHandler(handleGoogleCallback));
  *                   description: The refresh token
  *       400:
  *         description: Invalid token or missing email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   examples:
+ *                     - ID token is required
+ *                     - No email in Google profile
  *       401:
  *         description: Invalid token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid token
  *       500:
- *         description: Server error
+ *         description: Server error or OAuth not configured
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Server error during token verification
  */
 router.post('/google/verify-token', loginLimiter, wrapHandler(verifyGoogleToken));
 
