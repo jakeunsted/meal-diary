@@ -51,6 +51,14 @@ const router = express.Router();
  *                 $ref: '#/components/schemas/ItemCategory'
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error fetching item categories
  */
 router.get('/', authenticateToken, async (req, res, next) => {
   try {
@@ -84,8 +92,24 @@ router.get('/', authenticateToken, async (req, res, next) => {
  *               $ref: '#/components/schemas/ItemCategory'
  *       404:
  *         description: Item category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item category not found
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error fetching item category
  */
 router.get('/:id', authenticateToken, async (req, res, next) => {
   try {
@@ -127,8 +151,24 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *               $ref: '#/components/schemas/ItemCategory'
  *       400:
  *         description: Invalid input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Name is required
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error creating item category
  */
 router.post('/', authenticateToken, async (req, res, next) => {
   try {
@@ -175,8 +215,24 @@ router.post('/', authenticateToken, async (req, res, next) => {
  *               $ref: '#/components/schemas/ItemCategory'
  *       404:
  *         description: Item category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item category not found
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error updating item category
  */
 router.put('/:id', authenticateToken, async (req, res, next) => {
   try {
@@ -204,10 +260,34 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
  *     responses:
  *       200:
  *         description: Item category deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item category deleted successfully
  *       404:
  *         description: Item category not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Item category not found
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Error deleting item category
  */
 router.delete('/:id', authenticateToken, async (req, res, next) => {
   try {
