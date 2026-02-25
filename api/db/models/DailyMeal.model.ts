@@ -9,11 +9,14 @@ interface DailyMealAttributes {
   breakfast?: string;
   lunch?: string;
   dinner?: string;
+  breakfast_recipe_id?: number;
+  lunch_recipe_id?: number;
+  dinner_recipe_id?: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface DailyMealCreationAttributes extends Optional<DailyMealAttributes, 'id' | 'breakfast' | 'lunch' | 'dinner' | 'created_at' | 'updated_at'> {}
+interface DailyMealCreationAttributes extends Optional<DailyMealAttributes, 'id' | 'breakfast' | 'lunch' | 'dinner' | 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id' | 'created_at' | 'updated_at'> {}
 
 class DailyMeal extends Model<DailyMealAttributes, DailyMealCreationAttributes> {}
 
@@ -46,6 +49,18 @@ DailyMeal.init(
     },
     dinner: {
       type: DataTypes.STRING(200),
+      allowNull: true,
+    },
+    breakfast_recipe_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    lunch_recipe_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    dinner_recipe_id: {
+      type: DataTypes.INTEGER,
       allowNull: true,
     },
     created_at: {

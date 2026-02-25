@@ -5,6 +5,11 @@
       <span class="dock-label">Home</span>
     </button>
     
+    <button :class="{ 'dock-active': isActive('/recipes') }" @click="navigateTo('/recipes')">
+      <fa icon="book-open"></fa>
+      <span class="dock-label">Recipes</span>
+    </button>
+
     <button :class="{ 'dock-active': isActive('/shopping-list') }" @click="navigateTo('/shopping-list')">
       <fa icon="list"></fa>
       <span class="dock-label">Shopping List</span>

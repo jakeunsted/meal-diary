@@ -148,16 +148,23 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     setSelectedMeal(type: string, dayOfWeek: number) {
       // Find the existing meal for this day
       const existingDayMeal = this.weeklyMeals.find(meal => meal.day_of_week === dayOfWeek);
-      
+
       // Get the existing meal name if it exists
-      const existingMealName = existingDayMeal 
+      const existingMealName = existingDayMeal
         ? existingDayMeal[type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] || ''
         : '';
-      
+
+      // Get the existing recipe ID if it exists
+      const recipeIdKey = `${type}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
+      const existingRecipeId = existingDayMeal
+        ? existingDayMeal[recipeIdKey] || null
+        : null;
+
       this.selectedMeal = {
         type,
         dayOfWeek,
         name: existingMealName,
+        recipeId: existingRecipeId,
       };
     },
 
@@ -165,6 +172,13 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     updateSelectedMealName(name: string) {
       if (this.selectedMeal) {
         this.selectedMeal.name = name;
+      }
+    },
+
+    // Update selected meal recipe ID
+    updateSelectedMealRecipeId(recipeId: number | null) {
+      if (this.selectedMeal) {
+        this.selectedMeal.recipeId = recipeId;
       }
     },
 
@@ -179,19 +193,27 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           breakfast: null,
           lunch: null,
           dinner: null,
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
           day_of_week: this.selectedMeal.dayOfWeek
         };
         // Create a complete meal object with all meal types
-        const mealData = {
+        const mealData: any = {
           week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString(),
           day_of_week: this.selectedMeal.dayOfWeek,
           breakfast: dayMeal.breakfast || '',
           lunch: dayMeal.lunch || '',
-          dinner: dayMeal.dinner || ''
+          dinner: dayMeal.dinner || '',
+          breakfast_recipe_id: dayMeal.breakfast_recipe_id || null,
+          lunch_recipe_id: dayMeal.lunch_recipe_id || null,
+          dinner_recipe_id: dayMeal.dinner_recipe_id || null,
         };
-        
+
         // Update the specific meal type that changed
-        mealData[this.selectedMeal.type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] = this.selectedMeal.name;
+        const mealType = this.selectedMeal.type as 'breakfast' | 'lunch' | 'dinner';
+        mealData[mealType] = this.selectedMeal.name;
+        mealData[`${mealType}_recipe_id`] = this.selectedMeal.recipeId;
 
         const { api } = useApi();
         await api(`/api/meal-diaries/${userStore.user.family_group_id}/daily-meals`, {
@@ -202,19 +224,22 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         // Update local state
         const existingDayMeal = this.weeklyMeals.find(meal => meal.day_of_week === this.selectedMeal.dayOfWeek);
         if (existingDayMeal) {
-          existingDayMeal[this.selectedMeal.type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] = this.selectedMeal.name;
+          existingDayMeal[mealType] = this.selectedMeal.name;
+          const recipeIdKey = `${mealType}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
+          (existingDayMeal as any)[recipeIdKey] = this.selectedMeal.recipeId;
         } else {
-          // If this is a new day entry, add it to weeklyMeals
           this.weeklyMeals.push({
             day_of_week: this.selectedMeal.dayOfWeek,
             week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString(),
-            breakfast: this.selectedMeal.type === 'breakfast' ? this.selectedMeal.name : null,
-            lunch: this.selectedMeal.type === 'lunch' ? this.selectedMeal.name : null,
-            dinner: this.selectedMeal.type === 'dinner' ? this.selectedMeal.name : null
+            breakfast: mealType === 'breakfast' ? this.selectedMeal.name : null,
+            lunch: mealType === 'lunch' ? this.selectedMeal.name : null,
+            dinner: mealType === 'dinner' ? this.selectedMeal.name : null,
+            breakfast_recipe_id: mealType === 'breakfast' ? this.selectedMeal.recipeId : null,
+            lunch_recipe_id: mealType === 'lunch' ? this.selectedMeal.recipeId : null,
+            dinner_recipe_id: mealType === 'dinner' ? this.selectedMeal.recipeId : null,
           });
         }
 
-        // Save to Preferences after successful update
         await this.saveToLocalStorage();
 
         // Reset selected meal
@@ -222,6 +247,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           type: null,
           dayOfWeek: null,
           name: '',
+          recipeId: null,
         };
 
       } catch (error) {
