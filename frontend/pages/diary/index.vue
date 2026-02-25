@@ -4,18 +4,18 @@
 
     <MealDiarySkeleton v-if="!hasMealData" />
     <div v-else>
-      <WeekCalendarPicker 
+      <WeekCalendarPicker
         :initialWeekStartDate="currentWeekStartDate"
-        @weekChange="handleWeekChange" 
+        @weekChange="handleWeekChange"
       />
       <DayFoodPlanCard
         v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
         :key="index"
         :day="getDayName(dayMeal.day_of_week)"
         :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
-        :breakfast="{ name: dayMeal.breakfast }"
-        :lunch="{ name: dayMeal.lunch }"
-        :dinner="{ name: dayMeal.dinner }"
+        :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
+        :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
+        :dinner="{ name: dayMeal.dinner, recipeId: dayMeal.dinner_recipe_id }"
         :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
         @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
       />
@@ -25,7 +25,9 @@
       <SetUpdateMealModal
         v-if="mealDiaryStoreComputed.selectedMeal.type !== null"
         :meal="mealDiaryStoreComputed.selectedMeal.name"
+        :recipeId="mealDiaryStoreComputed.selectedMeal.recipeId"
         @update:meal="mealDiaryStoreComputed.updateSelectedMealName"
+        @update:recipeId="mealDiaryStoreComputed.updateSelectedMealRecipeId"
         @saveMeal="handleSaveMeal"
       />
     </dialog>
@@ -49,11 +51,9 @@ const mealDiaryStore = useMealDiaryStore();
 const userStore = useUserStore();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
-// Make mealDiaryStore reactive as a computed property
 const mealDiaryStoreComputed = computed(() => mealDiaryStore);
 const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.length > 0);
 
-// Get current week start date for the calendar picker
 const currentWeekStartDate = computed(() => {
   if (mealDiaryStoreComputed.value.currentWeekStart) {
     return new Date(mealDiaryStoreComputed.value.currentWeekStart);
@@ -61,31 +61,25 @@ const currentWeekStartDate = computed(() => {
   return mealDiaryStoreComputed.value.getWeekStartDate();
 });
 
-// Handle opening the meal modal
 const handleSetMeal = (mealType, dayOfWeek) => {
   mealDiaryStore.setSelectedMeal(mealType, dayOfWeek);
   set_meal_modal.showModal();
 };
 
-// Handle saving the meal
 const handleSaveMeal = async () => {
   try {
     await mealDiaryStoreComputed.value.saveMeal();
     set_meal_modal.close();
   } catch (error) {
-    // Handle error (maybe show a notification)
     console.error('Error saving meal:', error);
   }
 };
 
-// Handle week change from the calendar picker
 const handleWeekChange = (weekStartDate) => {
   mealDiaryStoreComputed.value.fetchWeeklyMeals(weekStartDate);
 };
 
-// Fetch meals when component mounts
 onMounted(() => {
-  // Start loading data immediately without waiting
   const loadData = async () => {
     try {
       if (!userStore.user?.family_group_id) {
@@ -97,11 +91,9 @@ onMounted(() => {
     }
   };
 
-  // Start loading data without waiting
   loadData();
 });
 
-// Watch for changes in family group ID
 watch(() => userStore.user?.family_group_id, (newId) => {
   if (newId) {
     mealDiaryStoreComputed.value.fetchWeeklyMeals();

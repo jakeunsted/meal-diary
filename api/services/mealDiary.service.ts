@@ -9,6 +9,9 @@ interface DailyMealWithDay {
   breakfast: string | null;
   lunch: string | null;
   dinner: string | null;
+  breakfast_recipe_id: number | null;
+  lunch_recipe_id: number | null;
+  dinner_recipe_id: number | null;
 }
 
 /**
@@ -54,7 +57,10 @@ export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate:
       day_of_week: day,
       breakfast: '',
       lunch: '',
-      dinner: ''
+      dinner: '',
+      breakfast_recipe_id: null,
+      lunch_recipe_id: null,
+      dinner_recipe_id: null,
     });
   }
 
@@ -84,7 +90,7 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
   // Get all daily meals for this week
   const dailyMeals = await DailyMeal.findAll({
     where: { meal_diary_id: mealDiary.dataValues.id },
-    attributes: ['day_of_week', 'breakfast', 'lunch', 'dinner'],
+    attributes: ['day_of_week', 'breakfast', 'lunch', 'dinner', 'breakfast_recipe_id', 'lunch_recipe_id', 'dinner_recipe_id'],
     order: [['day_of_week', 'ASC']]
   });
   
@@ -101,7 +107,10 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
       day_of_week: day,
       breakfast: existingMeal?.dataValues.breakfast || null,
       lunch: existingMeal?.dataValues.lunch || null,
-      dinner: existingMeal?.dataValues.dinner || null
+      dinner: existingMeal?.dataValues.dinner || null,
+      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id || null,
+      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id || null,
+      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id || null,
     });
   }
 
@@ -125,6 +134,9 @@ export const updateDailyMeal = async (
     breakfast?: string;
     lunch?: string;
     dinner?: string;
+    breakfast_recipe_id?: number | null;
+    lunch_recipe_id?: number | null;
+    dinner_recipe_id?: number | null;
   }
 ): Promise<DailyMeal> => {
   // Find the meal diary for this week

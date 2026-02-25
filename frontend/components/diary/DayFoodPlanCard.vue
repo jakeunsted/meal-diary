@@ -9,31 +9,88 @@
         <div class="card-content">
           <div class="flex justify-between mb-3 items-center">
             <h3 class="">{{ $t('Breakfast') }}</h3>
-            <div v-if="breakfast && breakfast.name" @click="$emit('setMeal', 'breakfast')">
-              <span class="badge badge-primary" >
+            <div v-if="breakfast && breakfast.name" class="flex items-center gap-1">
+              <span
+                v-if="breakfast.recipeId"
+                class="badge badge-primary cursor-pointer"
+                @click.stop="handleNavigateToRecipe(breakfast.recipeId)"
+              >
+                {{ breakfast.name }}
+                <fa :icon="['fas', 'book-open']" class="ml-2 text-xs" />
+              </span>
+              <span
+                v-else
+                class="badge badge-primary"
+                @click="$emit('setMeal', 'breakfast')"
+              >
                 {{ breakfast.name }}
                 <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
+              <button
+                v-if="breakfast.recipeId"
+                class="btn btn-ghost btn-xs btn-circle"
+                @click.stop="$emit('setMeal', 'breakfast')"
+              >
+                <fa :icon="['fas', 'pencil']" class="text-xs" />
+              </button>
             </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'breakfast')">{{ $t('Set Meal +') }}</button>
           </div>
           <div class="flex justify-between mb-3 items-center">
             <h3 class="">{{ $t('Lunch') }}</h3>
-            <div v-if="lunch && lunch.name" @click="$emit('setMeal', 'lunch')">
-              <span class="badge badge-primary" >
+            <div v-if="lunch && lunch.name" class="flex items-center gap-1">
+              <span
+                v-if="lunch.recipeId"
+                class="badge badge-primary cursor-pointer"
+                @click.stop="handleNavigateToRecipe(lunch.recipeId)"
+              >
+                {{ lunch.name }}
+                <fa :icon="['fas', 'book-open']" class="ml-2 text-xs" />
+              </span>
+              <span
+                v-else
+                class="badge badge-primary"
+                @click="$emit('setMeal', 'lunch')"
+              >
                 {{ lunch.name }}
                 <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
+              <button
+                v-if="lunch.recipeId"
+                class="btn btn-ghost btn-xs btn-circle"
+                @click.stop="$emit('setMeal', 'lunch')"
+              >
+                <fa :icon="['fas', 'pencil']" class="text-xs" />
+              </button>
             </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'lunch')">{{ $t('Set Meal +') }}</button>
           </div>
           <div class="flex justify-between mb-3 items-center">
             <h3 class="">{{ $t('Dinner') }}</h3>
-            <div v-if="dinner && dinner.name" @click="$emit('setMeal', 'dinner')">
-              <span class="badge badge-primary" >
+            <div v-if="dinner && dinner.name" class="flex items-center gap-1">
+              <span
+                v-if="dinner.recipeId"
+                class="badge badge-primary cursor-pointer"
+                @click.stop="handleNavigateToRecipe(dinner.recipeId)"
+              >
+                {{ dinner.name }}
+                <fa :icon="['fas', 'book-open']" class="ml-2 text-xs" />
+              </span>
+              <span
+                v-else
+                class="badge badge-primary"
+                @click="$emit('setMeal', 'dinner')"
+              >
                 {{ dinner.name }}
                 <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
+              <button
+                v-if="dinner.recipeId"
+                class="btn btn-ghost btn-xs btn-circle"
+                @click.stop="$emit('setMeal', 'dinner')"
+              >
+                <fa :icon="['fas', 'pencil']" class="text-xs" />
+              </button>
             </div>
             <button v-else class="btn btn-xs" @click="$emit('setMeal', 'dinner')">{{ $t('Set Meal +') }}</button>
           </div>
@@ -44,6 +101,8 @@
 </template>
 
 <script setup>
+const router = useRouter();
+
 const props = defineProps({
   day: {
     required: true,
@@ -70,20 +129,25 @@ const props = defineProps({
     type: Boolean,
     default: false
   }
-})
+});
 
-defineEmits(['setMeal'])
+defineEmits(['setMeal']);
 
 const isOpen = ref(!props.isPastDay);
 
-// Watch for changes in isPastDay prop
 watch(() => props.isPastDay, (newValue) => {
   isOpen.value = !newValue;
 });
 
 const toggleCard = () => {
   isOpen.value = !isOpen.value;
-}
+};
+
+const handleNavigateToRecipe = (recipeId) => {
+  if (recipeId) {
+    router.push(`/recipes/${recipeId}`);
+  }
+};
 </script>
 
 <style>

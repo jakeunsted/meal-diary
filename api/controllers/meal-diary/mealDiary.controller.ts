@@ -111,7 +111,16 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
 export const updateDailyMealForFamilyGroup = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { week_start_date, day_of_week, breakfast = '', lunch = '', dinner = '' } = req.body;
+    const {
+      week_start_date,
+      day_of_week,
+      breakfast = '',
+      lunch = '',
+      dinner = '',
+      breakfast_recipe_id = null,
+      lunch_recipe_id = null,
+      dinner_recipe_id = null,
+    } = req.body;
 
     if (!family_group_id || !week_start_date || !day_of_week) {
       return res.status(400).json({ 
@@ -123,7 +132,7 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       parseInt(family_group_id),
       new Date(week_start_date),
       parseInt(day_of_week),
-      { breakfast, lunch, dinner }
+      { breakfast, lunch, dinner, breakfast_recipe_id, lunch_recipe_id, dinner_recipe_id }
     );
 
     sendDailyMealWebhook(

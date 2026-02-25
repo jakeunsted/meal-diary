@@ -8,6 +8,7 @@ import familyGroupRoutes from './routes/familyGroups.routes.ts';
 import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
 import itemCategoriesRoutes from './routes/itemCategories.routes.ts';
+import recipeRoutes from './routes/recipes.routes.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
@@ -45,6 +46,7 @@ app.use('/family-groups', familyGroupRoutes);
 app.use('/shopping-list', shoppingListRoutes);
 app.use('/auth', authRoutes);
 app.use('/item-categories', itemCategoriesRoutes);
+app.use('/recipes', recipeRoutes);
 
 // health check
 app.get('/health', (req: Request, res: Response) => {
