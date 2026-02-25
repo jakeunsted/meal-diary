@@ -121,10 +121,10 @@ export const updateRecipe = async (
     }
 
     await recipe.update({
-      name: input.name ?? recipe.dataValues.name,
-      description: input.description ?? recipe.dataValues.description,
-      instructions: input.instructions ?? recipe.dataValues.instructions,
-      portions: input.portions ?? recipe.dataValues.portions,
+      name: input.name !== undefined ? input.name : recipe.dataValues.name,
+      description: input.description !== undefined ? input.description : recipe.dataValues.description,
+      instructions: input.instructions !== undefined ? input.instructions : recipe.dataValues.instructions,
+      portions: input.portions !== undefined ? input.portions : recipe.dataValues.portions,
     }, { transaction });
 
     if (input.ingredients !== undefined) {

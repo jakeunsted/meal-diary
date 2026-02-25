@@ -170,10 +170,10 @@ const handleSubmit = () => {
   const cleanedIngredients = form.ingredients.filter(i => i.name.trim() !== '');
   emit('submit', {
     name: form.name,
-    description: form.description || undefined,
-    instructions: form.instructions || undefined,
-    portions: form.portions || undefined,
-    ingredients: cleanedIngredients.length > 0 ? cleanedIngredients : undefined,
+    description: form.description || null,
+    instructions: form.instructions || null,
+    portions: form.portions || null,
+    ingredients: cleanedIngredients,
   });
 };
 </script>
