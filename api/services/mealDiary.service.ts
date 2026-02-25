@@ -164,8 +164,16 @@ export const updateDailyMeal = async (
     }
   });
 
+  // Convert null values to undefined for Sequelize compatibility
+  const sanitizedUpdates: Record<string, any> = {};
+  for (const [key, value] of Object.entries(updates)) {
+    if (value !== undefined) {
+      sanitizedUpdates[key] = value === null ? undefined : value;
+    }
+  }
+
   // Update the daily meal
-  await dailyMeal.update(updates);
+  await dailyMeal.update(sanitizedUpdates);
 
   return dailyMeal;
 };

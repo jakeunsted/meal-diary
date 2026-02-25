@@ -166,16 +166,30 @@ export const deleteRecipe = async (recipeId: number): Promise<void> => {
   try {
     // Clear recipe references from daily meals
     await DailyMeal.update(
-      { breakfast: '', breakfast_recipe_id: undefined },
+      { breakfast: '' } as any,
       { where: { breakfast_recipe_id: recipeId }, transaction }
     );
     await DailyMeal.update(
-      { lunch: '', lunch_recipe_id: undefined },
+      { lunch: '' } as any,
       { where: { lunch_recipe_id: recipeId }, transaction }
     );
     await DailyMeal.update(
-      { dinner: '', dinner_recipe_id: undefined },
+      { dinner: '' } as any,
       { where: { dinner_recipe_id: recipeId }, transaction }
+    );
+    // Sequelize.literal used to set nullable FK columns to NULL
+    const { literal } = await import('sequelize');
+    await sequelize.query(
+      `UPDATE daily_meals SET breakfast_recipe_id = NULL WHERE breakfast_recipe_id = $1`,
+      { bind: [recipeId], transaction }
+    );
+    await sequelize.query(
+      `UPDATE daily_meals SET lunch_recipe_id = NULL WHERE lunch_recipe_id = $1`,
+      { bind: [recipeId], transaction }
+    );
+    await sequelize.query(
+      `UPDATE daily_meals SET dinner_recipe_id = NULL WHERE dinner_recipe_id = $1`,
+      { bind: [recipeId], transaction }
     );
 
     // Delete ingredients (cascade should handle this, but explicit is safer)
