@@ -11,6 +11,7 @@
           <div class="tabs tabs-border mb-4 mx-auto">
             <button 
               class="tab" 
+              data-testid="family-tab-create"
               :class="{ 'tab-active': activeTab === 'create' }"
               @click="activeTab = 'create'"
               :disabled="isLoading"
@@ -19,6 +20,7 @@
             </button>
             <button 
               class="tab" 
+              data-testid="family-tab-join"
               :class="{ 'tab-active': activeTab === 'join' }"
               @click="activeTab = 'join'"
               :disabled="isLoading"
@@ -38,6 +40,7 @@
                 v-model="familyName" 
                 :placeholder="$t('Enter family group name')" 
                 class="input input-bordered" 
+                data-testid="family-create-name-input"
                 :disabled="isLoading"
                 required
               />
@@ -53,6 +56,7 @@
                 v-model="familyKey" 
                 :placeholder="$t('Enter family key')" 
                 class="input input-bordered" 
+                data-testid="family-join-key-input"
                 :disabled="isLoading"
                 required
               />
@@ -61,13 +65,14 @@
             <button 
               type="submit" 
               class="btn btn-primary w-full mt-4"
+              data-testid="family-submit-button"
               :disabled="isLoading"
             >
               <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
               <span v-else>{{ activeTab === 'create' ? $t('Create Family Group') : $t('Join Family Group') }}</span>
             </button>
 
-            <div v-if="errorMessage" class="text-error text-center mt-2">
+            <div v-if="errorMessage" class="text-error text-center mt-2" data-testid="family-error-message">
               {{ errorMessage }}
             </div>
           </form>

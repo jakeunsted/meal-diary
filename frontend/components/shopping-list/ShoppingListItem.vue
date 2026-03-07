@@ -16,12 +16,14 @@
       <input 
         type="checkbox"
         class="checkbox checkbox-primary mr-2"
+        :data-testid="`shopping-item-checkbox-${item.id}`"
         :checked="item.checked"
         @change="handleCheckboxChange"
       />
       <div 
         v-if="!isEditing" 
         class="flex-1 px-3 py-2 cursor-pointer"
+        :data-testid="`shopping-item-name-${item.id}`"
         :class="{ 'line-through text-gray-400': item.checked }"
         @click="startEditing"
       >
@@ -32,6 +34,7 @@
         type="text"
         :placeholder="$t('Enter item name')"
         class="input input-ghost flex-1"
+        :data-testid="`shopping-item-edit-input-${item.id}`"
         :class="{ 'line-through text-gray-400': item.checked }"
         :value="item.name"
         @change="handleNameChange($event.target.value)"
@@ -46,6 +49,7 @@
       <button
         class="btn btn-ghost btn-xs"
         type="button"
+        :data-testid="`shopping-item-outdent-${item.id}`"
         @click="handleOutdent"
         :aria-label="$t('Outdent item')"
       >
@@ -54,6 +58,7 @@
       <button
         class="btn btn-ghost btn-xs"
         type="button"
+        :data-testid="`shopping-item-indent-${item.id}`"
         @click="handleIndent"
         :aria-label="$t('Indent item')"
       >
@@ -61,6 +66,7 @@
       </button>
       <button 
         class="btn btn-ghost btn-sm"
+        :data-testid="`shopping-item-remove-${item.id}`"
         type="button"
         @click="handleRemove"
         :aria-label="$t('Remove item')"

@@ -6,7 +6,7 @@
           <h1>{{ $t('Welcome to meal diary') }}</h1>
         </div>
         <hr />
-        <form @submit.prevent="handleLogin" class="space-y-4">
+        <form @submit.prevent="handleLogin" class="space-y-4" data-testid="login-form">
           <div class="form-control">
             <label class="label">
               <span class="label-text">{{ $t('Email') }}</span>
@@ -16,6 +16,7 @@
               v-model="email" 
               placeholder="your@email.com" 
               class="input input-bordered" 
+              data-testid="login-email-input"
               :disabled="isLoading"
               required
             />
@@ -29,16 +30,18 @@
               v-model="password" 
               placeholder="••••••••" 
               class="input input-bordered" 
+              data-testid="login-password-input"
               :disabled="isLoading"
               required
             />
           </div>
-          <div v-if="error" class="alert alert-error">
+          <div v-if="error" class="alert alert-error" data-testid="login-error-alert">
             <span>{{ error }}</span>
           </div>
           <button
             type="submit"
             class="btn btn-primary w-full"
+            data-testid="login-submit-button"
             :disabled="isLoading"
           >
             <span v-if="isLoading" class="loading loading-spinner"></span>
@@ -48,6 +51,7 @@
           <button
             type="button"
             class="btn btn-outline w-full"
+            data-testid="google-login-button"
             :disabled="isLoading"
             @click="handleGoogleLogin"
           >
@@ -62,7 +66,7 @@
           <div class="text-center">
             <p>
               {{ $t('Don\'t have an account?') }} 
-              <a class="link link-hover link-primary" href="/registration/step-1">{{ $t('Register') }}</a>
+              <a class="link link-hover link-primary" data-testid="register-link" href="/registration/step-1">{{ $t('Register') }}</a>
             </p>
           </div>
         </form>

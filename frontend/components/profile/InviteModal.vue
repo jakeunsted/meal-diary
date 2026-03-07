@@ -20,11 +20,13 @@
               <input 
                 type="text" 
                 :value="inviteLink" 
+                data-testid="profile-invite-link-input"
                 readonly
                 class="input input-bordered flex-1 font-mono text-sm"
               />
               <button 
                 class="btn btn-outline" 
+                data-testid="profile-copy-invite-link-button"
                 @click="handleCopyLink"
                 :disabled="isCopying"
               >

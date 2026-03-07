@@ -8,6 +8,7 @@
         <div class="flex flex-row gap-2">
           <button 
             class="btn btn-primary" 
+            data-testid="week-previous-button"
             @click="handlePreviousWeek"
             :disabled="!canGoBack"
           >
@@ -16,6 +17,7 @@
           <select
             :value="selectedWeekKey"
             class="select select-bordered"
+            data-testid="week-select"
             @change="handleWeekSelect"
           >
             <option v-for="week in filteredWeeks" :key="`${week.year}-${week.number}`" :value="`${week.year}-${week.number}`">
@@ -24,6 +26,7 @@
           </select>
           <button 
             class="btn btn-primary" 
+            data-testid="week-next-button"
             @click="handleNextWeek"
             :disabled="!canGoForward"
           >

@@ -3,13 +3,13 @@
     <div class="modal-box">
       <h3 class="font-bold text-lg mb-4">{{ $t('Category Options') }}</h3>
       <div class="flex flex-col gap-2">
-        <button class="btn btn-dash btn-primary" @click="handleUntickAll">
+        <button class="btn btn-dash btn-primary" data-testid="category-options-untick-all" @click="handleUntickAll">
           {{ $t('Untick All') }}
         </button>
-        <button class="btn btn-dash btn-primary" @click="handleTickAll">
+        <button class="btn btn-dash btn-primary" data-testid="category-options-tick-all" @click="handleTickAll">
           {{ $t('Tick All') }}
         </button>
-        <button class="btn btn-error" @click="handleDeleteGroup">
+        <button class="btn btn-error" data-testid="category-options-delete-group" @click="handleDeleteGroup">
           {{ $t('Delete Group') }}
         </button>
       </div>

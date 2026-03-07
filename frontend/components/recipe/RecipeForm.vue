@@ -9,6 +9,7 @@
         <input
           type="text"
           class="input input-bordered w-full"
+          data-testid="recipe-form-name-input"
           :placeholder="$t('Recipe Name')"
           v-model="form.name"
           required
@@ -22,6 +23,7 @@
         </label>
         <textarea
           class="textarea textarea-bordered w-full"
+          data-testid="recipe-form-description-input"
           :placeholder="$t('Description')"
           v-model="form.description"
           rows="2"
@@ -36,6 +38,7 @@
         <input
           type="number"
           class="input input-bordered w-24"
+          data-testid="recipe-form-portions-input"
           :placeholder="$t('Portions')"
           v-model.number="form.portions"
           min="1"
@@ -56,12 +59,14 @@
             <input
               type="text"
               class="input input-bordered input-sm flex-1"
+              :data-testid="`recipe-form-ingredient-name-${index}`"
               :placeholder="$t('Ingredient name')"
               v-model="ingredient.name"
             />
             <input
               type="number"
               class="input input-bordered input-sm w-20"
+              :data-testid="`recipe-form-ingredient-quantity-${index}`"
               :placeholder="$t('Qty')"
               v-model.number="ingredient.quantity"
               step="0.1"
@@ -70,11 +75,13 @@
             <input
               type="text"
               class="input input-bordered input-sm w-20"
+              :data-testid="`recipe-form-ingredient-unit-${index}`"
               :placeholder="$t('Unit')"
               v-model="ingredient.unit"
             />
             <button
               class="btn btn-ghost btn-sm btn-circle text-error"
+              :data-testid="`recipe-form-remove-ingredient-${index}`"
               @click="handleRemoveIngredient(index)"
             >
               <fa icon="circle-minus" />
@@ -83,6 +90,7 @@
         </div>
         <button
           class="btn btn-ghost btn-sm mt-2 self-start"
+          data-testid="recipe-form-add-ingredient-button"
           @click="handleAddIngredient"
         >
           <fa icon="circle-plus" class="mr-1" />
@@ -97,6 +105,7 @@
         </label>
         <textarea
           class="textarea textarea-bordered w-full"
+          data-testid="recipe-form-instructions-input"
           :placeholder="$t('Instructions')"
           v-model="form.instructions"
           rows="6"
@@ -105,11 +114,12 @@
 
       <!-- Submit -->
       <div class="flex justify-end gap-2 pt-2 pb-4">
-        <button class="btn btn-ghost" @click="$emit('cancel')">
+        <button class="btn btn-ghost" data-testid="recipe-form-cancel-button" @click="$emit('cancel')">
           {{ $t('Cancel') }}
         </button>
         <button
           class="btn btn-primary"
+          data-testid="recipe-form-submit-button"
           @click="handleSubmit"
           :disabled="!form.name || isLoading"
         >

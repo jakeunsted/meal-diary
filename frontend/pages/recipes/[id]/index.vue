@@ -15,11 +15,11 @@
       <div class="flex justify-between items-start mb-4">
         <h1 class="text-2xl font-bold">{{ recipe.name }}</h1>
         <div class="flex gap-2">
-          <button class="btn btn-outline btn-sm" @click="handleEdit">
+          <button class="btn btn-outline btn-sm" data-testid="recipe-edit-button" @click="handleEdit">
             <fa icon="pencil" class="mr-1" />
             {{ $t('Edit Recipe') }}
           </button>
-          <button class="btn btn-error btn-outline btn-sm" @click="handleShowDeleteConfirm">
+          <button class="btn btn-error btn-outline btn-sm" data-testid="recipe-delete-button" @click="handleShowDeleteConfirm">
             <fa icon="trash" />
           </button>
         </div>
@@ -47,7 +47,7 @@
             </ul>
           </div>
         </div>
-        <button class="btn btn-outline btn-primary btn-sm mt-3" @click="handleAddToShoppingList">
+        <button class="btn btn-outline btn-primary btn-sm mt-3" data-testid="recipe-add-to-shopping-list-button" @click="handleAddToShoppingList">
           <fa icon="list" class="mr-1" />
           {{ $t('Add to Shopping List') }}
         </button>
@@ -73,7 +73,7 @@
           <form method="dialog">
             <button class="btn btn-ghost mr-2">{{ $t('Cancel') }}</button>
           </form>
-          <button class="btn btn-error" @click="handleDelete" :disabled="recipeStore.loading">
+          <button class="btn btn-error" data-testid="recipe-confirm-delete-button" @click="handleDelete" :disabled="recipeStore.loading">
             <span v-if="recipeStore.loading" class="loading loading-spinner loading-sm"></span>
             <span v-else>{{ $t('Delete') }}</span>
           </button>
