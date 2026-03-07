@@ -173,8 +173,13 @@ const handleTouchEnd = (event) => {
   const deltaX = touch.clientX - touchStartX;
   const deltaY = Math.abs(touch.clientY - touchStartY);
 
-  if (deltaX > SWIPE_THRESHOLD && deltaY < SWIPE_THRESHOLD) {
+  if (deltaY >= SWIPE_THRESHOLD) {
+    return;
+  }
+  if (deltaX > SWIPE_THRESHOLD) {
     handleIndent();
+  } else if (deltaX < -SWIPE_THRESHOLD) {
+    handleOutdent();
   }
 };
 </script>
