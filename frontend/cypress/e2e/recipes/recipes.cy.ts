@@ -54,9 +54,7 @@ describe('Recipes', () => {
     cy.location('pathname').should('match', /\/recipes\/\d+$/);
     cy.get('[data-testid="recipe-add-to-shopping-list-button"]').click();
 
-    cy.wait('@apiGetShoppingListCategories');
-    cy.wait('@apiGetShoppingList');
-    cy.wait('@apiAddShoppingItem');
+    cy.wait('@apiAddShoppingItemBulk');
     cy.contains('Ingredients added to shopping list!').should('be.visible');
   });
 });

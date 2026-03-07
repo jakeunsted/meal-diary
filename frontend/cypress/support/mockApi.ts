@@ -348,6 +348,40 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     req.reply({ statusCode: 200, body: newItem });
   }).as('apiAddShoppingItem');
 
+  cy.intercept('POST', /\/api\/shopping-list\/\d+\/items\/bulk$/, (req) => {
+    const bulkItems = Array.isArray(req.body?.items) ? req.body.items : [];
+    const createdItems = bulkItems.map((entry: Record<string, any>) => {
+      const siblingPositions = state.shoppingList.items
+        .filter((item: Record<string, any>) => item.parent_item_id === (entry.parent_item_id ?? null))
+        .map((item: Record<string, any>) => item.position || 0);
+      const nextPosition = siblingPositions.length > 0 ? Math.max(...siblingPositions) + 1 : 0;
+      return {
+        id: nextItemId++,
+        shopping_list_id: state.shoppingList.id,
+        shopping_list_categories: 101,
+        name: entry.name || 'New Item',
+        checked: false,
+        deleted: false,
+        parent_item_id: entry.parent_item_id ?? null,
+        position: nextPosition,
+        created_by: state.activeUser.id,
+        created_at: getIsoDate(),
+        updated_at: getIsoDate(),
+      };
+    });
+    state.shoppingList.items.push(...createdItems);
+    const defaultCategory = state.shoppingList.categories.find((entry: Record<string, any>) => entry.id === 101);
+    if (defaultCategory) {
+      defaultCategory.items.push(...createdItems);
+    }
+    req.reply({
+      statusCode: 200,
+      body: {
+        data: createdItems,
+      },
+    });
+  }).as('apiAddShoppingItemBulk');
+
   cy.intercept('PUT', /\/api\/shopping-list\/\d+\/items\/.+$/, (req) => {
     const itemId = String(req.url.split('/').pop());
     const item = state.shoppingList.items.find((entry: Record<string, any>) => String(entry.id) === itemId);
