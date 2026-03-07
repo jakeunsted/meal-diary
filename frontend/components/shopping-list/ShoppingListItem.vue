@@ -9,6 +9,7 @@
         class="drag-handle btn btn-ghost btn-sm cursor-grab active:cursor-grabbing"
         type="button"
         :aria-label="$t('Reorder item')"
+        style="touch-action: none;"
       >
         <fa icon="grip-vertical" />
       </button>
