@@ -1,5 +1,5 @@
 <template>
-  <div class="card bg-base-200 shadow-sm cursor-pointer hover:bg-base-300 transition-colors" @click="$emit('click')">
+  <div class="card bg-base-200 shadow-sm cursor-pointer hover:bg-base-300 transition-colors" :data-testid="`recipe-card-${recipe.id}`" @click="$emit('click')">
     <div class="card-body p-4">
       <div class="flex justify-between items-start">
         <div class="flex-1">

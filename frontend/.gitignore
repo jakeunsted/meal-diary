@@ -13,6 +13,11 @@ node_modules
 logs
 *.log
 
+# Cypress artifacts
+cypress/screenshots
+cypress/videos
+cypress/downloads
+
 # Misc
 .DS_Store
 .fleet

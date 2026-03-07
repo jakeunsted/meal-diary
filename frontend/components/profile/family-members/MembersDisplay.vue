@@ -21,7 +21,7 @@
       <h3 class="font-semibold">{{ $t('Wow its empty here!') }}</h3>
     </div>
     <div class="flex flex-col items-center justify-center mx-auto rounded-xl">
-      <button class="btn btn-primary mt-4" @click="handleAddFamilyMember">{{ $t('Add family member') }}</button>
+      <button class="btn btn-primary mt-4" data-testid="profile-add-family-member-button" @click="handleAddFamilyMember">{{ $t('Add family member') }}</button>
     </div>
   </div>
 </template>

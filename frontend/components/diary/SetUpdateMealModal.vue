@@ -12,6 +12,7 @@
       </label>
       <select
         class="select select-bordered w-full"
+        data-testid="set-meal-recipe-select"
         :value="selectedRecipeId || ''"
         @change="handleRecipeSelect($event.target.value)"
       >
@@ -36,6 +37,7 @@
       v-if="!selectedRecipeId"
       type="text"
       class="input input-bordered w-full mb-4"
+      data-testid="set-meal-name-input"
       required
       :value="meal"
       @input="handleMealInput($event.target.value)"
@@ -46,7 +48,7 @@
 
     <!-- Show selected recipe info -->
     <div v-if="selectedRecipeId && selectedRecipeName" class="mb-4">
-      <div class="badge badge-primary badge-lg">
+      <div class="badge badge-primary badge-lg" data-testid="set-meal-selected-recipe">
         {{ selectedRecipeName }}
       </div>
     </div>
@@ -54,6 +56,7 @@
     <div class="flex flex-col items-center">
       <button
         class="btn btn-outline btn-primary btn-sm"
+        data-testid="set-meal-save-button"
         @click="saveMeal"
         :disabled="isLoading || (!meal && !selectedRecipeId)"
       >

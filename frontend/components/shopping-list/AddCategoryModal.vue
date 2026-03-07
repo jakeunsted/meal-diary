@@ -12,6 +12,7 @@
         <select 
           v-model="selectedCategory" 
           class="select select-bordered w-full"
+          data-testid="add-category-select"
           :class="{ 'select-error': hasError }"
           :disabled="loading"
         >
@@ -28,6 +29,7 @@
       <div class="modal-action">
         <button 
           class="btn btn-primary" 
+          data-testid="add-category-submit-button"
           @click="handleSubmit"
           :disabled="loading"
         >

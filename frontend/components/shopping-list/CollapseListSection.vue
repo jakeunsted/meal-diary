@@ -7,6 +7,8 @@
     >
       <div 
         class="collapse-title flex justify-between bg-base-200 items-center px-2"
+        data-testid="shopping-category-header"
+        :data-category-title="categoryTitle"
         @click="toggleCollapse"
         @touchstart="handlePressStart"
         @touchend="handlePressEnd"
@@ -28,6 +30,7 @@
           >
             <ShoppingListItem 
               :item="item" 
+              :data-testid="`shopping-item-${item.id}`"
               @update="handleItemUpdate" 
               @remove="removeItem"
             />
@@ -36,6 +39,8 @@
         <div class="pt-2 flex items-center gap-2">
           <button 
             class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
+            data-testid="shopping-add-item-button"
+            :data-category-title="categoryTitle"
             @click="addItem(newItemName)"
             v-on:keyup.enter="addItem(newItemName)"
           >
@@ -45,6 +50,8 @@
             type="text"
             :placeholder="$t('Enter new item')"
             class="input input-ghost w-full pr-5"
+            data-testid="shopping-add-item-input"
+            :data-category-title="categoryTitle"
             v-model="newItemName"
             v-on:keyup.enter="addItem(newItemName)"
             @focus="handleNewItemInputFocus"

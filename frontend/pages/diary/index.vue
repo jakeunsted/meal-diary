@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-4xl mx-auto">
-    <h1 class="text-2xl font-bold text-center m-4">{{ $t('Meal diary') }}</h1>
+    <h1 class="text-2xl font-bold text-center m-4" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
 
     <MealDiarySkeleton v-if="!hasMealData" />
     <div v-else>
@@ -21,7 +21,7 @@
       />
     </div>
 
-    <dialog id="set_meal_modal" class="modal">
+    <dialog id="set_meal_modal" class="modal" data-testid="set-meal-modal">
       <SetUpdateMealModal
         v-if="mealDiaryStoreComputed.selectedMeal.type !== null"
         :meal="mealDiaryStoreComputed.selectedMeal.name"

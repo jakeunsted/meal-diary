@@ -8,12 +8,13 @@
         <input
           type="text"
           class="input input-bordered w-full pl-10"
+          data-testid="recipes-search-input"
           :placeholder="$t('Search recipes...')"
           v-model="searchQuery"
           @input="handleSearch"
         />
       </div>
-      <button class="btn btn-primary" @click="navigateTo('/recipes/create')">
+      <button class="btn btn-primary" data-testid="recipes-new-button" @click="navigateTo('/recipes/create')">
         <fa icon="plus" />
         <span class="hidden sm:inline">{{ $t('New Recipe') }}</span>
       </button>
@@ -81,9 +82,13 @@ const navigateTo = (path) => {
 };
 
 onMounted(async () => {
-  if (!userStore.user?.family_group_id) {
-    await userStore.fetchUser();
+  try {
+    if (!userStore.user?.family_group_id) {
+      await userStore.fetchUser();
+    }
+    await recipeStore.fetchRecipes();
+  } catch (error) {
+    console.error('Error loading recipes:', error);
   }
-  await recipeStore.fetchRecipes();
 });
 </script>

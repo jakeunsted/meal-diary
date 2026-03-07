@@ -26,6 +26,7 @@
                 <div class="flex items-center justify-center gap-2 mt-2">
                   <code 
                     @click="copyFamilyCode" 
+                    data-testid="profile-family-code"
                     class="bg-base-300 px-3 py-2 rounded-lg font-mono cursor-pointer hover:bg-base-400 transition-colors flex items-center gap-2"
                   >
                     {{ familyGroup.random_identifier }}

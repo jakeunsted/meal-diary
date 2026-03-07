@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-4xl mx-auto px-4">
-    <h1 class="text-2xl font-bold text-center m-4">
+    <h1 class="text-2xl font-bold text-center m-4" data-testid="shopping-list-title">
       {{ $t('Shopping List') }}
     </h1>
 
@@ -21,6 +21,7 @@
         <button
           class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
           type="button"
+          data-testid="shopping-list-new-item-button"
           @click="handleAddNewItem"
         >
           <fa icon="plus" />
@@ -29,6 +30,7 @@
           type="text"
           :placeholder="$t('Enter new item')"
           class="input input-ghost w-full pr-5"
+          data-testid="shopping-list-new-item-input"
           v-model="newItemName"
           @keyup.enter="handleAddNewItem"
           @focus="handleInputFocus"
@@ -38,7 +40,7 @@
         <div v-if="hasCheckedItems" class="mt-4">
           <div class="collapse collapse-arrow bg-base-200">
             <input type="checkbox" />
-            <div class="collapse-title text-sm font-medium">
+            <div class="collapse-title text-sm font-medium" data-testid="shopping-list-checked-items-title">
               {{ $t('Checked items') }} ({{ checkedItems.length }})
             </div>
             <div class="collapse-content">
