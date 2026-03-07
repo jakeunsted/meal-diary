@@ -43,11 +43,25 @@ export const createBaseShoppingList = async (familyGroupId: number, createdBy: n
 };
 
 /**
- * Get entire shopping list with categories and items
+ * Get entire shopping list with categories and items.
+ * If a shopping list does not exist for the family group, it will be created.
  * @param {number} familyGroupId - Family group ID
  * @returns {Promise<ShoppingList | null>} Shopping list with categories and items
  */
 export const getEntireShoppingList = async (familyGroupId: number): Promise<ShoppingList | null> => {
+  // Ensure there is exactly one shopping list per family group.
+  const existingList = await ShoppingList.findOne({
+    where: { family_group_id: familyGroupId },
+  });
+
+  if (!existingList) {
+    try {
+      await ShoppingList.create({ family_group_id: familyGroupId });
+    } catch (error) {
+      console.error('Error creating shopping list for family group:', error);
+    }
+  }
+
   const shoppingList = await ShoppingList.findOne({
     where: { family_group_id: familyGroupId },
     attributes: ['id', 'family_group_id', 'created_at', 'updated_at'],
@@ -67,10 +81,45 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
             as: 'items',
             where: { deleted: false },
             required: false,
-            attributes: ['id', 'shopping_list_id', 'shopping_list_categories', 'name', 'checked', 'deleted', 'created_by', 'created_at', 'updated_at'],
+            attributes: [
+              'id',
+              'shopping_list_id',
+              'shopping_list_categories',
+              'name',
+              'checked',
+              'deleted',
+              'created_by',
+              'parent_item_id',
+              'position',
+              'created_at',
+              'updated_at'
+            ],
           },
         ],
       },
+      {
+        model: ShoppingListItem,
+        as: 'items',
+        where: { deleted: false },
+        required: false,
+        attributes: [
+          'id',
+          'shopping_list_id',
+          'shopping_list_categories',
+          'name',
+          'checked',
+          'deleted',
+          'created_by',
+          'parent_item_id',
+          'position',
+          'created_at',
+          'updated_at'
+        ],
+      },
+    ],
+    order: [
+      [{ model: ShoppingListItem, as: 'items' }, 'parent_item_id', 'ASC'],
+      [{ model: ShoppingListItem, as: 'items' }, 'position', 'ASC'],
     ],
   });
 
@@ -238,7 +287,12 @@ export const getFamilyCategories = async (familyGroupId: number): Promise<Shoppi
  * @returns {Promise<ShoppingListItem>} Created shopping list item
  * @throws {Error} If shopping list or category not found
  */
-export const addItem = async (familyGroupId: number, categoryId: number, name: string, createdBy: number): Promise<ShoppingListItem> => {
+export const addItem = async (
+  familyGroupId: number,
+  name: string,
+  createdBy: number,
+  parentItemId?: number | null
+): Promise<ShoppingListItem> => {
   return await sequelize.transaction(async (t: Transaction) => {
     const shoppingList = await ShoppingList.findOne({
       where: { family_group_id: familyGroupId },
@@ -249,21 +303,51 @@ export const addItem = async (familyGroupId: number, categoryId: number, name: s
       throw new Error('Shopping list not found');
     }
 
-    const shoppingListCategory = await ShoppingListCategory.findOne({
-      where: { id: categoryId },
+    // Ensure there is at least one shopping list category to satisfy the foreign key,
+    // even though the new UI no longer surfaces categories.
+    let shoppingListCategory = await ShoppingListCategory.findOne({
+      where: { shopping_list_id: Number(shoppingList.get('id')) },
       transaction: t,
     });
 
     if (!shoppingListCategory) {
-      throw new Error('Shopping list category not found');
+      const fallbackItemCategory = await ItemCategory.findOne({ transaction: t });
+
+      if (!fallbackItemCategory) {
+        throw new Error('No item categories configured for shopping list');
+      }
+
+      shoppingListCategory = await ShoppingListCategory.create(
+        {
+          shopping_list_id: Number(shoppingList.get('id')),
+          item_categories_id: Number(fallbackItemCategory.get('id')),
+          created_by: createdBy,
+        },
+        { transaction: t }
+      );
     }
+
+    const resolvedParentId = parentItemId ?? null;
+
+    const maxPosition = await ShoppingListItem.max('position', {
+      where: {
+        shopping_list_id: Number(shoppingList.get('id')),
+        parent_item_id: resolvedParentId,
+        deleted: false,
+      },
+      transaction: t,
+    });
+
+    const nextPosition = typeof maxPosition === 'number' ? maxPosition + 1 : 0;
 
     const item = await ShoppingListItem.create(
       {
         shopping_list_id: Number(shoppingList.get('id')),
-        shopping_list_categories: categoryId,
+        shopping_list_categories: Number(shoppingListCategory.get('id')),
         name,
         created_by: createdBy,
+        parent_item_id: resolvedParentId,
+        position: nextPosition,
       },
       { transaction: t }
     );
@@ -277,6 +361,97 @@ export const addItem = async (familyGroupId: number, categoryId: number, name: s
     );
 
     return item;
+  });
+};
+
+/**
+ * Add multiple items to a shopping list in a single operation.
+ * All items are appended to the end of their respective sibling groups.
+ * @param {number} familyGroupId - Family group ID
+ * @param {{ name: string; parent_item_id?: number | null }[]} items - Items to add
+ * @param {number} createdBy - User ID who created the items
+ * @returns {Promise<ShoppingListItem[]>} Created shopping list items
+ */
+export const bulkAddItems = async (
+  familyGroupId: number,
+  items: { name: string; parent_item_id?: number | null }[],
+  createdBy: number
+): Promise<ShoppingListItem[]> => {
+  if (!items.length) {
+    return [];
+  }
+
+  return await sequelize.transaction(async (t: Transaction) => {
+    const shoppingList = await ShoppingList.findOne({
+      where: { family_group_id: familyGroupId },
+      transaction: t,
+    });
+
+    if (!shoppingList) {
+      throw new Error('Shopping list not found');
+    }
+
+    let shoppingListCategory = await ShoppingListCategory.findOne({
+      where: { shopping_list_id: Number(shoppingList.get('id')) },
+      transaction: t,
+    });
+
+    if (!shoppingListCategory) {
+      const fallbackItemCategory = await ItemCategory.findOne({ transaction: t });
+
+      if (!fallbackItemCategory) {
+        throw new Error('No item categories configured for shopping list');
+      }
+
+      shoppingListCategory = await ShoppingListCategory.create(
+        {
+          shopping_list_id: Number(shoppingList.get('id')),
+          item_categories_id: Number(fallbackItemCategory.get('id')),
+          created_by: createdBy,
+        },
+        { transaction: t }
+      );
+    }
+
+    const createdItems: ShoppingListItem[] = [];
+
+    for (const payload of items) {
+      const resolvedParentId = payload.parent_item_id ?? null;
+
+      const maxPosition = await ShoppingListItem.max('position', {
+        where: {
+          shopping_list_id: Number(shoppingList.get('id')),
+          parent_item_id: resolvedParentId,
+          deleted: false,
+        },
+        transaction: t,
+      });
+
+      const nextPosition = typeof maxPosition === 'number' ? maxPosition + 1 : 0;
+
+      const item = await ShoppingListItem.create(
+        {
+          shopping_list_id: Number(shoppingList.get('id')),
+          shopping_list_categories: Number(shoppingListCategory.get('id')),
+          name: payload.name,
+          created_by: createdBy,
+          parent_item_id: resolvedParentId,
+          position: nextPosition,
+        },
+        { transaction: t }
+      );
+
+      createdItems.push(item);
+
+      await sendShoppingListItemWebhook(
+        familyGroupId,
+        'add-item',
+        item,
+        shoppingListCategory
+      );
+    }
+
+    return createdItems;
   });
 };
 
@@ -335,6 +510,66 @@ export const updateItem = async (familyGroupId: number, itemId: number, name: st
     }
 
     return item;
+  });
+};
+
+/**
+ * Reorder items in a shopping list by updating their parent_item_id and position.
+ * @param {number} familyGroupId - Family group ID
+ * @param {{ id: number; parent_item_id: number | null; position: number }[]} changes - Items to reorder
+ * @returns {Promise<ShoppingListItem[]>} Updated shopping list items
+ * @throws {Error} If any item is not found or does not belong to the family group
+ */
+export const reorderItems = async (
+  familyGroupId: number,
+  changes: { id: number; parent_item_id: number | null; position: number }[]
+): Promise<ShoppingListItem[]> => {
+  if (!changes.length) {
+    return [];
+  }
+
+  return await sequelize.transaction(async (t: Transaction) => {
+    const updatedItems: ShoppingListItem[] = [];
+
+    for (const change of changes) {
+      const item = await ShoppingListItem.findOne({
+        where: { id: change.id },
+        include: [
+          {
+            model: ShoppingList,
+            where: { family_group_id: familyGroupId },
+          },
+          {
+            model: ShoppingListCategory,
+            required: true,
+          },
+        ],
+        transaction: t,
+      }) as ShoppingListItem & { category: ShoppingListCategory };
+
+      if (!item) {
+        throw new Error('Item not found');
+      }
+
+      await item.update(
+        {
+          parent_item_id: change.parent_item_id ?? null,
+          position: change.position,
+        },
+        { transaction: t }
+      );
+
+      updatedItems.push(item);
+
+      await sendShoppingListItemWebhook(
+        familyGroupId,
+        'move-item',
+        item,
+        item.category
+      );
+    }
+
+    return updatedItems;
   });
 };
 

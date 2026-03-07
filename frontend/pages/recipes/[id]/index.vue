@@ -128,37 +128,25 @@ const handleAddToShoppingList = async () => {
     const { api } = useApi();
     const familyGroupId = userStore.user.family_group_id;
 
-    // Get existing shopping list categories
-    const categories = await api(`/api/shopping-list/${familyGroupId}/categories`);
-
-    // Find or use the first category as default
-    let targetCategoryId = categories?.[0]?.id;
-
-    if (!targetCategoryId) {
-      showError('No shopping list categories found. Please create a category first.');
-      return;
-    }
-
-    // Get shopping list ID
-    const shoppingList = await api(`/api/shopping-list/${familyGroupId}`);
-
-    // Add each ingredient as a shopping list item
-    for (const ingredient of recipe.value.ingredients) {
+    const items = recipe.value.ingredients.map((ingredient) => {
       const itemName = ingredient.quantity && ingredient.unit
         ? `${ingredient.name} (${ingredient.quantity} ${ingredient.unit})`
         : ingredient.quantity
           ? `${ingredient.name} (${ingredient.quantity})`
           : ingredient.name;
 
-      await api(`/api/shopping-list/${familyGroupId}/items`, {
-        method: 'POST',
-        body: {
-          shopping_list_id: shoppingList.id,
-          shopping_list_categories: targetCategoryId,
-          name: itemName,
-        },
-      });
-    }
+      return {
+        name: itemName,
+        parent_item_id: null
+      };
+    });
+
+    await api(`/api/shopping-list/${familyGroupId}/items/bulk`, {
+      method: 'POST',
+      body: {
+        items
+      }
+    });
 
     const { showSuccess } = useToast();
     showSuccess('Ingredients added to shopping list!');

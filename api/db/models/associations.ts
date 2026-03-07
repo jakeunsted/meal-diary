@@ -76,6 +76,18 @@ ShoppingListItem.belongsTo(ShoppingList, {
   foreignKeyConstraint: true
 });
 
+// ShoppingListItem hierarchy associations
+ShoppingListItem.belongsTo(ShoppingListItem, {
+  foreignKey: 'parent_item_id',
+  foreignKeyConstraint: false,
+  as: 'parent'
+});
+ShoppingListItem.hasMany(ShoppingListItem, {
+  foreignKey: 'parent_item_id',
+  foreignKeyConstraint: false,
+  as: 'children'
+});
+
 // FamilyGroup <-> MealDiary associations
 FamilyGroup.hasMany(MealDiary, {
   foreignKey: 'family_group_id',

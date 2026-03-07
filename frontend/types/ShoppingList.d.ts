@@ -14,6 +14,8 @@ export interface ShoppingListItem {
   checked: boolean;
   deleted: boolean;
   created_by: number;
+  parent_item_id: number | null;
+  position: number;
   created_at: string;
   updated_at: string;
 }
@@ -34,6 +36,7 @@ export interface ShoppingList {
   family_group_id: number;
   created_at: string;
   updated_at: string;
+  items: ShoppingListItem[];
   categories: ShoppingListCategoryWithItems[];
 }
 

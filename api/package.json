@@ -8,6 +8,7 @@
     "dev": "node --experimental-strip-types --experimental-transform-types --watch index.ts",
     "build": "tsc && tsc-alias",
     "start": "node --experimental-strip-types --experimental-transform-types index.ts",
+    "reset-shopping-lists": "node --experimental-strip-types --experimental-transform-types scripts/resetShoppingLists.ts",
     "seed": "node --experimental-strip-types --experimental-transform-types scripts/seed.ts"
   },
   "author": "Jake Unsted",

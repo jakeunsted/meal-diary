@@ -34,92 +34,102 @@ export const useSSE = () => {
         'token-refresh': handleTokenRefresh,
 
         // Shopping list events
-        'add-new-category': (data) => {
-          // Handle category added event
-          if (shoppingListStore.shoppingList && data.category) {
-            const categoryExists = shoppingListStore.shoppingList.categories.some(
-              c => c.id === data.category.id
-            );
-            if (!categoryExists) {
-              shoppingListStore.shoppingList.categories.push(data.category);
-              shoppingListStore.saveToLocalStorage();
-            }
-          }
+        'add-new-category': () => {
+          // Categories are no longer used in the single-list UI.
         },
-        'save-category': (data) => {
-          // Handle category saved event
-          if (shoppingListStore.shoppingList && data.category) {
-            const index = shoppingListStore.shoppingList.categories.findIndex(
-              c => c.id === data.category.id
-            );
-            if (index !== -1) {
-              shoppingListStore.shoppingList.categories[index] = data.category;
-              shoppingListStore.saveToLocalStorage();
-            }
-          }
+        'save-category': () => {
+          // Categories are no longer used in the single-list UI.
         },
-        'delete-category': (data) => {
-          if (shoppingListStore.shoppingList && data.category?.id) {
-            shoppingListStore.shoppingList.categories = shoppingListStore.shoppingList.categories.filter(
-              (category: any) => category.id !== data.category.id
-            );
-            shoppingListStore.saveToLocalStorage();
-          }
+        'delete-category': () => {
+          // Categories are no longer used in the single-list UI.
         },
-        'update-category-order': (data) => {
-          // if (shoppingListStore.shoppingList?.content) {
-          //   shoppingListStore.shoppingList.content.categories = data.categoryContents;
-          //   shoppingListStore.saveToLocalStorage();
-          // }
+        'update-category-order': () => {
+          // Categories are no longer used in the single-list UI.
         },
         // Shopping list item events
         'add-item': (data) => {
           // Ignore events from the current user
           if (data.item?.created_by === authStore.user?.id) return;
           
-          const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category?.id);
-          const itemExists = category?.items.some(item => item.name.toLowerCase() === data.item?.name?.toLowerCase());
-          
-          if (!itemExists && category && data.item) {
-            category.items.push(data.item);
-            shoppingListStore.saveToLocalStorage();
+          if (!shoppingListStore.shoppingList || !data.item) {
+            return;
           }
+
+          const existingIndex = shoppingListStore.shoppingList.items.findIndex(
+            item => item.id === data.item.id
+          );
+
+          if (existingIndex === -1) {
+            shoppingListStore.shoppingList.items.push(data.item);
+          } else {
+            shoppingListStore.shoppingList.items[existingIndex] = data.item;
+          }
+
+          shoppingListStore.saveToLocalStorage();
         },
         'delete-item': (data) => {
           // Ignore events from the current user
           if (data.item?.created_by === authStore.user?.id) return;
           
-          const category = shoppingListStore.shoppingList?.categories.find(c => c.id === data.category?.id);
-          if (category && data.item?.id) {
-            const index = category.items.findIndex(item => item.id === data.item.id);
-            if (index !== -1) {
-              category.items.splice(index, 1);
-              shoppingListStore.saveToLocalStorage();
-            }
+          if (!shoppingListStore.shoppingList || !data.item?.id) {
+            return;
           }
+
+          shoppingListStore.shoppingList.items = shoppingListStore.shoppingList.items.filter(
+            item => item.id !== data.item.id
+          );
+          shoppingListStore.saveToLocalStorage();
         },
         'check-item': (data) => {
-          // Find category by item's shopping_list_categories field or category id
-          const categoryId = data.item?.shopping_list_categories || data.category?.id;
-          const category = shoppingListStore.shoppingList?.categories.find(c => c.id === categoryId);
-          if (category && data.item?.id) {
-            const index = category.items.findIndex(item => item.id === data.item.id);
-            if (index !== -1) {
-              category.items[index] = { ...category.items[index], checked: true };
-              shoppingListStore.saveToLocalStorage();
-            }
+          if (!shoppingListStore.shoppingList || !data.item?.id) {
+            return;
+          }
+
+          const index = shoppingListStore.shoppingList.items.findIndex(
+            item => item.id === data.item.id
+          );
+
+          if (index !== -1) {
+            shoppingListStore.shoppingList.items[index] = {
+              ...shoppingListStore.shoppingList.items[index],
+              checked: true
+            };
+            shoppingListStore.saveToLocalStorage();
           }
         },
         'uncheck-item': (data) => {
-          // Find category by item's shopping_list_categories field or category id (same as check-item)
-          const categoryId = data.item?.shopping_list_categories || data.category?.id;
-          const category = shoppingListStore.shoppingList?.categories.find(c => c.id === categoryId);
-          if (category && data.item?.id) {
-            const index = category.items.findIndex(item => item.id === data.item.id);
-            if (index !== -1) {
-              category.items[index] = { ...category.items[index], checked: false };
-              shoppingListStore.saveToLocalStorage();
-            }
+          if (!shoppingListStore.shoppingList || !data.item?.id) {
+            return;
+          }
+
+          const index = shoppingListStore.shoppingList.items.findIndex(
+            item => item.id === data.item.id
+          );
+
+          if (index !== -1) {
+            shoppingListStore.shoppingList.items[index] = {
+              ...shoppingListStore.shoppingList.items[index],
+              checked: false
+            };
+            shoppingListStore.saveToLocalStorage();
+          }
+        },
+        'move-item': (data) => {
+          if (!shoppingListStore.shoppingList || !data.item?.id) {
+            return;
+          }
+
+          const index = shoppingListStore.shoppingList.items.findIndex(
+            item => item.id === data.item.id
+          );
+
+          if (index !== -1) {
+            shoppingListStore.shoppingList.items[index] = {
+              ...shoppingListStore.shoppingList.items[index],
+              parent_item_id: data.item.parent_item_id ?? null,
+              position: data.item.position
+            };
+            shoppingListStore.saveToLocalStorage();
           }
         },
 

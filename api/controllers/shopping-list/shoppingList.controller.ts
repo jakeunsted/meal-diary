@@ -168,23 +168,22 @@ export const getFamilyCategories = async (req: Request, res: Response) => {
 export const addItem = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { name, shopping_list_categories } = req.body;
+    const { name, parent_item_id } = req.body;
 
     const user = req.user as User;
 
     try {
       const item = await ShoppingListService.addItem(
         Number(family_group_id),
-        Number(shopping_list_categories),
         name,
-        Number(user.dataValues.id)
+        Number(user.dataValues.id),
+        parent_item_id !== undefined ? Number(parent_item_id) || null : undefined
       );
 
       // Track shopping list item added
       await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_added', {
         family_group_id: Number(family_group_id),
         item_id: item.get('id'),
-        category_id: Number(shopping_list_categories),
       });
 
       res.json(item);
@@ -200,6 +199,97 @@ export const addItem = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error adding item:', error);
     res.status(500).json({ message: 'Failed to add item' });
+  }
+};
+
+/**
+ * Adds multiple new items to a shopping list
+ * @param {Request} req - Express request object containing item details
+ * @param {Response} res - Express response object
+ * @returns {Promise<void>} - Returns the newly created items
+ */
+export const bulkAddItems = async (req: Request, res: Response) => {
+  try {
+    const { family_group_id } = req.params;
+    const { items } = req.body as { items?: { name: string; parent_item_id?: number | null }[] };
+
+    if (!family_group_id || isNaN(Number(family_group_id))) {
+      return res.status(400).json({ message: 'Valid family group ID is required' });
+    }
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    const user = req.user as User;
+
+    try {
+      const createdItems = await ShoppingListService.bulkAddItems(
+        Number(family_group_id),
+        items,
+        Number(user.dataValues.id)
+      );
+
+      // Track shopping list items added from bulk operation
+      await trackEvent(user.dataValues.id.toString(), 'shopping_list_items_bulk_added', {
+        family_group_id: Number(family_group_id),
+        item_count: createdItems.length,
+      });
+
+      res.json(createdItems);
+    } catch (serviceError) {
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to add items';
+      
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      throw serviceError;
+    }
+  } catch (error) {
+    console.error('Error adding items:', error);
+    res.status(500).json({ message: 'Failed to add items' });
+  }
+};
+
+/**
+ * Reorders items in a shopping list by updating their parent and position.
+ * @param {Request} req - Express request object containing reorder payload
+ * @param {Response} res - Express response object
+ * @returns {Promise<void>} - Returns the updated items
+ */
+export const reorderItems = async (req: Request, res: Response) => {
+  try {
+    const { family_group_id } = req.params;
+    const { items } = req.body as { items?: { id: number; parent_item_id: number | null; position: number }[] };
+
+    if (!family_group_id || isNaN(Number(family_group_id))) {
+      return res.status(400).json({ message: 'Valid family group ID is required' });
+    }
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    try {
+      const updatedItems = await ShoppingListService.reorderItems(
+        Number(family_group_id),
+        items
+      );
+
+      return res.json(updatedItems);
+    } catch (serviceError) {
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to reorder items';
+
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      throw serviceError;
+    }
+  } catch (error) {
+    console.error('Error reordering items:', error);
+    res.status(500).json({ message: 'Failed to reorder items' });
   }
 };
 

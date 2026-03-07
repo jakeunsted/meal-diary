@@ -1,6 +1,17 @@
 <template>
-  <div class="flex items-center justify-between list-none">
-    <div class="flex-1 flex items-center">
+  <div
+    class="flex items-center justify-between list-none px-2 py-1"
+    @touchstart="handleTouchStart"
+    @touchend="handleTouchEnd"
+  >
+    <div class="flex items-center gap-2 flex-1">
+      <button
+        class="drag-handle btn btn-ghost btn-sm cursor-grab active:cursor-grabbing"
+        type="button"
+        :aria-label="$t('Reorder item')"
+      >
+        <fa icon="grip-vertical" />
+      </button>
       <input 
         type="checkbox"
         class="checkbox checkbox-primary mr-2"
@@ -24,23 +35,43 @@
         :value="item.name"
         @change="handleNameChange($event.target.value)"
         @blur="stopEditing"
-        @keyup.enter="stopEditing"
+        @keyup.enter.prevent="handleEnterKey($event)"
         @keyup.escape="cancelEditing"
         @focus="scrollToInput($event.target)"
         ref="editInput"
       />
     </div>
-    <button 
-      class="btn btn-ghost btn-sm"
-      @click="handleRemove"
-    >
-      <fa icon="xmark" />
-    </button>
+    <div class="flex items-center gap-1">
+      <button
+        class="btn btn-ghost btn-xs"
+        type="button"
+        @click="handleOutdent"
+        :aria-label="$t('Outdent item')"
+      >
+        <fa icon="angle-left" />
+      </button>
+      <button
+        class="btn btn-ghost btn-xs"
+        type="button"
+        @click="handleIndent"
+        :aria-label="$t('Indent item')"
+      >
+        <fa icon="angle-right" />
+      </button>
+      <button 
+        class="btn btn-ghost btn-sm"
+        type="button"
+        @click="handleRemove"
+        :aria-label="$t('Remove item')"
+      >
+        <fa icon="xmark" />
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
-const emit = defineEmits(['update', 'remove']);
+const emit = defineEmits(['update', 'remove', 'indent', 'outdent', 'insertBelow']);
 
 const props = defineProps({
   item: {
@@ -55,6 +86,10 @@ const originalName = ref('');
 
 // Add mobile input scroll functionality
 const { scrollToInput } = useMobileInputScroll();
+
+let touchStartX = 0;
+let touchStartY = 0;
+const SWIPE_THRESHOLD = 40;
 
 const startEditing = () => {
   isEditing.value = true;
@@ -98,7 +133,47 @@ const handleNameChange = (newName) => {
   stopEditing();
 };
 
+const handleEnterKey = (event) => {
+  const newName = event?.target?.value ?? '';
+  emit('update', {
+    id: props.item.id,
+    name: newName
+  });
+  emit('insertBelow', props.item.id);
+  stopEditing();
+};
+
 const handleRemove = () => {
   emit('remove', props.item.id);
+};
+
+const handleIndent = () => {
+  emit('indent', props.item.id);
+};
+
+const handleOutdent = () => {
+  emit('outdent', props.item.id);
+};
+
+const handleTouchStart = (event) => {
+  if (!event.touches || event.touches.length === 0) {
+    return;
+  }
+  const touch = event.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
+};
+
+const handleTouchEnd = (event) => {
+  if (!event.changedTouches || event.changedTouches.length === 0) {
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const deltaX = touch.clientX - touchStartX;
+  const deltaY = Math.abs(touch.clientY - touchStartY);
+
+  if (deltaX > SWIPE_THRESHOLD && deltaY < SWIPE_THRESHOLD) {
+    handleIndent();
+  }
 };
 </script>

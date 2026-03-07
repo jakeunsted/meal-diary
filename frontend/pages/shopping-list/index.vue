@@ -1,63 +1,84 @@
 <template>
-  <div class="max-w-4xl mx-auto">
+  <div class="max-w-4xl mx-auto px-4">
     <h1 class="text-2xl font-bold text-center m-4">
       {{ $t('Shopping List') }}
     </h1>
 
     <ShoppingListSkeleton v-if="!hasData" />
     <div v-else>
-      <transition-group 
-        name="list" 
-        tag="div"
-        class="relative"
-      >
-        <div 
-          v-for="category in shoppingCategories" 
-          :key="category.id"
-        >
-          <CollapseListSection
-            class="m-4"
-            :categoryTitle="category?.itemCategory?.name || ''"
-            :categoryItems="category?.items || []"
-            @addItem="saveItem(category, $event)"
-            @updateItem="saveItem(category, $event)"
-            @removeItem="deleteItem(category, $event)"
-            @longPress="handleLongPress(category)"
-            @inputFocus="handleInputFocus"
-          />
-        </div>
-      </transition-group>
-    </div>
+      <DnDProvider>
+        <ShoppingListDndZone
+          :active-items="activeItems"
+          :item-depth-map="itemDepthMap"
+          @update="handleItemUpdate"
+          @remove="handleRemoveItem"
+          @indent="handleIndent"
+          @outdent="handleOutdent"
+          @insertBelow="handleInsertBelow"
+        />
 
-    <div class="flex justify-center" v-if="hasData">
-      <button class="btn btn-primary rounded-2xl" @click="addCategoryModal?.showModal()">{{ $t('Add Category') }}</button>
+      <div class="pt-4 flex items-center gap-2 my-2">
+        <button
+          class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
+          type="button"
+          @click="handleAddNewItem"
+        >
+          <fa icon="plus" />
+        </button>
+        <input
+          type="text"
+          :placeholder="$t('Enter new item')"
+          class="input input-ghost w-full pr-5"
+          v-model="newItemName"
+          @keyup.enter="handleAddNewItem"
+          @focus="handleInputFocus"
+        />
+      </div>
+
+        <div v-if="hasCheckedItems" class="mt-4">
+          <div class="collapse collapse-arrow bg-base-200">
+            <input type="checkbox" />
+            <div class="collapse-title text-sm font-medium">
+              {{ $t('Checked items') }} ({{ checkedItems.length }})
+            </div>
+            <div class="collapse-content">
+              <div
+                v-for="item in checkedItems"
+                :key="item.id"
+                class="my-1"
+              >
+                <div
+                  class="flex items-center gap-2"
+                  :style="{ marginLeft: `${(itemDepthMap[item.id] || 0) * 1.5}rem` }"
+                >
+                  <ShoppingListItem
+                    class="flex-1"
+                    :item="item"
+                    @update="handleItemUpdate"
+                    @remove="handleRemoveItem"
+                    @indent="handleIndent"
+                    @outdent="handleOutdent"
+                    @insertBelow="handleInsertBelow"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DnDProvider>
     </div>
-    <AddCategoryModal
-      ref="addCategoryModal"
-      :itemCategories="shoppingListStore.itemCategories || []"
-      :loading="shoppingListStore.isLoading"
-      @addCategory="handleAddCategory"
-    />
-    <CategoryOptionsModal
-      ref="categoryOptionsModal"
-      v-if="selectedCategory"
-      :categoryName="selectedCategory.itemCategory.name"
-      @untickAll="handleUntickAll"
-      @tickAll="handleTickAll"
-      @deleteGroup="handleDeleteGroup"
-    />
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   middleware: 'auth'
 });
 
-import CollapseListSection from '~/components/shopping-list/CollapseListSection.vue';
-import AddCategoryModal from '~/components/shopping-list/AddCategoryModal.vue';
-import CategoryOptionsModal from '~/components/shopping-list/CategoryOptionsModal.vue';
+import { DnDProvider } from '@vue-dnd-kit/core';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
+import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
+import ShoppingListDndZone from '~/components/shopping-list/ShoppingListDndZone.vue';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 
@@ -65,91 +86,79 @@ const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 
 const loading = ref(true);
-const selectedCategory = ref(null);
-const categoryOptionsModal = ref(null);
-const addCategoryModal = ref(null);
 const hasData = computed(() => {
-  return !loading.value && shoppingListStore.shoppingList?.categories !== undefined;
+  return !loading.value && !!shoppingListStore.shoppingList;
 });
 
-const handleError = (error) => {
+const newItemName = ref('');
+
+const handleError = (error: unknown) => {
   console.error('Error in shopping list page:', error);
 };
 
-// Use computed property to ensure reactivity to store changes
-const shoppingCategories = computed(() => 
-  shoppingListStore.shoppingList?.categories || []
-);
-
-const handleLongPress = (category) => {
-  selectedCategory.value = category;
-  categoryOptionsModal.value?.showModal();
-};
-
-const handleUntickAll = async () => {
-  if (!selectedCategory.value) return;
-  const updatedCategory = {
-    ...selectedCategory.value,
-    items: selectedCategory.value.items.map(item => ({ ...item, checked: false }))
-  };
-  await saveItem(updatedCategory);
-};
-
-const handleTickAll = async () => {
-  if (!selectedCategory.value) return;
-  const updatedCategory = {
-    ...selectedCategory.value,
-    items: selectedCategory.value.items.map(item => ({ ...item, checked: true }))
-  };
-  await saveItem(updatedCategory);
-};
-
-const handleDeleteGroup = async () => {
-  if (!selectedCategory.value) return;
-  try {
-    await shoppingListStore.deleteCategory(selectedCategory.value.id);
-    categoryOptionsModal.value?.close();
-  } catch (error) {
-    console.error('Error deleting category:', error);
+const orderedItems = computed(() => {
+  if (!shoppingListStore.shoppingList?.items) {
+    return [];
   }
-};
+  return [...shoppingListStore.shoppingList.items].sort((a, b) => a.position - b.position);
+});
 
-const saveItem = async (category, event) => {
-  if (event?.itemName) {
-    if (event.id) {
-      // Only update name and checked status
-      await shoppingListStore.updateItem(event.id, {
-        name: event.itemName,
-        checked: event.itemChecked || false,
-        shopping_list_categories: category.id
-      });
-    } else {
-      await shoppingListStore.addItem({
-        name: event.itemName,
-        shopping_list_categories: category.id
-      });
-    }
-  } else {
-    // Handle category update
-    await shoppingListStore.updateCategoryOrder(userStore.user?.family_group_id, [category]);
-  }
-};
+const activeItems = computed(() => {
+  return orderedItems.value.filter(item => !item.checked);
+});
 
-const deleteItem = async (category, event) => {
-  if (event?.itemName) {
-    const item = category.items.find(i => i.name === event.itemName);
-    if (item) {
-      await shoppingListStore.deleteItem(item.id);
+const checkedItems = computed(() => {
+  return orderedItems.value.filter(item => item.checked);
+});
+
+const hasCheckedItems = computed(() => checkedItems.value.length > 0);
+
+const itemDepthMap = computed<Record<number, number>>(() => {
+  const depthMap: Record<number, number> = {};
+  const items = shoppingListStore.shoppingList?.items || [];
+  const byId = new Map<number, { id: number; parent_item_id: number | null }>();
+
+  for (const item of items) {
+    if (typeof item.id === 'number') {
+      byId.set(item.id, { id: item.id, parent_item_id: item.parent_item_id });
     }
   }
-}
+
+  const computeDepth = (id: number, visited: Set<number>): number => {
+    if (depthMap[id] !== undefined) {
+      return depthMap[id];
+    }
+    if (visited.has(id)) {
+      return 0;
+    }
+    visited.add(id);
+    const entry = byId.get(id);
+    if (!entry || entry.parent_item_id === null) {
+      depthMap[id] = 0;
+      return 0;
+    }
+    const parentDepth = computeDepth(entry.parent_item_id, visited);
+    const depth = parentDepth + 1;
+    depthMap[id] = depth;
+    return depth;
+  };
+
+  for (const entry of byId.values()) {
+    computeDepth(entry.id, new Set<number>());
+  }
+
+  return depthMap;
+});
 
 // Add function to handle input focus
-const handleInputFocus = async (event) => {
+const handleInputFocus = async (event: FocusEvent) => {
   // Use the improved mobile input scroll functionality
   const { scrollToInput } = useMobileInputScroll();
-  scrollToInput(event.target);
-  
+  const target = event.target as HTMLElement | null;
+  if (target) {
+    scrollToInput(target);
+  }
+
   // For Capacitor Android, also ensure the input is visible
   if (import.meta.client) {
     try {
@@ -157,11 +166,13 @@ const handleInputFocus = async (event) => {
       if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
         // Additional scroll to ensure input is visible
         setTimeout(() => {
-          event.target.scrollIntoView({ 
-            behavior: 'auto', 
-            block: 'center',
-            inline: 'nearest'
-          });
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'auto',
+              block: 'center',
+              inline: 'nearest'
+            });
+          }
         }, 600);
       }
     } catch (error) {
@@ -170,28 +181,58 @@ const handleInputFocus = async (event) => {
   }
 };
 
-const handleAddCategory = async (category) => {
-  try {
-    await shoppingListStore.addCategory(category);
-    addCategoryModal.value?.closeModal();
-  } catch (error) {
-    console.error('Error adding category:', error);
+const handleAddNewItem = async () => {
+  if (!newItemName.value.trim()) {
+    return;
   }
+  try {
+    await shoppingListStore.addItem({
+      name: newItemName.value,
+      parentItemId: null
+    });
+    newItemName.value = '';
+  } catch (error) {
+    console.error('Error adding item:', error);
+  }
+};
+
+const handleItemUpdate = async (event: { id: number | string; name: string; checked?: boolean }) => {
+  if (!event?.id) {
+    return;
+  }
+  await shoppingListStore.updateItem(event.id, {
+    name: event.name,
+    checked: event.checked ?? false
+  });
+};
+
+const handleRemoveItem = async (itemId: number | string) => {
+  await shoppingListStore.deleteItem(itemId);
+};
+
+const handleIndent = async (itemId: number | string) => {
+  await shoppingListStore.indentItem(itemId);
+};
+
+const handleOutdent = async (itemId: number | string) => {
+  await shoppingListStore.outdentItem(itemId);
+};
+
+const handleInsertBelow = async (itemId: number | string) => {
+  await shoppingListStore.insertItemAfter(itemId, '');
 };
 
 onMounted(async () => {
   await nextTick();
-  
+
   // Start loading data after skeleton is visible
   const loadData = async () => {
     try {
       // Start all requests in parallel
       await Promise.all([
         shoppingListStore.fetchShoppingList().catch(handleError),
-        userStore.fetchUser().catch(handleError),
-        shoppingListStore.fetchItemCategories().catch(handleError)
+        userStore.fetchUser().catch(handleError)
       ]);
-
     } catch (error) {
       handleError(error);
     } finally {
@@ -201,38 +242,38 @@ onMounted(async () => {
 
   // Start loading data
   loadData();
-  
+
   // Add viewport resize listener for keyboard handling
   if (import.meta.client) {
     try {
       const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
         let initialViewportHeight = window.innerHeight;
-        
+
         const handleViewportResize = () => {
           const currentHeight = window.innerHeight;
           const heightDifference = initialViewportHeight - currentHeight;
-          
+
           // If viewport height decreased significantly, keyboard likely opened
           if (heightDifference > 150) {
             // Find focused input and scroll to it
             const focusedElement = document.activeElement;
             if (focusedElement && focusedElement.tagName === 'INPUT') {
               setTimeout(() => {
-                focusedElement.scrollIntoView({ 
-                  behavior: 'auto', 
+                focusedElement.scrollIntoView({
+                  behavior: 'auto',
                   block: 'center',
                   inline: 'nearest'
                 });
               }, 100);
             }
           }
-          
+
           initialViewportHeight = currentHeight;
         };
-        
+
         window.addEventListener('resize', handleViewportResize);
-        
+
         // Cleanup on unmount
         onUnmounted(() => {
           window.removeEventListener('resize', handleViewportResize);
@@ -278,3 +319,4 @@ onMounted(async () => {
   z-index: 10;
 }
 </style>
+

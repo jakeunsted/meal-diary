@@ -11,11 +11,13 @@ export interface ShoppingListItemAttributes {
   checked: boolean;
   deleted: boolean;
   created_by: number;
+  parent_item_id?: number | null;
+  position: number;
   created_at?: Date;
   updated_at?: Date;
 }
 
-interface ShoppingListItemCreationAttributes extends Optional<ShoppingListItemAttributes, 'id' | 'checked' | 'deleted' | 'created_at' | 'updated_at'> {}
+interface ShoppingListItemCreationAttributes extends Optional<ShoppingListItemAttributes, 'id' | 'checked' | 'deleted' | 'parent_item_id' | 'position' | 'created_at' | 'updated_at'> {}
 
 class ShoppingListItem extends Model<ShoppingListItemAttributes, ShoppingListItemCreationAttributes> {
   declare category: ShoppingListCategory;
@@ -54,6 +56,15 @@ ShoppingListItem.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    parent_item_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    position: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+    },
     created_at: {
       type: DataTypes.DATE,
       allowNull: false,
@@ -80,6 +91,9 @@ ShoppingListItem.init(
       },
       {
         fields: ['shopping_list_categories', 'deleted'],
+      },
+      {
+        fields: ['shopping_list_id', 'parent_item_id', 'position'],
       },
     ],
   }

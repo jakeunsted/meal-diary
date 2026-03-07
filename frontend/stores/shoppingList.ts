@@ -19,6 +19,7 @@ export interface ShoppingListState {
     add: ShoppingListItem[];
     update: ShoppingListItem[];
     delete: number[];
+    reorder: { id: number | string; parent_item_id: number | null; position: number }[];
   };
 }
 
@@ -34,39 +35,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
     pendingChanges: {
       add: [],
       update: [],
-      delete: []
+      delete: [],
+      reorder: []
     }
   }),
 
   getters: {
-    /**
-     * Get all items belonging to a specific category
-     * @param state - The store state
-     * @returns A function that takes a categoryId and returns filtered items
-     */
-    getItemsByCategory: (state) => (categoryId: number) => {
-      const category = state.shoppingList?.categories.find(c => c.id === categoryId);
-      return category?.items || [];
-    },
-
-    /**
-     * Get a category by its ID
-     * @param state - The store state
-     * @returns A function that takes a categoryId and returns the matching category
-     */
-    getCategoryById: (state) => (categoryId: number) => {
-      return state.shoppingList?.categories.find(category => category.id === categoryId);
-    },
-
-    /**
-     * Get an item category by its ID
-     * @param state - The store state
-     * @returns A function that takes a categoryId and returns the matching item category
-     */
-    getItemCategoryById: (state) => (categoryId: number) => {
-      return state.itemCategories.find(category => category.id === categoryId);
-    },
-
     /**
      * Check if an ID is temporary
      */
@@ -226,29 +200,40 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Add a new item to the shopping list (offline-first)
      * @param item - The item data to add
      */
-    async addItem(item: { name: string, shopping_list_categories: number }) {
+    async addItem(item: { name: string; parentItemId?: number | null }) {
       const authStore = useAuthStore();
       const userStore = useUserStore();
       const tempId = this.generateTempId();
       const createdById = userStore.user?.id || 0;
-      
+      const resolvedParentId = item.parentItemId ?? null;
+
+      const existingItems = this.shoppingList?.items || [];
+      const siblingPositions = existingItems
+        .filter(existing => existing.parent_item_id === resolvedParentId)
+        .map(existing => existing.position);
+      const nextPosition = siblingPositions.length ? Math.max(...siblingPositions) + 1 : 0;
+
       // Create a temporary item
       const tempItem: ShoppingListItem = {
         id: tempId as unknown as number,
         shopping_list_id: this.shoppingList?.id || 0,
-        shopping_list_categories: item.shopping_list_categories,
+        shopping_list_categories: 0,
         name: item.name,
         checked: false,
         deleted: false,
+        parent_item_id: resolvedParentId,
+        position: nextPosition,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_by: createdById
       };
 
       // Add to local state immediately
-      const category = this.shoppingList?.categories.find(c => c.id === item.shopping_list_categories);
-      if (category) {
-        category.items.push(tempItem);
+      if (this.shoppingList) {
+        if (!Array.isArray(this.shoppingList.items)) {
+          this.shoppingList.items = [];
+        }
+        this.shoppingList.items.push(tempItem);
         await this.saveToLocalStorage();
       }
 
@@ -260,7 +245,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
         const { api } = useApi();
         const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
           method: 'POST',
-          body: item,
+          body: {
+            name: item.name,
+            parent_item_id: resolvedParentId
+          },
           headers: {
             'Authorization': `Bearer ${authStore.accessToken}`,
             'x-refresh-token': authStore.refreshToken || ''
@@ -269,11 +257,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
         const newItem = response as ShoppingListItem;
         
-        // Update the item in the category with the real ID
-        if (category) {
-          const index = category.items.findIndex(i => String(i.id) === tempId);
+        // Update the item in the list with the real ID
+        if (this.shoppingList) {
+          const index = this.shoppingList.items.findIndex(i => String(i.id) === tempId);
           if (index !== -1) {
-            category.items[index] = newItem;
+            this.shoppingList.items[index] = newItem;
             // Remove from pending changes
             this.pendingChanges.add = this.pendingChanges.add.filter(i => String(i.id) !== tempId);
             await this.saveToLocalStorage();
@@ -297,27 +285,23 @@ export const useShoppingListStore = defineStore('shoppingList', {
       
       // Update local state immediately
       if (this.shoppingList) {
-        let itemUpdated = false;
-        for (const category of this.shoppingList.categories) {
-          const index = category.items.findIndex(item => item.id === itemId);
-          if (index !== -1) {
-            category.items[index] = { ...category.items[index], ...updates };
-            itemUpdated = true;
-            break;
-          }
+        const index = this.shoppingList.items.findIndex(item => item.id === itemId);
+        if (index !== -1) {
+          this.shoppingList.items[index] = { ...this.shoppingList.items[index], ...updates };
         }
         await this.saveToLocalStorage();
       }
 
       // If it's a temporary item, no need to sync with server
       if (isTemp) {
+        if (updates.name && typeof updates.name === 'string' && updates.name.trim()) {
+          await this.persistTempItem(itemId, updates.name);
+        }
         return;
       }
 
       // Add to pending changes
-      const updatedItem = this.shoppingList?.categories
-        .flatMap(c => c.items)
-        .find(i => i.id === itemId);
+      const updatedItem = this.shoppingList?.items.find(i => i.id === itemId);
       if (updatedItem) {
         this.pendingChanges.update.push(updatedItem);
       }
@@ -337,14 +321,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
         // Update the item in the category with the server response
         if (this.shoppingList) {
-          let itemUpdated = false;
-          for (const category of this.shoppingList.categories) {
-            const index = category.items.findIndex(item => item.id === itemId);
-            if (index !== -1) {
-              category.items[index] = serverUpdatedItem;
-              itemUpdated = true;
-              break;
-            }
+          const index = this.shoppingList.items.findIndex(item => item.id === itemId);
+          if (index !== -1) {
+            this.shoppingList.items[index] = serverUpdatedItem;
           }
           // Remove from pending changes
           this.pendingChanges.update = this.pendingChanges.update.filter(i => i.id !== itemId);
@@ -359,6 +338,50 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
+     * Persist a temporary item to the server once it has a name.
+     */
+    async persistTempItem(itemId: number | string, name: string) {
+      const authStore = useAuthStore();
+      const userStore = useUserStore();
+      const { api } = useApi();
+
+      if (!this.shoppingList || !userStore.user?.family_group_id) {
+        return;
+      }
+
+      const existing = this.shoppingList.items.find(item => item.id === itemId);
+      if (!existing) {
+        return;
+      }
+
+      const resolvedParentId = existing.parent_item_id ?? null;
+
+      try {
+        const response = await api(`/api/shopping-list/${userStore.user.family_group_id}/items`, {
+          method: 'POST',
+          body: {
+            name,
+            parent_item_id: resolvedParentId
+          },
+          headers: {
+            'Authorization': `Bearer ${authStore.accessToken}`,
+            'x-refresh-token': authStore.refreshToken || ''
+          }
+        });
+
+        const newItem = response as ShoppingListItem;
+        const index = this.shoppingList.items.findIndex(item => item.id === itemId);
+        if (index !== -1) {
+          this.shoppingList.items[index] = newItem;
+        }
+
+        await this.saveToLocalStorage();
+      } catch (error) {
+        console.error('Failed to persist temporary item:', error);
+      }
+    },
+
+    /**
      * Delete an item from the shopping list (offline-first)
      * @param itemId - The ID of the item to delete
      */
@@ -369,14 +392,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
       
       // Remove from local state immediately
       if (this.shoppingList) {
-        for (const category of this.shoppingList.categories) {
-          const index = category.items.findIndex(item => item.id === itemId);
-          if (index !== -1) {
-            category.items.splice(index, 1);
-            await this.saveToLocalStorage();
-            break;
-          }
-        }
+        this.shoppingList.items = this.shoppingList.items.filter(item => item.id !== itemId);
+        await this.saveToLocalStorage();
       }
 
       // If it's a temporary item, just remove from pending adds
@@ -407,113 +424,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Delete a category from the shopping list
-     * @param categoryId - The ID of the category to delete
-     */
-    async deleteCategory(categoryId: number) {
-      const authStore = useAuthStore();
-      const userStore = useUserStore();
-      try {
-        this.isLoading = true;
-        this.error = null;
-        const { api } = useApi();
-        await api(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${categoryId}`, {
-          method: 'DELETE' as any,
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
-        });
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to delete category';
-        throw err;
-      } finally {
-        // Remove the category from the shopping list
-        if (this.shoppingList) {
-          const index = this.shoppingList.categories.findIndex(category => category.id === categoryId);
-          if (index !== -1) {
-            this.shoppingList.categories.splice(index, 1);
-            await this.saveToLocalStorage();
-          }
-        }
-        this.isLoading = false;
-      }
-    },
-
-    /**
-     * Add a new category to the shopping list
-     * @param category - The item category to add
-     */
-    async addCategory(category: ItemCategory) {
-      if (!this.shoppingList) throw new Error('No shopping list found');
-      const authStore = useAuthStore();
-      const userStore = useUserStore();
-      try {
-        this.isLoading = true;
-        this.error = null;
-        const { api } = useApi();
-        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/categories/${category.id}`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
-        });
-        const newCategory = response.data as ShoppingListCategoryWithItems;
-
-        // Create a complete category object with the itemCategory data
-        const completeCategory: ShoppingListCategoryWithItems = {
-          ...newCategory,
-          itemCategory: category,
-          items: newCategory.items || []
-        };
-
-        // Add the new category to the shopping list
-        if (this.shoppingList.categories) {
-          this.shoppingList.categories.push(completeCategory);
-        } else {
-          this.shoppingList.categories = [completeCategory];
-        }
-        
-        // Save to local storage
-        await this.saveToLocalStorage();
-        
-        // Fetch the updated shopping list to ensure we have the latest data
-        await this.fetchShoppingList();
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to add category';
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    /**
-     * Update the order of categories in the shopping list
-     * @param familyGroupId - The ID of the family group
-     * @param categories - The new order of categories
-     */
-    async updateCategoryOrder(familyGroupId: number, categories: ShoppingListCategoryWithItems[]) {
-      if (!this.shoppingList) throw new Error('No shopping list found');
-      try {
-        this.isLoading = true;
-        this.error = null;
-        const { api } = useApi();
-        await api(`/api/shopping-list/${familyGroupId}/categories/order`, {
-          method: 'PUT' as any,
-          body: { categories }
-        });
-        this.shoppingList.categories = categories;
-        await this.saveToLocalStorage();
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to update category order';
-        throw err;
-      } finally {
-        this.isLoading = false;
-      }
-    },
-
-    /**
      * Sync pending changes with the server
      */
     async syncPendingChanges() {
@@ -536,7 +446,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
             method: 'POST',
             body: {
               name: item.name,
-              shopping_list_categories: item.shopping_list_categories
+              parent_item_id: item.parent_item_id ?? null
             },
             headers: {
               'Authorization': `Bearer ${authStore.accessToken}`,
@@ -545,14 +455,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
           });
           const newItem = response as ShoppingListItem;
           
-          // Update the item in the category with the real ID
+          // Update the item in the list with the real ID
           if (this.shoppingList) {
-            for (const category of this.shoppingList.categories) {
-              const index = category.items.findIndex(i => String(i.id) === String(item.id));
-              if (index !== -1) {
-                category.items[index] = newItem;
-                break;
-              }
+            const index = this.shoppingList.items.findIndex(i => String(i.id) === String(item.id));
+            if (index !== -1) {
+              this.shoppingList.items[index] = newItem;
             }
           }
           this.pendingChanges.add = this.pendingChanges.add.filter(i => String(i.id) !== String(item.id));
@@ -618,6 +525,168 @@ export const useShoppingListStore = defineStore('shoppingList', {
           }
         }
       }
+
+      // Sync reorders
+      if (this.pendingChanges.reorder.length) {
+        const uniqueById = new Map<number, { id: number; parent_item_id: number | null; position: number }>();
+        for (const change of this.pendingChanges.reorder) {
+          if (typeof change.id === 'number') {
+            uniqueById.set(change.id, {
+              id: change.id,
+              parent_item_id: change.parent_item_id,
+              position: change.position
+            });
+          }
+        }
+
+        const items = Array.from(uniqueById.values());
+
+        try {
+          await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/reorder`, {
+            method: 'PUT',
+            body: { items },
+            headers: {
+              'Authorization': `Bearer ${authStore.accessToken}`,
+              'x-refresh-token': authStore.refreshToken || ''
+            }
+          });
+
+          this.pendingChanges.reorder = [];
+          await this.saveToLocalStorage();
+        } catch (err) {
+          console.error('Failed to sync reordered items:', err);
+        }
+      }
+    },
+
+    /**
+     * Record a local reorder operation for an item.
+     * This updates local state immediately and queues the change for sync.
+     */
+    recordReorder(change: { id: number | string; parent_item_id: number | null; position: number }) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const index = this.shoppingList.items.findIndex(item => item.id === change.id);
+      if (index === -1) {
+        return;
+      }
+
+      this.shoppingList.items[index] = {
+        ...this.shoppingList.items[index],
+        parent_item_id: change.parent_item_id,
+        position: change.position
+      };
+
+      if (typeof change.id === 'number') {
+        const existingIndex = this.pendingChanges.reorder.findIndex(entry => entry.id === change.id);
+        if (existingIndex !== -1) {
+          this.pendingChanges.reorder[existingIndex] = change;
+        } else {
+          this.pendingChanges.reorder.push(change);
+        }
+      }
+    },
+
+    /**
+     * Indent an item, making it a child of the previous item in the ordered list.
+     */
+    async indentItem(itemId: number | string) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const orderedItems = [...this.shoppingList.items].sort((a, b) => a.position - b.position);
+      const index = orderedItems.findIndex(item => item.id === itemId);
+
+      if (index <= 0) {
+        return;
+      }
+
+      const target = orderedItems[index];
+      const previous = orderedItems[index - 1];
+
+      if (!previous || typeof previous.id !== 'number') {
+        return;
+      }
+
+      this.recordReorder({
+        id: target.id,
+        parent_item_id: previous.id,
+        position: target.position
+      });
+
+      await this.saveToLocalStorage();
+    },
+
+    /**
+     * Outdent an item, moving it up one level in the hierarchy.
+     */
+    async outdentItem(itemId: number | string) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const target = this.shoppingList.items.find(item => item.id === itemId);
+      if (!target || target.parent_item_id === null) {
+        return;
+      }
+
+      this.recordReorder({
+        id: target.id,
+        parent_item_id: null,
+        position: target.position
+      });
+
+      await this.saveToLocalStorage();
+    },
+
+    /**
+     * Insert a new temporary item directly after an existing item, preserving its parent.
+     * This only updates local state; the item is persisted when its name is later set.
+     */
+    async insertItemAfter(existingItemId: number | string, name: string) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const existingIndex = this.shoppingList.items.findIndex(item => item.id === existingItemId);
+      if (existingIndex === -1) {
+        await this.addItem({ name, parentItemId: null });
+        return;
+      }
+
+      const existing = this.shoppingList.items[existingIndex];
+      const tempId = this.generateTempId();
+      const createdById = useUserStore().user?.id || 0;
+      const parentId = existing.parent_item_id ?? null;
+
+      const tempItem: ShoppingListItem = {
+        id: tempId as unknown as number,
+        shopping_list_id: this.shoppingList.id,
+        shopping_list_categories: 0,
+        name,
+        checked: false,
+        deleted: false,
+        parent_item_id: parentId,
+        position: existing.position,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        created_by: createdById
+      };
+
+      this.shoppingList.items.splice(existingIndex + 1, 0, tempItem);
+
+      const siblings = this.shoppingList.items
+        .filter(item => item.parent_item_id === parentId)
+        .sort((a, b) => a.position - b.position);
+
+      siblings.forEach((item, index) => {
+        item.position = index;
+      });
+
+      await this.saveToLocalStorage();
     }
   }
 });

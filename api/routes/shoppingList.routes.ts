@@ -134,6 +134,13 @@ router.use(authenticateToken);
  *         shopping_list_categories:
  *           type: integer
  *           description: The id of the shopping list category
+ *         parent_item_id:
+ *           type: integer
+ *           nullable: true
+ *           description: The parent item id for hierarchical lists (null for root items)
+ *         position:
+ *           type: integer
+ *           description: The position of the item within its parent group
  *         name:
  *           type: string
  *           description: The name of the item
@@ -382,7 +389,7 @@ router.delete('/:family_group_id/categories/:category_id', async (req, res, next
  * /shopping-list/{family_group_id}/items:
  *   post:
  *     summary: Add a new item to a shopping list
- *     description: Creates a new item in a specific category of the shopping list
+ *     description: Creates a new item in the shopping list
  *     tags:
  *       - Shopping List
  *     parameters:
@@ -398,14 +405,14 @@ router.delete('/:family_group_id/categories/:category_id', async (req, res, next
  *             type: object
  *             required:
  *               - name
- *               - shopping_list_categories
  *             properties:
  *               name:
  *                 type: string
  *                 description: The name of the new item
- *               shopping_list_categories:
+ *               parent_item_id:
  *                 type: integer
- *                 description: The id of the category to add the item to
+ *                 nullable: true
+ *                 description: The parent item id for hierarchical lists (optional)
  *     responses:
  *       200:
  *         description: The newly created item
@@ -429,6 +436,116 @@ router.delete('/:family_group_id/categories/:category_id', async (req, res, next
 router.post('/:family_group_id/items', async (req, res, next) => {
   try {
     await shoppingListController.addItem(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/bulk:
+ *   post:
+ *     summary: Add multiple new items to a shopping list
+ *     description: Creates multiple new items in the shopping list in a single request
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - name
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                       description: The name of the new item
+ *                     parent_item_id:
+ *                       type: integer
+ *                       nullable: true
+ *                       description: The parent item id for hierarchical lists (optional)
+ *     responses:
+ *       200:
+ *         description: The newly created items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Shopping list not found
+ *       500:
+ *         description: Failed to add new items
+ */
+router.post('/:family_group_id/items/bulk', async (req, res, next) => {
+  try {
+    await shoppingListController.bulkAddItems(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/reorder:
+ *   put:
+ *     summary: Reorder shopping list items
+ *     description: Updates parent and position for one or more shopping list items
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - id
+ *                     - position
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The id of the item to move
+ *                     parent_item_id:
+ *                       type: integer
+ *                       nullable: true
+ *                       description: The new parent item id (null for root)
+ *                     position:
+ *                       type: integer
+ *                       description: The new position within the parent group
+ *     responses:
+ *       200:
+ *         description: The updated items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to reorder items
+ */
+router.put('/:family_group_id/items/reorder', async (req, res, next) => {
+  try {
+    await shoppingListController.reorderItems(req, res);
   } catch (error) {
     next(error);
   }
