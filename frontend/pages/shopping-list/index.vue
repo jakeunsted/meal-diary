@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4">
+  <PullToRefresh class="max-w-4xl mx-auto px-4" :enabled="pullToRefreshEnabled">
     <h1 class="text-2xl font-bold text-center m-4" data-testid="shopping-list-title">
       {{ $t('Shopping List') }}
     </h1>
@@ -69,7 +69,7 @@
         </div>
       </DnDProvider>
     </div>
-  </div>
+  </PullToRefresh>
 </template>
 
 <script setup lang="ts">
@@ -81,9 +81,12 @@ import { DnDProvider } from '@vue-dnd-kit/core';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
 import ShoppingListDndZone from '~/components/shopping-list/ShoppingListDndZone.vue';
+import PullToRefresh from '~/components/PullToRefresh.vue';
+import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 
+const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 
@@ -306,13 +309,6 @@ onMounted(async () => {
 
 .list-item {
   transition: all 0.2s ease;
-}
-
-/* Ensure the page is scrollable and handles keyboard properly */
-.max-w-4xl {
-  min-height: 100vh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Ensure inputs are properly positioned when keyboard opens */
