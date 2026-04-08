@@ -32,9 +32,7 @@ export default defineNuxtConfig({
     '@fortawesome/fontawesome-svg-core/styles.css',
   ],
   vite: {
-    plugins: [
-      tailwindcss(),
-    ],
+    plugins: [tailwindcss() as any],
   },
   modules: [
     '@vesp/nuxt-fontawesome',
