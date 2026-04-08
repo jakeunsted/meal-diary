@@ -106,11 +106,11 @@ const handleTouchStart = (event: TouchEvent) => {
       endGestureListeners();
       return;
     }
-    const t = ev.touches[0];
-    if (!t) {
+    const currentTouch = ev.touches[0];
+    if (!currentTouch) {
       return;
     }
-    const delta = t.clientY - touchStartY;
+    const delta = currentTouch.clientY - touchStartY;
     if (delta <= 0) {
       pull.value = 0;
       return;
