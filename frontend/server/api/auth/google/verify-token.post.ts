@@ -1,4 +1,4 @@
-import { apiFetch } from '~/server/utils/fetch';
+import { apiFetch } from '~~/server/utils/fetch';
 import { User } from '~/types/User';
 
 // Define the expected response type from the API

@@ -81,7 +81,7 @@ export async function authenticatedFetch<T>(
       } catch (error: any) {
         // If refresh fails with 403, it might be because the token was just rotated by client
         // Check if the access token in the request is actually still valid (not expired)
-        const { decodeJWT, isTokenExpired } = await import('~/server/utils/jwt');
+        const { decodeJWT, isTokenExpired } = await import('~~/server/utils/jwt');
         const decoded = decodeJWT(accessToken);
         const issuedAt = decoded?.iat ? decoded.iat * 1000 : null;
         const tokenAge = issuedAt ? Date.now() - issuedAt : null;

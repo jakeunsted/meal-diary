@@ -1,4 +1,4 @@
-import { apiFetch } from '~/server/utils/fetch';
+import { apiFetch } from '~~/server/utils/fetch';
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
