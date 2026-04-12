@@ -1,3 +1,6 @@
+import { isSameDay, startOfISOWeek } from 'date-fns';
+import { parseWeekStartDisplayDate } from '~/composables/mealDiaryWeekKey';
+
 interface DateUtils {
   getDayName: (dayNumber: number) => string;
   getDateForDay: (weekStartDate: string | null, dayNumber: number) => string;
@@ -26,9 +29,9 @@ export const useDateUtils = (): DateUtils => {
     if (!weekStartDate) return '';
     
     try {
-      const startDate: Date = new Date(weekStartDate);
+      const startDate = parseWeekStartDisplayDate(weekStartDate);
       if (isNaN(startDate.getTime())) return '';
-      
+
       const dayOffset: number = dayNumber - 1; // Subtract 1 because Monday is 1 in our system
       const date: Date = new Date(startDate);
       date.setDate(startDate.getDate() + dayOffset);
@@ -51,20 +54,15 @@ export const useDateUtils = (): DateUtils => {
     if (!weekStartDate) return false;
     
     try {
-      const startDate: Date = new Date(weekStartDate);
+      const startDate = parseWeekStartDisplayDate(weekStartDate);
       if (isNaN(startDate.getTime())) return false;
-      
+
       const today: Date = new Date();
       today.setHours(0, 0, 0, 0);
+      const currentIsoWeekMonday = startOfISOWeek(today);
+      currentIsoWeekMonday.setHours(0, 0, 0, 0);
 
-      // Get the start of the current week (Monday)
-      const currentWeekStart: Date = new Date(today);
-      const currentDayOfWeek: number = today.getDay() || 7; // Convert Sunday (0) to 7
-      currentWeekStart.setDate(today.getDate() - (currentDayOfWeek - 1));
-      currentWeekStart.setHours(0, 0, 0, 0);
-
-      // If the week start date is not the current week, return false
-      if (startDate.getTime() !== currentWeekStart.getTime()) {
+      if (!isSameDay(startDate, currentIsoWeekMonday)) {
         return false;
       }
       

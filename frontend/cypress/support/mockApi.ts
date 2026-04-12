@@ -1,3 +1,5 @@
+import { normalizeMealDiaryWeekKey } from '../../composables/mealDiaryWeekKey';
+
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
 }
@@ -18,15 +20,7 @@ const STUB_TOKEN =
 
 const getIsoDate = () => new Date().toISOString();
 
-const getCurrentWeekStartIso = () => {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-  const startDate = new Date(now);
-  startDate.setDate(diff);
-  startDate.setHours(0, 0, 0, 0);
-  return startDate.toISOString();
-};
+const getCurrentWeekStartKey = () => normalizeMealDiaryWeekKey(new Date());
 
 const createWeeklyMeals = (weekStartDate: string) => {
   return Array.from({ length: 7 }, (_, index) => ({
@@ -42,7 +36,7 @@ const createWeeklyMeals = (weekStartDate: string) => {
 };
 
 const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
-  const weekStartDate = getCurrentWeekStartIso();
+  const weekStartDate = getCurrentWeekStartKey();
   const userWithFamily = {
     id: 1,
     username: 'meal_diary_user',
@@ -310,7 +304,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   cy.intercept('DELETE', /\/api\/shopping-list\/\d+\/categories\/\d+$/, (req) => {
     const categoryId = Number(req.url.split('/').pop());
     state.shoppingList.categories = state.shoppingList.categories.filter(
-      (category) => category.id !== categoryId,
+      (category: Record<string, any>) => category.id !== categoryId,
     );
     req.reply({ statusCode: 200, body: { message: 'Deleted' } });
   }).as('apiDeleteShoppingCategory');
@@ -323,7 +317,9 @@ export const installMockApi = (options: MockApiOptions = {}) => {
 
   cy.intercept('POST', /\/api\/shopping-list\/\d+\/items$/, (req) => {
     const categoryId = Number(req.body?.shopping_list_categories || 101);
-    const category = state.shoppingList.categories.find((entry) => entry.id === categoryId);
+    const category = state.shoppingList.categories.find(
+      (entry: Record<string, any>) => entry.id === categoryId,
+    );
     const siblingPositions = state.shoppingList.items
       .filter((item: Record<string, any>) => item.parent_item_id === (req.body?.parent_item_id ?? null))
       .map((item: Record<string, any>) => item.position || 0);

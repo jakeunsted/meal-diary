@@ -1,8 +1,13 @@
 import { defineStore } from 'pinia';
+import { startOfISOWeek } from 'date-fns';
 import { useUserStore } from './user';
 import { Preferences } from '@capacitor/preferences';
 import type { MealDiaryState, DailyMeal } from '~/types/MealDiary';
 import { useApi } from '~/composables/useApi';
+import {
+  normalizeMealDiaryWeekKey,
+  weekKeysEqual,
+} from '~/composables/mealDiaryWeekKey';
 
 /** Client-side cache TTL for weekly meals (matches fetch + initialize logic). */
 const WEEKLY_MEALS_CACHE_MS = 5 * 60 * 1000;
@@ -39,15 +44,11 @@ export const useMealDiaryStore = defineStore('mealDiary', {
   },
 
   actions: {
-    // Get the current week's start date (Monday)
+    // Current ISO week Monday at local midnight (matches WeekCalendarPicker)
     getWeekStartDate() {
-      const now = new Date();
-      const day = now.getDay();
-      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-      const startDate = new Date(now);
-      startDate.setDate(diff);
-      startDate.setHours(0, 0, 0, 0);
-      return startDate;
+      const monday = startOfISOWeek(new Date());
+      monday.setHours(0, 0, 0, 0);
+      return monday;
     },
 
     // Save to Preferences
@@ -90,8 +91,15 @@ export const useMealDiaryStore = defineStore('mealDiary', {
               await Preferences.remove({ key: 'mealDiary' });
               return false;
             }
-            this.weeklyMeals = weeklyMeals;
-            this.currentWeekStart = currentWeekStart;
+            this.currentWeekStart = currentWeekStart
+              ? normalizeMealDiaryWeekKey(currentWeekStart)
+              : null;
+            this.weeklyMeals = weeklyMeals.map((meal: DailyMeal) => ({
+              ...meal,
+              week_start_date: normalizeMealDiaryWeekKey(
+                meal.week_start_date || this.currentWeekStart || new Date()
+              ),
+            }));
             this.lastFetchTime = lastFetchTime;
             return true;
           } catch (error) {
@@ -133,10 +141,14 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       if (!userStore.user?.family_group_id) return;
 
       const dateToUse = weekStartDate || this.getWeekStartDate();
-      const weekStartDateStr = new Date(dateToUse).toISOString();
+      const weekStartDateStr = normalizeMealDiaryWeekKey(dateToUse);
+      if (!weekStartDateStr) {
+        return;
+      }
 
       // Only fetch if we don't have data for this week or if force refresh is requested
-      const hasDataForWeek = this.currentWeekStart === weekStartDateStr && this.weeklyMeals.length > 0;
+      const hasDataForWeek =
+        weekKeysEqual(this.currentWeekStart, weekStartDateStr) && this.weeklyMeals.length > 0;
       const now = Date.now();
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
 
@@ -158,7 +170,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             { signal: fetchController.signal }
           );
 
-          if (this.currentWeekStart !== weekStartDateStr) {
+          if (!weekKeysEqual(this.currentWeekStart, weekStartDateStr)) {
             return;
           }
 
@@ -180,7 +192,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           }
           console.error('Error fetching weekly meals:', error);
           // Avoid replacing state from Preferences when a newer week was already requested
-          if (this.currentWeekStart !== weekStartDateStr) {
+          if (!weekKeysEqual(this.currentWeekStart, weekStartDateStr)) {
             return;
           }
           // If fetch fails, try to load from Preferences
@@ -261,7 +273,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         };
         // Create a complete meal object with all meal types
         const mealData: any = {
-          week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString(),
+          week_start_date:
+            this.currentWeekStart || normalizeMealDiaryWeekKey(this.getWeekStartDate()),
           day_of_week: this.selectedMeal.dayOfWeek,
           breakfast: dayMeal.breakfast || '',
           lunch: dayMeal.lunch || '',
@@ -291,7 +304,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         } else {
           this.weeklyMeals.push({
             day_of_week: this.selectedMeal.dayOfWeek,
-            week_start_date: this.currentWeekStart || this.getWeekStartDate().toISOString(),
+            week_start_date:
+              this.currentWeekStart || normalizeMealDiaryWeekKey(this.getWeekStartDate()),
             breakfast: mealType === 'breakfast' ? this.selectedMeal.name : null,
             lunch: mealType === 'lunch' ? this.selectedMeal.name : null,
             dinner: mealType === 'dinner' ? this.selectedMeal.name : null,
@@ -321,18 +335,14 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     handleDailyMealUpdate(dailyMeal: DailyMeal) {
       if (!dailyMeal) return;
 
-      // Normalize week_start_date for comparison (handle both Date objects and strings)
-      const incomingWeekStart = dailyMeal.week_start_date 
-        ? (typeof dailyMeal.week_start_date === 'string' 
-            ? dailyMeal.week_start_date 
-            : new Date(dailyMeal.week_start_date).toISOString())
-        : null;
-      
-      const currentWeekStart = this.currentWeekStart;
+      const incomingKey = dailyMeal.week_start_date
+        ? normalizeMealDiaryWeekKey(dailyMeal.week_start_date)
+        : '';
+      const currentKey = this.currentWeekStart
+        ? normalizeMealDiaryWeekKey(this.currentWeekStart)
+        : '';
 
-      // Only process updates for the current week being viewed
-      // Compare normalized ISO strings
-      if (incomingWeekStart && currentWeekStart && incomingWeekStart !== currentWeekStart) {
+      if (incomingKey && currentKey && incomingKey !== currentKey) {
         return;
       }
 
@@ -342,18 +352,32 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       );
 
       if (existingDayMealIndex !== -1) {
-        // Update existing meal
-        this.weeklyMeals[existingDayMealIndex] = {
-          ...this.weeklyMeals[existingDayMealIndex],
+        const prev = this.weeklyMeals[existingDayMealIndex];
+        const next: DailyMeal = {
+          ...prev,
           breakfast: dailyMeal.breakfast,
           lunch: dailyMeal.lunch,
-          dinner: dailyMeal.dinner
+          dinner: dailyMeal.dinner,
         };
+        const recipeKeys = [
+          'breakfast_recipe_id',
+          'lunch_recipe_id',
+          'dinner_recipe_id',
+        ] as const;
+        const payload = dailyMeal as unknown as Record<string, unknown>;
+        for (const k of recipeKeys) {
+          if (k in payload) {
+            (next as unknown as Record<string, unknown>)[k] = dailyMeal[k];
+          }
+        }
+        this.weeklyMeals[existingDayMealIndex] = next;
       } else {
-        // Add new meal
         this.weeklyMeals.push({
           ...dailyMeal,
-          week_start_date: currentWeekStart || this.getWeekStartDate().toISOString()
+          week_start_date:
+            currentKey ||
+            incomingKey ||
+            normalizeMealDiaryWeekKey(this.getWeekStartDate()),
         });
       }
 

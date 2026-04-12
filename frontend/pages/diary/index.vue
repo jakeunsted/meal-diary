@@ -47,6 +47,7 @@ import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
 import PullToRefresh from '~/components/PullToRefresh.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
+import { weekStartKeyToLocalDate } from '~/composables/mealDiaryWeekKey';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
@@ -59,7 +60,7 @@ const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.len
 
 const currentWeekStartDate = computed(() => {
   if (mealDiaryStoreComputed.value.currentWeekStart) {
-    return new Date(mealDiaryStoreComputed.value.currentWeekStart);
+    return weekStartKeyToLocalDate(mealDiaryStoreComputed.value.currentWeekStart);
   }
   return mealDiaryStoreComputed.value.getWeekStartDate();
 });
