@@ -1,10 +1,10 @@
 <template>
   <div
     ref="scrollRootRef"
-    class="pull-to-refresh-root min-h-[100dvh] overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+    class="pull-to-refresh-root touch-pan-y h-[calc(100dvh-5rem)] max-h-[calc(100dvh-5rem)] min-h-0 overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
     @touchstart.passive="handleTouchStart"
   >
-    <div class="flex flex-col min-h-full">
+    <div class="flex flex-col">
       <div
         class="flex shrink-0 flex-col overflow-hidden"
         :class="{ 'transition-[height] duration-200 ease-out': !isPulling }"
@@ -20,7 +20,7 @@
           />
         </div>
       </div>
-      <div class="flex-1 min-h-0">
+      <div class="shrink-0">
         <slot />
       </div>
     </div>
@@ -61,6 +61,9 @@ const isScrollAtTop = (el: HTMLElement): boolean => {
   return el.scrollTop <= 1;
 };
 
+/** Pixels pulled down before we preventDefault — avoids blocking scroll-up after small downward jitter at scroll top. */
+const PULL_COMMIT_PX = 14;
+
 const rubberBand = (delta: number): number => {
   const raw = delta * 0.48;
   return Math.min(props.maxPull, raw);
@@ -91,6 +94,7 @@ const handleTouchStart = (event: TouchEvent) => {
   touchStartY = touch.clientY;
   pull.value = 0;
   isPulling.value = true;
+  let pullCommitted = false;
 
   const onMove = (ev: TouchEvent) => {
     if (!props.enabled || !isPulling.value) {
@@ -102,6 +106,7 @@ const handleTouchStart = (event: TouchEvent) => {
     }
     if (!isScrollAtTop(root)) {
       pull.value = 0;
+      pullCommitted = false;
       isPulling.value = false;
       endGestureListeners();
       return;
@@ -113,8 +118,13 @@ const handleTouchStart = (event: TouchEvent) => {
     const delta = currentTouch.clientY - touchStartY;
     if (delta <= 0) {
       pull.value = 0;
+      pullCommitted = false;
       return;
     }
+    if (!pullCommitted && delta < PULL_COMMIT_PX) {
+      return;
+    }
+    pullCommitted = true;
     ev.preventDefault();
     pull.value = rubberBand(delta);
   };
@@ -124,14 +134,14 @@ const handleTouchStart = (event: TouchEvent) => {
     handleTouchEnd();
   };
 
-  document.addEventListener('touchmove', onMove, { passive: false, capture: true });
-  document.addEventListener('touchend', onEnd, { capture: true, passive: true });
-  document.addEventListener('touchcancel', onEnd, { capture: true, passive: true });
+  el.addEventListener('touchmove', onMove, { passive: false });
+  window.addEventListener('touchend', onEnd, { capture: true, passive: true });
+  window.addEventListener('touchcancel', onEnd, { capture: true, passive: true });
 
   gestureCleanup = () => {
-    document.removeEventListener('touchmove', onMove, { capture: true });
-    document.removeEventListener('touchend', onEnd, { capture: true });
-    document.removeEventListener('touchcancel', onEnd, { capture: true });
+    el.removeEventListener('touchmove', onMove);
+    window.removeEventListener('touchend', onEnd, { capture: true });
+    window.removeEventListener('touchcancel', onEnd, { capture: true });
   };
 };
 
