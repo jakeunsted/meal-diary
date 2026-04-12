@@ -10,6 +10,9 @@ const WEEKLY_MEALS_CACHE_MS = 5 * 60 * 1000;
 /** Tracks overlapping fetchWeeklyMeals calls so loading stays true until the last one finishes. */
 let weeklyMealsFetchDepth = 0;
 
+/** Aborts the previous in-flight weekly meals request when a new one starts. */
+let weeklyMealsFetchAbort: AbortController | null = null;
+
 /** Batches rapid Preferences writes (e.g. multiple SSE updates). */
 let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const PERSIST_DEBOUNCE_MS = 400;
@@ -140,12 +143,20 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       if (!hasDataForWeek || forceRefresh || cacheAge > WEEKLY_MEALS_CACHE_MS) {
         weeklyMealsFetchDepth += 1;
         this.loading = true;
+        let fetchController: AbortController | null = null;
         try {
           this.currentWeekStart = weekStartDateStr;
 
+          weeklyMealsFetchAbort?.abort();
+          fetchController = new AbortController();
+          weeklyMealsFetchAbort = fetchController;
+
           const familyGroupId = userStore.user.family_group_id;
           const { api } = useApi();
-          const response = await api(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
+          const response = await api(
+            `/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`,
+            { signal: fetchController.signal }
+          );
 
           if (this.currentWeekStart !== weekStartDateStr) {
             return;
@@ -161,6 +172,12 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           // Save to Preferences after successful fetch
           await this.saveToLocalStorage();
         } catch (error: any) {
+          const aborted =
+            error?.name === 'AbortError' ||
+            error?.cause?.name === 'AbortError';
+          if (aborted) {
+            return;
+          }
           console.error('Error fetching weekly meals:', error);
           // Avoid replacing state from Preferences when a newer week was already requested
           if (this.currentWeekStart !== weekStartDateStr) {
@@ -176,6 +193,9 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             throw error;
           }
         } finally {
+          if (fetchController && weeklyMealsFetchAbort === fetchController) {
+            weeklyMealsFetchAbort = null;
+          }
           weeklyMealsFetchDepth -= 1;
           if (weeklyMealsFetchDepth < 0) {
             weeklyMealsFetchDepth = 0;

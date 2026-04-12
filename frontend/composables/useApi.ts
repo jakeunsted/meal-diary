@@ -237,6 +237,11 @@ export const useApi = () => {
         headers: finalHeaders
       } as any) as T;
     } catch (error: any) {
+      // Caller cancelled the request (e.g. newer meal-diary week fetch) — do not toast or treat as failure
+      if (error?.name === 'AbortError' || error?.cause?.name === 'AbortError') {
+        throw error;
+      }
+
       // Extract meaningful error message
       const errorMessage = extractErrorMessage(error);
 
