@@ -1,27 +1,36 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
-import type { ShoppingList, ShoppingListCategoryWithItems, ShoppingListItem, ItemCategory } from '~/types/ShoppingList'
+import type {
+  ShoppingList,
+  ShoppingListItem,
+  ItemCategory,
+  ShoppingListState,
+} from '~/types/ShoppingList';
 import { useApi } from '~/composables/useApi';
+import { useConnection } from '~/composables/useConnection';
 
 // Temporary ID prefix for offline items
 const TEMP_ID_PREFIX = 'temp_';
 
+const emptyPendingChanges = (): ShoppingListState['pendingChanges'] => ({
+  add: [],
+  update: [],
+  delete: [],
+  reorder: [],
+});
+
 /**
- * State interface for the shopping list store
- * @interface ShoppingListState
+ * Some Nuxt handlers return `{ data }` from `authenticatedFetch`; others return the payload only.
  */
-export interface ShoppingListState {
-  shoppingList: ShoppingList | null;
-  itemCategories: ItemCategory[];
-  isLoading: boolean;
-  error: string | null;
-  pendingChanges: {
-    add: ShoppingListItem[];
-    update: ShoppingListItem[];
-    delete: number[];
-    reorder: { id: number | string; parent_item_id: number | null; position: number }[];
-  };
+function unwrapShoppingResponse<T>(response: unknown): T {
+  if (response !== null && typeof response === 'object' && 'data' in response) {
+    return (response as { data: T }).data;
+  }
+  return response as T;
 }
+
+let saveToLocalStorageTimer: ReturnType<typeof setTimeout> | null = null;
+const PERSIST_DEBOUNCE_MS = 400;
 
 /**
  * Store for managing shopping list data and operations
@@ -32,12 +41,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
     itemCategories: [],
     isLoading: false,
     error: null,
-    pendingChanges: {
-      add: [],
-      update: [],
-      delete: [],
-      reorder: []
-    }
+    pendingChanges: emptyPendingChanges(),
   }),
 
   getters: {
@@ -74,6 +78,22 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
+     * Debounce rapid Preferences writes (typing, reorder tweaks).
+     */
+    scheduleSaveToLocalStorage() {
+      if (!import.meta.client) {
+        return;
+      }
+      if (saveToLocalStorageTimer !== null) {
+        clearTimeout(saveToLocalStorageTimer);
+      }
+      saveToLocalStorageTimer = setTimeout(() => {
+        saveToLocalStorageTimer = null;
+        void this.saveToLocalStorage();
+      }, PERSIST_DEBOUNCE_MS);
+    },
+
+    /**
      * Load shopping list data from local storage
      * @returns {Promise<boolean>} True if data was loaded successfully, false otherwise
      */
@@ -85,7 +105,13 @@ export const useShoppingListStore = defineStore('shoppingList', {
             const data = JSON.parse(value);
             this.shoppingList = data.shoppingList;
             this.itemCategories = data.itemCategories;
-            this.pendingChanges = data.pendingChanges || { add: [], update: [], delete: [] };
+            const p = data.pendingChanges;
+            this.pendingChanges = {
+              add: Array.isArray(p?.add) ? p.add : [],
+              update: Array.isArray(p?.update) ? p.update : [],
+              delete: Array.isArray(p?.delete) ? p.delete : [],
+              reorder: Array.isArray(p?.reorder) ? p.reorder : [],
+            };
             return true;
           } catch (error) {
             console.error('Failed to parse stored shopping list:', error);
@@ -97,19 +123,21 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Check if there is an active internet connection
+     * Queue a temp row for sync if it is not already in pending adds (e.g. after a failed POST).
      */
-    async checkConnection(): Promise<boolean> {
-      try {
-        const { api } = useApi();
-        await api('/api/health', { 
-          method: 'GET',
-          timeout: 5000 // 5 second timeout
-        });
-        return true;
-      } catch {
-        return false;
+    enqueueTempAddIfNotQueued(itemId: number | string) {
+      if (!this.isTempId(itemId) || !this.shoppingList) {
+        return;
       }
+      const item = this.shoppingList.items.find(i => String(i.id) === String(itemId));
+      if (!item) {
+        return;
+      }
+      const already = this.pendingChanges.add.some(i => String(i.id) === String(itemId));
+      if (!already) {
+        this.pendingChanges.add.push(item);
+      }
+      this.scheduleSaveToLocalStorage();
     },
 
     /**
@@ -119,13 +147,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
     async fetchShoppingList(forceRefresh = false) {
       const userStore = useUserStore();
       const authStore = useAuthStore();
-      
+
       if (!authStore.user?.family_group_id) {
         return;
       }
-      
+
+      let loadingStarted = false;
       try {
         if (!this.shoppingList || forceRefresh) {
+          loadingStarted = true;
           this.isLoading = true;
           this.error = null;
           let familyGroupId = userStore.user?.family_group_id || authStore.user?.family_group_id;
@@ -149,13 +179,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
           }
           console.log('fetching shopping list for family group:', familyGroupId);
           const { api } = useApi();
-          const response = await api(`/api/shopping-list/${familyGroupId}`, {
-            headers: {
-              'Authorization': `Bearer ${authStore.accessToken}`,
-              'x-refresh-token': authStore.refreshToken || ''
-            }
-          });
-          const shoppingList = response.data as ShoppingList;
+          const response = await api(`/api/shopping-list/${familyGroupId}`);
+          const shoppingList = unwrapShoppingResponse<ShoppingList>(response);
           this.shoppingList = shoppingList;
           await this.saveToLocalStorage();
         }
@@ -166,7 +191,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
           throw err;
         }
       } finally {
-        this.isLoading = false;
+        if (loadingStarted) {
+          this.isLoading = false;
+        }
       }
     },
 
@@ -174,25 +201,23 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Fetch all item categories
      */
     async fetchItemCategories() {
-      const authStore = useAuthStore();
+      let loadingStarted = false;
       try {
+        loadingStarted = true;
         this.isLoading = true;
         this.error = null;
         const { api } = useApi();
-        const response = await api('/api/item-categories', {
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
-        })
-        const itemCategories = response.data as ItemCategory[];
+        const response = await api('/api/item-categories');
+        const itemCategories = unwrapShoppingResponse<ItemCategory[]>(response);
         this.itemCategories = itemCategories;
         await this.saveToLocalStorage();
       } catch (err) {
         this.error = err instanceof Error ? err.message : 'Failed to fetch item categories';
         throw err;
       } finally {
-        this.isLoading = false;
+        if (loadingStarted) {
+          this.isLoading = false;
+        }
       }
     },
 
@@ -201,7 +226,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @param item - The item data to add
      */
     async addItem(item: { name: string; parentItemId?: number | null }) {
-      const authStore = useAuthStore();
       const userStore = useUserStore();
       const tempId = this.generateTempId();
       const createdById = userStore.user?.id || 0;
@@ -215,7 +239,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Create a temporary item
       const tempItem: ShoppingListItem = {
-        id: tempId as unknown as number,
+        id: tempId,
         shopping_list_id: this.shoppingList?.id || 0,
         shopping_list_categories: 0,
         name: item.name,
@@ -234,7 +258,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
           this.shoppingList.items = [];
         }
         this.shoppingList.items.push(tempItem);
-        await this.saveToLocalStorage();
+        this.scheduleSaveToLocalStorage();
       }
 
       // Add to pending changes
@@ -249,14 +273,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
             name: item.name,
             parent_item_id: resolvedParentId
           },
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
         });
 
-        const newItem = response as ShoppingListItem;
-        
+        const newItem = unwrapShoppingResponse<ShoppingListItem>(response);
+
         // Update the item in the list with the real ID
         if (this.shoppingList) {
           const index = this.shoppingList.items.findIndex(i => String(i.id) === tempId);
@@ -267,8 +287,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
             await this.saveToLocalStorage();
           }
         }
+        this.error = null;
       } catch (err) {
-        // Keep the temporary item in the UI and pending changes
+        this.error = err instanceof Error ? err.message : 'Failed to sync new item';
         console.error('Failed to sync item with server:', err);
       }
     },
@@ -279,17 +300,21 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @param updates - The updates to apply to the item
      */
     async updateItem(itemId: number | string, updates: Partial<ShoppingListItem>) {
-      const authStore = useAuthStore();
       const userStore = useUserStore();
       const isTemp = this.isTempId(itemId);
-      
+
       // Update local state immediately
       if (this.shoppingList) {
         const index = this.shoppingList.items.findIndex(item => item.id === itemId);
         if (index !== -1) {
           this.shoppingList.items[index] = { ...this.shoppingList.items[index], ...updates };
+          const fresh = this.shoppingList.items[index];
+          const pendingAddIdx = this.pendingChanges.add.findIndex(i => String(i.id) === String(itemId));
+          if (pendingAddIdx !== -1 && fresh) {
+            this.pendingChanges.add[pendingAddIdx] = fresh;
+          }
         }
-        await this.saveToLocalStorage();
+        this.scheduleSaveToLocalStorage();
       }
 
       // If it's a temporary item, no need to sync with server
@@ -300,10 +325,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      // Add to pending changes
+      // Add to pending changes (dedupe by id)
       const updatedItem = this.shoppingList?.items.find(i => i.id === itemId);
       if (updatedItem) {
-        this.pendingChanges.update.push(updatedItem);
+        const existingIdx = this.pendingChanges.update.findIndex(i => i.id === itemId);
+        if (existingIdx !== -1) {
+          this.pendingChanges.update[existingIdx] = updatedItem;
+        } else {
+          this.pendingChanges.update.push(updatedItem);
+        }
       }
 
       // Try to sync with server
@@ -312,12 +342,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'PUT',
           body: updates,
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
         });
-        const serverUpdatedItem = response.data as ShoppingListItem;
+        const serverUpdatedItem = unwrapShoppingResponse<ShoppingListItem>(response);
 
         // Update the item in the category with the server response
         if (this.shoppingList) {
@@ -330,9 +356,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
           await this.saveToLocalStorage();
         }
 
+        this.error = null;
         return serverUpdatedItem;
       } catch (err) {
-        // Keep the local changes and pending updates
+        this.error = err instanceof Error ? err.message : 'Failed to sync item update';
         console.error('Failed to sync item update with server:', err);
       }
     },
@@ -341,7 +368,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Persist a temporary item to the server once it has a name.
      */
     async persistTempItem(itemId: number | string, name: string) {
-      const authStore = useAuthStore();
       const userStore = useUserStore();
       const { api } = useApi();
 
@@ -363,21 +389,21 @@ export const useShoppingListStore = defineStore('shoppingList', {
             name,
             parent_item_id: resolvedParentId
           },
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
         });
 
-        const newItem = response as ShoppingListItem;
+        const newItem = unwrapShoppingResponse<ShoppingListItem>(response);
         const index = this.shoppingList.items.findIndex(item => item.id === itemId);
         if (index !== -1) {
           this.shoppingList.items[index] = newItem;
         }
 
+        this.pendingChanges.add = this.pendingChanges.add.filter(i => String(i.id) !== String(itemId));
         await this.saveToLocalStorage();
+        this.error = null;
       } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Failed to persist item';
         console.error('Failed to persist temporary item:', error);
+        this.enqueueTempAddIfNotQueued(itemId);
       }
     },
 
@@ -386,19 +412,18 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * @param itemId - The ID of the item to delete
      */
     async deleteItem(itemId: number | string) {
-      const authStore = useAuthStore();
       const userStore = useUserStore();
       const isTemp = this.isTempId(itemId);
-      
+
       // Remove from local state immediately
       if (this.shoppingList) {
         this.shoppingList.items = this.shoppingList.items.filter(item => item.id !== itemId);
-        await this.saveToLocalStorage();
+        this.scheduleSaveToLocalStorage();
       }
 
       // If it's a temporary item, just remove from pending adds
       if (isTemp) {
-        this.pendingChanges.add = this.pendingChanges.add.filter(i => i.id !== itemId);
+        this.pendingChanges.add = this.pendingChanges.add.filter(i => String(i.id) !== String(itemId));
         return;
       }
 
@@ -410,15 +435,13 @@ export const useShoppingListStore = defineStore('shoppingList', {
         const { api } = useApi();
         await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
           method: 'DELETE' as any,
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
         });
         // Remove from pending deletes
         this.pendingChanges.delete = this.pendingChanges.delete.filter(id => id !== itemId);
+        await this.saveToLocalStorage();
+        this.error = null;
       } catch (err) {
-        // Keep the local deletion and pending delete
+        this.error = err instanceof Error ? err.message : 'Failed to sync delete';
         console.error('Failed to sync item deletion with server:', err);
       }
     },
@@ -427,10 +450,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Sync pending changes with the server
      */
     async syncPendingChanges() {
-      const authStore = useAuthStore();
       const userStore = useUserStore();
       const { checkConnection } = useConnection();
-      
+
       // Check connection first
       const isConnected = await checkConnection();
       if (!isConnected) {
@@ -441,6 +463,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync additions
       const { api } = useApi();
       for (const item of [...this.pendingChanges.add]) {
+        if (!item.name?.trim()) {
+          continue;
+        }
         try {
           const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items`, {
             method: 'POST',
@@ -448,13 +473,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
               name: item.name,
               parent_item_id: item.parent_item_id ?? null
             },
-            headers: {
-              'Authorization': `Bearer ${authStore.accessToken}`,
-              'x-refresh-token': authStore.refreshToken || ''
-            }
           });
-          const newItem = response as ShoppingListItem;
-          
+          const newItem = unwrapShoppingResponse<ShoppingListItem>(response);
+
           // Update the item in the list with the real ID
           if (this.shoppingList) {
             const index = this.shoppingList.items.findIndex(i => String(i.id) === String(item.id));
@@ -483,14 +504,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
             name: item.name,
             checked: item.checked
           };
-          
+
           await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
             method: 'PUT',
             body: apiUpdates,
-            headers: {
-              'Authorization': `Bearer ${authStore.accessToken}`,
-              'x-refresh-token': authStore.refreshToken || ''
-            }
           });
           this.pendingChanges.update = this.pendingChanges.update.filter(i => i.id !== item.id);
           await this.saveToLocalStorage();
@@ -509,10 +526,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
         try {
           await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${itemId}`, {
             method: 'DELETE' as any,
-            headers: {
-              'Authorization': `Bearer ${authStore.accessToken}`,
-              'x-refresh-token': authStore.refreshToken || ''
-            }
           });
           this.pendingChanges.delete = this.pendingChanges.delete.filter(id => id !== itemId);
           await this.saveToLocalStorage();
@@ -545,10 +558,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
           await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/reorder`, {
             method: 'PUT',
             body: { items },
-            headers: {
-              'Authorization': `Bearer ${authStore.accessToken}`,
-              'x-refresh-token': authStore.refreshToken || ''
-            }
           });
 
           this.pendingChanges.reorder = [];
@@ -617,7 +626,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         position: target.position
       });
 
-      await this.saveToLocalStorage();
+      this.scheduleSaveToLocalStorage();
     },
 
     /**
@@ -639,7 +648,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         position: target.position
       });
 
-      await this.saveToLocalStorage();
+      this.scheduleSaveToLocalStorage();
     },
 
     /**
@@ -663,7 +672,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
       const parentId = existing.parent_item_id ?? null;
 
       const tempItem: ShoppingListItem = {
-        id: tempId as unknown as number,
+        id: tempId,
         shopping_list_id: this.shoppingList.id,
         shopping_list_categories: 0,
         name,
@@ -686,8 +695,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         item.position = index;
       });
 
-      await this.saveToLocalStorage();
+      this.pendingChanges.add.push(tempItem);
+      this.scheduleSaveToLocalStorage();
     }
   }
 });
-

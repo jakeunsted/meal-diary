@@ -7,7 +7,7 @@ export interface ItemCategory {
 }
 
 export interface ShoppingListItem {
-  id: number;
+  id: number | string;
   shopping_list_id: number;
   shopping_list_categories: number;
   name: string;
@@ -51,9 +51,17 @@ export interface ShoppingListCategoryWithItems {
   items: ShoppingListItem[];
 }
 
+export interface PendingShoppingListChanges {
+  add: ShoppingListItem[];
+  update: ShoppingListItem[];
+  delete: number[];
+  reorder: { id: number | string; parent_item_id: number | null; position: number }[];
+}
+
 export interface ShoppingListState {
   shoppingList: ShoppingList | null;
   itemCategories: ItemCategory[];
   isLoading: boolean;
   error: string | null;
+  pendingChanges: PendingShoppingListChanges;
 }
