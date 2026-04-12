@@ -3,6 +3,17 @@ import { useUserStore } from './user';
 import { Preferences } from '@capacitor/preferences';
 import type { MealDiaryState, DailyMeal } from '~/types/MealDiary';
 import { useApi } from '~/composables/useApi';
+
+/** Client-side cache TTL for weekly meals (matches fetch + initialize logic). */
+const WEEKLY_MEALS_CACHE_MS = 5 * 60 * 1000;
+
+/** Tracks overlapping fetchWeeklyMeals calls so loading stays true until the last one finishes. */
+let weeklyMealsFetchDepth = 0;
+
+/** Batches rapid Preferences writes (e.g. multiple SSE updates). */
+let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+const PERSIST_DEBOUNCE_MS = 400;
+
 export const useMealDiaryStore = defineStore('mealDiary', {
   state: (): MealDiaryState => ({
     weeklyMeals: [],
@@ -51,6 +62,20 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       }
     },
 
+    /** Coalesce rapid writes (e.g. SSE bursts) before persisting to Preferences. */
+    schedulePersistToLocalStorage() {
+      if (!import.meta.client) {
+        return;
+      }
+      if (persistDebounceTimer !== null) {
+        clearTimeout(persistDebounceTimer);
+      }
+      persistDebounceTimer = setTimeout(() => {
+        persistDebounceTimer = null;
+        void this.saveToLocalStorage();
+      }, PERSIST_DEBOUNCE_MS);
+    },
+
     // Load from Preferences
     async loadFromLocalStorage() {
       if (import.meta.client) {
@@ -58,6 +83,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         if (value) {
           try {
             const { weeklyMeals, currentWeekStart, lastFetchTime } = JSON.parse(value);
+            if (!Array.isArray(weeklyMeals)) {
+              await Preferences.remove({ key: 'mealDiary' });
+              return false;
+            }
             this.weeklyMeals = weeklyMeals;
             this.currentWeekStart = currentWeekStart;
             this.lastFetchTime = lastFetchTime;
@@ -89,9 +118,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       // Only fetch if we don't have data or if it's too old
       const now = Date.now();
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
-      const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-      if (!loadedFromStorage || !this.lastFetchTime || cacheAge > CACHE_DURATION) {
+      if (!loadedFromStorage || !this.lastFetchTime || cacheAge > WEEKLY_MEALS_CACHE_MS) {
         await this.fetchWeeklyMeals();
       }
     },
@@ -104,15 +132,15 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       const dateToUse = weekStartDate || this.getWeekStartDate();
       const weekStartDateStr = new Date(dateToUse).toISOString();
 
-      try {
-        // Only fetch if we don't have data for this week or if force refresh is requested
-        const hasDataForWeek = this.currentWeekStart === weekStartDateStr && this.weeklyMeals.length > 0;
-        const now = Date.now();
-        const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
-        const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+      // Only fetch if we don't have data for this week or if force refresh is requested
+      const hasDataForWeek = this.currentWeekStart === weekStartDateStr && this.weeklyMeals.length > 0;
+      const now = Date.now();
+      const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
 
-        if (!hasDataForWeek || forceRefresh || cacheAge > CACHE_DURATION) {
-          this.loading = true;
+      if (!hasDataForWeek || forceRefresh || cacheAge > WEEKLY_MEALS_CACHE_MS) {
+        weeklyMealsFetchDepth += 1;
+        this.loading = true;
+        try {
           this.currentWeekStart = weekStartDateStr;
 
           const familyGroupId = userStore.user.family_group_id;
@@ -132,24 +160,28 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           this.lastFetchTime = now;
           // Save to Preferences after successful fetch
           await this.saveToLocalStorage();
-        }
-      } catch (error: any) {
-        console.error('Error fetching weekly meals:', error);
-        // Avoid replacing state from Preferences when a newer week was already requested
-        if (this.currentWeekStart !== weekStartDateStr) {
-          return;
-        }
-        // If fetch fails, try to load from Preferences
-        const loadedFromStorage = await this.loadFromLocalStorage();
-        if (!loadedFromStorage) {
-          if (error?.statusCode === 500 || error?.status === 500) {
-            console.warn('Meal diary may not exist yet, skipping fetch');
+        } catch (error: any) {
+          console.error('Error fetching weekly meals:', error);
+          // Avoid replacing state from Preferences when a newer week was already requested
+          if (this.currentWeekStart !== weekStartDateStr) {
             return;
           }
-          throw error;
+          // If fetch fails, try to load from Preferences
+          const loadedFromStorage = await this.loadFromLocalStorage();
+          if (!loadedFromStorage) {
+            if (error?.statusCode === 500 || error?.status === 500) {
+              console.warn('Meal diary may not exist yet, skipping fetch');
+              return;
+            }
+            throw error;
+          }
+        } finally {
+          weeklyMealsFetchDepth -= 1;
+          if (weeklyMealsFetchDepth < 0) {
+            weeklyMealsFetchDepth = 0;
+          }
+          this.loading = weeklyMealsFetchDepth > 0;
         }
-      } finally {
-        this.loading = false;
       }
     },
 
@@ -305,8 +337,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         });
       }
 
-      // Save to Preferences after receiving update
-      this.saveToLocalStorage();
+      // Save to Preferences after receiving update (debounced — SSE can send many events)
+      this.schedulePersistToLocalStorage();
     },
 
     // Update meals from events
