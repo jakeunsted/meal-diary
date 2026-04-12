@@ -11,6 +11,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       type: null,
       dayOfWeek: null,
       name: '',
+      recipeId: null,
     },
     eventSource: null as EventSource | null,
     currentWeekStart: null as string | null,
@@ -100,10 +101,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       const userStore = useUserStore();
       if (!userStore.user?.family_group_id) return;
 
+      const dateToUse = weekStartDate || this.getWeekStartDate();
+      const weekStartDateStr = new Date(dateToUse).toISOString();
+
       try {
-        const dateToUse = weekStartDate || this.getWeekStartDate();
-        const weekStartDateStr = new Date(dateToUse).toISOString();
-        
         // Only fetch if we don't have data for this week or if force refresh is requested
         const hasDataForWeek = this.currentWeekStart === weekStartDateStr && this.weeklyMeals.length > 0;
         const now = Date.now();
@@ -113,11 +114,15 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         if (!hasDataForWeek || forceRefresh || cacheAge > CACHE_DURATION) {
           this.loading = true;
           this.currentWeekStart = weekStartDateStr;
-          
+
           const familyGroupId = userStore.user.family_group_id;
           const { api } = useApi();
           const response = await api(`/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`);
-          
+
+          if (this.currentWeekStart !== weekStartDateStr) {
+            return;
+          }
+
           // Add week_start_date to each meal
           this.weeklyMeals = response.map((meal: DailyMeal) => ({
             ...meal,
@@ -130,6 +135,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         }
       } catch (error: any) {
         console.error('Error fetching weekly meals:', error);
+        // Avoid replacing state from Preferences when a newer week was already requested
+        if (this.currentWeekStart !== weekStartDateStr) {
+          return;
+        }
         // If fetch fails, try to load from Preferences
         const loadedFromStorage = await this.loadFromLocalStorage();
         if (!loadedFromStorage) {
