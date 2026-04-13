@@ -1,5 +1,6 @@
 <template>
-  <PullToRefresh class="max-w-4xl mx-auto px-4" :enabled="pullToRefreshEnabled">
+  <div class="max-w-4xl mx-auto px-4">
+    <PullToRefreshChrome :enabled="pullToRefreshEnabled" />
     <h1 class="text-2xl font-bold text-center m-4" data-testid="shopping-list-title">
       {{ $t('Shopping List') }}
     </h1>
@@ -69,7 +70,7 @@
         </div>
       </DnDProvider>
     </div>
-  </PullToRefresh>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -81,7 +82,7 @@ import { DnDProvider } from '@vue-dnd-kit/core';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
 import ShoppingListDndZone from '~/components/shopping-list/ShoppingListDndZone.vue';
-import PullToRefresh from '~/components/PullToRefresh.vue';
+import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';

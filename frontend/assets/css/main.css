@@ -1,2 +1,12 @@
 @import "tailwindcss";
 @plugin "daisyui";
+
+@media (max-width: 768px) {
+  html.hide-scrollbar-mobile {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  html.hide-scrollbar-mobile::-webkit-scrollbar {
+    display: none;
+  }
+}

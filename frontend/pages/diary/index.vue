@@ -1,5 +1,6 @@
 <template>
-  <PullToRefresh class="max-w-4xl mx-auto" :enabled="pullToRefreshEnabled">
+  <div class="max-w-4xl mx-auto">
+    <PullToRefreshChrome :enabled="pullToRefreshEnabled" />
     <h1 class="text-2xl font-bold text-center m-4" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
 
     <MealDiarySkeleton v-if="!hasMealData" />
@@ -31,7 +32,7 @@
         @saveMeal="handleSaveMeal"
       />
     </dialog>
-  </PullToRefresh>
+  </div>
 </template>
 
 <script setup>
@@ -45,7 +46,7 @@ import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
-import PullToRefresh from '~/components/PullToRefresh.vue';
+import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
 import { weekStartKeyToLocalDate } from '~/composables/mealDiaryWeekKey';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
