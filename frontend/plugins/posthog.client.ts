@@ -1,12 +1,29 @@
 import posthog from 'posthog-js';
 import { useAuthStore } from '~/stores/auth';
 
+const POSTHOG_DISABLED_HOSTS = new Set([
+  'localhost',
+  '127.0.0.1',
+  '::1',
+  'dev.mealdiary.co.uk',
+]);
+
+function isPostHogDisabledForBaseUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    if (POSTHOG_DISABLED_HOSTS.has(host)) return true;
+    return host.endsWith('.localhost');
+  } catch {
+    return false;
+  }
+}
+
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig();
 
   // If localhost or dev.mealdiary.co.uk, skip PostHog
   if (process.client) {
-    if (config.public.baseUrl.includes('localhost') || config.public.baseUrl.includes('dev.mealdiary.co.uk')) {
+    if (isPostHogDisabledForBaseUrl(config.public.baseUrl as string)) {
       console.log('Skipping PostHog in development');
       nuxtApp.provide('posthog', {
         capture: () => {},

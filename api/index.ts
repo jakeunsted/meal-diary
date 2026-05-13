@@ -32,6 +32,21 @@ if (posthog) {
 // Railway uses 1 proxy, so we trust only the first proxy
 app.set('trust proxy', 1);
 app.use(express.json());
+// Note on CSRF: this API does not use cookie-based authentication. All
+// state-changing routes are protected by the `authenticateToken` middleware,
+// which validates a JWT supplied via the `Authorization: Bearer <token>`
+// header (see `middleware/auth.middleware.ts`). Browsers do not attach
+// `Authorization` headers to cross-origin requests automatically, so the
+// classic CSRF attack vector does not apply to these endpoints and a CSRF
+// token middleware is not required.
+//
+// The only cookie this API issues is `oauth_state`, used during the Google
+// OAuth 2.0 flow (see `controllers/auth/auth.controller.ts`). That cookie
+// already implements its own CSRF protection: the value is compared against
+// the `state` query parameter returned by Google, which is the standard
+// OAuth 2.0 CSRF mitigation. The cookie is also `httpOnly`, `secure` in
+// production, and `sameSite: 'lax'` (Strict would break the cross-site
+// redirect back from Google).
 app.use(cookieParser());
 
 // Apply rate limiting to all routes
