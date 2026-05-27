@@ -38,6 +38,17 @@ export function weekKeysEqual(
   return normalizeMealDiaryWeekKey(a) === normalizeMealDiaryWeekKey(b);
 }
 
+/** True when every loaded row belongs to the given ISO week key. */
+export function weeklyMealsMatchWeek(
+  meals: { week_start_date?: string | null }[],
+  weekKey: string
+): boolean {
+  if (!weekKey || meals.length === 0) {
+    return false;
+  }
+  return meals.every((meal) => weekKeysEqual(meal.week_start_date, weekKey));
+}
+
 /** Local midnight calendar date for a normalized week key (for pickers / display). */
 export function weekStartKeyToLocalDate(key: string): Date {
   const s = key.trim();

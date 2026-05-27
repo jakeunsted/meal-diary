@@ -90,7 +90,7 @@ onMounted(() => {
       if (!userStore.user?.family_group_id) {
         await userStore.fetchUser();
       }
-      await mealDiaryStoreComputed.value.fetchWeeklyMeals();
+      await mealDiaryStoreComputed.value.fetchWeeklyMeals(currentWeekStartDate.value);
     } catch (error) {
       console.error('Error loading meal diary:', error);
     }
@@ -101,7 +101,7 @@ onMounted(() => {
 
 watch(() => userStore.user?.family_group_id, (newId) => {
   if (newId) {
-    mealDiaryStoreComputed.value.fetchWeeklyMeals();
+    mealDiaryStoreComputed.value.fetchWeeklyMeals(currentWeekStartDate.value);
   }
 });
 </script>

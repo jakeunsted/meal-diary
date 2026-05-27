@@ -7,6 +7,8 @@ import { useApi } from '~/composables/useApi';
 import {
   normalizeMealDiaryWeekKey,
   weekKeysEqual,
+  weeklyMealsMatchWeek,
+  weekStartKeyToLocalDate,
 } from '~/composables/mealDiaryWeekKey';
 
 /** Client-side cache TTL for weekly meals (matches fetch + initialize logic). */
@@ -130,8 +132,23 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       const now = Date.now();
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
 
-      if (!loadedFromStorage || !this.lastFetchTime || cacheAge > WEEKLY_MEALS_CACHE_MS) {
-        await this.fetchWeeklyMeals();
+      const targetWeekKey = this.currentWeekStart
+        ? normalizeMealDiaryWeekKey(this.currentWeekStart)
+        : normalizeMealDiaryWeekKey(this.getWeekStartDate());
+      const weekStateConsistent =
+        weeklyMealsMatchWeek(this.weeklyMeals, targetWeekKey) &&
+        weekKeysEqual(this.currentWeekStart, targetWeekKey);
+
+      if (
+        !loadedFromStorage ||
+        !this.lastFetchTime ||
+        cacheAge > WEEKLY_MEALS_CACHE_MS ||
+        !weekStateConsistent
+      ) {
+        const weekDate = this.currentWeekStart
+          ? weekStartKeyToLocalDate(this.currentWeekStart)
+          : undefined;
+        await this.fetchWeeklyMeals(weekDate);
       }
     },
 
@@ -146,9 +163,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         return;
       }
 
-      // Only fetch if we don't have data for this week or if force refresh is requested
+      // Require meals to match the week — currentWeekStart alone is not enough (aborted fetches)
       const hasDataForWeek =
-        weekKeysEqual(this.currentWeekStart, weekStartDateStr) && this.weeklyMeals.length > 0;
+        weekKeysEqual(this.currentWeekStart, weekStartDateStr) &&
+        weeklyMealsMatchWeek(this.weeklyMeals, weekStartDateStr);
       const now = Date.now();
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
 
@@ -157,8 +175,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         this.loading = true;
         let fetchController: AbortController | null = null;
         try {
-          this.currentWeekStart = weekStartDateStr;
-
           weeklyMealsFetchAbort?.abort();
           fetchController = new AbortController();
           weeklyMealsFetchAbort = fetchController;
@@ -170,7 +186,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             { signal: fetchController.signal }
           );
 
-          if (!weekKeysEqual(this.currentWeekStart, weekStartDateStr)) {
+          if (fetchController.signal.aborted) {
             return;
           }
 
@@ -179,6 +195,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             ...meal,
             week_start_date: weekStartDateStr
           }));
+          this.currentWeekStart = weekStartDateStr;
 
           this.lastFetchTime = now;
           // Save to Preferences after successful fetch
@@ -191,10 +208,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             return;
           }
           console.error('Error fetching weekly meals:', error);
-          // Avoid replacing state from Preferences when a newer week was already requested
-          if (!weekKeysEqual(this.currentWeekStart, weekStartDateStr)) {
-            return;
-          }
           // If fetch fails, try to load from Preferences
           const loadedFromStorage = await this.loadFromLocalStorage();
           if (!loadedFromStorage) {
