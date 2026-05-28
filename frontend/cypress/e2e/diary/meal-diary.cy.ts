@@ -31,6 +31,20 @@ describe('Meal diary', () => {
     cy.location('search').should('include', 'week=');
   });
 
+  it('returns to this week via shortcut', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.location('search').then((search) => {
+      const originalWeek = new URLSearchParams(search).get('week');
+      expect(originalWeek).to.be.a('string').and.not.be.empty;
+
+      cy.get('[data-testid="week-next-button"]').click();
+      cy.wait('@apiGetMealDiary');
+      cy.get('[data-testid="week-this-week-button"]').should('be.visible').click();
+      cy.wait('@apiGetMealDiary');
+      cy.location('search').should('include', `week=${originalWeek}`);
+    });
+  });
+
   it('loads the week from the URL query param', () => {
     const weekStart = '2026-05-18';
     cy.visitApp(`/diary?week=${weekStart}`);

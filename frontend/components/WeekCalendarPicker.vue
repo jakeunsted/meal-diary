@@ -5,7 +5,16 @@
         <label class="label">
           <span class="label-text">{{ $t('Week Selection') }}</span>
         </label>
-        <div class="flex flex-row gap-2">
+        <div class="flex flex-row gap-2 flex-wrap justify-center items-center">
+          <button
+            v-if="!isCurrentWeek"
+            type="button"
+            class="btn btn-ghost btn-sm"
+            data-testid="week-this-week-button"
+            @click="emit('goToThisWeek')"
+          >
+            {{ $t('This week') }}
+          </button>
           <button 
             class="btn btn-primary" 
             data-testid="week-previous-button"
@@ -46,10 +55,14 @@ const props = defineProps({
   initialWeekStartDate: {
     type: Date,
     default: null
-  }
+  },
+  isCurrentWeek: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(['weekChange']);
+const emit = defineEmits(['weekChange', 'goToThisWeek']);
 
 // Use the composable with a ref to the prop
 const initialWeekStartDateRef = computed(() => props.initialWeekStartDate);

@@ -25,7 +25,9 @@
       <WeekCalendarPicker
         :key="resolvedWeekKey"
         :initialWeekStartDate="displayWeekStartDate"
+        :is-current-week="isCurrentWeek"
         @weekChange="handleWeekChange"
+        @go-to-this-week="handleGoToThisWeek"
       />
       <div
         class="relative"
@@ -92,6 +94,8 @@ const {
   lastFetchError,
   setWeek,
   refreshWeek,
+  isCurrentWeek,
+  goToCurrentWeek,
 } = useMealDiaryWeek();
 
 const hasMealData = computed(() => mealDiaryStore.weeklyMeals?.length > 0);
@@ -114,6 +118,10 @@ const handleSaveMeal = async () => {
 
 const handleWeekChange = (weekStartDate) => {
   void setWeek(weekStartDate);
+};
+
+const handleGoToThisWeek = () => {
+  void goToCurrentWeek();
 };
 
 const handleRetry = () => {
