@@ -31,6 +31,20 @@ describe('Meal diary', () => {
     cy.location('search').should('include', 'week=');
   });
 
+  it('clears a breakfast meal entry', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().click();
+    cy.get('[data-testid="set-meal-name-input"]').type('Omelette');
+    cy.get('[data-testid="set-meal-save-button"]').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="breakfast-custom-badge"]').first().should('contain.text', 'Omelette');
+
+    cy.get('[data-testid="breakfast-custom-badge"]').first().click();
+    cy.get('[data-testid="set-meal-clear-button"]').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().should('be.visible');
+  });
+
   it('returns to this week via shortcut', () => {
     cy.wait('@apiGetMealDiary');
     cy.location('search').then((search) => {

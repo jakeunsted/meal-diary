@@ -82,9 +82,12 @@ import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useMealDiaryWeek } from '~/composables/useMealDiaryWeek';
+import { useToast } from '~/composables/useToast';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
+const { showSuccess } = useToast();
+const { t } = useI18n();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
 const {
@@ -111,6 +114,7 @@ const handleSaveMeal = async () => {
   try {
     await mealDiaryStore.saveMeal();
     set_meal_modal.close();
+    showSuccess(t('Meal saved'));
   } catch (error) {
     console.error('Error saving meal:', error);
   }

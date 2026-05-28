@@ -292,7 +292,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
 
         // Update the specific meal type that changed
         const mealType = this.selectedMeal.type as 'breakfast' | 'lunch' | 'dinner';
-        mealData[mealType] = this.selectedMeal.name;
+        const mealName = this.selectedMeal.name?.trim() ?? '';
+        mealData[mealType] = mealName;
         mealData[`${mealType}_recipe_id`] = this.selectedMeal.recipeId;
 
         const { api } = useApi();
@@ -304,7 +305,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         // Update local state
         const existingDayMeal = this.weeklyMeals.find(meal => meal.day_of_week === this.selectedMeal.dayOfWeek);
         if (existingDayMeal) {
-          existingDayMeal[mealType] = this.selectedMeal.name;
+          existingDayMeal[mealType] = mealName || null;
           const recipeIdKey = `${mealType}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
           (existingDayMeal as any)[recipeIdKey] = this.selectedMeal.recipeId;
         } else {

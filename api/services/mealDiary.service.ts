@@ -164,12 +164,22 @@ export const updateDailyMeal = async (
     }
   });
 
-  // Convert null values to undefined for Sequelize compatibility
-  const sanitizedUpdates: Record<string, any> = {};
+  const recipeIdKeys = new Set([
+    'breakfast_recipe_id',
+    'lunch_recipe_id',
+    'dinner_recipe_id',
+  ]);
+
+  const sanitizedUpdates: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(updates)) {
-    if (value !== undefined) {
-      sanitizedUpdates[key] = value === null ? undefined : value;
+    if (value === undefined) {
+      continue;
     }
+    if (value === null && recipeIdKeys.has(key)) {
+      sanitizedUpdates[key] = null;
+      continue;
+    }
+    sanitizedUpdates[key] = value === null ? undefined : value;
   }
 
   // Update the daily meal
