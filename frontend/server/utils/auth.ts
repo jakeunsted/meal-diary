@@ -2,6 +2,7 @@ import { H3Event } from 'h3';
 import type { TokenResponse } from '~/types/Auth';
 import type { ApiResponse } from '~/types/Api';
 import { isTokenExpired } from './jwt';
+import { getApiBaseUrl } from '~/server/utils/apiBaseUrl';
 
 /**
  * Handles automatic logout when token refresh fails
@@ -27,8 +28,8 @@ export const handleAutoLogout = () => {
  * @param baseUrl - The base URL for the API
  * @returns The new access token and refresh token
  */
-async function refreshAccessToken(refreshToken: string, baseUrl: string): Promise<TokenResponse> {
-  const refreshResponse = await fetch(`${baseUrl}/auth/refresh-token`, {
+async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
+  const refreshResponse = await fetch(`${getApiBaseUrl()}/auth/refresh-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -74,9 +75,7 @@ export async function authenticatedFetch<T>(
 
     if (expired) {
       try {
-        const config = useRuntimeConfig();
-        const baseUrl = config.public.baseUrl;
-        const tokenData = await refreshAccessToken(refreshToken, baseUrl);
+        const tokenData = await refreshAccessToken(refreshToken);
         accessToken = tokenData.accessToken;
       } catch (error: any) {
         // If refresh fails with 403, it might be because the token was just rotated by client
@@ -150,9 +149,7 @@ export async function authenticatedFetch<T>(
     // This is a fallback in case the token expired between our check and the actual request
     if (error.statusCode === 401 && refreshToken) {
       try {
-        const config = useRuntimeConfig();
-        const baseUrl = config.public.baseUrl;
-        const data = await refreshAccessToken(refreshToken, baseUrl);
+        const data = await refreshAccessToken(refreshToken);
         
         // Retry the original request with new token
         const result = await makeRequest(data.accessToken);

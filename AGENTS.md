@@ -26,8 +26,8 @@ Docker requires these workarounds in the Cloud Agent environment:
 
 ### Environment files
 
-- `api/.env` — copy from `api/.env.example`. Dev DB defaults: name=`meal-diary-dev`, user=`postgres`, password=`postgres`, host=`localhost`, port=`5432`. Set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` to any string. Set `NODE_ENV=development`.
-- `frontend/.env` — copy from `frontend/.env.example`. Set `BASE_URL=http://localhost:3001`.
+- `api/.env` — copy from `api/.env.example`. Dev DB defaults: name=`meal-diary-dev`, user=`postgres`, password=`postgres`, port=`5432`. Use `DEV_DB_HOST=localhost` when the API runs on the host; use `DEV_DB_HOST=postgres` when the API runs via `docker compose`. Set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` to any string. Set `NODE_ENV=development`. If you change Postgres credentials, run `docker compose down -v` once so the volume is recreated.
+- `frontend/.env` — copy from `frontend/.env.example`. Set `BASE_URL=http://localhost:3001` (public API URL for browser/OAuth redirects). For `docker compose`, set `API_INTERNAL_URL=http://api:3001` for Nuxt server routes; leave it empty when running the frontend on the host (falls back to `BASE_URL`).
 
 ### Testing
 

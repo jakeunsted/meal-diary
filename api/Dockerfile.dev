@@ -1,0 +1,12 @@
+FROM node:23.6
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm install
+RUN npm rebuild bcrypt --build-from-source
+
+EXPOSE 3001
+
+CMD ["npm", "run", "dev"]

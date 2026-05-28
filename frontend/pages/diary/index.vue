@@ -1,34 +1,65 @@
 <template>
   <div class="max-w-4xl mx-auto">
-    <PullToRefreshChrome :enabled="pullToRefreshEnabled" />
+    <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="refreshWeek" />
     <h1 class="text-2xl font-bold text-center m-4" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
 
-    <MealDiarySkeleton v-if="!hasMealData" />
-    <div v-else>
+    <div
+      v-if="lastFetchError && !loading"
+      class="alert alert-error mx-4 mb-4"
+      role="alert"
+      data-testid="diary-load-error"
+    >
+      <span>{{ $t('Failed to load meal diary') }}</span>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        data-testid="diary-retry-button"
+        @click="handleRetry"
+      >
+        {{ $t('Retry') }}
+      </button>
+    </div>
+
+    <MealDiarySkeleton v-if="showSkeleton" />
+    <div v-else class="relative">
       <WeekCalendarPicker
-        :initialWeekStartDate="currentWeekStartDate"
+        :key="resolvedWeekKey"
+        :initialWeekStartDate="displayWeekStartDate"
         @weekChange="handleWeekChange"
       />
-      <DayFoodPlanCard
-        v-for="(dayMeal, index) in mealDiaryStoreComputed.weeklyMeals"
-        :key="index"
-        :day="getDayName(dayMeal.day_of_week)"
-        :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
-        :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
-        :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
-        :dinner="{ name: dayMeal.dinner, recipeId: dayMeal.dinner_recipe_id }"
-        :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
-        @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
-      />
+      <div
+        class="relative"
+        :class="{ 'opacity-50 pointer-events-none': showWeekLoading }"
+      >
+        <DayFoodPlanCard
+          v-for="dayMeal in mealDiaryStore.weeklyMeals"
+          :key="dayMeal.day_of_week"
+          :day="getDayName(dayMeal.day_of_week)"
+          :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
+          :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
+          :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
+          :dinner="{ name: dayMeal.dinner, recipeId: dayMeal.dinner_recipe_id }"
+          :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
+          @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
+        />
+      </div>
+      <div
+        v-if="showWeekLoading"
+        class="absolute inset-0 flex items-center justify-center z-10"
+        aria-busy="true"
+        data-testid="diary-week-loading"
+      >
+        <span class="loading loading-spinner loading-lg text-primary" />
+      </div>
     </div>
 
     <dialog id="set_meal_modal" class="modal" data-testid="set-meal-modal">
       <SetUpdateMealModal
-        v-if="mealDiaryStoreComputed.selectedMeal.type !== null"
-        :meal="mealDiaryStoreComputed.selectedMeal.name"
-        :recipeId="mealDiaryStoreComputed.selectedMeal.recipeId"
-        @update:meal="mealDiaryStoreComputed.updateSelectedMealName"
-        @update:recipeId="mealDiaryStoreComputed.updateSelectedMealRecipeId"
+        v-if="mealDiaryStore.selectedMeal.type !== null"
+        :meal="mealDiaryStore.selectedMeal.name"
+        :recipeId="mealDiaryStore.selectedMeal.recipeId"
+        @update:meal="mealDiaryStore.updateSelectedMealName"
+        @update:recipeId="mealDiaryStore.updateSelectedMealRecipeId"
         @saveMeal="handleSaveMeal"
       />
     </dialog>
@@ -41,30 +72,31 @@ definePageMeta({
 });
 
 import { useMealDiaryStore } from '~/stores/mealDiary';
-import { useUserStore } from '~/stores/user';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
 import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
-import { weekStartKeyToLocalDate } from '~/composables/mealDiaryWeekKey';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
+import { useMealDiaryWeek } from '~/composables/useMealDiaryWeek';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
-const userStore = useUserStore();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
-const mealDiaryStoreComputed = computed(() => mealDiaryStore);
-const hasMealData = computed(() => mealDiaryStoreComputed.value.weeklyMeals?.length > 0);
+const {
+  resolvedWeekKey,
+  displayWeekStartDate,
+  loading,
+  lastFetchError,
+  setWeek,
+  refreshWeek,
+} = useMealDiaryWeek();
 
-const currentWeekStartDate = computed(() => {
-  if (mealDiaryStoreComputed.value.currentWeekStart) {
-    return weekStartKeyToLocalDate(mealDiaryStoreComputed.value.currentWeekStart);
-  }
-  return mealDiaryStoreComputed.value.getWeekStartDate();
-});
+const hasMealData = computed(() => mealDiaryStore.weeklyMeals?.length > 0);
+const showSkeleton = computed(() => loading.value && !hasMealData.value);
+const showWeekLoading = computed(() => loading.value && hasMealData.value);
 
 const handleSetMeal = (mealType, dayOfWeek) => {
   mealDiaryStore.setSelectedMeal(mealType, dayOfWeek);
@@ -73,7 +105,7 @@ const handleSetMeal = (mealType, dayOfWeek) => {
 
 const handleSaveMeal = async () => {
   try {
-    await mealDiaryStoreComputed.value.saveMeal();
+    await mealDiaryStore.saveMeal();
     set_meal_modal.close();
   } catch (error) {
     console.error('Error saving meal:', error);
@@ -81,27 +113,10 @@ const handleSaveMeal = async () => {
 };
 
 const handleWeekChange = (weekStartDate) => {
-  mealDiaryStoreComputed.value.fetchWeeklyMeals(weekStartDate);
+  void setWeek(weekStartDate);
 };
 
-onMounted(() => {
-  const loadData = async () => {
-    try {
-      if (!userStore.user?.family_group_id) {
-        await userStore.fetchUser();
-      }
-      await mealDiaryStoreComputed.value.fetchWeeklyMeals(currentWeekStartDate.value);
-    } catch (error) {
-      console.error('Error loading meal diary:', error);
-    }
-  };
-
-  loadData();
-});
-
-watch(() => userStore.user?.family_group_id, (newId) => {
-  if (newId) {
-    mealDiaryStoreComputed.value.fetchWeeklyMeals(currentWeekStartDate.value);
-  }
-});
+const handleRetry = () => {
+  void refreshWeek();
+};
 </script>

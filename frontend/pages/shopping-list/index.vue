@@ -1,6 +1,6 @@
 <template>
   <div class="max-w-4xl mx-auto px-4">
-    <PullToRefreshChrome :enabled="pullToRefreshEnabled" />
+    <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="handlePullRefresh" />
     <h1 class="text-2xl font-bold text-center m-4" data-testid="shopping-list-title">
       {{ $t('Shopping List') }}
     </h1>
@@ -100,6 +100,10 @@ const newItemName = ref('');
 
 const handleError = (error: unknown) => {
   console.error('Error in shopping list page:', error);
+};
+
+const handlePullRefresh = async () => {
+  await shoppingListStore.fetchShoppingList(true);
 };
 
 const orderedItems = computed(() => {

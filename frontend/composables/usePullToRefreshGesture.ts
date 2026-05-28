@@ -6,6 +6,7 @@ interface UsePullToRefreshGestureOptions {
   enabled: MaybeRef<boolean>;
   threshold?: MaybeRef<number>;
   maxPull?: MaybeRef<number>;
+  onRefresh?: MaybeRef<(() => void | Promise<void>) | undefined>;
 }
 
 const getScrollEl = (): HTMLElement | null => {
@@ -61,7 +62,12 @@ export const usePullToRefreshGesture = (options: UsePullToRefreshGestureOptions)
       return;
     }
     if (pullAtEnd >= threshold) {
-      reloadNuxtApp({ persistState: false, force: true });
+      const refreshHandler = options.onRefresh ? toValue(options.onRefresh) : undefined;
+      if (refreshHandler) {
+        void Promise.resolve(refreshHandler());
+      } else {
+        reloadNuxtApp({ persistState: false, force: true });
+      }
     }
     pull.value = 0;
   };

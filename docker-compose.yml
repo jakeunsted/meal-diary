@@ -1,15 +1,14 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16
     container_name: meal-diary-dev-postgres
     environment:
-      POSTGRES_DB: ${DEV_DB_NAME:-meal-diary-dev}
-      POSTGRES_USER: ${DEV_DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DEV_DB_PASSWORD:-postgres}
+      # Must match DEV_DB_* in api/.env (Postgres only reads these on first volume init)
+      POSTGRES_DB: meal-diary-dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
-      - "${DEV_DB_PORT:-5432}:5432"
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -26,21 +25,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    environment:
-      # Development DB variables
-      DEV_DB_NAME: ${DEV_DB_NAME:-meal-diary-dev}
-      DEV_DB_USER: ${DEV_DB_USER:-postgres}
-      DEV_DB_PASSWORD: ${DEV_DB_PASSWORD:-postgres}
-      DEV_DB_HOST: postgres
-      DEV_DB_PORT: 5432
-      # Production DB variables (for reference, not used in dev)
-      DB_NAME: ${DB_NAME:-}
-      DB_USER: ${DB_USER:-}
-      DB_PASSWORD: ${DB_PASSWORD:-}
-      DB_HOST: ${DB_HOST:-}
-      DB_PORT: ${DB_PORT:-}
-      NODE_ENV: development
-      PORT: 3001
+    env_file:
+      - ./api/.env
     ports:
       - "3001:3001"
     volumes:
@@ -60,10 +46,8 @@ services:
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - BASE_URL=http://localhost:3001/api
-      - API_INTERNAL_URL=http://api:3001/api
-      - NODE_ENV=development
+    env_file:
+      - ./frontend/.env
     command: npm run dev
 
 volumes:

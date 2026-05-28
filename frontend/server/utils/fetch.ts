@@ -1,4 +1,5 @@
 import { H3Event } from 'h3';
+import { getApiBaseUrl } from '~/server/utils/apiBaseUrl';
 
 /**
  * Custom fetch export to use baseUrl from .env and return json.
@@ -13,8 +14,7 @@ interface ApiFetchOptions extends RequestInit {
 }
 
 export async function apiFetch<T = any>(path: string, options: ApiFetchOptions = {}, event?: H3Event): Promise<T> {
-  const config = useRuntimeConfig();
-  const baseUrl = config.public.baseUrl;
+  const baseUrl = getApiBaseUrl();
   let finalUrl = `${baseUrl}${path}`;
 
   if (options.query) {

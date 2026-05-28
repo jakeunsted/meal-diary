@@ -1,4 +1,4 @@
-import { ref, computed, watch, watchEffect, nextTick, type Ref, type ComputedRef } from 'vue';
+import { ref, computed, watchEffect, nextTick, type Ref, type ComputedRef } from 'vue';
 import { 
   getISOWeek, 
   getISOWeekYear, 
@@ -224,33 +224,9 @@ export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | Comput
     updateWeeks();
   });
 
-  // Watch for changes in initialWeekStartDate
-  if (initialWeekStartDate) {
-    watch(initialWeekStartDate, (newDate) => {
-      if (newDate) {
-        const weekInfo = getWeekInfoForDate(newDate);
-        if (weekInfo.year !== selectedYear.value) {
-          selectedYear.value = weekInfo.year;
-        }
-        const weekData = weeks.value.find(w => w.year === weekInfo.year && w.number === weekInfo.weekNumber);
-        if (weekData) {
-          selectedWeek.value = weekInfo.weekNumber;
-        }
-      }
-    }, { immediate: true });
-
-    // Also watch for when weeks are updated to set the correct week from initial date
-    watch(weeks, () => {
-      if (initialWeekStartDate && 'value' in initialWeekStartDate && initialWeekStartDate.value && weeks.value.length > 0) {
-        const weekInfo = getWeekInfoForDate(initialWeekStartDate.value);
-        const weekData = weeks.value.find(w => w.year === weekInfo.year && w.number === weekInfo.weekNumber);
-        if (weekData) {
-          selectedYear.value = weekInfo.year;
-          selectedWeek.value = weekInfo.weekNumber;
-        }
-      }
-    }, { immediate: true });
-  }
+  // initialWeekStartDate is only read at init (getInitialWeekInfo). Parent remounts the
+  // picker via :key when the route week changes — do not watch the prop here or the
+  // picker snaps back while the URL is still catching up (circular fetches).
 
   // Computed property for the select dropdown key
   const selectedWeekKey = computed(() => `${selectedYear.value}-${selectedWeek.value}`);

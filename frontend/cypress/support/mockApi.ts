@@ -425,9 +425,11 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   }).as('apiReorderShoppingItems');
 
   cy.intercept('GET', /\/api\/meal-diaries\/\d+\/.*\/daily-meals$/, (req) => {
+    const weekMatch = req.url.match(/meal-diaries\/\d+\/([^/]+)\/daily-meals/);
+    const weekStartDate = weekMatch?.[1] || getCurrentWeekStartKey();
     req.reply({
       statusCode: 200,
-      body: state.weeklyMeals,
+      body: createWeeklyMeals(weekStartDate),
     });
   }).as('apiGetMealDiary');
 

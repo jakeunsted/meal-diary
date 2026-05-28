@@ -9,6 +9,7 @@ export default defineNuxtConfig({
     port: 3000,
   },
   runtimeConfig: {
+    apiInternalUrl: process.env.API_INTERNAL_URL || '',
     public: {
       baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,

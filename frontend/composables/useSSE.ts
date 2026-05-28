@@ -24,7 +24,7 @@ export const useSSE = () => {
    */
   const setupSSEConnection = async (familyGroupId: number) => {
     // Initialize stores
-    await mealDiaryStore.initialize();
+    await mealDiaryStore.hydrateFromStorage();
     await shoppingListStore.fetchShoppingList();
 
     // Setup global SSE connection for meal diary and shopping list

@@ -8,7 +8,6 @@ import {
   normalizeMealDiaryWeekKey,
   weekKeysEqual,
   weeklyMealsMatchWeek,
-  weekStartKeyToLocalDate,
 } from '~/composables/mealDiaryWeekKey';
 
 /** Client-side cache TTL for weekly meals (matches fetch + initialize logic). */
@@ -17,8 +16,8 @@ const WEEKLY_MEALS_CACHE_MS = 5 * 60 * 1000;
 /** Tracks overlapping fetchWeeklyMeals calls so loading stays true until the last one finishes. */
 let weeklyMealsFetchDepth = 0;
 
-/** Aborts the previous in-flight weekly meals request when a new one starts. */
-let weeklyMealsFetchAbort: AbortController | null = null;
+/** In-flight fetch per week key — duplicate requests share the same promise. */
+const inflightWeeklyMeals = new Map<string, Promise<void>>();
 
 /** Batches rapid Preferences writes (e.g. multiple SSE updates). */
 let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -37,11 +36,19 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     eventSource: null as EventSource | null,
     currentWeekStart: null as string | null,
     lastFetchTime: null as number | null,
+    lastFetchError: null as string | null,
   }),
 
   getters: {
     getDayMeals: (state) => (dayOfWeek: number) => {
       return state.weeklyMeals.find(meal => meal.day_of_week === dayOfWeek);
+    },
+
+    isWeekReady: (state) => (weekKey: string) => {
+      return (
+        weekKeysEqual(state.currentWeekStart, weekKey) &&
+        weeklyMealsMatchWeek(state.weeklyMeals, weekKey)
+      );
     },
   },
 
@@ -113,43 +120,22 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       return false;
     },
 
-    async initialize() {
-      const userStore = useUserStore();
+    /** Load cached diary from Preferences only (no network). */
+    async hydrateFromStorage() {
       const authStore = useAuthStore();
-
       if (!authStore.user?.family_group_id) {
         return;
       }
-
+      const userStore = useUserStore();
       if (!userStore.user?.family_group_id) {
         return;
       }
-      
-      // Try to load from Preferences first
-      const loadedFromStorage = await this.loadFromLocalStorage();
-      
-      // Only fetch if we don't have data or if it's too old
-      const now = Date.now();
-      const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
+      await this.loadFromLocalStorage();
+    },
 
-      const targetWeekKey = this.currentWeekStart
-        ? normalizeMealDiaryWeekKey(this.currentWeekStart)
-        : normalizeMealDiaryWeekKey(this.getWeekStartDate());
-      const weekStateConsistent =
-        weeklyMealsMatchWeek(this.weeklyMeals, targetWeekKey) &&
-        weekKeysEqual(this.currentWeekStart, targetWeekKey);
-
-      if (
-        !loadedFromStorage ||
-        !this.lastFetchTime ||
-        cacheAge > WEEKLY_MEALS_CACHE_MS ||
-        !weekStateConsistent
-      ) {
-        const weekDate = this.currentWeekStart
-          ? weekStartKeyToLocalDate(this.currentWeekStart)
-          : undefined;
-        await this.fetchWeeklyMeals(weekDate);
-      }
+    /** @deprecated Use hydrateFromStorage — fetch is owned by useMealDiaryWeek on the diary page. */
+    async initialize() {
+      await this.hydrateFromStorage();
     },
 
     // Fetch daily meals for week from API
@@ -163,70 +149,77 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         return;
       }
 
-      // Require meals to match the week — currentWeekStart alone is not enough (aborted fetches)
-      const hasDataForWeek =
-        weekKeysEqual(this.currentWeekStart, weekStartDateStr) &&
-        weeklyMealsMatchWeek(this.weeklyMeals, weekStartDateStr);
+      const hasDataForWeek = this.isWeekReady(weekStartDateStr);
       const now = Date.now();
       const cacheAge = this.lastFetchTime ? now - this.lastFetchTime : Infinity;
 
-      if (!hasDataForWeek || forceRefresh || cacheAge > WEEKLY_MEALS_CACHE_MS) {
-        weeklyMealsFetchDepth += 1;
-        this.loading = true;
-        let fetchController: AbortController | null = null;
-        try {
-          weeklyMealsFetchAbort?.abort();
-          fetchController = new AbortController();
-          weeklyMealsFetchAbort = fetchController;
+      if (hasDataForWeek && !forceRefresh && cacheAge <= WEEKLY_MEALS_CACHE_MS) {
+        return;
+      }
 
-          const familyGroupId = userStore.user.family_group_id;
-          const { api } = useApi();
-          const response = await api(
-            `/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`,
-            { signal: fetchController.signal }
-          );
-
-          if (fetchController.signal.aborted) {
-            return;
-          }
-
-          // Add week_start_date to each meal
-          this.weeklyMeals = response.map((meal: DailyMeal) => ({
-            ...meal,
-            week_start_date: weekStartDateStr
-          }));
-          this.currentWeekStart = weekStartDateStr;
-
-          this.lastFetchTime = now;
-          // Save to Preferences after successful fetch
-          await this.saveToLocalStorage();
-        } catch (error: any) {
-          const aborted =
-            error?.name === 'AbortError' ||
-            error?.cause?.name === 'AbortError';
-          if (aborted) {
-            return;
-          }
-          console.error('Error fetching weekly meals:', error);
-          // If fetch fails, try to load from Preferences
-          const loadedFromStorage = await this.loadFromLocalStorage();
-          if (!loadedFromStorage) {
-            if (error?.statusCode === 500 || error?.status === 500) {
-              console.warn('Meal diary may not exist yet, skipping fetch');
-              return;
-            }
-            throw error;
-          }
-        } finally {
-          if (fetchController && weeklyMealsFetchAbort === fetchController) {
-            weeklyMealsFetchAbort = null;
-          }
-          weeklyMealsFetchDepth -= 1;
-          if (weeklyMealsFetchDepth < 0) {
-            weeklyMealsFetchDepth = 0;
-          }
-          this.loading = weeklyMealsFetchDepth > 0;
+      if (!forceRefresh) {
+        const existing = inflightWeeklyMeals.get(weekStartDateStr);
+        if (existing) {
+          return existing;
         }
+      } else {
+        inflightWeeklyMeals.delete(weekStartDateStr);
+      }
+
+      const fetchPromise = this.executeWeeklyMealsFetch(weekStartDateStr, now);
+      inflightWeeklyMeals.set(weekStartDateStr, fetchPromise);
+
+      try {
+        await fetchPromise;
+      } finally {
+        if (inflightWeeklyMeals.get(weekStartDateStr) === fetchPromise) {
+          inflightWeeklyMeals.delete(weekStartDateStr);
+        }
+      }
+    },
+
+    async executeWeeklyMealsFetch(weekStartDateStr: string, fetchStartedAt: number) {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      weeklyMealsFetchDepth += 1;
+      this.loading = true;
+
+      try {
+        const familyGroupId = userStore.user.family_group_id;
+        const { api } = useApi();
+        const response = await api(
+          `/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`
+        );
+
+        this.weeklyMeals = response.map((meal: DailyMeal) => ({
+          ...meal,
+          week_start_date: weekStartDateStr,
+        }));
+        this.currentWeekStart = weekStartDateStr;
+        this.lastFetchTime = fetchStartedAt;
+        this.lastFetchError = null;
+        await this.saveToLocalStorage();
+      } catch (error: unknown) {
+        console.error('Error fetching weekly meals:', error);
+        const err = error as { statusCode?: number; status?: number; message?: string };
+        const loadedFromStorage = await this.loadFromLocalStorage();
+        if (!loadedFromStorage) {
+          if (err?.statusCode === 500 || err?.status === 500) {
+            console.warn('Meal diary may not exist yet, skipping fetch');
+            return;
+          }
+          this.lastFetchError =
+            err?.message || 'Failed to load meal diary';
+          throw error;
+        }
+        this.lastFetchError = null;
+      } finally {
+        weeklyMealsFetchDepth -= 1;
+        if (weeklyMealsFetchDepth < 0) {
+          weeklyMealsFetchDepth = 0;
+        }
+        this.loading = weeklyMealsFetchDepth > 0;
       }
     },
 

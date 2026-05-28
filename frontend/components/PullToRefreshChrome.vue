@@ -35,12 +35,14 @@ interface Props {
   enabled?: boolean;
   threshold?: number;
   maxPull?: number;
+  onRefresh?: () => void | Promise<void>;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   enabled: true,
   threshold: 80,
-  maxPull: 120
+  maxPull: 120,
+  onRefresh: undefined,
 });
 
 const { t } = useI18n();
@@ -48,7 +50,8 @@ const { t } = useI18n();
 const { pull, isPulling } = usePullToRefreshGesture({
   enabled: toRef(props, 'enabled'),
   threshold: toRef(props, 'threshold'),
-  maxPull: toRef(props, 'maxPull')
+  maxPull: toRef(props, 'maxPull'),
+  onRefresh: toRef(props, 'onRefresh'),
 });
 
 const iconOpacity = computed(() => {

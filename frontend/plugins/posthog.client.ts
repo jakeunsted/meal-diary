@@ -8,30 +8,59 @@ const POSTHOG_DISABLED_HOSTS = new Set([
   'dev.mealdiary.co.uk',
 ]);
 
-function isPostHogDisabledForBaseUrl(baseUrl: string): boolean {
-  try {
-    const host = new URL(baseUrl).hostname.toLowerCase();
-    if (POSTHOG_DISABLED_HOSTS.has(host)) return true;
-    return host.endsWith('.localhost');
-  } catch {
-    return false;
+function isPostHogDisabledHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (POSTHOG_DISABLED_HOSTS.has(host)) return true;
+  return host.endsWith('.localhost');
+}
+
+function shouldDisablePostHog(config: ReturnType<typeof useRuntimeConfig>): boolean {
+  if (import.meta.dev) {
+    return true;
   }
+
+  const hostnames: string[] = [];
+
+  if (process.client && typeof window !== 'undefined') {
+    hostnames.push(window.location.hostname);
+  }
+
+  const origin = config.public.origin as string | undefined;
+  if (origin) {
+    try {
+      hostnames.push(new URL(origin).hostname);
+    } catch {
+      /* ignore invalid ORIGIN */
+    }
+  }
+
+  const baseUrl = config.public.baseUrl as string | undefined;
+  if (baseUrl) {
+    try {
+      hostnames.push(new URL(baseUrl).hostname);
+    } catch {
+      /* ignore invalid BASE_URL */
+    }
+  }
+
+  return hostnames.some((hostname) => isPostHogDisabledHost(hostname));
 }
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig();
 
-  // If localhost or dev.mealdiary.co.uk, skip PostHog
-  if (process.client) {
-    if (isPostHogDisabledForBaseUrl(config.public.baseUrl as string)) {
+  const noopPostHog = {
+    capture: () => {},
+    identify: () => {},
+    reset: () => {},
+  };
+
+  if (process.client && shouldDisablePostHog(config)) {
+    if (import.meta.dev) {
       console.log('Skipping PostHog in development');
-      nuxtApp.provide('posthog', {
-        capture: () => {},
-        identify: () => {},
-        reset: () => {},
-      });
-      return;
     }
+    nuxtApp.provide('posthog', noopPostHog);
+    return;
   }
   
   if (process.client && config.public.posthogPublicKey) {
