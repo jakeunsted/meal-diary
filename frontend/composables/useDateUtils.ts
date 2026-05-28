@@ -1,58 +1,67 @@
-import { isSameDay, startOfISOWeek } from 'date-fns';
+import { format, isSameDay, startOfISOWeek, type Locale } from 'date-fns';
+import { enUS } from 'date-fns/locale';
 import { parseWeekStartDisplayDate } from '~/composables/mealDiaryWeekKey';
 
 interface DateUtils {
-  getDayName: (dayNumber: number) => string;
+  getDayName: (dayNumber: number, weekStartDate?: string | null) => string;
   getDateForDay: (weekStartDate: string | null, dayNumber: number) => string;
   isDayInPast: (weekStartDate: string | null, dayNumber: number) => boolean;
 }
 
+const dateFnsLocales: Record<string, Locale> = {
+  en: enUS,
+};
+
+function resolveDateFnsLocale(i18nLocale: string): Locale {
+  return dateFnsLocales[i18nLocale] ?? enUS;
+}
+
+function dayDateFromWeekStart(weekStartDate: string, dayNumber: number): Date | null {
+  const startDate = parseWeekStartDisplayDate(weekStartDate);
+  if (isNaN(startDate.getTime())) {
+    return null;
+  }
+  const dayOffset = dayNumber - 1;
+  const date = new Date(startDate);
+  date.setDate(startDate.getDate() + dayOffset);
+  return date;
+}
+
 export const useDateUtils = (): DateUtils => {
-  /**
-   * Converts a day number (1-7) to its corresponding day name
-   * @param {number} dayNumber - The day number (1 = Monday, 7 = Sunday)
-   * @returns {string} The name of the day
-   * @throws Will throw an error if dayNumber is outside the range 1-7
-   */
-  const getDayName = (dayNumber: number): string => {
-    const days: string[] = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    return days[dayNumber - 1];
+  const { locale } = useI18n();
+  const dateFnsLocale = computed(() => resolveDateFnsLocale(locale.value));
+
+  const getDayName = (dayNumber: number, weekStartDate?: string | null): string => {
+    if (weekStartDate) {
+      const date = dayDateFromWeekStart(weekStartDate, dayNumber);
+      if (date) {
+        return format(date, 'EEEE', { locale: dateFnsLocale.value });
+      }
+    }
+    const referenceMonday = startOfISOWeek(new Date());
+    referenceMonday.setHours(0, 0, 0, 0);
+    const date = new Date(referenceMonday);
+    date.setDate(referenceMonday.getDate() + (dayNumber - 1));
+    return format(date, 'EEEE', { locale: dateFnsLocale.value });
   };
 
-  /**
-   * Calculates and formats the date for a specific day of the week based on a week start date
-   * @param {string | null} weekStartDate - The start date of the week in ISO format
-   * @param {number} dayNumber - The day number (1 = Monday, 7 = Sunday)
-   * @returns {string} Formatted date string (e.g., "15 Mar") or empty string if invalid input
-   */
   const getDateForDay = (weekStartDate: string | null, dayNumber: number): string => {
     if (!weekStartDate) return '';
-    
-    try {
-      const startDate = parseWeekStartDisplayDate(weekStartDate);
-      if (isNaN(startDate.getTime())) return '';
 
-      const dayOffset: number = dayNumber - 1; // Subtract 1 because Monday is 1 in our system
-      const date: Date = new Date(startDate);
-      date.setDate(startDate.getDate() + dayOffset);
-      
-      return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    try {
+      const date = dayDateFromWeekStart(weekStartDate, dayNumber);
+      if (!date) return '';
+
+      return format(date, 'd MMM', { locale: dateFnsLocale.value });
     } catch (error) {
       console.error('Error calculating date:', error);
       return '';
     }
   };
 
-  /**
-   * Determines if a given day is in the past relative to the current date.
-   * Only returns true for past days in the current week.
-   * @param {string | null} weekStartDate - The start date of the week in ISO format
-   * @param {number} dayNumber - The day number (1 = Monday, 7 = Sunday)
-   * @returns {boolean} True if the day is in the past and in the current week, false otherwise
-   */
   const isDayInPast = (weekStartDate: string | null, dayNumber: number): boolean => {
     if (!weekStartDate) return false;
-    
+
     try {
       const startDate = parseWeekStartDisplayDate(weekStartDate);
       if (isNaN(startDate.getTime())) return false;
@@ -65,12 +74,11 @@ export const useDateUtils = (): DateUtils => {
       if (!isSameDay(startDate, currentIsoWeekMonday)) {
         return false;
       }
-      
-      const dayOffset: number = dayNumber - 1;
-      const date: Date = new Date(startDate);
-      date.setDate(startDate.getDate() + dayOffset);
+
+      const date = dayDateFromWeekStart(weekStartDate, dayNumber);
+      if (!date) return false;
       date.setHours(0, 0, 0, 0);
-      
+
       return date < today;
     } catch (error) {
       console.error('Error checking if day is in past:', error);
@@ -81,6 +89,6 @@ export const useDateUtils = (): DateUtils => {
   return {
     getDayName,
     getDateForDay,
-    isDayInPast
+    isDayInPast,
   };
 };
