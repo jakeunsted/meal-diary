@@ -33,7 +33,7 @@
       >
         <DayFoodPlanCard
           v-for="dayMeal in mealDiaryStore.weeklyMeals"
-          :key="dayMeal.day_of_week"
+          :key="`${resolvedWeekKey}-${dayMeal.day_of_week}`"
           :day="getDayName(dayMeal.day_of_week, dayMeal.week_start_date)"
           :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
           :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
