@@ -18,11 +18,21 @@ if (!WEBHOOK_BASE_URL) {
   throw new Error('WEBHOOK_BASE_URL is not defined');
 }
 
+interface DailyMealPayload {
+  day_of_week: number;
+  breakfast: string | null;
+  lunch: string | null;
+  dinner: string | null;
+  breakfast_recipe_id: number | null;
+  lunch_recipe_id: number | null;
+  dinner_recipe_id: number | null;
+}
+
 /**
  * Sends a webhook for a meal diary event
  * @param {number} familyGroupId - The ID of the family group
  * @param {string} eventType - The type of the event
- * @param {DailyMeal} dailyMeal - The daily meal object
+ * @param {DailyMeal} dailyMeal - The daily meal model instance
  */
 export const sendDailyMealWebhook = async (
   familyGroupId: number,
@@ -32,10 +42,20 @@ export const sendDailyMealWebhook = async (
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/daily-meal`;
 
+    const payload: DailyMealPayload = {
+      day_of_week: dailyMeal.dataValues.day_of_week,
+      breakfast: dailyMeal.dataValues.breakfast ?? null,
+      lunch: dailyMeal.dataValues.lunch ?? null,
+      dinner: dailyMeal.dataValues.dinner ?? null,
+      breakfast_recipe_id: dailyMeal.dataValues.breakfast_recipe_id ?? null,
+      lunch_recipe_id: dailyMeal.dataValues.lunch_recipe_id ?? null,
+      dinner_recipe_id: dailyMeal.dataValues.dinner_recipe_id ?? null,
+    };
+
     await axios.post(webHookUrl, {
       eventType,
       familyGroupId,
-      dailyMeal,
+      dailyMeal: payload,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

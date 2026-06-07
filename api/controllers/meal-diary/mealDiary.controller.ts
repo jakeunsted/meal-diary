@@ -156,11 +156,7 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       { breakfast, lunch, dinner, breakfast_recipe_id, lunch_recipe_id, dinner_recipe_id }
     );
 
-    sendDailyMealWebhook(
-      parseInt(family_group_id),
-      'update-daily-meal',
-      updatedMeal.dataValues as unknown as DailyMeal
-    );
+    sendDailyMealWebhook(parseInt(family_group_id), 'update-daily-meal', updatedMeal);
 
     // Track meal updated
     if (user) {
