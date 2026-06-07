@@ -88,12 +88,12 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
     const existingMeal = existingMealsMap.get(day);
     weeklyMeals.push({
       day_of_week: day,
-      breakfast: existingMeal?.dataValues.breakfast || null,
-      lunch: existingMeal?.dataValues.lunch || null,
-      dinner: existingMeal?.dataValues.dinner || null,
-      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id || null,
-      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id || null,
-      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id || null,
+      breakfast: existingMeal?.dataValues.breakfast ?? null,
+      lunch: existingMeal?.dataValues.lunch ?? null,
+      dinner: existingMeal?.dataValues.dinner ?? null,
+      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id ?? null,
+      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id ?? null,
+      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id ?? null,
     });
   }
 
@@ -165,7 +165,6 @@ export const updateDailyMeal = async (
     sanitizedUpdates[key] = value === null ? undefined : value;
   }
 
-  // Update the daily meal
   await dailyMeal.update(sanitizedUpdates);
 
   return dailyMeal;
