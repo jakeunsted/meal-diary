@@ -171,6 +171,20 @@ export const useAuthStore = defineStore('auth', () => {
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
           console.log('[Auth Store] Successfully restored auth state');
+
+          // Proactively refresh an expired access token so the first API call
+          // after a daily return doesn't hit a stale-token round-trip.
+          if (isTokenExpired(authState.accessToken, 0)) {
+            try {
+              const { useAuth } = await import('~/composables/useAuth');
+              const { refreshTokens } = useAuth();
+              await refreshTokens();
+              console.log('[Auth Store] Proactively refreshed expired access token on startup');
+            } catch {
+              // If refresh fails the session is invalid; clearAuth will have
+              // been called by refreshTokens → handleAutoLogout already.
+            }
+          }
           
           // Identify user in PostHog after restoring auth state
           if (authState.user?.id) {

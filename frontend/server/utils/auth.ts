@@ -3,31 +3,12 @@ import type { TokenResponse } from '~/types/Auth';
 import type { ApiResponse } from '~/types/Api';
 import { isTokenExpired } from './jwt';
 import { getApiBaseUrl } from '~/server/utils/apiBaseUrl';
+import {
+  toApiHttpError,
+  getHttpStatusCode,
+  AUTH_RETRY_MESSAGE,
+} from '~/utils/httpError';
 
-/**
- * Handles automatic logout when token refresh fails
- * This function clears auth state and redirects to login
- */
-export const handleAutoLogout = () => {
-  // Clear auth state from storage
-  if (process.client) {
-    try {
-      localStorage.removeItem('auth');
-      // Also clear any other auth-related storage
-      localStorage.removeItem('mealDiary');
-      localStorage.removeItem('shoppingList');
-    } catch (error) {
-      console.error('[Auto Logout] Failed to clear localStorage:', error);
-    }
-  }
-};
-
-/**
- * Refresh the access token using the refresh token
- * @param refreshToken - The refresh token
- * @param baseUrl - The base URL for the API
- * @returns The new access token and refresh token
- */
 async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> {
   const refreshResponse = await fetch(`${getApiBaseUrl()}/auth/refresh-token`, {
     method: 'POST',
@@ -41,12 +22,11 @@ async function refreshAccessToken(refreshToken: string): Promise<TokenResponse> 
     const errorData = await refreshResponse.json().catch(() => ({ message: 'Failed to refresh token' }));
     throw {
       statusCode: refreshResponse.status,
-      message: errorData.message || 'Failed to refresh token'
+      message: errorData.message || 'Failed to refresh token',
     };
   }
 
-  const tokenData = await refreshResponse.json() as TokenResponse;
-  return tokenData;
+  return refreshResponse.json() as Promise<TokenResponse>;
 }
 
 export async function authenticatedFetch<T>(
@@ -60,16 +40,18 @@ export async function authenticatedFetch<T>(
   if (!authHeader) {
     throw createError({
       statusCode: 401,
-      message: 'No token provided to server'
+      message: 'No token provided to server',
     });
   }
 
-  // Extract token from "Bearer <token>" format
   let accessToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
 
-  // Check if token is expired before making the request
-  // Only check if we have a refresh token available
-  // Use a smaller buffer (30 seconds) on server-side to reduce unnecessary refresh attempts
+  // Track new tokens produced by any server-side refresh so we can always
+  // propagate them back to the client regardless of which code path ran.
+  let rotatedTokens: TokenResponse | null = null;
+
+  // Pre-request refresh: if the access token is close to expiry and we have a
+  // refresh token, rotate now before the upstream call.
   if (refreshToken) {
     const expired = isTokenExpired(accessToken, 30);
 
@@ -77,112 +59,73 @@ export async function authenticatedFetch<T>(
       try {
         const tokenData = await refreshAccessToken(refreshToken);
         accessToken = tokenData.accessToken;
-      } catch (error: any) {
-        // If refresh fails with 403, it might be because the token was just rotated by client
-        // Check if the access token in the request is actually still valid (not expired)
-        const { decodeJWT, isTokenExpired } = await import('~/server/utils/jwt');
-        const decoded = decodeJWT(accessToken);
-        const issuedAt = decoded?.iat ? decoded.iat * 1000 : null;
-        const tokenAge = issuedAt ? Date.now() - issuedAt : null;
-        
-        // Check if token is actually expired (without buffer) - if not, it's still valid
-        const actuallyExpired = isTokenExpired(accessToken, 0); // No buffer for actual expiration check
-        
-        // If the access token is still valid (not actually expired) and refresh failed with 403, 
-        // the client likely just refreshed and the old refresh token was deleted
-        // Proceed with the access token from the request (it's the new one from client refresh)
-        if (!actuallyExpired && error.statusCode === 403) {
-          // Don't throw error, proceed with the access token from the request
-        } else if (actuallyExpired && error.statusCode === 403) {
-          // If token is actually expired and refresh failed, it means the refresh token was rotated
-          // Return 401 instead of 403 so client knows to retry with its new tokens
+        rotatedTokens = tokenData;
+      } catch (err: unknown) {
+        const { statusCode, message } = toApiHttpError(err);
+        const actuallyExpired = isTokenExpired(accessToken, 0);
+
+        if (!actuallyExpired && statusCode === 403) {
+          // Client already rotated the refresh token; the access token in the
+          // request is still valid — proceed with it.
+        } else if (actuallyExpired && statusCode === 403) {
+          // Access is genuinely expired but refresh token was already rotated.
+          // Signal the client to retry with its latest stored tokens.
           throw createError({
             statusCode: 401,
-            message: 'Token expired and refresh token was rotated. Please retry with new tokens.'
+            message: `${AUTH_RETRY_MESSAGE}. Please retry with new tokens.`,
           });
         } else {
-          // On server-side, don't trigger logout - let the error propagate to client
-          // The client will handle the error appropriately
-          // Only trigger logout if we're actually on the client
-          if (process.client) {
-            const { handleAutoLogout } = await import('~/composables/useAuth');
-            await handleAutoLogout();
-          }
-          throw createError({
-            statusCode: error.statusCode || 401,
-            message: error.message || 'Failed to refresh token'
-          });
+          throw createError({ statusCode: statusCode || 401, message });
         }
       }
     }
   }
 
   const makeRequest = async (token: string) => {
-    try {
-      const response = await apiFetch<T>(url, {
-        ...options,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...options.headers
-        }
-      }, event);
-      return {
-        data: response,
-        headers: {}
-      };
-    } catch (error: any) {
-      if (error.statusCode === 401) {
-        throw error;
-      }
-      throw createError({
-        statusCode: error.statusCode || 500,
-        message: error.message || 'Request failed'
-      });
-    }
+    const response = await apiFetch<T>(url, {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+      },
+    }, event);
+    return { data: response, headers: {} };
   };
 
   try {
-    // Try with current token (which may have been refreshed above)
-    return await makeRequest(accessToken);
-  } catch (error: any) {
-    // If we get a 401 and have a refresh token, try to refresh
-    // This is a fallback in case the token expired between our check and the actual request
-    if (error.statusCode === 401 && refreshToken) {
+    const result = await makeRequest(accessToken);
+    return {
+      ...result,
+      headers: rotatedTokens
+        ? {
+            'x-new-access-token': rotatedTokens.accessToken,
+            'x-new-refresh-token': rotatedTokens.refreshToken,
+          }
+        : {},
+    };
+  } catch (err: unknown) {
+    const status = getHttpStatusCode(err);
+
+    // Fallback refresh: access token expired between our check and the actual
+    // request (race condition), or wasn't caught by the buffer above.
+    if (status === 401 && refreshToken) {
       try {
         const data = await refreshAccessToken(refreshToken);
-        
-        // Retry the original request with new token
+        rotatedTokens = data;
         const result = await makeRequest(data.accessToken);
-        
         return {
           ...result,
           headers: {
             'x-new-access-token': data.accessToken,
-            'x-new-refresh-token': data.refreshToken
-          }
+            'x-new-refresh-token': data.refreshToken,
+          },
         };
-      } catch (refreshError: any) {
-        // If refresh fails, trigger automatic logout
-        console.error('[authenticatedFetch] Token refresh failed (fallback):', {
-          error: refreshError.message,
-          statusCode: refreshError.statusCode
-        });
-        if (process.client) {
-          const { handleAutoLogout } = await import('~/composables/useAuth');
-          await handleAutoLogout();
-        }
-        
-        // Preserve the original error status code if available, otherwise use 401
-        const statusCode = refreshError?.statusCode || refreshError?.response?.status || 401;
-        const message = refreshError?.message || refreshError?.data?.message || 'Failed to refresh token';
-        
-        throw createError({
-          statusCode,
-          message
-        });
+      } catch (refreshErr: unknown) {
+        const { statusCode, message } = toApiHttpError(refreshErr);
+        throw createError({ statusCode: statusCode || 401, message });
       }
     }
-    
-    throw error;
+
+    throw err;
   }
-} 
+}

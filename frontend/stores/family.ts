@@ -4,7 +4,6 @@ import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGro
 import type { ApiResponse } from '~/types/Api';
 import { useApi } from '~/composables/useApi';
 import { useUserStore } from '~/stores/user';
-import { useAuthStore } from '~/stores/auth';
 
 const CACHE_NAME = 'avatar-cache-v1';
 
@@ -48,7 +47,6 @@ export const useFamilyStore = defineStore('family', {
   actions: {
     async fetchMembers() {
       const userStore = useUserStore();
-      const authStore = useAuthStore();
 
       if (!userStore.user?.family_group_id) return;
       
@@ -71,24 +69,7 @@ export const useFamilyStore = defineStore('family', {
       
       try {
         const { api } = useApi();
-        const response = await api<ApiResponse<FamilyMember[]>>(`/api/family-groups/${userStore.user.family_group_id}/members`, {
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
-        });
-
-        // Check for new tokens in response headers
-        const newAccessToken = response.headers['x-new-access-token'];
-        const newRefreshToken = response.headers['x-new-refresh-token'];
-        
-        if (newAccessToken && newRefreshToken && authStore.user) {
-          authStore.setAuth({
-            user: authStore.user,
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken
-          });
-        }
+        const response = await api<ApiResponse<FamilyMember[]>>(`/api/family-groups/${userStore.user.family_group_id}/members`);
 
         // Process members and cache their avatars
         const filteredMembers = await Promise.all(
@@ -150,7 +131,6 @@ export const useFamilyStore = defineStore('family', {
 
     async fetchFamilyGroup() {
       const userStore = useUserStore();
-      const authStore = useAuthStore();
 
       if (!userStore.user?.family_group_id) return;
 
@@ -173,12 +153,7 @@ export const useFamilyStore = defineStore('family', {
 
       try {
         const { api } = useApi();
-        const response = await api<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`, {
-          headers: {
-            'Authorization': `Bearer ${authStore.accessToken}`,
-            'x-refresh-token': authStore.refreshToken || ''
-          }
-        });
+        const response = await api<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`);
 
         this.familyGroup = response.data;
         this.groupLastFetched = new Date().toISOString();
