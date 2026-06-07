@@ -153,11 +153,7 @@ const handleMealInput = (value) => {
   emit('update:recipeId', null);
 };
 
-const saveMeal = async () => {
-  const closeButton = document.querySelector('.modal-box form button');
-  if (closeButton) {
-    closeButton.click();
-  }
+const saveMeal = () => {
   emit('saveMeal', props.meal);
 };
 
