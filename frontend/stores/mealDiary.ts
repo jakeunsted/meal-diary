@@ -204,16 +204,10 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         console.error('Error fetching weekly meals:', error);
         const err = error as { statusCode?: number; status?: number; message?: string };
         const loadedFromStorage = await this.loadFromLocalStorage();
+        this.lastFetchError = err?.message || 'Failed to load meal diary';
         if (!loadedFromStorage) {
-          if (err?.statusCode === 500 || err?.status === 500) {
-            console.warn('Meal diary may not exist yet, skipping fetch');
-            return;
-          }
-          this.lastFetchError =
-            err?.message || 'Failed to load meal diary';
           throw error;
         }
-        this.lastFetchError = null;
       } finally {
         weeklyMealsFetchDepth -= 1;
         if (weeklyMealsFetchDepth < 0) {

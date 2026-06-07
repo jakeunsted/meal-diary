@@ -21,50 +21,33 @@ interface DailyMealWithDay {
  * @returns {Promise<DailyMealWithDay[]>} An array of daily meals with day of week information
  */
 export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
-  // Create an array of 7 days starting from weekStartDate
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(weekStartDate);
-    date.setDate(date.getDate() + index);
-    return {
-      date: date,
-      breakfast: '',
-      lunch: '',
-      dinner: '',
-    };
-  });
-
   const mealDiary = await MealDiary.create({
     family_group_id: familyGroupId,
     week_start_date: weekStartDate
   });
 
-  for (const day of days) {
-    const dayOfWeek = day.date.getDay();
-    // Convert JavaScript day (0-6, Sunday=0) to our format (1-7, Monday=1, Sunday=7)
-    const normalizedDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
-    await DailyMeal.create({
+  // Build all 7 rows at once (Monday=1 … Sunday=7)
+  const rows = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(weekStartDate);
+    date.setDate(date.getDate() + index);
+    const jsDay = date.getDay();
+    return {
       meal_diary_id: mealDiary.dataValues.id,
-      day_of_week: normalizedDayOfWeek,
-      breakfast: day.breakfast || '',
-      lunch: day.lunch || '',
-      dinner: day.dinner || ''
-    });
-  }
+      day_of_week: jsDay === 0 ? 7 : jsDay,
+    };
+  });
 
-  const weeklyMeals: DailyMealWithDay[] = [];
-  for (let day = 1; day <= 7; day++) {
-    weeklyMeals.push({
-      day_of_week: day,
-      breakfast: '',
-      lunch: '',
-      dinner: '',
-      breakfast_recipe_id: null,
-      lunch_recipe_id: null,
-      dinner_recipe_id: null,
-    });
-  }
+  await DailyMeal.bulkCreate(rows, { ignoreDuplicates: true });
 
-  return weeklyMeals;
+  return Array.from({ length: 7 }, (_, i) => ({
+    day_of_week: i + 1,
+    breakfast: null,
+    lunch: null,
+    dinner: null,
+    breakfast_recipe_id: null,
+    lunch_recipe_id: null,
+    dinner_recipe_id: null,
+  }));
 };
 
 /**
@@ -105,12 +88,12 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
     const existingMeal = existingMealsMap.get(day);
     weeklyMeals.push({
       day_of_week: day,
-      breakfast: existingMeal?.dataValues.breakfast || null,
-      lunch: existingMeal?.dataValues.lunch || null,
-      dinner: existingMeal?.dataValues.dinner || null,
-      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id || null,
-      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id || null,
-      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id || null,
+      breakfast: existingMeal?.dataValues.breakfast ?? null,
+      lunch: existingMeal?.dataValues.lunch ?? null,
+      dinner: existingMeal?.dataValues.dinner ?? null,
+      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id ?? null,
+      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id ?? null,
+      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id ?? null,
     });
   }
 
@@ -182,7 +165,6 @@ export const updateDailyMeal = async (
     sanitizedUpdates[key] = value === null ? undefined : value;
   }
 
-  // Update the daily meal
   await dailyMeal.update(sanitizedUpdates);
 
   return dailyMeal;

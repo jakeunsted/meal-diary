@@ -72,17 +72,23 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
     }
 
+    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const parsedDate = new Date(week_start_date as string);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid week_start_date format' });
+    }
+
     let weeklyMeals = await getWeeklyMeals(
       parseInt(family_group_id),
-      new Date(week_start_date as string)
+      parsedDate
     );
 
     // if no weekly meals yet, create the diary and return empty meals
     if (!weeklyMeals) {
-      weeklyMeals = await createNewWeeklyMeals(
-        parseInt(family_group_id),
-        new Date(week_start_date as string)
-      );
+      weeklyMeals = await createNewWeeklyMeals(parseInt(family_group_id), parsedDate);
     }
 
     if (user) {
@@ -114,35 +120,45 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     const {
       week_start_date,
       day_of_week,
-      breakfast = '',
-      lunch = '',
-      dinner = '',
+      breakfast = null,
+      lunch = null,
+      dinner = null,
       breakfast_recipe_id = null,
       lunch_recipe_id = null,
       dinner_recipe_id = null,
     } = req.body;
+    const user = req.user as User;
 
     if (!family_group_id || !week_start_date || !day_of_week) {
-      return res.status(400).json({ 
-        message: 'Family group ID, week start date, and day of week are required' 
+      return res.status(400).json({
+        message: 'Family group ID, week start date, and day of week are required'
       });
     }
 
-    const updatedMeal= await updateDailyMeal(
+    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    const parsedDate = new Date(week_start_date);
+    if (isNaN(parsedDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid week_start_date format' });
+    }
+
+    const parsedDayOfWeek = parseInt(day_of_week);
+    if (parsedDayOfWeek < 1 || parsedDayOfWeek > 7) {
+      return res.status(400).json({ message: 'day_of_week must be between 1 and 7' });
+    }
+
+    const updatedMeal = await updateDailyMeal(
       parseInt(family_group_id),
-      new Date(week_start_date),
-      parseInt(day_of_week),
+      parsedDate,
+      parsedDayOfWeek,
       { breakfast, lunch, dinner, breakfast_recipe_id, lunch_recipe_id, dinner_recipe_id }
     );
 
-    sendDailyMealWebhook(
-      parseInt(family_group_id),
-      'update-daily-meal',
-      updatedMeal.dataValues as unknown as DailyMeal
-    );
+    sendDailyMealWebhook(parseInt(family_group_id), 'update-daily-meal', updatedMeal);
 
     // Track meal updated
-    const user = req.user as User;
     if (user) {
       const mealTypes: string[] = [];
       if (breakfast) mealTypes.push('breakfast');
@@ -152,7 +168,7 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       await trackEvent(user.dataValues.id.toString(), 'meal_updated', {
         family_group_id: parseInt(family_group_id),
         week_start_date: week_start_date as string,
-        day_of_week: parseInt(day_of_week),
+        day_of_week: parsedDayOfWeek,
         meal_types: mealTypes,
       });
     }
