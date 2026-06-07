@@ -72,6 +72,10 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
     }
 
+    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     let weeklyMeals = await getWeeklyMeals(
       parseInt(family_group_id),
       new Date(week_start_date as string)
@@ -114,18 +118,23 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     const {
       week_start_date,
       day_of_week,
-      breakfast = '',
-      lunch = '',
-      dinner = '',
+      breakfast = null,
+      lunch = null,
+      dinner = null,
       breakfast_recipe_id = null,
       lunch_recipe_id = null,
       dinner_recipe_id = null,
     } = req.body;
+    const user = req.user as User;
 
     if (!family_group_id || !week_start_date || !day_of_week) {
-      return res.status(400).json({ 
-        message: 'Family group ID, week start date, and day of week are required' 
+      return res.status(400).json({
+        message: 'Family group ID, week start date, and day of week are required'
       });
+    }
+
+    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     const updatedMeal= await updateDailyMeal(
@@ -142,7 +151,6 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     );
 
     // Track meal updated
-    const user = req.user as User;
     if (user) {
       const mealTypes: string[] = [];
       if (breakfast) mealTypes.push('breakfast');
