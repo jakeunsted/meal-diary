@@ -54,22 +54,32 @@ export async function authenticatedFetch<T>(
   // refresh token, rotate now before the upstream call.
   if (refreshToken) {
     const expired = isTokenExpired(accessToken, 30);
+    console.log(`[Token Debug] authenticatedFetch: url=${url} accessExpired(30s)=${expired} hasRefreshToken=${!!refreshToken}`);
 
     if (expired) {
+      console.log('[Token Debug] authenticatedFetch: pre-request refresh starting');
       try {
         const tokenData = await refreshAccessToken(refreshToken);
         accessToken = tokenData.accessToken;
         rotatedTokens = tokenData;
+        console.log('[Token Debug] authenticatedFetch: pre-request refresh succeeded');
       } catch (err: unknown) {
         const { statusCode, message } = toApiHttpError(err);
         const actuallyExpired = isTokenExpired(accessToken, 0);
+        console.warn('[Token Debug] authenticatedFetch: pre-request refresh failed', {
+          statusCode,
+          message,
+          actuallyExpired,
+        });
 
         if (!actuallyExpired && statusCode === 403) {
           // Client already rotated the refresh token; the access token in the
           // request is still valid — proceed with it.
+          console.log('[Token Debug] authenticatedFetch: 403 but access still valid, proceeding');
         } else if (actuallyExpired && statusCode === 403) {
           // Access is genuinely expired but refresh token was already rotated.
           // Signal the client to retry with its latest stored tokens.
+          console.warn('[Token Debug] authenticatedFetch: 403 + access expired → sending AUTH_RETRY_MESSAGE 401');
           throw createError({
             statusCode: 401,
             message: `${AUTH_RETRY_MESSAGE}. Please retry with new tokens.`,
@@ -105,13 +115,20 @@ export async function authenticatedFetch<T>(
     };
   } catch (err: unknown) {
     const status = getHttpStatusCode(err);
+    console.warn('[Token Debug] authenticatedFetch: makeRequest failed', {
+      url,
+      statusCode: status,
+      message: toApiHttpError(err).message,
+    });
 
     // Fallback refresh: access token expired between our check and the actual
     // request (race condition), or wasn't caught by the buffer above.
     if (status === 401 && refreshToken) {
+      console.log('[Token Debug] authenticatedFetch: fallback refresh starting');
       try {
         const data = await refreshAccessToken(refreshToken);
         rotatedTokens = data;
+        console.log('[Token Debug] authenticatedFetch: fallback refresh succeeded');
         const result = await makeRequest(data.accessToken);
         return {
           ...result,
@@ -122,6 +139,7 @@ export async function authenticatedFetch<T>(
         };
       } catch (refreshErr: unknown) {
         const { statusCode, message } = toApiHttpError(refreshErr);
+        console.error('[Token Debug] authenticatedFetch: fallback refresh failed', { statusCode, message });
         throw createError({ statusCode: statusCode || 401, message });
       }
     }

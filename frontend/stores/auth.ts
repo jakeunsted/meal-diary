@@ -175,12 +175,14 @@ export const useAuthStore = defineStore('auth', () => {
           // Proactively refresh an expired access token so the first API call
           // after a daily return doesn't hit a stale-token round-trip.
           if (isTokenExpired(authState.accessToken, 0)) {
+            console.log('[Token Debug] initializeAuth: access token expired, attempting proactive refresh');
             try {
               const { useAuth } = await import('~/composables/useAuth');
               const { refreshTokens } = useAuth();
               await refreshTokens();
-              console.log('[Auth Store] Proactively refreshed expired access token on startup');
-            } catch {
+              console.log('[Token Debug] initializeAuth: proactive refresh succeeded');
+            } catch (err: unknown) {
+              console.error('[Token Debug] initializeAuth: proactive refresh failed — session cleared', err);
               // If refresh fails the session is invalid; clearAuth will have
               // been called by refreshTokens → handleAutoLogout already.
             }

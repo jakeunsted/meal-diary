@@ -169,9 +169,11 @@ export const useAuth = () => {
   const refreshTokens = async () => {
     try {
       if (!authStore.refreshToken) {
-        console.error('[useAuth Client] No refresh token available');
+        console.error('[Token Debug] refreshTokens: no refresh token in store');
         throw new Error('No refresh token available');
       }
+
+      console.log('[Token Debug] refreshTokens: calling /api/auth/refresh-token');
       
       // Use $fetch directly instead of useApi to prevent recursion
       // The refresh endpoint doesn't require an access token, only the refresh token in the body
@@ -181,6 +183,8 @@ export const useAuth = () => {
           refreshToken: authStore.refreshToken
         }
       }) as TokenResponse;
+
+      console.log('[Token Debug] refreshTokens: succeeded, updating store');
       
       // Update tokens in store
       authStore.setAuth({
@@ -191,6 +195,11 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
+      console.error('[Token Debug] refreshTokens: failed', {
+        statusCode: err?.statusCode ?? err?.status ?? err?.data?.statusCode,
+        message: err?.data?.message ?? err?.message,
+        errorData: err?.data,
+      });
       // If refresh fails, trigger automatic logout
       await handleAutoLogout();
       throw err;
