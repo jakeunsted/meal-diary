@@ -25,7 +25,9 @@
       <WeekCalendarPicker
         :key="resolvedWeekKey"
         :initialWeekStartDate="displayWeekStartDate"
+        :is-current-week="isCurrentWeek"
         @weekChange="handleWeekChange"
+        @go-to-this-week="handleGoToThisWeek"
       />
       <div
         class="relative"
@@ -33,8 +35,8 @@
       >
         <DayFoodPlanCard
           v-for="dayMeal in mealDiaryStore.weeklyMeals"
-          :key="dayMeal.day_of_week"
-          :day="getDayName(dayMeal.day_of_week)"
+          :key="`${resolvedWeekKey}-${dayMeal.day_of_week}`"
+          :day="getDayName(dayMeal.day_of_week, dayMeal.week_start_date)"
           :date="getDateForDay(dayMeal.week_start_date, dayMeal.day_of_week)"
           :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
           :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
@@ -80,9 +82,12 @@ import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useMealDiaryWeek } from '~/composables/useMealDiaryWeek';
+import { useToast } from '~/composables/useToast';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
+const { showSuccess } = useToast();
+const { t } = useI18n();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
 const {
@@ -92,6 +97,8 @@ const {
   lastFetchError,
   setWeek,
   refreshWeek,
+  isCurrentWeek,
+  goToCurrentWeek,
 } = useMealDiaryWeek();
 
 const hasMealData = computed(() => mealDiaryStore.weeklyMeals?.length > 0);
@@ -107,6 +114,7 @@ const handleSaveMeal = async () => {
   try {
     await mealDiaryStore.saveMeal();
     set_meal_modal.close();
+    showSuccess(t('Meal saved'));
   } catch (error) {
     console.error('Error saving meal:', error);
   }
@@ -114,6 +122,10 @@ const handleSaveMeal = async () => {
 
 const handleWeekChange = (weekStartDate) => {
   void setWeek(weekStartDate);
+};
+
+const handleGoToThisWeek = () => {
+  void goToCurrentWeek();
 };
 
 const handleRetry = () => {

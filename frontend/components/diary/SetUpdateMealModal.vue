@@ -53,12 +53,22 @@
       </div>
     </div>
 
-    <div class="flex flex-col items-center">
+    <div class="flex flex-col items-center gap-2">
+      <button
+        v-if="hasExistingMeal"
+        type="button"
+        class="btn btn-ghost btn-sm"
+        data-testid="set-meal-clear-button"
+        :disabled="isLoading"
+        @click="handleClearMeal"
+      >
+        {{ $t('Clear meal') }}
+      </button>
       <button
         class="btn btn-outline btn-primary btn-sm"
         data-testid="set-meal-save-button"
         @click="saveMeal"
-        :disabled="isLoading || (!meal && !selectedRecipeId)"
+        :disabled="isLoading || !canSave"
       >
         <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
         <span v-else>{{ $t('Save') }}</span>
@@ -96,6 +106,14 @@ const selectedRecipeId = ref(props.recipeId);
 const selectedRecipeName = ref('');
 
 const recipes = computed(() => recipeStore.recipes);
+
+const hasExistingMeal = computed(
+  () => !!(props.meal && props.meal.trim()) || !!props.recipeId
+);
+
+const canSave = computed(
+  () => !!(props.meal && props.meal.trim()) || !!selectedRecipeId.value || hasExistingMeal.value
+);
 
 // Load recipes on mount
 onMounted(async () => {
@@ -141,5 +159,14 @@ const saveMeal = async () => {
     closeButton.click();
   }
   emit('saveMeal', props.meal);
+};
+
+const handleClearMeal = async () => {
+  selectedRecipeId.value = null;
+  selectedRecipeName.value = '';
+  emit('update:meal', '');
+  emit('update:recipeId', null);
+  await nextTick();
+  saveMeal();
 };
 </script>

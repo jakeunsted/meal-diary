@@ -104,6 +104,16 @@ export const useMealDiaryWeek = () => {
 
   const refreshWeek = () => ensureWeekLoaded({ forceRefresh: true });
 
+  const currentWeekKey = computed(() =>
+    normalizeMealDiaryWeekKey(mealDiaryStore.getWeekStartDate())
+  );
+
+  const isCurrentWeek = computed(() =>
+    weekKeysEqual(resolvedWeekKey.value, currentWeekKey.value)
+  );
+
+  const goToCurrentWeek = () => setWeek(mealDiaryStore.getWeekStartDate());
+
   watch(
     () => route.query.week,
     (newWeek, oldWeek) => {
@@ -135,5 +145,7 @@ export const useMealDiaryWeek = () => {
     ensureWeekLoaded,
     setWeek,
     refreshWeek,
+    isCurrentWeek,
+    goToCurrentWeek,
   };
 };

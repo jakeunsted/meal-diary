@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted, ref, toValue, type MaybeRef } from 'vue';
+import { useToast } from '~/composables/useToast';
 
 const PULL_COMMIT_PX = 14;
 
@@ -28,6 +29,8 @@ const touchTargetAllowsPull = (target: EventTarget | null): boolean => {
 };
 
 export const usePullToRefreshGesture = (options: UsePullToRefreshGestureOptions) => {
+  const { t } = useI18n();
+  const { showError } = useToast();
   const pull = ref(0);
   const isPulling = ref(false);
 
@@ -64,7 +67,14 @@ export const usePullToRefreshGesture = (options: UsePullToRefreshGestureOptions)
     if (pullAtEnd >= threshold) {
       const refreshHandler = options.onRefresh ? toValue(options.onRefresh) : undefined;
       if (refreshHandler) {
-        void Promise.resolve(refreshHandler());
+        void (async () => {
+          try {
+            await refreshHandler();
+          } catch (error) {
+            console.error('Pull to refresh failed:', error);
+            showError(t('Failed to refresh'));
+          }
+        })();
       } else {
         reloadNuxtApp({ persistState: false, force: true });
       }

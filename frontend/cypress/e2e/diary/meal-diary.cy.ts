@@ -31,6 +31,34 @@ describe('Meal diary', () => {
     cy.location('search').should('include', 'week=');
   });
 
+  it('clears a breakfast meal entry', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().click();
+    cy.get('[data-testid="set-meal-name-input"]').type('Omelette');
+    cy.get('[data-testid="set-meal-save-button"]').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="breakfast-custom-badge"]').first().should('contain.text', 'Omelette');
+
+    cy.get('[data-testid="breakfast-custom-badge"]').first().click();
+    cy.get('[data-testid="set-meal-clear-button"]').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().should('be.visible');
+  });
+
+  it('returns to this week via shortcut', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.location('search').then((search) => {
+      const originalWeek = new URLSearchParams(search).get('week');
+      expect(originalWeek).to.be.a('string').and.not.be.empty;
+
+      cy.get('[data-testid="week-next-button"]').click();
+      cy.wait('@apiGetMealDiary');
+      cy.get('[data-testid="week-this-week-button"]').should('be.visible').click();
+      cy.wait('@apiGetMealDiary');
+      cy.location('search').should('include', `week=${originalWeek}`);
+    });
+  });
+
   it('loads the week from the URL query param', () => {
     const weekStart = '2026-05-18';
     cy.visitApp(`/diary?week=${weekStart}`);
