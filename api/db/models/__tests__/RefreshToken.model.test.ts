@@ -4,6 +4,8 @@ import RefreshToken, { type RefreshTokenAttributes } from '../RefreshToken.model
 import User, { type UserAttributes } from '../User.model.ts';
 import { Op } from 'sequelize';
 
+const REFRESH_TOKEN_TTL_MS = 28 * 24 * 60 * 60 * 1000;
+
 describe('RefreshToken Model', () => {
   it('should create a refresh token', async () => {
     // Create a test user first
@@ -18,7 +20,7 @@ describe('RefreshToken Model', () => {
     const tokenData = {
       token: 'vitest_test_refresh_token1',
       user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       is_revoked: false
     };
 
@@ -44,7 +46,7 @@ describe('RefreshToken Model', () => {
     const tokenData = {
       token: 'vitest_test_refresh_token2',
       user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       is_revoked: false
     };
 
@@ -59,7 +61,7 @@ describe('RefreshToken Model', () => {
     const tokenData = {
       token: 'vitest_test_refresh_token3',
       user_id: 999, // Non-existent user ID
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       is_revoked: false
     };
 
@@ -80,7 +82,7 @@ describe('RefreshToken Model', () => {
   //   const refreshToken = await RefreshToken.create({
   //     token: 'vitest_test_refresh_token4',
   //     user_id: user.id,
-  //     expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  //     expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
   //     is_revoked: false
   //   }) as RefreshToken & RefreshTokenAttributes;
 
@@ -110,7 +112,7 @@ describe('RefreshToken Model', () => {
     await RefreshToken.create({
       token: 'vitest_test_refresh_token5',
       user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       is_revoked: false
     });
 
@@ -118,7 +120,7 @@ describe('RefreshToken Model', () => {
     await expect(RefreshToken.create({
       token: 'vitest_test_refresh_token5_second',
       user_id: user.id,
-      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expires_at: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       is_revoked: false
     })).rejects.toThrow();
   });

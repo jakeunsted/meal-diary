@@ -6,6 +6,8 @@ import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
 
+const REFRESH_TOKEN_TTL_DAYS = 28;
+
 export interface GoogleProfile {
   id: string;
   email?: string;
@@ -113,12 +115,12 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
       tokenId // Add unique identifier to prevent token collisions
     },
     refreshSecret,
-    { expiresIn: '7d' } // 7-day refresh token
+    { expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` }
   );
   
   // Store refresh token in database
   const expiresAt = new Date();
-  expiresAt.setDate(expiresAt.getDate() + 7); // 7 days from now
+  expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
   
   console.log('[generateTokens] Generating tokens for user:', {
     userId,
