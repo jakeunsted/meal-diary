@@ -134,7 +134,7 @@ export const useMealDiaryWeek = () => {
   );
 
   onMounted(() => {
-    void ensureWeekLoaded();
+    void ensureWeekLoaded({ forceRefresh: true });
   });
 
   return {
