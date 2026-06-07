@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router';
 import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
 import { hasFamilyGroup } from '~/composables/useAuth';
+import { isTokenExpired } from '~/composables/useJWT';
 
 interface AuthState {
   user: User | null;
@@ -160,6 +161,12 @@ export const useAuthStore = defineStore('auth', () => {
         });
         // Only restore if we have all required data
         if (authState.user && authState.accessToken && authState.refreshToken) {
+          if (isTokenExpired(authState.refreshToken, 0)) {
+            console.log('[Auth Store] Refresh token expired, clearing stale auth state');
+            await clearAuth();
+            return;
+          }
+
           user.value = authState.user;
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;

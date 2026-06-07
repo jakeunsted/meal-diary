@@ -82,6 +82,7 @@ export default defineNuxtConfig({
         'magnifying-glass',
         'circle-plus',
         'circle-minus',
+        'calendar-day',
         'arrows-rotate',
       ],
       brands: [],

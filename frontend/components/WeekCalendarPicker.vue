@@ -5,15 +5,21 @@
         <label class="label">
           <span class="label-text">{{ $t('Week Selection') }}</span>
         </label>
-        <button
+        <div
           v-if="!isCurrentWeek"
-          type="button"
-          class="btn btn-ghost btn-sm mb-2"
-          data-testid="week-this-week-button"
-          @click="emit('goToThisWeek')"
+          class="mb-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 rounded-box border border-primary/20 bg-primary/5 px-4 py-2.5"
         >
-          {{ $t('This week') }}
-        </button>
+          <span class="text-sm text-base-content/70">{{ $t(viewingWeekMessageKey) }}</span>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm gap-1.5 w-full sm:w-auto"
+            data-testid="week-this-week-button"
+            @click="emit('goToThisWeek')"
+          >
+            <fa icon="calendar-day" />
+            {{ $t('This week') }}
+          </button>
+        </div>
         <div class="flex flex-row flex-nowrap items-center gap-2 w-full">
           <button
             type="button"
@@ -51,7 +57,8 @@
 
 <script setup>
 import { computed, watch } from 'vue';
-import { useWeekCalendar } from '~/composables/useWeekCalendar';
+import { startOfISOWeek } from 'date-fns';
+import { useWeekCalendar, normalizeDate } from '~/composables/useWeekCalendar';
 
 const props = defineProps({
   initialWeekStartDate: {
@@ -80,6 +87,25 @@ const {
   handleWeekSelect: handleWeekSelectInternal,
   getSelectedWeekStartDate,
 } = useWeekCalendar(initialWeekStartDateRef);
+
+const viewingWeekMessageKey = computed(() => {
+  const selectedStart = getSelectedWeekStartDate();
+  if (!selectedStart) {
+    return 'Viewing another week';
+  }
+
+  const currentWeekStart = normalizeDate(startOfISOWeek(new Date()));
+  const selectedTime = selectedStart.getTime();
+  const currentTime = currentWeekStart.getTime();
+
+  if (selectedTime < currentTime) {
+    return 'Viewing a previous week';
+  }
+  if (selectedTime > currentTime) {
+    return 'Viewing a future week';
+  }
+  return 'Viewing another week';
+});
 
 // Handle week selection from dropdown
 const handleWeekSelect = (event) => {
