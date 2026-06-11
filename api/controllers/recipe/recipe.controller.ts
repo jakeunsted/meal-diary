@@ -43,6 +43,10 @@ export const getRecipeById = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Recipe not found' });
     }
 
+    if (recipe.dataValues.family_group_id !== (req.user as User | undefined)?.dataValues.family_group_id) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
     return res.status(200).json(recipe);
   } catch (error) {
     console.error('Error getting recipe:', error);
@@ -60,6 +64,10 @@ export const createRecipe = async (req: Request, res: Response) => {
 
     if (!family_group_id || !name) {
       return res.status(400).json({ message: 'Family group ID and name are required' });
+    }
+
+    if (user.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     const recipe = await recipeService.createRecipe({
@@ -91,10 +99,14 @@ export const updateRecipe = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Recipe ID is required' });
     }
 
-    // Verify recipe exists
+    // Verify recipe exists and belongs to the user's family
     const existingRecipe = await recipeService.getRecipeById(parseInt(id));
     if (!existingRecipe) {
       return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    if (existingRecipe.dataValues.family_group_id !== (req.user as User | undefined)?.dataValues.family_group_id) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     const recipe = await recipeService.updateRecipe(parseInt(id), {
@@ -126,6 +138,10 @@ export const deleteRecipe = async (req: Request, res: Response) => {
     const existingRecipe = await recipeService.getRecipeById(parseInt(id));
     if (!existingRecipe) {
       return res.status(404).json({ message: 'Recipe not found' });
+    }
+
+    if (existingRecipe.dataValues.family_group_id !== (req.user as User | undefined)?.dataValues.family_group_id) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     await recipeService.deleteRecipe(parseInt(id));

@@ -1,6 +1,14 @@
 import type { Request, Response } from 'express';
-import { User } from '../../db/models/associations.ts';
+import { User, MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import * as DailyMealService from '../../services/dailyMeal.service.ts';
+
+// A meal diary is only accessible to members of its family group
+const userOwnsMealDiary = async (mealDiaryId: number, user?: User): Promise<boolean> => {
+  if (!user) return false;
+  const mealDiary = await MealDiary.findByPk(mealDiaryId);
+  return !!mealDiary &&
+    mealDiary.dataValues.family_group_id === user.dataValues.family_group_id;
+};
 
 // Create a new daily meal
 export const createDailyMeal = async (req: Request, res: Response) => {
@@ -11,6 +19,10 @@ export const createDailyMeal = async (req: Request, res: Response) => {
     // Validate required fields
     if (!meal_diary_id || !day_of_week) {
       return res.status(400).json({ message: 'Meal diary ID and day of week are required' });
+    }
+
+    if (!(await userOwnsMealDiary(parseInt(meal_diary_id), user))) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     const dailyMeal = await DailyMealService.createDailyMealEntry(
@@ -39,6 +51,10 @@ export const getDailyMealsByMealDiaryId = async (req: Request, res: Response) =>
       return res.status(400).json({ message: 'Meal diary ID is required' });
     }
 
+    if (!(await userOwnsMealDiary(parseInt(meal_diary_id), req.user as User | undefined))) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
     // Get daily meals by meal diary ID
     const dailyMeals = await DailyMealService.getDailyMealsByMealDiaryId(parseInt(meal_diary_id));
     return res.status(200).json(dailyMeals);
@@ -53,6 +69,15 @@ export const updateDailyMealById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { breakfast = null, lunch = null, dinner = null } = req.body;
+
+    const existingMeal = await DailyMeal.findByPk(parseInt(id));
+    if (!existingMeal) {
+      return res.status(404).json({ message: 'Daily meal not found' });
+    }
+
+    if (!(await userOwnsMealDiary(existingMeal.dataValues.meal_diary_id, req.user as User | undefined))) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
 
     const dailyMeal = await DailyMealService.updateDailyMealById(parseInt(id), breakfast, lunch, dinner, req.user as User);
 

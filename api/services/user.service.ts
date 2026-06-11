@@ -128,18 +128,6 @@ export const createUser = async (userData: CreateUserData): Promise<{
 };
 
 /**
- * Get all users
- * @returns {Promise<Omit<UserAttributes, 'password_hash'>[]>} Array of users without password hash
- */
-export const getAllUsers = async (): Promise<Omit<UserAttributes, 'password_hash'>[]> => {
-  const users = await User.findAll({
-    attributes: { exclude: ['password_hash'] }
-  });
-
-  return users.map(user => sanitizeUser(user as User & UserAttributes));
-};
-
-/**
  * Get user by ID
  * @param {number} userId - User ID
  * @returns {Promise<Omit<UserAttributes, 'password_hash'>>} User without password hash

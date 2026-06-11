@@ -1,6 +1,6 @@
 import express from 'express';
 import * as recipeController from '../controllers/recipe/recipe.controller.ts';
-import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -93,7 +93,7 @@ const router = express.Router();
  *       500:
  *         description: Failed to get recipes
  */
-router.get('/family/:family_group_id', authenticateToken, async (req, res, next) => {
+router.get('/family/:family_group_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await recipeController.getRecipes(req, res);
   } catch (error) {
