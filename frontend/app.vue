@@ -13,7 +13,9 @@ import { Capacitor } from '@capacitor/core';
 const authStore = useAuthStore();
 const { initializeSSE, cleanupSSE } = useSSE();
 
-// Initialize auth store and Google Auth (for native platforms)
+// Initialize auth store and Google Auth (for native platforms).
+// Route middleware also calls initializeAuth; the store single-flight guard
+// prevents duplicate refresh attempts when both run on cold start.
 onMounted(async () => {
   await authStore.initializeAuth();
 

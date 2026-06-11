@@ -2,6 +2,9 @@
   "name": "nuxt-app",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host 0.0.0.0",
@@ -57,6 +60,7 @@
     "@nuxtjs/style-resources": "^1.2.2",
     "cypress": "^15.15.0",
     "daisyui": "^5.5.19",
+    "oxc-parser": "^0.89.0",
     "sass": "^1.99.0",
     "sass-loader": "^16.0.8"
   }

@@ -200,8 +200,6 @@ export const useAuth = () => {
         message: err?.data?.message ?? err?.message,
         errorData: err?.data,
       });
-      // If refresh fails, trigger automatic logout
-      await handleAutoLogout();
       throw err;
     }
   };

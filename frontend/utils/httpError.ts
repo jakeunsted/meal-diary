@@ -91,6 +91,25 @@ export function isAuthError(error: unknown): boolean {
   return TOKEN_AUTH_MESSAGES.some(m => message.includes(m));
 }
 
+/**
+ * True when the request failed before reaching the server (no HTTP status).
+ * Common on mobile when the app resumes before the network is ready.
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (getHttpStatusCode(error) !== undefined) return false;
+  const message = extractErrorMessage(error).toLowerCase();
+  const networkPatterns = [
+    'failed to fetch',
+    'fetch failed',
+    'network request failed',
+    'network error',
+    '<no response>',
+    'load failed',
+    'the internet connection appears to be offline',
+  ];
+  return networkPatterns.some(p => message.includes(p));
+}
+
 const SESSION_EXPIRED_MESSAGES = [
   'invalid or expired refresh token',
   'token refresh failed',
@@ -104,6 +123,9 @@ const SESSION_EXPIRED_MESSAGES = [
  * Triggers automatic logout.
  */
 export function isSessionExpiredError(error: unknown): boolean {
+  // Transient network failures must not be treated as an expired session.
+  if (isNetworkError(error)) return false;
+
   const message = extractErrorMessage(error).toLowerCase();
   return SESSION_EXPIRED_MESSAGES.some(m => message.includes(m));
 }
