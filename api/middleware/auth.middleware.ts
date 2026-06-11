@@ -54,3 +54,49 @@ export const authenticateToken = async (
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+/**
+ * Only allow the authenticated user to act on their own user id.
+ * Must be mounted after authenticateToken on routes with an :id param.
+ */
+export const requireSelf = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const targetId = parseInt(req.params.id);
+  const user = req.user as User | undefined;
+
+  if (!user || isNaN(targetId) || user.dataValues.id !== targetId) {
+    res.status(403).json({ message: 'Forbidden' });
+    return;
+  }
+
+  next();
+};
+
+/**
+ * Only allow access to resources in the authenticated user's own family
+ * group. Must be mounted after authenticateToken on routes with a
+ * :family_group_id param.
+ */
+export const requireFamilyMember = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const familyGroupId = parseInt(req.params.family_group_id);
+  const user = req.user as User | undefined;
+
+  if (isNaN(familyGroupId)) {
+    res.status(400).json({ message: 'Invalid family group ID' });
+    return;
+  }
+
+  if (!user || user.dataValues.family_group_id !== familyGroupId) {
+    res.status(403).json({ message: 'Forbidden' });
+    return;
+  }
+
+  next();
+};

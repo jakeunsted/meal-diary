@@ -1,7 +1,7 @@
 import express from 'express';
 import * as mealDiaryController from '../controllers/meal-diary/mealDiary.controller.ts';
 import * as mealDiaryService from '../services/mealDiary.service.ts';
-import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -127,7 +127,7 @@ router.post('/', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Failed to get meal diary
  */
-router.get('/:family_group_id', authenticateToken, async (req, res, next) => {
+router.get('/:family_group_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await mealDiaryController.getMealDiaryByFamilyGroupId(req, res);
   } catch (error) {
@@ -216,7 +216,7 @@ router.get('/:family_group_id', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Failed to get weekly meals
  */
-router.get('/:family_group_id/daily-meals', authenticateToken, async (req, res, next) => {
+router.get('/:family_group_id/daily-meals', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await mealDiaryController.getWeeklyMealsForFamilyGroup(req, res);
   } catch (error) {
@@ -322,7 +322,7 @@ router.get('/:family_group_id/daily-meals', authenticateToken, async (req, res, 
  *       500:
  *         description: Failed to update daily meal
  */
-router.patch('/:family_group_id/daily-meals', authenticateToken, async (req, res, next) => {
+router.patch('/:family_group_id/daily-meals', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await mealDiaryController.updateDailyMealForFamilyGroup(req, res);
   } catch (error) {

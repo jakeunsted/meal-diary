@@ -1,6 +1,6 @@
 import express from 'express';
 import * as userController from '../controllers/user/user.controller.ts';
-import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { authenticateToken, requireSelf } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -162,35 +162,9 @@ router.post('/', async (req, res, next) => {
 
 /**
  * @openapi
- * /users:
- *   get:
- *     summary: Get all users
- *     tags: [Users]
- *     responses:
- *       200:
- *         description: The list of users
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/User'
- *       500:
- *         description: Failed to fetch users
- */
-router.get('/', authenticateToken, async (req, res, next) => {
-  try {
-    await userController.getAllUsers(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
  * /users/{id}:
  *   get:
- *     summary: Get a user by id
+ *     summary: Get a user by id (own account only)
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -206,12 +180,14 @@ router.get('/', authenticateToken, async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Forbidden — can only access your own account
  *       404:
  *         description: User not found
  *       500:
  *         description: Failed to fetch user
  */
-router.get('/:id', authenticateToken, async (req, res, next) => {
+router.get('/:id', authenticateToken, requireSelf, async (req, res, next) => {
   try {
     await userController.getUserById(req, res);
   } catch (error) {
@@ -223,7 +199,7 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  * @openapi
  * /users/{id}:
  *   put:
- *     summary: Update a user
+ *     summary: Update a user (own account only)
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -273,6 +249,8 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/User'
+ *       403:
+ *         description: Forbidden — can only update your own account
  *       404:
  *         description: User not found
  *       409:
@@ -280,7 +258,7 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Failed to update user
  */
-router.put('/:id', authenticateToken, async (req, res, next) => {
+router.put('/:id', authenticateToken, requireSelf, async (req, res, next) => {
   try {
     await userController.updateUser(req, res);
   } catch (error) {
@@ -292,7 +270,7 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
  * @openapi
  * /users/{id}:
  *   delete:
- *     summary: Delete a user
+ *     summary: Delete a user (own account only)
  *     tags: [Users]
  *     parameters:
  *       - in: path
@@ -312,12 +290,14 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
  *                 message:
  *                   type: string
  *                   example: User deleted successfully
+ *       403:
+ *         description: Forbidden — can only delete your own account
  *       404:
  *         description: User not found
  *       500:
  *         description: Failed to delete user
  */
-router.delete('/:id', authenticateToken, async (req, res, next) => {
+router.delete('/:id', authenticateToken, requireSelf, async (req, res, next) => {
   try {
     await userController.deleteUser(req, res);
   } catch (error) {

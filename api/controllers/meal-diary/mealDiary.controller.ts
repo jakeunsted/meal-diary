@@ -15,6 +15,10 @@ export const createMealDiary = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
     }
 
+    if ((req.user as User | undefined)?.dataValues.family_group_id !== parseInt(family_group_id)) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
     // Create the meal diary
     const mealDiary = await MealDiary.create({
       family_group_id,

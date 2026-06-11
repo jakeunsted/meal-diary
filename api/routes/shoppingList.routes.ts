@@ -1,9 +1,11 @@
 import express from 'express';
 import * as shoppingListController from '../controllers/shopping-list/shoppingList.controller.ts';
-import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 router.use(authenticateToken);
+// Every route below is scoped to /:family_group_id — members only
+router.use('/:family_group_id', requireFamilyMember);
 
 /**
  * @openapi

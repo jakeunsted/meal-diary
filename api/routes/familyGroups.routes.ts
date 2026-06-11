@@ -48,21 +48,19 @@ const router = express.Router();
  *             type: object
  *             required:
  *               - name
- *               - created_by
  *             properties:
  *               name:
  *                 type: string
  *                 description: The name of the family group
- *               created_by:
- *                 type: integer
- *                 description: The id of the user who created the family group
  *     responses:
  *       201:
- *         description: The created family group
+ *         description: The created family group (creator is the authenticated user)
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/FamilyGroup'
+ *       401:
+ *         description: Unauthorized
  *       500:
  *         description: Failed to create family group
  */
@@ -94,6 +92,12 @@ router.post('/', authenticateToken, async (req, res, next) => {
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/FamilyGroup'
+ *       400:
+ *         description: Invalid family group id
+ *       403:
+ *         description: Forbidden — members only
+ *       404:
+ *         description: Family group not found
  *       500:
  *         description: Failed to get family group
  */
@@ -119,19 +123,17 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *             type: object
  *             required:
  *               - random_identifier
- *               - user_id
  *             properties:
  *               random_identifier:
  *                 type: string
  *                 description: The random identifier of the family group
- *               user_id:
- *                 type: integer
- *                 description: The id of the user who is joining the family group
  *     responses:
  *       200:
- *         description: The user has been added to the family group
+ *         description: The authenticated user has been added to the family group
  *       400:
  *         description: User already in the family group
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Family group not found
  *       412:
@@ -167,6 +169,8 @@ router.post('/join', authenticateToken, async (req, res, next) => {
  *         description: Invalid family group id
  *       401:
  *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — members only
  *       404:
  *         description: Family group not found
  *       500:

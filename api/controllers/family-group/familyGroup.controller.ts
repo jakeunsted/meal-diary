@@ -13,7 +13,13 @@ const generateRandomIdentifier = (): string => {
 
 export const createFamilyGroup = async (req: Request, res: Response) => {
   try {
-    const { name, created_by } = req.body;
+    const { name } = req.body;
+    // Identity comes from the authenticated token, never the request body
+    const created_by = (req.user as User | undefined)?.dataValues.id;
+
+    if (!created_by) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
 
     // Generate a unique random identifier
     let random_identifier = generateRandomIdentifier();
@@ -62,14 +68,20 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
 
 export const joinFamilyGroup = async (req: Request, res: Response) => {
   try {
-    const { random_identifier, user_id } = req.body;
+    const { random_identifier } = req.body;
+    // Identity comes from the authenticated token, never the request body
+    const user_id = (req.user as User | undefined)?.dataValues.id;
 
-    if (!random_identifier || !user_id) {
+    if (!user_id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!random_identifier) {
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'family_group_join_failure', {
         reason: 'missing_fields',
       });
-      return res.status(412).json({ message: 'Random identifier and user id are required' });
+      return res.status(412).json({ message: 'Random identifier is required' });
     }
 
     const familyGroup = await FamilyGroup.findOne({
@@ -99,9 +111,19 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
 
 export const getFamilyGroupById = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const familyGroupId = parseInt(req.params.id);
+    if (isNaN(familyGroupId)) {
+      return res.status(400).json({ message: 'Invalid family group ID' });
+    }
 
-    const familyGroup = await FamilyGroup.findByPk(id);
+    if ((req.user as User | undefined)?.dataValues.family_group_id !== familyGroupId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const familyGroup = await FamilyGroup.findByPk(familyGroupId);
+    if (!familyGroup) {
+      return res.status(404).json({ message: 'Family group not found' });
+    }
 
     return res.status(200).json(familyGroup);
   } catch (error) {
@@ -115,6 +137,10 @@ export const getFamilyGroupMembers = async (req: Request, res: Response) => {
     const familyGroupId = parseInt(req.params.id);
     if (isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group ID' });
+    }
+
+    if ((req.user as User | undefined)?.dataValues.family_group_id !== familyGroupId) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
 
     const familyGroup = await FamilyGroup.findByPk(familyGroupId);
