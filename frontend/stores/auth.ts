@@ -5,6 +5,8 @@ import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
 import { hasFamilyGroup } from '~/composables/useAuth';
 import { isTokenExpired } from '~/composables/useJWT';
+import { isSessionExpiredError } from '~/utils/httpError';
+import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 
 interface AuthState {
   user: User | null;
@@ -12,6 +14,8 @@ interface AuthState {
   refreshToken: string | null;
   isAuthenticated: boolean;
 }
+
+let initializeAuthPromise: Promise<void> | null = null;
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
@@ -144,7 +148,13 @@ export const useAuthStore = defineStore('auth', () => {
   
   const initializeAuth = async () => {
     if (!import.meta.client) return;
-    
+
+    if (initializeAuthPromise) {
+      await initializeAuthPromise;
+      return;
+    }
+
+    initializeAuthPromise = (async () => {
     try {
       console.log('[Auth Store] Initializing auth state from storage');
       const { value } = await Preferences.get({ key: 'authState' });
@@ -173,18 +183,24 @@ export const useAuthStore = defineStore('auth', () => {
           console.log('[Auth Store] Successfully restored auth state');
 
           // Proactively refresh an expired access token so the first API call
-          // after a daily return doesn't hit a stale-token round-trip.
+          // after returning from background doesn't hit a stale-token round-trip.
           if (isTokenExpired(authState.accessToken, 0)) {
             console.log('[Token Debug] initializeAuth: access token expired, attempting proactive refresh');
             try {
-              const { useAuth } = await import('~/composables/useAuth');
-              const { refreshTokens } = useAuth();
-              await refreshTokens();
+              await runWithTokenRefreshLock(async () => {
+                const { useAuth } = await import('~/composables/useAuth');
+                const { refreshTokens } = useAuth();
+                await refreshTokens();
+              });
               console.log('[Token Debug] initializeAuth: proactive refresh succeeded');
             } catch (err: unknown) {
-              console.error('[Token Debug] initializeAuth: proactive refresh failed — session cleared', err);
-              // If refresh fails the session is invalid; clearAuth will have
-              // been called by refreshTokens → handleAutoLogout already.
+              if (isSessionExpiredError(err)) {
+                console.error('[Token Debug] initializeAuth: session expired, clearing auth');
+                await clearAuth();
+              } else {
+                // Network/transient failure — keep the session; useApi will retry on next request.
+                console.warn('[Token Debug] initializeAuth: proactive refresh failed (non-fatal)', err);
+              }
             }
           }
           
@@ -213,6 +229,13 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       console.error('[Auth Store] Failed to initialize auth state:', error);
       await clearAuth();
+    }
+    })();
+
+    try {
+      await initializeAuthPromise;
+    } finally {
+      initializeAuthPromise = null;
     }
   };
   

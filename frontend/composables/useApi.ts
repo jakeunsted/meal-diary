@@ -11,6 +11,7 @@ import {
   isRetryableAuthError,
   getHttpStatusCode,
 } from '~/utils/httpError';
+import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 import type { ApiResponse } from '~/types/Api';
 
 /**
@@ -42,14 +43,15 @@ const resolveErrorMessage = (error: unknown): string => {
   }
   if (e?.data && typeof e.data === 'string') return e.data;
 
-  const generic = ['fetch failed', 'Network request failed', 'Failed to fetch'];
+  const generic = ['fetch failed', 'network request failed', 'failed to fetch', '<no response>'];
   const base = extractErrorMessage(error);
-  if (!base || generic.includes(base)) {
+  const baseLower = base.toLowerCase();
+  if (!base || generic.some(g => baseLower.includes(g))) {
     const status = getHttpStatusCode(error);
     if (status) return getDefaultMessage(status);
     const statusMessage = e?.statusMessage;
     if (statusMessage && statusMessage !== 'Server Error') return statusMessage;
-    return 'An error occurred';
+    return 'Network error. Please check your connection.';
   }
   return base;
 };
@@ -77,10 +79,6 @@ const applyRefreshedTokensFromResponse = async (
   }
 };
 
-// Module-level flags to serialise concurrent refresh attempts.
-let isRefreshing = false;
-let refreshPromise: Promise<void> | null = null;
-
 /**
  * Composable for making API calls with automatic error handling.
  * Wraps $fetch and:
@@ -100,35 +98,25 @@ export const useApi = () => {
     if (!authStore.accessToken || !authStore.refreshToken) return;
 
     const expired = isTokenExpired(authStore.accessToken);
-    console.log(`[Token Debug] ensureFreshTokens: url=${url} accessTokenExpired=${expired} isRefreshing=${isRefreshing}`);
+    console.log(`[Token Debug] ensureFreshTokens: url=${url} accessTokenExpired=${expired}`);
     if (!expired) return;
 
-    if (isRefreshing && refreshPromise) {
-      console.log('[Token Debug] ensureFreshTokens: refresh already in progress, waiting');
-      await refreshPromise;
-      return;
-    }
-
-    if (!isRefreshing) {
-      console.log('[Token Debug] ensureFreshTokens: starting token refresh');
-      isRefreshing = true;
-      refreshPromise = (async () => {
-        try {
-          await refreshTokens();
-          console.log('[Token Debug] ensureFreshTokens: token refresh succeeded');
-        } catch (err: unknown) {
-          console.error('[Token Debug] ensureFreshTokens: token refresh failed', {
-            statusCode: getHttpStatusCode(err),
-            message: extractErrorMessage(err),
-          });
-          await handleAutoLogout();
-          throw err;
-        } finally {
-          isRefreshing = false;
-          refreshPromise = null;
-        }
-      })();
-      await refreshPromise;
+    console.log('[Token Debug] ensureFreshTokens: starting token refresh');
+    try {
+      await runWithTokenRefreshLock(async () => {
+        await refreshTokens();
+      });
+      console.log('[Token Debug] ensureFreshTokens: token refresh succeeded');
+    } catch (err: unknown) {
+      console.error('[Token Debug] ensureFreshTokens: token refresh failed', {
+        statusCode: getHttpStatusCode(err),
+        message: extractErrorMessage(err),
+        isSessionExpired: isSessionExpiredError(err),
+      });
+      if (isSessionExpiredError(err)) {
+        await handleAutoLogout();
+      }
+      throw err;
     }
   };
 
