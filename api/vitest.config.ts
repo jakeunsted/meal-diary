@@ -16,15 +16,6 @@ export default defineConfig({
           exclude: ['node_modules/**'],
         },
       },
-      {
-        // Legacy integration tests — require a running Postgres (see globalSetup)
-        test: {
-          name: 'db',
-          include: ['**/*.test.ts'],
-          exclude: ['**/*.unit.test.ts', 'node_modules/**'],
-          globalSetup: './test/globalSetup.ts',
-        },
-      },
     ],
   },
 });
