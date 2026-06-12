@@ -99,20 +99,44 @@
                 {{ errors.confirm_password }}
               </div>
 
+              <p class="text-sm opacity-70 mt-4">
+                {{ $t('You must be at least 13 years old to use Meal Diary.') }}
+              </p>
+
+              <label class="label cursor-pointer justify-start gap-3 mt-2">
+                <input
+                  type="checkbox"
+                  v-model="terms_accepted"
+                  class="checkbox checkbox-primary"
+                  data-testid="terms-checkbox"
+                  :disabled="isLoading"
+                />
+                <span class="label-text">
+                  {{ $t('I agree to the') }}
+                  <NuxtLink class="link link-primary" to="/terms" target="_blank">{{ $t('Terms of Service') }}</NuxtLink>
+                  {{ $t('and') }}
+                  <NuxtLink class="link link-primary" to="/privacy" target="_blank">{{ $t('Privacy Policy') }}</NuxtLink>
+                </span>
+              </label>
+              <div v-if="errors.terms_accepted" class="text-error text-sm mt-1" data-testid="terms-error">
+                {{ errors.terms_accepted }}
+              </div>
+
               <div v-if="errors.general" class="text-error text-center mt-4">
                 {{ errors.general }}
               </div>
 
-              <button 
-                type="submit" 
+              <button
+                type="submit"
                 class="btn btn-primary w-full mt-4"
                 :disabled="isLoading"
               >
                 <span v-if="isLoading" class="loading loading-spinner loading-sm"></span>
                 <span v-else>{{ $t('Register') }}</span>
               </button>
-            </div> 
+            </div>
           </form>
+          <LegalLinks class="mt-4" />
         </div>
       </div>
     </div>
@@ -124,6 +148,8 @@ definePageMeta({
   layout: false
 });
 
+import LegalLinks from '~/components/LegalLinks.vue';
+
 const { performRegistration, storeRegisterString, deleteRegisterString } = useRegister();
 
 const username = ref('');
@@ -132,6 +158,7 @@ const last_name = ref('');
 const password = ref('');
 const confirm_password = ref('');
 const email = ref('');
+const terms_accepted = ref(false);
 const isLoading = ref(false);
 
 const errors = ref({
@@ -141,6 +168,7 @@ const errors = ref({
   last_name: '',
   password: '',
   confirm_password: '',
+  terms_accepted: '',
   general: ''
 });
 
@@ -152,6 +180,7 @@ const clearErrors = () => {
     last_name: '',
     password: '',
     confirm_password: '',
+    terms_accepted: '',
     general: ''
   };
 };
@@ -175,7 +204,8 @@ const handleRegistration = async () => {
       first_name: first_name.value,
       last_name: last_name.value,
       password: password.value,
-      confirm_password: confirm_password.value
+      confirm_password: confirm_password.value,
+      terms_accepted: terms_accepted.value
     });
 
     if (result.hasErrors) {

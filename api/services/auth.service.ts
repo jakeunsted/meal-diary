@@ -81,6 +81,9 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
       last_name: lastName,
       avatar_url: avatarUrl,
       password_hash: undefined, // Google-only account
+      // OAuth sign-up: the login screen states that continuing with Google
+      // constitutes acceptance of the terms and privacy policy
+      terms_accepted_at: new Date(),
     }) as User & UserAttributes;
   }
 

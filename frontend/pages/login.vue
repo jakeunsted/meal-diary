@@ -63,13 +63,20 @@
             </svg>
             {{ $t('Sign in with Google') }}
           </button>
+          <p class="text-xs text-center opacity-70">
+            {{ $t('By continuing with Google, you agree to our') }}
+            <NuxtLink class="link" to="/terms">{{ $t('Terms of Service') }}</NuxtLink>
+            {{ $t('and') }}
+            <NuxtLink class="link" to="/privacy">{{ $t('Privacy Policy') }}</NuxtLink>
+          </p>
           <div class="text-center">
             <p>
-              {{ $t('Don\'t have an account?') }} 
+              {{ $t('Don\'t have an account?') }}
               <a class="link link-hover link-primary" data-testid="register-link" href="/registration/step-1">{{ $t('Register') }}</a>
             </p>
           </div>
         </form>
+        <LegalLinks class="mt-4" />
       </div>
     </div>
   </div>
@@ -80,6 +87,8 @@ definePageMeta({
   layout: false,
   middleware: ['auth']
 });
+
+import LegalLinks from '~/components/LegalLinks.vue';
 
 const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
 const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();

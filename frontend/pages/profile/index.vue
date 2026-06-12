@@ -23,6 +23,8 @@
 
     <LogoutButton />
 
+    <LegalLinks class="mt-8" />
+
     <InviteModal
       ref="inviteModal"
       :family-group-code="familyGroup?.random_identifier || ''"
@@ -61,6 +63,7 @@ import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
 import LogoutButton from '~/components/profile/LogoutButton.vue';
 import InviteModal from '~/components/profile/InviteModal.vue';
+import LegalLinks from '~/components/LegalLinks.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();

@@ -7,6 +7,7 @@ interface RegisterData {
   last_name: string;
   password: string;
   confirm_password: string;
+  terms_accepted: boolean;
   hasErrors: boolean;
 }
 
@@ -56,6 +57,7 @@ export const useRegister = () => {
       last_name: '',
       password: '',
       confirm_password: '',
+      terms_accepted: '',
       general: ''
     });
 
@@ -94,6 +96,11 @@ export const useRegister = () => {
       errors.value.confirm_password = 'Passwords do not match';
       hasErrors = true;
     }
+
+    if (!registrationData.terms_accepted) {
+      errors.value.terms_accepted = 'You must accept the terms of service and privacy policy';
+      hasErrors = true;
+    }
   
     if (hasErrors) {
       return {
@@ -116,7 +123,8 @@ export const useRegister = () => {
           first_name: registrationData.first_name, 
           last_name: registrationData.last_name, 
           password: registrationData.password,
-          family_group_code: registerString.value
+          family_group_code: registerString.value,
+          terms_accepted: registrationData.terms_accepted
         }),
       });
   

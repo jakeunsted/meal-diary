@@ -5,7 +5,7 @@ import * as UserService from '../../services/user.service.ts';
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, first_name, last_name, family_group_code, family_group_id } = req.body;
+    const { username, email, password, first_name, last_name, family_group_code, family_group_id, terms_accepted } = req.body;
 
     try {
       const { user, familyGroupId } = await UserService.createUser({
@@ -15,7 +15,8 @@ export const createUser = async (req: Request, res: Response) => {
         first_name,
         last_name,
         family_group_code,
-        family_group_id
+        family_group_id,
+        terms_accepted
       });
 
       // Track user registration
