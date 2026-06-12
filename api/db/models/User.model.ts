@@ -12,6 +12,7 @@ export interface UserAttributes {
   last_name?: string;
   family_group_id?: number;
   avatar_url?: string;
+  terms_accepted_at?: Date;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -57,6 +58,10 @@ User.init(
     },
     avatar_url: {
       type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    terms_accepted_at: {
+      type: DataTypes.DATE,
       allowNull: true,
     },
     created_at: {

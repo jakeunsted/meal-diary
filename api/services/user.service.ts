@@ -11,6 +11,7 @@ export interface CreateUserData {
   last_name?: string;
   family_group_id?: number;
   family_group_code?: string;
+  terms_accepted?: boolean;
 }
 
 export interface UpdateUserData {
@@ -91,10 +92,14 @@ export const createUser = async (userData: CreateUserData): Promise<{
   user: Omit<UserAttributes, 'password_hash'>;
   familyGroupId: number | null;
 }> => {
-  const { username, email, password, first_name, last_name, family_group_id, family_group_code } = userData;
+  const { username, email, password, first_name, last_name, family_group_id, family_group_code, terms_accepted } = userData;
 
   if (!username || !email || !password) {
     throw new Error('Username, email, and password are required');
+  }
+
+  if (!terms_accepted) {
+    throw new Error('Acceptance of the terms of service and privacy policy is required');
   }
 
   // Resolve family group ID from code if provided
@@ -118,7 +123,8 @@ export const createUser = async (userData: CreateUserData): Promise<{
     password_hash: hashedPassword,
     first_name,
     last_name,
-    family_group_id: resolvedFamilyGroupId
+    family_group_id: resolvedFamilyGroupId,
+    terms_accepted_at: new Date()
   }) as User & UserAttributes;
 
   return {

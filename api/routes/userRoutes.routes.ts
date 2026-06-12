@@ -54,7 +54,11 @@ const router = express.Router();
  *         - username
  *         - email
  *         - password
+ *         - terms_accepted
  *       properties:
+ *         terms_accepted:
+ *           type: boolean
+ *           description: Must be true — records acceptance of the terms of service and privacy policy
  *         username:
  *           type: string
  *           maxLength: 50
