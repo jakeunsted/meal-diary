@@ -166,6 +166,58 @@ router.post('/', async (req, res, next) => {
 
 /**
  * @openapi
+ * /users/me:
+ *   delete:
+ *     summary: Permanently delete the authenticated user's account and personal data
+ *     tags: [Users]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 description: Required for accounts with a password
+ *               confirmation:
+ *                 type: string
+ *                 description: Must be "DELETE" for Google-only accounts
+ *     responses:
+ *       200:
+ *         description: Account deleted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 deletedAt:
+ *                   type: string
+ *                   format: date-time
+ *       400:
+ *         description: Missing confirmation
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Password is incorrect
+ *       409:
+ *         description: User created a family group that still has other members
+ *       500:
+ *         description: Failed to delete account
+ */
+router.delete('/me', authenticateToken, async (req, res, next) => {
+  try {
+    await userController.deleteOwnAccount(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /users/{id}:
  *   get:
  *     summary: Get a user by id (own account only)
@@ -265,45 +317,6 @@ router.get('/:id', authenticateToken, requireSelf, async (req, res, next) => {
 router.put('/:id', authenticateToken, requireSelf, async (req, res, next) => {
   try {
     await userController.updateUser(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
- * /users/{id}:
- *   delete:
- *     summary: Delete a user (own account only)
- *     tags: [Users]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: The user id
- *     responses:
- *       200:
- *         description: User deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: User deleted successfully
- *       403:
- *         description: Forbidden — can only delete your own account
- *       404:
- *         description: User not found
- *       500:
- *         description: Failed to delete user
- */
-router.delete('/:id', authenticateToken, requireSelf, async (req, res, next) => {
-  try {
-    await userController.deleteUser(req, res);
   } catch (error) {
     next(error);
   }

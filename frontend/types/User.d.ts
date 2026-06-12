@@ -6,6 +6,7 @@ export interface User {
   last_name?: string;
   family_group_id?: number;
   avatar_url?: string;
+  has_password?: boolean;
   created_at?: Date;
   updated_at?: Date;
 }

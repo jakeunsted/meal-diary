@@ -6,6 +6,9 @@
           <h1>{{ $t('Welcome to meal diary') }}</h1>
         </div>
         <hr />
+        <div v-if="accountDeleted" class="alert alert-success" data-testid="account-deleted-alert">
+          <span>{{ $t('Your account has been deleted.') }}</span>
+        </div>
         <form @submit.prevent="handleLogin" class="space-y-4" data-testid="login-form">
           <div class="form-control">
             <label class="label">
@@ -94,6 +97,7 @@ const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAut
 const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
 const email = ref('');
 const password = ref('');
+const accountDeleted = computed(() => useRoute().query.deleted === '1');
 
 const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
 const error = computed(() => emailLoginError.value || googleLoginError.value);

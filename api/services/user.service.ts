@@ -1,7 +1,12 @@
 import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
+import sequelize from '../db/models/index.ts';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import FamilyGroup from '../db/models/FamilyGroup.model.ts';
+import Recipe from '../db/models/Recipe.model.ts';
+import RefreshToken from '../db/models/RefreshToken.model.ts';
+import { deleteFamilyGroupData } from './familyGroup.service.ts';
+import { deletePersonData } from '../utils/posthog.ts';
 
 export interface CreateUserData {
   username: string;
@@ -71,25 +76,32 @@ const hashPassword = async (password: string): Promise<string> => {
   return await bcrypt.hash(password, saltRounds);
 };
 
+export type SanitizedUser = Omit<UserAttributes, 'password_hash'> & {
+  // Lets the client choose the right delete-account confirmation
+  // (password prompt vs typed DELETE for Google-only users)
+  has_password: boolean;
+};
+
 /**
  * Remove password hash from user object
  * @param {User & UserAttributes} user - User object
- * @returns {Omit<UserAttributes, 'password_hash'>} User without password hash
+ * @returns {SanitizedUser} User without password hash
  */
-const sanitizeUser = (user: User & UserAttributes): Omit<UserAttributes, 'password_hash'> => {
-  const userJson = user.toJSON();
+const sanitizeUser = (user: User & UserAttributes): SanitizedUser => {
+  const userJson = user.toJSON() as UserAttributes;
+  const hasPassword = !!userJson.password_hash;
   delete (userJson as any).password_hash;
-  return userJson as Omit<UserAttributes, 'password_hash'>;
+  return { ...(userJson as Omit<UserAttributes, 'password_hash'>), has_password: hasPassword };
 };
 
 /**
  * Create a new user
  * @param {CreateUserData} userData - User data
- * @returns {Promise<{ user: Omit<UserAttributes, 'password_hash'>; familyGroupId: number | null }>} Created user and family group ID
+ * @returns {Promise<{ user: SanitizedUser; familyGroupId: number | null }>} Created user and family group ID
  * @throws {Error} If validation fails or user already exists
  */
 export const createUser = async (userData: CreateUserData): Promise<{
-  user: Omit<UserAttributes, 'password_hash'>;
+  user: SanitizedUser;
   familyGroupId: number | null;
 }> => {
   const { username, email, password, first_name, last_name, family_group_id, family_group_code, terms_accepted } = userData;
@@ -136,13 +148,13 @@ export const createUser = async (userData: CreateUserData): Promise<{
 /**
  * Get user by ID
  * @param {number} userId - User ID
- * @returns {Promise<Omit<UserAttributes, 'password_hash'>>} User without password hash
+ * @returns {Promise<SanitizedUser>} User without password hash
  * @throws {Error} If user not found
  */
-export const getUserById = async (userId: number): Promise<Omit<UserAttributes, 'password_hash'>> => {
-  const user = await User.findByPk(userId, {
-    attributes: { exclude: ['password_hash'] }
-  }) as User & UserAttributes | null;
+export const getUserById = async (userId: number): Promise<SanitizedUser> => {
+  // password_hash is fetched so sanitizeUser can derive has_password,
+  // then stripped before the user is returned
+  const user = await User.findByPk(userId) as User & UserAttributes | null;
 
   if (!user) {
     throw new Error('User not found');
@@ -155,10 +167,10 @@ export const getUserById = async (userId: number): Promise<Omit<UserAttributes, 
  * Update user
  * @param {number} userId - User ID
  * @param {UpdateUserData} userData - User data to update
- * @returns {Promise<Omit<UserAttributes, 'password_hash'>>} Updated user without password hash
+ * @returns {Promise<SanitizedUser>} Updated user without password hash
  * @throws {Error} If user not found or validation fails
  */
-export const updateUser = async (userId: number, userData: UpdateUserData): Promise<Omit<UserAttributes, 'password_hash'>> => {
+export const updateUser = async (userId: number, userData: UpdateUserData): Promise<SanitizedUser> => {
   const { username, email, first_name, last_name, family_group_id, avatar_url } = userData;
 
   const user = await User.findByPk(userId) as User & UserAttributes | null;
@@ -193,27 +205,86 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     avatar_url
   });
 
-  // Get updated user without password hash
-  const updatedUser = await User.findByPk(userId, {
-    attributes: { exclude: ['password_hash'] }
-  }) as User & UserAttributes;
+  // Re-fetch and sanitize (strips password_hash, adds has_password)
+  const updatedUser = await User.findByPk(userId) as User & UserAttributes;
 
   return sanitizeUser(updatedUser);
 };
 
+export interface DeleteAccountInput {
+  password?: string;
+  confirmation?: string;
+}
+
 /**
- * Delete user
- * @param {number} userId - User ID
- * @returns {Promise<void>}
- * @throws {Error} If user not found
+ * Permanently delete a user's account and personal data.
+ *
+ * Confirmation: users with a password must supply it; Google-only users
+ * must send confirmation: 'DELETE' instead.
+ *
+ * Family handling: if the user created a family group that still has other
+ * members, deletion is blocked (they must delete the family or transfer it
+ * first). Groups they created with no other members are cascade-deleted.
+ * Recipes they created in surviving groups are kept but anonymised.
+ *
+ * PostHog person data is deleted best-effort after the transaction commits.
  */
-export const deleteUser = async (userId: number): Promise<void> => {
+export const deleteUserAccount = async (
+  userId: number,
+  input: DeleteAccountInput
+): Promise<void> => {
   const user = await User.findByPk(userId);
 
   if (!user) {
     throw new Error('User not found');
   }
 
-  await user.destroy();
+  const passwordHash = user.dataValues.password_hash;
+  if (passwordHash) {
+    if (!input.password) {
+      throw new Error('Password confirmation is required');
+    }
+    const passwordValid = await bcrypt.compare(input.password, passwordHash);
+    if (!passwordValid) {
+      throw new Error('Password is incorrect');
+    }
+  } else if (input.confirmation !== 'DELETE') {
+    throw new Error('Type DELETE to confirm account deletion');
+  }
+
+  // Family groups this user created: block if any still have other members,
+  // cascade-delete the ones that are now solely theirs
+  const createdGroups = await FamilyGroup.findAll({ where: { created_by: userId } });
+  const groupIdsToDelete: number[] = [];
+  for (const group of createdGroups) {
+    const groupId = group.dataValues.id;
+    const otherMembers = await User.count({
+      where: { family_group_id: groupId, id: { [Op.ne]: userId } },
+    });
+    if (otherMembers > 0) {
+      throw new Error('You created a family group that still has other members. Delete the family or transfer ownership before deleting your account');
+    }
+    groupIdsToDelete.push(groupId);
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    for (const groupId of groupIdsToDelete) {
+      await deleteFamilyGroupData(groupId, transaction);
+    }
+
+    // Keep recipes in surviving family groups, but unlink the creator
+    await Recipe.update(
+      { created_by: null },
+      { where: { created_by: userId }, transaction }
+    );
+
+    await RefreshToken.destroy({ where: { user_id: userId }, transaction });
+    await user.destroy({ transaction });
+  });
+
+  // GDPR erasure in PostHog — best-effort, never blocks the deletion
+  deletePersonData(userId.toString()).catch((err) => {
+    console.error('Failed to queue PostHog person deletion:', err);
+  });
 };
 

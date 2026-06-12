@@ -5,7 +5,9 @@ import sequelize from './index.ts';
 export interface RecipeAttributes {
   id: number;
   family_group_id: number;
-  created_by: number;
+  // Nullable so recipes can be anonymised (kept for the family) when their
+  // creator deletes their account
+  created_by: number | null;
   name: string;
   description?: string;
   instructions?: string;
@@ -31,7 +33,7 @@ Recipe.init(
     },
     created_by: {
       type: DataTypes.INTEGER,
-      allowNull: false,
+      allowNull: true,
     },
     name: {
       type: DataTypes.STRING(200),

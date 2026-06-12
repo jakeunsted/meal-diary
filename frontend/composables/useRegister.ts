@@ -117,17 +117,37 @@ export const useRegister = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          username: registrationData.username, 
-          email: registrationData.email, 
-          first_name: registrationData.first_name, 
-          last_name: registrationData.last_name, 
+        body: JSON.stringify({
+          username: registrationData.username,
+          email: registrationData.email,
+          first_name: registrationData.first_name,
+          last_name: registrationData.last_name,
           password: registrationData.password,
           family_group_code: registerString.value,
           terms_accepted: registrationData.terms_accepted
         }),
       });
-  
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+
+        if (response.status === 409) {
+          // Deliberately vague between username and email to limit
+          // account-enumeration value while staying helpful
+          errors.value.general = 'An account with these details already exists. Try logging in instead.';
+        } else if (response.status === 400 && body?.message) {
+          errors.value.general = body.message;
+        } else {
+          errors.value.general = 'Registration failed. Please try again.';
+        }
+
+        return {
+          response,
+          hasErrors: true,
+          errors: errors.value
+        };
+      }
+
       return {
         response,
         hasErrors: false,
