@@ -1,4 +1,5 @@
 import { PostHog } from 'posthog-node';
+import axios from 'axios';
 import type { Request } from 'express';
 
 let posthogClient: PostHog | null = null;
@@ -167,6 +168,43 @@ export const trackError = async (
     user_id: req.user ? getDistinctId(req) : undefined,
     ...additionalProperties,
   });
+};
+
+/**
+ * Delete a person and all their events from PostHog (GDPR erasure on
+ * account deletion). Uses the private API, which needs a personal API key
+ * (POSTHOG_PERSONAL_API_KEY) and project id (POSTHOG_PROJECT_ID) — distinct
+ * from the ingestion key. No-ops with a warning when they are not set.
+ */
+export const deletePersonData = async (distinctId: string): Promise<void> => {
+  const apiKey = process.env.POSTHOG_PERSONAL_API_KEY;
+  const projectId = process.env.POSTHOG_PROJECT_ID;
+  // The private API lives on the app host, not the ingestion (*.i.*) host
+  const host = (process.env.POSTHOG_HOST || 'https://eu.i.posthog.com').replace('.i.posthog.com', '.posthog.com');
+
+  if (!apiKey || !projectId) {
+    console.warn(`PostHog: Skipping person deletion for ${distinctId} - POSTHOG_PERSONAL_API_KEY or POSTHOG_PROJECT_ID not set`);
+    return;
+  }
+
+  try {
+    const headers = { Authorization: `Bearer ${apiKey}` };
+    const search = await axios.get(`${host}/api/projects/${projectId}/persons/`, {
+      headers,
+      params: { distinct_id: distinctId },
+    });
+
+    const persons: Array<{ id: string }> = search.data?.results ?? [];
+    for (const person of persons) {
+      await axios.delete(`${host}/api/projects/${projectId}/persons/${person.id}/`, {
+        headers,
+        params: { delete_events: 'true' },
+      });
+    }
+    console.log(`PostHog: Deleted ${persons.length} person record(s) for user ${distinctId}`);
+  } catch (err) {
+    console.error(`PostHog: Failed to delete person data for ${distinctId}:`, err instanceof Error ? err.message : err);
+  }
 };
 
 /**

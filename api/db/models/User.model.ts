@@ -10,7 +10,7 @@ export interface UserAttributes {
   google_id?: string;
   first_name?: string;
   last_name?: string;
-  family_group_id?: number;
+  family_group_id?: number | null;
   avatar_url?: string;
   terms_accepted_at?: Date;
   created_at?: Date;

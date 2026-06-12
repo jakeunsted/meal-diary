@@ -29,7 +29,10 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
 
   const { query, ...fetchOptions } = options;
 
-  if (fetchOptions.method === 'POST' || fetchOptions.method === 'PUT' || fetchOptions.method === 'PATCH') {
+  // Any request carrying a body needs the JSON content type, including
+  // DELETE (used by account deletion with a confirmation payload)
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  if (fetchOptions.body || method === 'POST' || method === 'PUT' || method === 'PATCH') {
     fetchOptions.headers = {
       'Content-Type': 'application/json',
       ...fetchOptions.headers,

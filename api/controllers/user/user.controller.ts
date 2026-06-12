@@ -118,23 +118,38 @@ export const updateUser = async (req: Request, res: Response) => {
   }
 };
 
-// Delete user
-export const deleteUser = async (req: Request, res: Response) => {
+// Delete the authenticated user's own account (App Store / Play / GDPR erasure)
+export const deleteOwnAccount = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.id);
+    const userId = (req.user as { dataValues: { id: number } }).dataValues.id;
+    const { password, confirmation } = req.body ?? {};
 
     try {
-      await UserService.deleteUser(userId);
-      return res.status(200).json({ message: 'User deleted successfully' });
+      await UserService.deleteUserAccount(userId, { password, confirmation });
+      return res.status(200).json({
+        message: 'Your account and personal data have been deleted',
+        deletedAt: new Date().toISOString(),
+      });
     } catch (serviceError) {
-      const errorMessage = serviceError instanceof Error ? serviceError.message : 'User not found';
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to delete account';
+
       if (errorMessage.includes('not found')) {
         return res.status(404).json({ message: errorMessage });
       }
+      if (errorMessage.includes('incorrect')) {
+        return res.status(403).json({ message: errorMessage });
+      }
+      if (errorMessage.includes('confirm')) {
+        return res.status(400).json({ message: errorMessage });
+      }
+      if (errorMessage.includes('other members')) {
+        return res.status(409).json({ message: errorMessage });
+      }
+
       throw serviceError;
     }
   } catch (error) {
-    console.error('Error deleting user:', error);
-    return res.status(500).json({ message: 'Failed to delete user' });
+    console.error('Error deleting account:', error);
+    return res.status(500).json({ message: 'Failed to delete account' });
   }
 };

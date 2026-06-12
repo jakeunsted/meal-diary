@@ -10,7 +10,7 @@ vi.mock('../../services/user.service.ts', () => ({
   createUser: vi.fn(),
   getUserById: vi.fn(),
   updateUser: vi.fn(),
-  deleteUser: vi.fn(),
+  deleteUserAccount: vi.fn(),
 }));
 
 vi.mock('../../services/recipe.service.ts', () => ({
@@ -125,10 +125,10 @@ describe('user routes authorization', () => {
     expect(UserService.updateUser).not.toHaveBeenCalled();
   });
 
-  it('user A cannot DELETE user B', async () => {
+  it('DELETE /users/:id no longer exists — deletion is /users/me only', async () => {
     const res = await request(app).delete('/users/2').set(auth);
-    expect(res.status).toBe(403);
-    expect(UserService.deleteUser).not.toHaveBeenCalled();
+    expect(res.status).toBe(404);
+    expect(UserService.deleteUserAccount).not.toHaveBeenCalled();
   });
 
   it('user A can GET their own record', async () => {
@@ -136,10 +136,61 @@ describe('user routes authorization', () => {
       id: 1,
       username: 'me',
       email: 'me@example.com',
+      has_password: true,
     });
     const res = await request(app).get('/users/1').set(auth);
     expect(res.status).toBe(200);
     expect(UserService.getUserById).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('DELETE /users/me', () => {
+  it('rejects unauthenticated requests', async () => {
+    const res = await request(app).delete('/users/me').send({ password: 'pw' });
+    expect(res.status).toBe(401);
+    expect(UserService.deleteUserAccount).not.toHaveBeenCalled();
+  });
+
+  it('deletes the authenticated user with their own id', async () => {
+    vi.mocked(UserService.deleteUserAccount).mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .delete('/users/me')
+      .set(auth)
+      .send({ password: 'correct-password' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ deletedAt: expect.any(String) });
+    expect(UserService.deleteUserAccount).toHaveBeenCalledWith(1, {
+      password: 'correct-password',
+      confirmation: undefined,
+    });
+  });
+
+  it('maps an incorrect password to 403', async () => {
+    vi.mocked(UserService.deleteUserAccount).mockRejectedValue(
+      new Error('Password is incorrect')
+    );
+
+    const res = await request(app)
+      .delete('/users/me')
+      .set(auth)
+      .send({ password: 'wrong' });
+
+    expect(res.status).toBe(403);
+  });
+
+  it('maps a family group with other members to 409', async () => {
+    vi.mocked(UserService.deleteUserAccount).mockRejectedValue(
+      new Error('You created a family group that still has other members. Delete the family or transfer ownership before deleting your account')
+    );
+
+    const res = await request(app)
+      .delete('/users/me')
+      .set(auth)
+      .send({ password: 'correct-password' });
+
+    expect(res.status).toBe(409);
   });
 });
 
