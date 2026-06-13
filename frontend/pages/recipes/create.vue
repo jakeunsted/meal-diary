@@ -30,11 +30,13 @@ import RecipeForm from '~/components/recipe/RecipeForm.vue';
 const router = useRouter();
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
+const { track } = useAnalytics();
 
 const handleCreate = async (formData) => {
   try {
     const recipe = await recipeStore.createRecipe(formData);
     if (recipe) {
+      track('recipe_created');
       router.push(`/recipes/${recipe.id}`);
     }
   } catch (error) {

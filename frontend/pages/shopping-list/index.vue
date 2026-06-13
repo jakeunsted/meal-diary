@@ -90,6 +90,7 @@ import { useUserStore } from '~/stores/user';
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
+const { track } = useAnalytics();
 
 const loading = ref(true);
 const hasData = computed(() => {
@@ -200,6 +201,7 @@ const handleAddNewItem = async () => {
       name: newItemName.value,
       parentItemId: null
     });
+    track('shopping_list_item_added');
     newItemName.value = '';
   } catch (error) {
     console.error('Error adding item:', error);
@@ -214,10 +216,12 @@ const handleItemUpdate = async (event: { id: number | string; name: string; chec
     name: event.name,
     checked: event.checked ?? false
   });
+  if (event.checked) track('shopping_list_item_checked');
 };
 
 const handleRemoveItem = async (itemId: number | string) => {
   await shoppingListStore.deleteItem(itemId);
+  track('shopping_list_item_deleted');
 };
 
 const handleIndent = async (itemId: number | string) => {
@@ -234,6 +238,7 @@ const handleInsertBelow = async (itemId: number | string) => {
 
 onMounted(async () => {
   await nextTick();
+  track('shopping_list_viewed');
 
   // Start loading data after skeleton is visible
   const loadData = async () => {

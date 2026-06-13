@@ -151,6 +151,7 @@ definePageMeta({
 import LegalLinks from '~/components/LegalLinks.vue';
 
 const { performRegistration, storeRegisterString, deleteRegisterString } = useRegister();
+const { track } = useAnalytics();
 
 const username = ref('');
 const first_name = ref('');
@@ -212,6 +213,7 @@ const handleRegistration = async () => {
       errors.value = result.errors;
     } else {
       if (result.response && result.response.ok) {
+        track('sign_up', { method: 'email', has_family_code: !!useRoute().query.code });
         deleteRegisterString();
         navigateTo('/registration/step-2');
       } else {

@@ -37,12 +37,14 @@ const route = useRoute();
 const router = useRouter();
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
+const { track } = useAnalytics();
 
 const recipe = computed(() => recipeStore.currentRecipe);
 
 const handleUpdate = async (formData) => {
   try {
     await recipeStore.updateRecipe(parseInt(route.params.id), formData);
+    track('recipe_edited');
     router.push(`/recipes/${route.params.id}`);
   } catch (error) {
     console.error('Error updating recipe:', error);

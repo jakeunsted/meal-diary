@@ -98,6 +98,7 @@ const router = useRouter();
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
 const { showError } = useToast();
+const { track } = useAnalytics();
 
 const recipe = computed(() => recipeStore.currentRecipe);
 
@@ -113,6 +114,7 @@ const handleShowDeleteConfirm = () => {
 const handleDelete = async () => {
   try {
     await recipeStore.deleteRecipe(parseInt(route.params.id));
+    track('recipe_deleted');
     const modal = document.getElementById('delete_recipe_modal');
     if (modal) modal.close();
     router.push('/recipes');
@@ -148,6 +150,7 @@ const handleAddToShoppingList = async () => {
       }
     });
 
+    track('recipe_added_to_shopping_list', { item_count: items.length });
     const { showSuccess } = useToast();
     showSuccess('Ingredients added to shopping list!');
   } catch (error) {
@@ -160,5 +163,6 @@ onMounted(async () => {
     await userStore.fetchUser();
   }
   await recipeStore.fetchRecipeById(parseInt(route.params.id));
+  track('recipe_viewed');
 });
 </script>
