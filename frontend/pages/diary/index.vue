@@ -87,6 +87,9 @@ import { useToast } from '~/composables/useToast';
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
 const { showSuccess } = useToast();
+const { track } = useAnalytics();
+
+onMounted(() => track('diary_viewed'));
 const { t } = useI18n();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
@@ -113,6 +116,7 @@ const handleSetMeal = (mealType, dayOfWeek) => {
 const handleSaveMeal = async () => {
   try {
     await mealDiaryStore.saveMeal();
+    track('diary_meal_saved');
     set_meal_modal.close();
     showSuccess(t('Meal saved'));
   } catch (error) {
@@ -121,6 +125,7 @@ const handleSaveMeal = async () => {
 };
 
 const handleWeekChange = (weekStartDate) => {
+  track('diary_week_changed');
   void setWeek(weekStartDate);
 };
 

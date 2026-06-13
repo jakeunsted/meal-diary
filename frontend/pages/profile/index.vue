@@ -73,6 +73,7 @@ import LegalLinks from '~/components/LegalLinks.vue';
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
 const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
+const { track } = useAnalytics();
 
 const inviteModal = ref(null);
 
@@ -89,7 +90,8 @@ const handleAddFamilyMember = () => {
 
 onMounted(async () => {
   await nextTick();
-  
+  track('profile_viewed');
+
   const loadData = async () => {
     try {
       // Start all requests in parallel
@@ -122,6 +124,7 @@ const copyFamilyCode = async () => {
   if (familyGroup.value?.random_identifier) {
     try {
       await navigator.clipboard.writeText(familyGroup.value.random_identifier);
+      track('family_invite_copied');
       // Show success toast
       const toast = document.createElement('div');
       toast.className = 'toast toast-top toast-end';

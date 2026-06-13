@@ -8,6 +8,14 @@
       <div class="card-actions mt-auto">
         <LogoutButton />
         <button
+          v-if="canManageCookies"
+          class="btn btn-ghost"
+          data-testid="manage-cookies-button"
+          @click="openCookiePreferences"
+        >
+          {{ $t('Cookie preferences') }}
+        </button>
+        <button
           class="btn btn-error btn-outline"
           data-testid="delete-account-button"
           @click="openModal"
@@ -88,6 +96,13 @@ const { t } = useI18n();
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const { api } = useApi();
+
+// Provided by the Silktide consent plugin (absent in dev / if it fails to load)
+const { $openCookiePreferences } = useNuxtApp();
+const canManageCookies = computed(() => typeof $openCookiePreferences === 'function');
+const openCookiePreferences = () => {
+  if (typeof $openCookiePreferences === 'function') $openCookiePreferences();
+};
 
 const modal = ref(null);
 const confirmInput = ref('');

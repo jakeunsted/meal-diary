@@ -16,7 +16,9 @@ export default defineNuxtConfig({
       googleClientId: process.env.GOOGLE_CLIENT_ID || '',
       posthogPublicKey: 'phc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN',
       posthogHost: 'https://eu.i.posthog.com',
-      posthogDefaults: '2025-11-30'
+      posthogDefaults: '2025-11-30',
+      // GA4 is dormant unless this is set; analytics still gated on consent
+      gaMeasurementId: process.env.GA_MEASUREMENT_ID || ''
     }
   },
   app: {
