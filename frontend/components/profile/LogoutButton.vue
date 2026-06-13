@@ -1,11 +1,11 @@
 <template>
   <button
     @click="handleLogout"
-    class="btn btn-error w-full mt-8"
+    class="btn"
     :disabled="isLoading"
   >
     <span v-if="isLoading" class="loading loading-spinner"></span>
-    <span v-else>Logout</span>
+    <span v-else>{{ $t('Logout') }}</span>
   </button>
 </template>
 

@@ -1,5 +1,6 @@
 import { Op } from 'sequelize';
 import type { Transaction } from 'sequelize';
+import sequelize from '../db/models/index.ts';
 import {
   User,
   FamilyGroup,
@@ -70,4 +71,83 @@ export const deleteFamilyGroupData = async (
     { where: { family_group_id: familyGroupId }, transaction }
   );
   await FamilyGroup.destroy({ where: { id: familyGroupId }, transaction });
+};
+
+/**
+ * Remove the user from a family group. Shared data (meal diaries, recipes,
+ * shopping lists) stays with the group. The owner cannot leave — they must
+ * transfer ownership or delete the family first, otherwise the group would
+ * be orphaned (created_by is a non-null FK).
+ */
+export const leaveFamilyGroup = async (
+  familyGroupId: number,
+  userId: number
+): Promise<void> => {
+  const familyGroup = await FamilyGroup.findByPk(familyGroupId);
+  if (!familyGroup) {
+    throw new Error('Family group not found');
+  }
+
+  if (familyGroup.dataValues.created_by === userId) {
+    throw new Error('The family owner cannot leave. Transfer ownership or delete the family first');
+  }
+
+  await User.update(
+    { family_group_id: null },
+    { where: { id: userId, family_group_id: familyGroupId } }
+  );
+};
+
+/**
+ * Transfer family group ownership to another current member.
+ * Only the current owner can transfer.
+ */
+export const transferFamilyGroupOwnership = async (
+  familyGroupId: number,
+  currentUserId: number,
+  newOwnerId: number
+): Promise<void> => {
+  const familyGroup = await FamilyGroup.findByPk(familyGroupId);
+  if (!familyGroup) {
+    throw new Error('Family group not found');
+  }
+
+  if (familyGroup.dataValues.created_by !== currentUserId) {
+    throw new Error('Only the family owner can transfer ownership');
+  }
+
+  if (newOwnerId === currentUserId) {
+    throw new Error('You already own this family group');
+  }
+
+  const newOwner = await User.findByPk(newOwnerId);
+  if (!newOwner || newOwner.dataValues.family_group_id !== familyGroupId) {
+    throw new Error('The new owner must be a member of the family group');
+  }
+
+  await FamilyGroup.update(
+    { created_by: newOwnerId },
+    { where: { id: familyGroupId } }
+  );
+};
+
+/**
+ * Delete a family group and all of its data. Only the owner can delete.
+ */
+export const deleteFamilyGroup = async (
+  familyGroupId: number,
+  userId: number
+): Promise<void> => {
+  const familyGroup = await FamilyGroup.findByPk(familyGroupId);
+  if (!familyGroup) {
+    throw new Error('Family group not found');
+  }
+
+  if (familyGroup.dataValues.created_by !== userId) {
+    throw new Error('Only the family owner can delete the family group');
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    await deleteFamilyGroupData(familyGroupId, transaction);
+  });
 };

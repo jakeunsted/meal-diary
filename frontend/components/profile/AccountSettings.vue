@@ -1,11 +1,12 @@
 <template>
-  <div class="card bg-base-200 mt-8">
+  <div class="card bg-base-200 h-full">
     <div class="card-body">
       <h2 class="card-title">{{ $t('Account') }}</h2>
       <p class="text-sm opacity-70">
         {{ $t('Deleting your account is permanent and cannot be undone.') }}
       </p>
-      <div class="card-actions">
+      <div class="card-actions mt-auto">
+        <LogoutButton />
         <button
           class="btn btn-error btn-outline"
           data-testid="delete-account-button"
@@ -81,6 +82,7 @@
 <script setup>
 import { useUserStore } from '~/stores/user';
 import { useAuthStore } from '~/stores/auth';
+import LogoutButton from '~/components/profile/LogoutButton.vue';
 
 const { t } = useI18n();
 const userStore = useUserStore();

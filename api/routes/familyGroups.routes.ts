@@ -1,6 +1,6 @@
 import express from 'express';
 import * as familyGroupController from '../controllers/family-group/familyGroup.controller.ts';
-import { authenticateToken } from '../middleware/auth.middleware.ts';
+import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
 
@@ -179,6 +179,112 @@ router.post('/join', authenticateToken, async (req, res, next) => {
 router.get('/:id/members', authenticateToken, async (req, res, next) => {
   try {
     await familyGroupController.getFamilyGroupMembers(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/leave:
+ *   post:
+ *     summary: Leave a family group (members only; the owner must transfer or delete instead)
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Left the family group; shared data remains with the group
+ *       403:
+ *         description: Forbidden — not a member
+ *       404:
+ *         description: Family group not found
+ *       409:
+ *         description: The owner cannot leave — transfer ownership or delete the family first
+ *       500:
+ *         description: Failed to leave family group
+ */
+router.post('/:family_group_id/leave', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await familyGroupController.leaveFamilyGroup(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/transfer-ownership:
+ *   post:
+ *     summary: Transfer family group ownership to another member (owner only)
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - new_owner_id
+ *             properties:
+ *               new_owner_id:
+ *                 type: integer
+ *                 description: The member to become the new owner
+ *     responses:
+ *       200:
+ *         description: Ownership transferred
+ *       400:
+ *         description: Invalid or non-member new owner
+ *       403:
+ *         description: Only the family owner can transfer ownership
+ *       404:
+ *         description: Family group not found
+ *       500:
+ *         description: Failed to transfer ownership
+ */
+router.post('/:family_group_id/transfer-ownership', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await familyGroupController.transferFamilyGroupOwnership(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}:
+ *   delete:
+ *     summary: Delete a family group and all of its data (owner only)
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Family group, meal diaries, shopping lists, and recipes deleted; members unlinked
+ *       403:
+ *         description: Only the family owner can delete the family group
+ *       404:
+ *         description: Family group not found
+ *       500:
+ *         description: Failed to delete family group
+ */
+router.delete('/:family_group_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await familyGroupController.deleteFamilyGroup(req, res);
   } catch (error) {
     next(error);
   }

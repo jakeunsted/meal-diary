@@ -34,6 +34,13 @@ vi.mock('../../services/shoppingList.service.ts', () => ({
   deleteItem: vi.fn(),
 }));
 
+vi.mock('../../services/familyGroup.service.ts', () => ({
+  deleteFamilyGroupData: vi.fn(),
+  leaveFamilyGroup: vi.fn(),
+  transferFamilyGroupOwnership: vi.fn(),
+  deleteFamilyGroup: vi.fn(),
+}));
+
 vi.mock('../../services/mealDiary.service.ts', () => ({
   createNewWeeklyMeals: vi.fn(),
   getWeeklyMeals: vi.fn(),
@@ -60,6 +67,7 @@ import {
 } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import * as UserService from '../../services/user.service.ts';
+import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import * as RecipeService from '../../services/recipe.service.ts';
 import * as ShoppingListService from '../../services/shoppingList.service.ts';
 import userRoutes from '../userRoutes.routes.ts';
@@ -263,6 +271,85 @@ describe('family group routes authorization', () => {
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'New family', created_by: 1 })
     );
+  });
+});
+
+describe('family lifecycle routes authorization', () => {
+  it("non-member cannot leave another family's group", async () => {
+    const res = await request(app).post('/family-groups/2/leave').set(auth);
+    expect(res.status).toBe(403);
+    expect(FamilyGroupService.leaveFamilyGroup).not.toHaveBeenCalled();
+  });
+
+  it('member leave routes through to the service with their own id', async () => {
+    vi.mocked(FamilyGroupService.leaveFamilyGroup).mockResolvedValue(undefined);
+
+    const res = await request(app).post('/family-groups/1/leave').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(FamilyGroupService.leaveFamilyGroup).toHaveBeenCalledWith(1, 1);
+  });
+
+  it('owner-cannot-leave service error maps to 409', async () => {
+    vi.mocked(FamilyGroupService.leaveFamilyGroup).mockRejectedValue(
+      new Error('The family owner cannot leave. Transfer ownership or delete the family first')
+    );
+
+    const res = await request(app).post('/family-groups/1/leave').set(auth);
+    expect(res.status).toBe(409);
+  });
+
+  it("non-member cannot delete another family's group", async () => {
+    const res = await request(app).delete('/family-groups/2').set(auth);
+    expect(res.status).toBe(403);
+    expect(FamilyGroupService.deleteFamilyGroup).not.toHaveBeenCalled();
+  });
+
+  it('non-owner member delete maps to 403 from the service', async () => {
+    vi.mocked(FamilyGroupService.deleteFamilyGroup).mockRejectedValue(
+      new Error('Only the family owner can delete the family group')
+    );
+
+    const res = await request(app).delete('/family-groups/1').set(auth);
+    expect(res.status).toBe(403);
+  });
+
+  it('owner delete routes through to the service', async () => {
+    vi.mocked(FamilyGroupService.deleteFamilyGroup).mockResolvedValue(undefined);
+
+    const res = await request(app).delete('/family-groups/1').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(FamilyGroupService.deleteFamilyGroup).toHaveBeenCalledWith(1, 1);
+  });
+
+  it("non-member cannot transfer another family's ownership", async () => {
+    const res = await request(app)
+      .post('/family-groups/2/transfer-ownership')
+      .set(auth)
+      .send({ new_owner_id: 3 });
+    expect(res.status).toBe(403);
+    expect(FamilyGroupService.transferFamilyGroupOwnership).not.toHaveBeenCalled();
+  });
+
+  it('transfer requires new_owner_id', async () => {
+    const res = await request(app)
+      .post('/family-groups/1/transfer-ownership')
+      .set(auth)
+      .send({});
+    expect(res.status).toBe(400);
+  });
+
+  it('owner transfer routes through to the service', async () => {
+    vi.mocked(FamilyGroupService.transferFamilyGroupOwnership).mockResolvedValue(undefined);
+
+    const res = await request(app)
+      .post('/family-groups/1/transfer-ownership')
+      .set(auth)
+      .send({ new_owner_id: 3 });
+
+    expect(res.status).toBe(200);
+    expect(FamilyGroupService.transferFamilyGroupOwnership).toHaveBeenCalledWith(1, 1, 3);
   });
 });
 
