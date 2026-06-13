@@ -62,7 +62,6 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     // Re-show the banner until a choice is made
     autoShow: true,
     position: { banner: 'bottomLeft' },
-    cookieIcon: { position: 'bottomLeft' },
     text: {
       banner: {
         description:
@@ -80,7 +79,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     consentTypes: [
       {
         id: 'necessary',
-        name: 'Essential',
+        label: 'Essential',
         description:
           'Required for Meal Diary to work — signing in, saving your meal plans, and keeping the app secure.',
         required: true,
@@ -88,7 +87,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       },
       {
         id: 'analytics',
-        name: 'Analytics',
+        label: 'Analytics',
         description:
           'Helps us understand how the app is used so we can improve it. No analytics run until you allow them.',
         defaultValue: false,
