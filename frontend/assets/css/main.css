@@ -10,3 +10,31 @@
     display: none;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Silktide Consent Manager — theme to match the daisyUI theme.
+   The library exposes these variables on #stcm-wrapper; we point them at the
+   app's daisyUI tokens. `html` prefix raises specificity above the library's
+   own stylesheet (loaded dynamically after this one).
+   -------------------------------------------------------------------------- */
+html #stcm-wrapper {
+  --primaryColor: var(--color-primary);
+  --backgroundColor: var(--color-base-100);
+  --textColor: var(--color-base-content);
+  --iconBackgroundColor: var(--color-primary);
+  --iconColor: var(--color-primary-content);
+  --backdropBackgroundColor: oklch(0% 0 0 / 0.5);
+  --boxShadow: 0 10px 25px -5px oklch(0% 0 0 / 0.3);
+  --fontFamily: inherit;
+}
+
+/* Primary buttons: use readable on-primary text from the theme */
+html #stcm-wrapper .stcm-button-primary {
+  color: var(--color-primary-content);
+}
+
+/* The floating cookie launcher is replaced by the Profile → "Cookie
+   preferences" button, so hide it on every screen size. */
+#stcm-icon {
+  display: none !important;
+}
