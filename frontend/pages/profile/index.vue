@@ -18,12 +18,14 @@
       :members="familyMembers"
       :is-loading="!hasFamilyData"
       :error="error"
+      :owner-id="familyGroup?.created_by"
       @add-family-member="handleAddFamilyMember"
     />
 
-    <LogoutButton />
-
-    <AccountSettings />
+    <div class="grid gap-6 md:grid-cols-2 items-stretch mt-8">
+      <FamilySettings />
+      <AccountSettings />
+    </div>
 
     <LegalLinks class="mt-8" />
 
@@ -63,9 +65,9 @@ import { useUserStore } from '~/stores/user';
 import ProfileHeader from '~/components/profile/ProfileHeader.vue';
 import FamilyDetails from '~/components/profile/FamilyDetails.vue';
 import FamilyMembers from '~/components/profile/FamilyMembers.vue';
-import LogoutButton from '~/components/profile/LogoutButton.vue';
 import InviteModal from '~/components/profile/InviteModal.vue';
 import AccountSettings from '~/components/profile/AccountSettings.vue';
+import FamilySettings from '~/components/profile/FamilySettings.vue';
 import LegalLinks from '~/components/LegalLinks.vue';
 
 const userStore = useUserStore();

@@ -3,7 +3,17 @@ import { FamilyGroup, User } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
+import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
+
+// Map family lifecycle service errors onto HTTP statuses
+const familyLifecycleErrorStatus = (message: string): number => {
+  if (message.includes('not found')) return 404;
+  if (message.includes('cannot leave')) return 409;
+  if (message.includes('Only the family owner')) return 403;
+  if (message.includes('must be a member') || message.includes('already own')) return 400;
+  return 500;
+};
 
 // Generate a random identifier (three 4-letter words separated by hyphens)
 const generateRandomIdentifier = (): string => {
@@ -111,7 +121,7 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
 
 export const getFamilyGroupById = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.id);
+    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
     if (isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group ID' });
     }
@@ -132,9 +142,96 @@ export const getFamilyGroupById = async (req: Request, res: Response) => {
   }
 };
 
+export const leaveFamilyGroup = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const userId = (req.user as User).dataValues.id;
+
+    try {
+      await FamilyGroupService.leaveFamilyGroup(familyGroupId, userId);
+    } catch (serviceError) {
+      const message = serviceError instanceof Error ? serviceError.message : 'Failed to leave family group';
+      const status = familyLifecycleErrorStatus(message);
+      if (status !== 500) {
+        return res.status(status).json({ message });
+      }
+      throw serviceError;
+    }
+
+    await trackEvent(userId.toString(), 'family_group_left', {
+      family_group_id: familyGroupId,
+    });
+
+    return res.status(200).json({ message: 'You have left the family group' });
+  } catch (error) {
+    console.error('Error leaving family group:', error);
+    return res.status(500).json({ message: 'Failed to leave family group' });
+  }
+};
+
+export const transferFamilyGroupOwnership = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const userId = (req.user as User).dataValues.id;
+    const newOwnerId = parseInt(req.body?.new_owner_id);
+
+    if (isNaN(newOwnerId)) {
+      return res.status(400).json({ message: 'new_owner_id is required' });
+    }
+
+    try {
+      await FamilyGroupService.transferFamilyGroupOwnership(familyGroupId, userId, newOwnerId);
+    } catch (serviceError) {
+      const message = serviceError instanceof Error ? serviceError.message : 'Failed to transfer ownership';
+      const status = familyLifecycleErrorStatus(message);
+      if (status !== 500) {
+        return res.status(status).json({ message });
+      }
+      throw serviceError;
+    }
+
+    await trackEvent(userId.toString(), 'family_group_ownership_transferred', {
+      family_group_id: familyGroupId,
+      new_owner_id: newOwnerId,
+    });
+
+    return res.status(200).json({ message: 'Ownership transferred' });
+  } catch (error) {
+    console.error('Error transferring family group ownership:', error);
+    return res.status(500).json({ message: 'Failed to transfer ownership' });
+  }
+};
+
+export const deleteFamilyGroup = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const userId = (req.user as User).dataValues.id;
+
+    try {
+      await FamilyGroupService.deleteFamilyGroup(familyGroupId, userId);
+    } catch (serviceError) {
+      const message = serviceError instanceof Error ? serviceError.message : 'Failed to delete family group';
+      const status = familyLifecycleErrorStatus(message);
+      if (status !== 500) {
+        return res.status(status).json({ message });
+      }
+      throw serviceError;
+    }
+
+    await trackEvent(userId.toString(), 'family_group_deleted', {
+      family_group_id: familyGroupId,
+    });
+
+    return res.status(200).json({ message: 'Family group and all of its data have been deleted' });
+  } catch (error) {
+    console.error('Error deleting family group:', error);
+    return res.status(500).json({ message: 'Failed to delete family group' });
+  }
+};
+
 export const getFamilyGroupMembers = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.id);
+    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
     if (isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group ID' });
     }
