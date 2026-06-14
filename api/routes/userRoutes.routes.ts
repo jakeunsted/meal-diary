@@ -218,6 +218,50 @@ router.delete('/me', authenticateToken, async (req, res, next) => {
 
 /**
  * @openapi
+ * /users/me/export:
+ *   get:
+ *     summary: Export all data linked to the authenticated user (GDPR Art. 15/20)
+ *     tags: [Users]
+ *     responses:
+ *       200:
+ *         description: JSON attachment containing the user's profile and family-group data
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 exportedAt:
+ *                   type: string
+ *                   format: date-time
+ *                 user:
+ *                   type: object
+ *                 familyGroup:
+ *                   type: object
+ *                   nullable: true
+ *                 recipes:
+ *                   type: array
+ *                   items: { type: object }
+ *                 mealDiaries:
+ *                   type: array
+ *                   items: { type: object }
+ *                 shoppingLists:
+ *                   type: array
+ *                   items: { type: object }
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Failed to export data
+ */
+router.get('/me/export', authenticateToken, async (req, res, next) => {
+  try {
+    await userController.exportOwnData(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /users/{id}:
  *   get:
  *     summary: Get a user by id (own account only)

@@ -8,6 +8,15 @@
       <div class="card-actions mt-auto">
         <LogoutButton />
         <button
+          class="btn btn-ghost"
+          data-testid="download-data-button"
+          :disabled="isExporting"
+          @click="handleDownloadData"
+        >
+          <span v-if="isExporting" class="loading loading-spinner loading-sm"></span>
+          <span v-else>{{ $t('Download my data') }}</span>
+        </button>
+        <button
           v-if="canManageCookies"
           class="btn btn-ghost"
           data-testid="manage-cookies-button"
@@ -91,17 +100,48 @@
 import { useUserStore } from '~/stores/user';
 import { useAuthStore } from '~/stores/auth';
 import LogoutButton from '~/components/profile/LogoutButton.vue';
+import { useToast } from '~/composables/useToast';
 
 const { t } = useI18n();
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const { api } = useApi();
+const { showError } = useToast();
 
 // Provided by the Silktide consent plugin (absent in dev / if it fails to load)
 const { $openCookiePreferences } = useNuxtApp();
 const canManageCookies = computed(() => typeof $openCookiePreferences === 'function');
 const openCookiePreferences = () => {
   if (typeof $openCookiePreferences === 'function') $openCookiePreferences();
+};
+
+// Download my data (GDPR Art. 15/20) — fetch the JSON bundle via the api
+// composable (carries the bearer token) and save it client-side as a file.
+const isExporting = ref(false);
+const handleDownloadData = async () => {
+  if (isExporting.value) return;
+  isExporting.value = true;
+  try {
+    const response = await api('/api/user/me/export');
+    // Proxy returns ApiResponse { data, headers }; unwrap to the bundle
+    const bundle = response?.data ?? response;
+    const json = JSON.stringify(bundle, null, 2);
+
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `meal-diary-export-${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    showError(t('Failed to download your data'));
+    console.error('Data export failed:', err);
+  } finally {
+    isExporting.value = false;
+  }
 };
 
 const modal = ref(null);

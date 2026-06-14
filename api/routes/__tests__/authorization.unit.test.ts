@@ -13,6 +13,10 @@ vi.mock('../../services/user.service.ts', () => ({
   deleteUserAccount: vi.fn(),
 }));
 
+vi.mock('../../services/dataExport.service.ts', () => ({
+  exportUserData: vi.fn(),
+}));
+
 vi.mock('../../services/recipe.service.ts', () => ({
   getRecipesByFamilyGroup: vi.fn(),
   getRecipeById: vi.fn(),
@@ -67,6 +71,7 @@ import {
 } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import * as UserService from '../../services/user.service.ts';
+import * as DataExportService from '../../services/dataExport.service.ts';
 import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import * as RecipeService from '../../services/recipe.service.ts';
 import * as ShoppingListService from '../../services/shoppingList.service.ts';
@@ -199,6 +204,43 @@ describe('DELETE /users/me', () => {
       .send({ password: 'correct-password' });
 
     expect(res.status).toBe(409);
+  });
+});
+
+describe('GET /users/me/export', () => {
+  const bundle = {
+    exportedAt: '2026-06-14T00:00:00.000Z',
+    user: { id: 1, email: 'jake@example.com' },
+    familyGroup: null,
+    recipes: [],
+    mealDiaries: [],
+    shoppingLists: [],
+  };
+
+  it('rejects unauthenticated requests', async () => {
+    const res = await request(app).get('/users/me/export');
+    expect(res.status).toBe(401);
+    expect(DataExportService.exportUserData).not.toHaveBeenCalled();
+  });
+
+  it('returns the export for the authenticated user as a JSON attachment', async () => {
+    vi.mocked(DataExportService.exportUserData).mockResolvedValue(bundle as never);
+
+    const res = await request(app).get('/users/me/export').set(auth);
+
+    expect(res.status).toBe(200);
+    expect(DataExportService.exportUserData).toHaveBeenCalledWith(1);
+    expect(res.headers['content-type']).toMatch(/application\/json/);
+    expect(res.headers['content-disposition']).toMatch(/attachment; filename=/);
+    expect(res.body).toMatchObject({ exportedAt: expect.any(String), user: { id: 1 } });
+    expect(JSON.stringify(res.body)).not.toContain('password_hash');
+  });
+
+  it('maps a missing user to 404', async () => {
+    vi.mocked(DataExportService.exportUserData).mockRejectedValue(new Error('User not found'));
+
+    const res = await request(app).get('/users/me/export').set(auth);
+    expect(res.status).toBe(404);
   });
 });
 
