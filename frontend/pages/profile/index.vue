@@ -27,6 +27,8 @@
       <AccountSettings />
     </div>
 
+    <SubscriptionCard class="mt-8" />
+
     <LegalLinks class="mt-8" />
 
     <InviteModal
@@ -69,9 +71,11 @@ import InviteModal from '~/components/profile/InviteModal.vue';
 import AccountSettings from '~/components/profile/AccountSettings.vue';
 import FamilySettings from '~/components/profile/FamilySettings.vue';
 import LegalLinks from '~/components/LegalLinks.vue';
+import SubscriptionCard from '~/components/subscription/SubscriptionCard.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
+const { refreshEntitlements } = useEntitlements();
 const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
 const { track } = useAnalytics();
 
@@ -110,6 +114,10 @@ onMounted(async () => {
           familyStore.fetchMembers().catch(handleError),
           familyStore.fetchFamilyGroup().catch(handleError)
         ]);
+      }
+
+      if (userData?.family_group_id) {
+        await refreshEntitlements().catch(handleError);
       }
     } catch (error) {
       handleError(error);

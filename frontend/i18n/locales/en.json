@@ -321,5 +321,37 @@
         "a": "A data export option is coming to profile settings. Until then, email us and we will send you a copy of your data."
       }
     ]
+  },
+  "plansPage": {
+    "title": "Family Plus plans",
+    "intro": "Compare free and paid features for your household. Family Plus unlocks more members, planning ahead, unlimited recipes, and more.",
+    "feature": "Feature",
+    "free": "Free",
+    "familyPlus": "Family Plus",
+    "compareTitle": "What's included",
+    "pricingTitle": "Pricing",
+    "subscription": "Subscription",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "trialBadge": "7-day free trial",
+    "freeDescription": "Core meal diary and shopping list for couples.",
+    "currentPlanBadge": "Always free",
+    "getStarted": "Get started",
+    "comingSoon": "Coming soon",
+    "askOwnerToUpgrade": "Ask {name} to upgrade",
+    "askOwnerToUpgradeGeneric": "Ask family owner to upgrade",
+    "ownerManagesBilling": "{name} manages billing for this family",
+    "loginToUpgrade": "Register or log in to upgrade",
+    "billingComingSoon": "Online billing arrives in a future update",
+    "currentPlanLabel": "Your plan: {plan}",
+    "trialDaysRemaining": "{days} days left in your free trial",
+    "viewPlans": "View plans",
+    "rows": {
+      "familyMembers": "Family members",
+      "weeksAhead": "Weeks you can plan ahead",
+      "editPastWeeks": "Edit past weeks",
+      "recipes": "Recipes",
+      "recipeToShoppingList": "Add recipe ingredients to shopping list"
+    }
   }
 }
