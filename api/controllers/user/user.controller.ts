@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 import * as UserService from '../../services/user.service.ts';
+import * as DataExportService from '../../services/dataExport.service.ts';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
@@ -151,5 +152,26 @@ export const deleteOwnAccount = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error deleting account:', error);
     return res.status(500).json({ message: 'Failed to delete account' });
+  }
+};
+
+// Export all data linked to the authenticated user (GDPR Art. 15 / 20)
+export const exportOwnData = async (req: Request, res: Response) => {
+  try {
+    const userId = (req.user as { dataValues: { id: number } }).dataValues.id;
+
+    const data = await DataExportService.exportUserData(userId);
+
+    const filename = `meal-diary-export-${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.status(200).send(JSON.stringify(data, null, 2));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to export data';
+    if (message.includes('not found')) {
+      return res.status(404).json({ message });
+    }
+    console.error('Error exporting user data:', error);
+    return res.status(500).json({ message: 'Failed to export data' });
   }
 };
