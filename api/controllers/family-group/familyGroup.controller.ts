@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { FamilyGroup, User } from '../../db/models/associations.ts';
+import { FamilyGroup, User, Subscription } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
@@ -55,6 +55,8 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
     if (!user?.dataValues.family_group_id) {
       await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: created_by } });
     }
+
+    await Subscription.create({ family_group_id: Number(familyGroup.dataValues.id) });
 
     await ShoppingList.create({ family_group_id: Number(familyGroup.dataValues.id) });
 

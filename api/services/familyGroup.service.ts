@@ -11,6 +11,7 @@ import {
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
+  Subscription,
 } from '../db/models/associations.ts';
 
 /**
@@ -65,6 +66,8 @@ export const deleteFamilyGroupData = async (
     });
   }
   await Recipe.destroy({ where: { family_group_id: familyGroupId }, transaction });
+
+  await Subscription.destroy({ where: { family_group_id: familyGroupId }, transaction });
 
   await User.update(
     { family_group_id: null },
