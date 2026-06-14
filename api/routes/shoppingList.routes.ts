@@ -1,6 +1,7 @@
 import express from 'express';
 import * as shoppingListController from '../controllers/shopping-list/shoppingList.controller.ts';
 import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
+import { requireEntitlement } from '../middleware/entitlement.middleware.ts';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -487,7 +488,7 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *       500:
  *         description: Failed to add new items
  */
-router.post('/:family_group_id/items/bulk', async (req, res, next) => {
+router.post('/:family_group_id/items/bulk', requireEntitlement('recipe_to_shopping_list'), async (req, res, next) => {
   try {
     await shoppingListController.bulkAddItems(req, res);
   } catch (error) {

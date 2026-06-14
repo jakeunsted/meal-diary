@@ -4,6 +4,8 @@ import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
 import * as FamilyGroupService from '../../services/familyGroup.service.ts';
+import * as EntitlementsService from '../../services/entitlements.service.ts';
+import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 
 // Map family lifecycle service errors onto HTTP statuses
@@ -105,6 +107,21 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
         reason: 'not_found',
       });
       return res.status(404).json({ message: 'Family group not found' });
+    }
+
+    try {
+      await EntitlementsService.assertCanAddFamilyMember(
+        Number(familyGroup.dataValues.id),
+        user_id
+      );
+    } catch (error) {
+      if (handleEntitlementError(error, res)) {
+        await trackEvent(user_id.toString(), 'family_group_join_failure', {
+          reason: 'member_limit',
+        });
+        return;
+      }
+      throw error;
     }
 
     await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: user_id } });

@@ -1,6 +1,8 @@
 import type { Request, Response } from 'express';
 import { User } from '../../db/models/associations.ts';
 import * as recipeService from '../../services/recipe.service.ts';
+import * as EntitlementsService from '../../services/entitlements.service.ts';
+import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 
 /**
  * Get all recipes for a family group
@@ -68,6 +70,18 @@ export const createRecipe = async (req: Request, res: Response) => {
 
     if (user.dataValues.family_group_id !== parseInt(family_group_id)) {
       return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    try {
+      await EntitlementsService.assertCanCreateRecipe(
+        parseInt(family_group_id),
+        user.dataValues.id
+      );
+    } catch (error) {
+      if (handleEntitlementError(error, res)) {
+        return;
+      }
+      throw error;
     }
 
     const recipe = await recipeService.createRecipe({
