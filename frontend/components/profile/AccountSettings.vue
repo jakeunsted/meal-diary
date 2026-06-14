@@ -122,7 +122,7 @@ const openCookiePreferences = () => {
 // native we write the file and open the share sheet instead.
 const isExporting = ref(false);
 
-const saveOnWeb = (json: string, filename: string) => {
+const saveOnWeb = (json, filename) => {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -134,7 +134,7 @@ const saveOnWeb = (json: string, filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-const saveOnNative = async (json: string, filename: string) => {
+const saveOnNative = async (json, filename) => {
   const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
   const { Share } = await import('@capacitor/share');
 
