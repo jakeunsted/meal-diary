@@ -10,7 +10,8 @@
     "build": "tsc && tsc-alias",
     "start": "node --experimental-strip-types --experimental-transform-types index.ts",
     "reset-shopping-lists": "node --experimental-strip-types --experimental-transform-types scripts/resetShoppingLists.ts",
-    "seed": "node --experimental-strip-types --experimental-transform-types scripts/seed.ts"
+    "seed": "node --experimental-strip-types --experimental-transform-types scripts/seed.ts",
+    "set-complimentary": "node --experimental-strip-types --experimental-transform-types scripts/setComplimentaryPremium.ts"
   },
   "author": "Jake Unsted",
   "license": "ISC",
