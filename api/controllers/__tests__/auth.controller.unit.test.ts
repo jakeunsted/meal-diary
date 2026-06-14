@@ -11,6 +11,14 @@ vi.mock('../../services/auth.service.ts', () => ({
   revokeRefreshToken: vi.fn(),
 }));
 
+vi.mock('../../services/authResponse.service.ts', () => ({
+  buildAuthResponse: vi.fn(async (user, tokens) => ({
+    user: { ...user, has_password: true },
+    accessToken: tokens.accessToken,
+    refreshToken: tokens.refreshToken,
+  })),
+}));
+
 import * as AuthService from '../../services/auth.service.ts';
 import { login, refreshToken, logout } from '../auth/auth.controller.ts';
 

@@ -51,6 +51,18 @@ vi.mock('../../services/mealDiary.service.ts', () => ({
   updateDailyMeal: vi.fn(),
 }));
 
+vi.mock('../../services/entitlements.service.ts', () => ({
+  resolveEntitlements: vi.fn().mockResolvedValue({ plan: 'free' }),
+  assertCanAddFamilyMember: vi.fn().mockResolvedValue({ plan: 'free' }),
+  assertCanCreateRecipe: vi.fn().mockResolvedValue({ plan: 'free' }),
+  assertCanUpdateMealWeek: vi.fn().mockResolvedValue({ plan: 'free' }),
+  assertFeature: vi.fn().mockResolvedValue({
+    plan: 'free',
+    features: { recipe_to_shopping_list: true },
+  }),
+  dismissEntitlementPrompt: vi.fn(),
+}));
+
 vi.mock('../../services/dailyMeal.service.ts', () => ({
   createDailyMealEntry: vi.fn(),
   updateDailyMealById: vi.fn(),
@@ -68,6 +80,7 @@ import {
   FamilyGroup,
   MealDiary,
   DailyMeal,
+  Subscription,
 } from '../../db/models/associations.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import * as UserService from '../../services/user.service.ts';
@@ -302,6 +315,9 @@ describe('family group routes authorization', () => {
     vi.spyOn(User, 'update').mockResolvedValue([1]);
     vi.spyOn(ShoppingList, 'create').mockResolvedValue(
       {} as unknown as ShoppingList
+    );
+    vi.spyOn(Subscription, 'create').mockResolvedValue(
+      {} as unknown as Subscription
     );
 
     const res = await request(app)

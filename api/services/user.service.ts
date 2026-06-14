@@ -87,7 +87,7 @@ export type SanitizedUser = Omit<UserAttributes, 'password_hash'> & {
  * @param {User & UserAttributes} user - User object
  * @returns {SanitizedUser} User without password hash
  */
-const sanitizeUser = (user: User & UserAttributes): SanitizedUser => {
+export const sanitizeUser = (user: User & UserAttributes): SanitizedUser => {
   const userJson = user.toJSON() as UserAttributes;
   const hasPassword = !!userJson.password_hash;
   delete (userJson as any).password_hash;
