@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useAuthStore } from '~/stores/auth';
 import { useRouter } from 'vue-router';
 import { useApi } from '~/composables/useApi';
+import type { ResolvedEntitlements } from '~/types/Entitlements';
 
 /**
  * Interface for the authentication response.
@@ -20,6 +21,7 @@ interface AuthResponse {
   };
   accessToken: string;
   refreshToken: string;
+  entitlements?: ResolvedEntitlements;
 }
 
 /**
@@ -30,6 +32,8 @@ interface AuthResponse {
 interface TokenResponse {
   accessToken: string;
   refreshToken: string;
+  user?: AuthResponse['user'];
+  entitlements?: ResolvedEntitlements;
 }
 
 /**
@@ -188,9 +192,10 @@ export const useAuth = () => {
       
       // Update tokens in store
       authStore.setAuth({
-        user: authStore.user!,
+        user: response.user ?? authStore.user!,
         accessToken: response.accessToken,
-        refreshToken: response.refreshToken
+        refreshToken: response.refreshToken,
+        entitlements: response.entitlements,
       });
       
       return response;
