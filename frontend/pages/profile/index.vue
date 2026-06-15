@@ -83,6 +83,8 @@ const userStore = useUserStore();
 const familyStore = useFamilyStore();
 const { refreshEntitlements, entitlements, billing } = useEntitlements();
 const { t } = useI18n();
+const route = useRoute();
+const router = useRouter();
 const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
 const { track } = useAnalytics();
 
@@ -151,7 +153,21 @@ onMounted(async () => {
       }
 
       if (userData?.family_group_id) {
-        await refreshEntitlements().catch(handleError);
+        await refreshEntitlements(route.query.upgraded === '1').catch(handleError);
+      }
+
+      if (route.query.upgraded === '1') {
+        track('subscription_upgraded');
+        const toast = document.createElement('div');
+        toast.className = 'toast toast-top toast-end';
+        toast.innerHTML = `
+          <div class="alert alert-success">
+            <span>${t('profilePage.upgradeSuccess')}</span>
+          </div>
+        `;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 4000);
+        router.replace({ path: '/profile' });
       }
     } catch (error) {
       handleError(error);

@@ -52,6 +52,7 @@
     "pg-hstore": "^2.3.4",
     "posthog-node": "^5.34.1",
     "sequelize": "^6.37.8",
+    "stripe": "^17.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }

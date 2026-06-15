@@ -10,6 +10,8 @@ import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
 import Subscription from './Subscription.model.ts';
+import TrialRedemption from './TrialRedemption.model.ts';
+import SubscriptionEvent from './SubscriptionEvent.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -28,6 +30,26 @@ FamilyGroup.hasOne(Subscription, {
   as: 'subscription',
 });
 Subscription.belongsTo(FamilyGroup, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+Subscription.hasMany(SubscriptionEvent, {
+  foreignKey: 'subscription_id',
+  foreignKeyConstraint: true,
+  as: 'events',
+});
+SubscriptionEvent.belongsTo(Subscription, {
+  foreignKey: 'subscription_id',
+  foreignKeyConstraint: true,
+});
+
+FamilyGroup.hasMany(TrialRedemption, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'trialRedemptions',
+});
+TrialRedemption.belongsTo(FamilyGroup, {
   foreignKey: 'family_group_id',
   foreignKeyConstraint: true,
 });
@@ -198,4 +220,6 @@ export {
   Recipe,
   RecipeIngredient,
   Subscription,
+  TrialRedemption,
+  SubscriptionEvent,
 };
