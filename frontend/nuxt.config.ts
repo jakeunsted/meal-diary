@@ -1,6 +1,20 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
 
+function getViteAllowedHosts(): string[] {
+  const hosts = new Set<string>(['localhost', '127.0.0.1', '.mealdiary.co.uk']);
+
+  if (process.env.ORIGIN) {
+    try {
+      hosts.add(new URL(process.env.ORIGIN).hostname);
+    } catch {
+      // ignore invalid ORIGIN
+    }
+  }
+
+  return [...hosts];
+}
+
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: false },
@@ -36,6 +50,10 @@ export default defineNuxtConfig({
   ],
   vite: {
     plugins: [tailwindcss() as any],
+    server: {
+      // Required when accessing the dev server via a custom domain (e.g. dev.mealdiary.co.uk)
+      allowedHosts: getViteAllowedHosts(),
+    },
   },
   modules: [
     '@vesp/nuxt-fontawesome',
@@ -99,6 +117,8 @@ export default defineNuxtConfig({
     strategy: "prefix_except_default",
     langDir: 'locales/',
     lazy: true,
-    vueI18n: './i18n/i18n.config.ts'
+    bundle: {
+      optimizeTranslationDirective: false,
+    },
   },
 })

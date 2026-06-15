@@ -70,6 +70,9 @@ export const useRegister = () => {
     if (!registrationData.email) {
       errors.value.email = 'Email is required';
       hasErrors = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registrationData.email)) {
+      errors.value.email = 'Please enter a valid email address';
+      hasErrors = true;
     }
   
     if (!registrationData.first_name) {

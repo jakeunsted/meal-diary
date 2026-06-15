@@ -66,6 +66,15 @@ const userExists = async (username: string, email: string): Promise<boolean> => 
   return !!existingUser;
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Validate an email address format
+ * @param {string} email - Email to validate
+ * @returns {boolean} True if the email format is valid
+ */
+export const isValidEmail = (email: string): boolean => EMAIL_REGEX.test(email);
+
 /**
  * Hash password
  * @param {string} password - Plain text password
@@ -108,6 +117,10 @@ export const createUser = async (userData: CreateUserData): Promise<{
 
   if (!username || !email || !password) {
     throw new Error('Username, email, and password are required');
+  }
+
+  if (!isValidEmail(email)) {
+    throw new Error('A valid email address is required');
   }
 
   if (!terms_accepted) {

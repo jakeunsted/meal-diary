@@ -32,6 +32,12 @@ describe('createUser', () => {
     ).rejects.toThrow('Username, email, and password are required');
   });
 
+  it('throws when the email format is invalid', async () => {
+    await expect(
+      createUser({ ...validInput, email: 'child' })
+    ).rejects.toThrow('A valid email address is required');
+  });
+
   it('throws when the terms have not been accepted', async () => {
     await expect(
       createUser({ ...validInput, terms_accepted: false })
