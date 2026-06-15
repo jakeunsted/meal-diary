@@ -99,9 +99,18 @@ import LegalLinks from '~/components/LegalLinks.vue';
 const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
 const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
 const { track } = useAnalytics();
+const route = useRoute();
 const email = ref('');
 const password = ref('');
-const accountDeleted = computed(() => useRoute().query.deleted === '1');
+const accountDeleted = computed(() => route.query.deleted === '1');
+
+const resolvePostLoginRedirect = (defaultRedirect) => {
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+  return defaultRedirect;
+};
 
 const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
 const error = computed(() => emailLoginError.value || googleLoginError.value);
@@ -111,7 +120,7 @@ const handleLogin = async () => {
     const response = await login(email.value, password.value);
     track('login', { method: 'email' });
     if (response && response.redirect) {
-      navigateTo(response.redirect);
+      navigateTo(resolvePostLoginRedirect(response.redirect));
     }
   } catch (err) {
     track('login_failed', { method: 'email' });

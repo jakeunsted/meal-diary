@@ -8,6 +8,7 @@ import RefreshToken from '../db/models/RefreshToken.model.ts';
 import { deleteFamilyGroupData } from './familyGroup.service.ts';
 import { deletePersonData } from '../utils/posthog.ts';
 import { assertCanAddFamilyMember } from './entitlements.service.ts';
+import { normalizeEmail } from '../utils/normalizeEmail.ts';
 
 export interface CreateUserData {
   username: string;
@@ -157,6 +158,7 @@ export const createUser = async (userData: CreateUserData): Promise<{
   const newUser = await User.create({
     username,
     email: email.toLowerCase(),
+    normalized_email: normalizeEmail(email),
     password_hash: hashedPassword,
     first_name,
     last_name,
@@ -214,6 +216,10 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
 
   // Check if email is being changed and already exists
   if (email && email.toLowerCase() !== user.email) {
+    if (!isValidEmail(email)) {
+      throw new Error('A valid email address is required');
+    }
+
     const existingEmail = await User.findOne({ where: { email: email.toLowerCase() } });
     if (existingEmail) {
       throw new Error('Email already in use');
@@ -224,6 +230,7 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
   await user.update({
     username,
     email: email?.toLowerCase(),
+    normalized_email: email ? normalizeEmail(email) : undefined,
     first_name,
     last_name,
     family_group_id,

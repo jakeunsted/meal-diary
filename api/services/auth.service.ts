@@ -5,6 +5,7 @@ import axios from 'axios';
 import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
+import { normalizeEmail } from '../utils/normalizeEmail.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
 
@@ -53,12 +54,19 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
 
   if (user) {
     // User exists - update Google ID if not set
+    const updates: Partial<UserAttributes> = {};
     if (!user.google_id) {
-      await user.update({ google_id: googleId });
+      updates.google_id = googleId;
     }
     // Update avatar if available
     if (avatarUrl && !user.avatar_url) {
-      await user.update({ avatar_url: avatarUrl });
+      updates.avatar_url = avatarUrl;
+    }
+    if (!user.normalized_email) {
+      updates.normalized_email = normalizeEmail(email);
+    }
+    if (Object.keys(updates).length > 0) {
+      await user.update(updates);
     }
   } else {
     // Create new user
@@ -75,6 +83,7 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
 
     user = await User.create({
       email,
+      normalized_email: normalizeEmail(email),
       username,
       google_id: googleId,
       first_name: firstName,

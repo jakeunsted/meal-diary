@@ -21,10 +21,11 @@
         <button
           type="button"
           class="btn btn-primary w-full"
-          :disabled="!canPurchase"
+          :disabled="!canPurchase || loadingInterval === 'month'"
           @click="handleUpgrade('month')"
         >
-          {{ ctaLabel }}
+          <span v-if="loadingInterval === 'month'" class="loading loading-spinner loading-sm"></span>
+          <span v-else>{{ ctaLabel }}</span>
         </button>
         <p v-if="helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
       </div>
@@ -40,14 +41,18 @@
         <button
           type="button"
           class="btn btn-primary w-full"
-          :disabled="!canPurchase"
+          :disabled="!canPurchase || loadingInterval === 'year'"
           @click="handleUpgrade('year')"
         >
-          {{ ctaLabel }}
+          <span v-if="loadingInterval === 'year'" class="loading loading-spinner loading-sm"></span>
+          <span v-else>{{ ctaLabel }}</span>
         </button>
         <p v-if="helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
       </div>
     </div>
+    <p v-if="checkoutError" class="md:col-span-3 text-sm text-error text-center">
+      {{ checkoutError }}
+    </p>
   </div>
 </template>
 
@@ -68,6 +73,11 @@ const props = defineProps({
 });
 
 const { t } = useI18n();
+const userStore = useUserStore();
+const { api } = useApi();
+const { track } = useAnalytics();
+const loadingInterval = ref(null);
+const checkoutError = ref('');
 
 const canPurchase = computed(() => !props.isLoggedIn || props.isOwner);
 
@@ -76,7 +86,7 @@ const ctaLabel = computed(() => {
     return t('plansPage.getStarted');
   }
   if (props.isOwner) {
-    return t('plansPage.comingSoon');
+    return t('plansPage.startFreeTrial');
   }
   if (props.ownerDisplayName) {
     return t('plansPage.askOwnerToUpgrade', { name: props.ownerDisplayName });
@@ -92,15 +102,62 @@ const helperText = computed(() => {
     return t('plansPage.ownerManagesBilling', { name: props.ownerDisplayName });
   }
   if (props.isOwner) {
-    return t('plansPage.billingComingSoon');
+    return t('plansPage.billingRedirectHint');
   }
   return '';
 });
 
-const handleUpgrade = (interval) => {
+const handleUpgrade = async (interval) => {
   if (!props.isLoggedIn) {
     navigateTo('/login');
     return;
+  }
+
+  if (!props.isOwner || loadingInterval.value) {
+    return;
+  }
+
+  const familyGroupId = userStore.user?.family_group_id;
+  if (!familyGroupId) {
+    checkoutError.value = t('plansPage.missingFamilyGroup');
+    return;
+  }
+
+  loadingInterval.value = interval;
+  checkoutError.value = '';
+
+  try {
+    track('begin_checkout', {
+      currency: 'GBP',
+      value: interval === 'year' ? 24.99 : 2.99,
+      interval,
+    });
+
+    const session = await api('/api/billing/create-checkout-session', {
+      method: 'POST',
+      silent: true,
+      body: {
+        family_group_id: familyGroupId,
+        interval,
+        success_url: `${window.location.origin}/profile?upgraded=1`,
+        cancel_url: `${window.location.origin}/plans`,
+      },
+    });
+
+    if (session?.url) {
+      window.location.href = session.url;
+      return;
+    }
+
+    checkoutError.value = t('plansPage.checkoutFailed');
+  } catch (error) {
+    const errorData = error?.data?.data ?? error?.data;
+    checkoutError.value =
+      errorData?.code === 'TRIAL_ALREADY_USED'
+        ? t('plansPage.trialAlreadyUsed')
+        : t('plansPage.checkoutFailed');
+  } finally {
+    loadingInterval.value = null;
   }
 };
 </script>

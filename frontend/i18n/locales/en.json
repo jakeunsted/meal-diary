@@ -43,7 +43,8 @@
     "familyMemberLimitOwner": "Your plan allows up to {max} family members.",
     "familyMemberLimitNonOwner": "Ask {name} to upgrade to add more family members.",
     "familyMemberLimitNonOwnerGeneric": "Ask the family owner to upgrade to add more family members.",
-    "viewPlansToUpgrade": "View plans to upgrade"
+    "viewPlansToUpgrade": "View plans to upgrade",
+    "upgradeSuccess": "Your subscription is active. Welcome to Family Plus!"
   },
   "Family Group": "Family Group",
   "Create New": "Create New",
@@ -362,6 +363,13 @@
     "ownerManagesBilling": "{name} manages billing for this family",
     "loginToUpgrade": "Register or log in to upgrade",
     "billingComingSoon": "Online billing arrives in a future update",
+    "startFreeTrial": "Start 7-day free trial",
+    "billingRedirectHint": "You'll be redirected to Stripe Checkout",
+    "missingFamilyGroup": "Create or join a family group before upgrading",
+    "checkoutFailed": "Unable to start checkout. Please try again.",
+    "trialAlreadyUsed": "You've already used your free trial. Paid checkout without a trial is coming soon.",
+    "manageBilling": "Manage billing",
+    "portalFailed": "Unable to open billing portal. Please try again.",
     "currentPlanLabel": "Your plan: {plan}",
     "trialDaysRemaining": "{days} days left in your free trial",
     "viewPlans": "View plans",

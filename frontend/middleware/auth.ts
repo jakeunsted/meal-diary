@@ -56,7 +56,14 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     // Redirect unauthenticated users to login for protected routes
     if (!publicRoutes.includes(to.path) && !authStore.isAuthenticated) {
       console.log('[Auth Middleware] User not authenticated, redirecting to login');
-      return navigateTo('/login');
+      const redirectTarget = to.fullPath.startsWith('/') && !to.fullPath.startsWith('//')
+        ? to.fullPath
+        : undefined;
+      return navigateTo(
+        redirectTarget
+          ? `/login?redirect=${encodeURIComponent(redirectTarget)}`
+          : '/login'
+      );
     }
   }
 }); 
