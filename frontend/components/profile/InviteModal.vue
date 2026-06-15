@@ -90,9 +90,13 @@ const handleCopyLink = async () => {
   isCopying.value = true;
   
   try {
-    await Clipboard.write({
-      string: inviteLink.value
-    });
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(inviteLink.value);
+    } else {
+      await Clipboard.write({
+        string: inviteLink.value
+      });
+    }
     showToastNotification('Invite link copied to clipboard!', true);
   } catch (err) {
     console.error('Failed to copy:', err);

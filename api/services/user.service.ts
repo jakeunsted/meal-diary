@@ -7,6 +7,7 @@ import Recipe from '../db/models/Recipe.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
 import { deleteFamilyGroupData } from './familyGroup.service.ts';
 import { deletePersonData } from '../utils/posthog.ts';
+import { assertCanAddFamilyMember } from './entitlements.service.ts';
 
 export interface CreateUserData {
   username: string;
@@ -131,6 +132,17 @@ export const createUser = async (userData: CreateUserData): Promise<{
   let resolvedFamilyGroupId = family_group_id;
   if (family_group_code) {
     resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
+  }
+
+  if (resolvedFamilyGroupId) {
+    const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId);
+    if (!familyGroup) {
+      throw new Error('Family group not found');
+    }
+    await assertCanAddFamilyMember(
+      resolvedFamilyGroupId,
+      Number(familyGroup.dataValues.created_by)
+    );
   }
 
   // Check if user already exists

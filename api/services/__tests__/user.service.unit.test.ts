@@ -5,7 +5,9 @@ import User from '../../db/models/User.model.ts';
 import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
+import Subscription from '../../db/models/Subscription.model.ts';
 import { createUser, deleteUserAccount } from '../user.service.ts';
+import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
 
 vi.mock('../familyGroup.service.ts', () => ({
@@ -36,6 +38,43 @@ describe('createUser', () => {
     await expect(
       createUser({ ...validInput, email: 'child' })
     ).rejects.toThrow('A valid email address is required');
+  });
+
+  it('throws when joining a family group that is at the member limit', async () => {
+    vi.spyOn(FamilyGroup, 'findOne').mockResolvedValue({
+      get: () => 1,
+      dataValues: { id: 1, created_by: 1 },
+    } as never);
+
+    vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+      {
+        dataValues: {
+          family_group_id: 1,
+          plan: 'free',
+          status: 'active',
+          is_complimentary: false,
+          trial_ends_at: null,
+          trial_expired_prompt_seen_at: null,
+          payment_failed_at: null,
+        },
+      },
+      false,
+    ] as never);
+
+    vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+      dataValues: { id: 1, created_by: 1 },
+    } as never);
+
+    vi.spyOn(User, 'findByPk').mockResolvedValue({
+      dataValues: { id: 1, first_name: 'Jake', username: 'jake' },
+    } as never);
+
+    vi.spyOn(User, 'count').mockResolvedValue(2 as never);
+    vi.spyOn(Recipe, 'count').mockResolvedValue(0 as never);
+
+    await expect(
+      createUser({ ...validInput, family_group_code: 'invite-code' })
+    ).rejects.toThrow(EntitlementRequiredError);
   });
 
   it('throws when the terms have not been accepted', async () => {

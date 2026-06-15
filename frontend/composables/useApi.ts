@@ -14,6 +14,11 @@ import {
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 import type { ApiResponse } from '~/types/Api';
 
+interface ApiOptions extends FetchOptions {
+  /** When true, errors are thrown without showing a global toast */
+  silent?: boolean;
+}
+
 /**
  * Get default error message based on status code.
  * Used to humanise raw HTTP status codes for toasts.
@@ -134,13 +139,15 @@ export const useApi = () => {
     return headers;
   };
 
-  const api = async <T = any>(url: string, options?: FetchOptions): Promise<T> => {
+  const api = async <T = any>(url: string, options?: ApiOptions): Promise<T> => {
+    const { silent = false, ...fetchOptions } = options ?? {};
+
     try {
       await ensureFreshTokens(url);
 
       const result = await $fetch<T>(url, {
-        ...options,
-        headers: buildHeaders(options),
+        ...fetchOptions,
+        headers: buildHeaders(fetchOptions),
       } as any);
 
       // Sync any server-rotated tokens back into the client store.
@@ -171,8 +178,8 @@ export const useApi = () => {
         console.log('[Token Debug] useApi: retrying after rotation-race 401');
         try {
           const result = await $fetch<T>(url, {
-            ...options,
-            headers: buildHeaders(options),
+            ...fetchOptions,
+            headers: buildHeaders(fetchOptions),
           } as any);
           await applyRefreshedTokensFromResponse(result, authStore);
           return result;
@@ -190,7 +197,7 @@ export const useApi = () => {
         if (isSessionExpiredError(error)) {
           await handleAutoLogout();
         }
-      } else {
+      } else if (!silent) {
         showError(errorMessage);
       }
 

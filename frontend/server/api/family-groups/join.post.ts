@@ -13,7 +13,13 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     throw createError({
       statusCode: error.statusCode || 500,
-      message: error.message || 'Failed to join family group'
+      message: error.message || 'Failed to join family group',
+      data: {
+        code: error.code,
+        feature: error.feature,
+        upgradeUrl: error.upgradeUrl,
+        plan: error.plan,
+      },
     });
   }
 });

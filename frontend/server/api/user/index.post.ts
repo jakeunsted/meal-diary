@@ -14,6 +14,11 @@ export default defineEventHandler(async (event) => {
     throw createError({
       statusCode: error.statusCode || 500,
       message: error.message || 'Failed to create user',
+      data: {
+        code: error.code,
+        feature: error.feature,
+        upgradeUrl: error.upgradeUrl,
+      },
     });
   }
 });

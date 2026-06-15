@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 import * as UserService from '../../services/user.service.ts';
 import * as DataExportService from '../../services/dataExport.service.ts';
+import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
@@ -28,6 +29,14 @@ export const createUser = async (req: Request, res: Response) => {
 
       return res.status(201).json(user);
     } catch (serviceError) {
+      if (handleEntitlementError(serviceError, res)) {
+        const distinctId = getDistinctId(req);
+        await trackEvent(distinctId, 'user_registration_failed', {
+          reason: 'member_limit',
+        });
+        return;
+      }
+
       const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to create user';
       
       // Determine failure reason and status code
