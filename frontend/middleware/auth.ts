@@ -3,7 +3,8 @@ import { hasFamilyGroup } from '~/composables/useAuth';
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore();
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/auth/google/callback'];
+  const publicRoutes = ['/login', '/register', '/forgot-password', '/auth/google/callback', '/plans'];
+  const stayWhenAuthenticated = ['/plans'];
 
   // don't allow refresh on step-2 registration page
   if (to.path === '/registration/step-2' && from.path === '/registration/step-2') {
@@ -38,7 +39,11 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     });
     
     // Redirect authenticated users away from public routes
-    if (publicRoutes.includes(to.path) && authStore.isAuthenticated) {
+    if (
+      publicRoutes.includes(to.path) &&
+      authStore.isAuthenticated &&
+      !stayWhenAuthenticated.includes(to.path)
+    ) {
       if (hasFamilyGroup(authStore.user)) {
         console.log('[Auth Middleware] User has family group, redirecting to diary');
         return navigateTo('/diary');

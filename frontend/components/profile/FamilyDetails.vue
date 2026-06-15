@@ -21,11 +21,11 @@
               <p class="text-base-content/80">{{ familyGroup.name }}</p>
             </div>
             <div class="space-y-4">
-              <div>
+              <div v-if="canAddFamilyMember">
                 <h3 class="font-semibold text-lg">{{ $t('Family group code') }}</h3>
                 <div class="flex items-center justify-center gap-2 mt-2">
                   <code 
-                    @click="copyFamilyCode" 
+                    @click="handleCopyFamilyCode" 
                     data-testid="profile-family-code"
                     class="bg-base-300 px-3 py-2 rounded-lg font-mono cursor-pointer hover:bg-base-400 transition-colors flex items-center gap-2"
                   >
@@ -33,10 +33,26 @@
                     <fa icon="copy" class="text-sm opacity-70" />
                   </code>
                 </div>
+                <p class="text-sm text-base-content/70 mt-4">
+                  {{ $t('Share this code with new users to join your family group') }}
+                </p>
               </div>
-              <p class="text-sm text-base-content/70">
-                {{ $t('Share this code with new users to join your family group') }}
-              </p>
+              <div
+                v-else-if="memberLimitMessage"
+                class="alert alert-warning text-left"
+                data-testid="profile-family-code-limit-message"
+              >
+                <span>
+                  {{ memberLimitMessage }}
+                  <NuxtLink
+                    v-if="showUpgradeLink"
+                    class="link link-primary"
+                    to="/plans"
+                  >
+                    {{ $t('profilePage.viewPlansToUpgrade') }}
+                  </NuxtLink>
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -48,17 +64,38 @@
 <script setup lang="ts">
 import type { FamilyGroup } from '../../types/FamilyGroup';
 
-defineProps<{
-  familyGroup: FamilyGroup | null;
-  isLoading: boolean;
-  error: string | null;
-}>();
+defineProps({
+  familyGroup: {
+    type: Object as () => FamilyGroup | null,
+    default: null,
+  },
+  isLoading: {
+    type: Boolean,
+    required: true,
+  },
+  error: {
+    type: String as () => string | null,
+    default: null,
+  },
+  canAddFamilyMember: {
+    type: Boolean,
+    default: true,
+  },
+  memberLimitMessage: {
+    type: String,
+    default: '',
+  },
+  showUpgradeLink: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const emit = defineEmits<{
   (e: 'copyCode'): void;
 }>();
 
-const copyFamilyCode = () => {
+const handleCopyFamilyCode = () => {
   emit('copyCode');
 };
 </script>

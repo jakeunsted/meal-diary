@@ -2,6 +2,8 @@ import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from '../../services/mealDiary.service.ts';
 import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
+import * as EntitlementsService from '../../services/entitlements.service.ts';
+import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { trackEvent } from '../../utils/posthog.ts';
 import { User } from '../../db/models/associations.ts';
 
@@ -151,6 +153,19 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     const parsedDayOfWeek = parseInt(day_of_week);
     if (parsedDayOfWeek < 1 || parsedDayOfWeek > 7) {
       return res.status(400).json({ message: 'day_of_week must be between 1 and 7' });
+    }
+
+    try {
+      await EntitlementsService.assertCanUpdateMealWeek(
+        parseInt(family_group_id),
+        user.dataValues.id,
+        parsedDate
+      );
+    } catch (error) {
+      if (handleEntitlementError(error, res)) {
+        return;
+      }
+      throw error;
     }
 
     const updatedMeal = await updateDailyMeal(

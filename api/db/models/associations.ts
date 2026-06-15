@@ -9,6 +9,7 @@ import ShoppingListCategory from './ShoppingListCategory.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
+import Subscription from './Subscription.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -16,6 +17,17 @@ User.belongsTo(FamilyGroup, {
   foreignKeyConstraint: true,
 });
 FamilyGroup.hasMany(User, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+// FamilyGroup <-> Subscription associations
+FamilyGroup.hasOne(Subscription, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'subscription',
+});
+Subscription.belongsTo(FamilyGroup, {
   foreignKey: 'family_group_id',
   foreignKeyConstraint: true,
 });
@@ -184,5 +196,6 @@ export {
   ShoppingListCategory,
   ShoppingListItem,
   Recipe,
-  RecipeIngredient
+  RecipeIngredient,
+  Subscription,
 };

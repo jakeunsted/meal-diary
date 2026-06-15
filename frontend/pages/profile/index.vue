@@ -11,6 +11,9 @@
       :family-group="familyGroup"
       :is-loading="!hasFamilyData"
       :error="error"
+      :can-add-family-member="canAddFamilyMember"
+      :member-limit-message="familyMemberLimitMessage"
+      :show-upgrade-link="billing.isOwner"
       @copy-code="copyFamilyCode"
     />
 
@@ -19,6 +22,9 @@
       :is-loading="!hasFamilyData"
       :error="error"
       :owner-id="familyGroup?.created_by"
+      :can-add-family-member="canAddFamilyMember"
+      :member-limit-message="familyMemberLimitMessage"
+      :show-upgrade-link="billing.isOwner"
       @add-family-member="handleAddFamilyMember"
     />
 
@@ -26,6 +32,8 @@
       <FamilySettings />
       <AccountSettings />
     </div>
+
+    <SubscriptionCard class="mt-8" />
 
     <LegalLinks class="mt-8" />
 
@@ -69,9 +77,12 @@ import InviteModal from '~/components/profile/InviteModal.vue';
 import AccountSettings from '~/components/profile/AccountSettings.vue';
 import FamilySettings from '~/components/profile/FamilySettings.vue';
 import LegalLinks from '~/components/LegalLinks.vue';
+import SubscriptionCard from '~/components/subscription/SubscriptionCard.vue';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
+const { refreshEntitlements, entitlements, billing } = useEntitlements();
+const { t } = useI18n();
 const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
 const { track } = useAnalytics();
 
@@ -79,12 +90,39 @@ const inviteModal = ref(null);
 
 const hasUserData = computed(() => !!userStore.user);
 const hasFamilyData = computed(() => !!familyGroup.value);
+const canAddFamilyMember = computed(() => {
+  if (!entitlements.value) {
+    return true;
+  }
+  return entitlements.value.features.family_members;
+});
+
+const familyMemberLimitMessage = computed(() => {
+  const usage = entitlements.value?.usage;
+  const limits = entitlements.value?.limits;
+  if (!usage || !limits || canAddFamilyMember.value) {
+    return '';
+  }
+
+  if (billing.value.isOwner) {
+    return t('profilePage.familyMemberLimitOwner', { max: limits.maxFamilyMembers });
+  }
+
+  if (billing.value.ownerDisplayName) {
+    return t('profilePage.familyMemberLimitNonOwner', { name: billing.value.ownerDisplayName });
+  }
+
+  return t('profilePage.familyMemberLimitNonOwnerGeneric');
+});
 
 const handleError = (error) => {
   console.error('Error in profile page:', error);
 };
 
 const handleAddFamilyMember = () => {
+  if (!canAddFamilyMember.value) {
+    return;
+  }
   inviteModal.value?.showModal();
 };
 
@@ -111,6 +149,10 @@ onMounted(async () => {
           familyStore.fetchFamilyGroup().catch(handleError)
         ]);
       }
+
+      if (userData?.family_group_id) {
+        await refreshEntitlements().catch(handleError);
+      }
     } catch (error) {
       handleError(error);
     }
@@ -121,6 +163,10 @@ onMounted(async () => {
 });
 
 const copyFamilyCode = async () => {
+  if (!canAddFamilyMember.value) {
+    return;
+  }
+
   if (familyGroup.value?.random_identifier) {
     try {
       await navigator.clipboard.writeText(familyGroup.value.random_identifier);

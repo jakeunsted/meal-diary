@@ -7,6 +7,7 @@ import Recipe from '../db/models/Recipe.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
 import { deleteFamilyGroupData } from './familyGroup.service.ts';
 import { deletePersonData } from '../utils/posthog.ts';
+import { assertCanAddFamilyMember } from './entitlements.service.ts';
 
 export interface CreateUserData {
   username: string;
@@ -66,6 +67,15 @@ const userExists = async (username: string, email: string): Promise<boolean> => 
   return !!existingUser;
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Validate an email address format
+ * @param {string} email - Email to validate
+ * @returns {boolean} True if the email format is valid
+ */
+export const isValidEmail = (email: string): boolean => EMAIL_REGEX.test(email);
+
 /**
  * Hash password
  * @param {string} password - Plain text password
@@ -87,7 +97,7 @@ export type SanitizedUser = Omit<UserAttributes, 'password_hash'> & {
  * @param {User & UserAttributes} user - User object
  * @returns {SanitizedUser} User without password hash
  */
-const sanitizeUser = (user: User & UserAttributes): SanitizedUser => {
+export const sanitizeUser = (user: User & UserAttributes): SanitizedUser => {
   const userJson = user.toJSON() as UserAttributes;
   const hasPassword = !!userJson.password_hash;
   delete (userJson as any).password_hash;
@@ -110,6 +120,10 @@ export const createUser = async (userData: CreateUserData): Promise<{
     throw new Error('Username, email, and password are required');
   }
 
+  if (!isValidEmail(email)) {
+    throw new Error('A valid email address is required');
+  }
+
   if (!terms_accepted) {
     throw new Error('Acceptance of the terms of service and privacy policy is required');
   }
@@ -118,6 +132,17 @@ export const createUser = async (userData: CreateUserData): Promise<{
   let resolvedFamilyGroupId = family_group_id;
   if (family_group_code) {
     resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
+  }
+
+  if (resolvedFamilyGroupId) {
+    const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId);
+    if (!familyGroup) {
+      throw new Error('Family group not found');
+    }
+    await assertCanAddFamilyMember(
+      resolvedFamilyGroupId,
+      Number(familyGroup.dataValues.created_by)
+    );
   }
 
   // Check if user already exists

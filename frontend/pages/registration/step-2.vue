@@ -49,12 +49,12 @@
             <!-- Join Existing Family Group -->
             <div v-if="activeTab === 'join'" class="form-control">
               <label class="label mb-2">
-                <span class="label-text">{{ $t('Family Key') }}</span>
+                <span class="label-text">{{ $t('Family group code') }}</span>
               </label>
               <input 
                 type="text" 
                 v-model="familyKey" 
-                :placeholder="$t('Enter family key')" 
+                :placeholder="$t('Enter family group code')" 
                 class="input input-bordered" 
                 data-testid="family-join-key-input"
                 :disabled="isLoading"
@@ -97,6 +97,21 @@ const isLoading = ref(false);
 const authStore = useAuthStore();
 const userStore = useUserStore();
 const { api } = useApi();
+const { t } = useI18n();
+
+const resolveJoinErrorMessage = (error) => {
+  const entitlement = extractEntitlementError(error);
+
+  if (entitlement?.feature === 'family_members') {
+    return t('registrationStep2.familyGroupFull');
+  }
+
+  if (getHttpStatusCode(error) === 404) {
+    return t('Family group not found');
+  }
+
+  return t('Failed to join family group, please try again!');
+};
 
 const handleSubmit = async () => {
   // Clear any existing error message
@@ -135,12 +150,13 @@ const handleSubmit = async () => {
         }
       } catch (error) {
         console.error('Create error:', error);
-        errorMessage.value = 'Failed to create family group, please try again!';
+        errorMessage.value = t('registrationStep2.createFailed');
       }
     } else {
       try {
         const response = await api('/api/family-groups/join', {
           method: 'POST',
+          silent: true,
           body: { 
             random_identifier: familyKey.value,
             user_id: user.id
@@ -166,16 +182,12 @@ const handleSubmit = async () => {
         }
       } catch (error) {
         console.error('Join error:', error);
-        if (error.statusCode === 404) {
-          errorMessage.value = 'Family group not found';
-        } else {
-          errorMessage.value = 'Failed to join family group, please try again!';
-        }
+        errorMessage.value = resolveJoinErrorMessage(error);
       }
     }
   } catch (error) {
     console.error('Error:', error);
-    errorMessage.value = 'An error occurred';
+    errorMessage.value = t('registrationStep2.genericError');
   } finally {
     isLoading.value = false;
   }

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { Preferences } from '@capacitor/preferences';
 import type { User } from '../types/User';
+import type { ResolvedEntitlements } from '../types/Entitlements';
 import { hasFamilyGroup } from '~/composables/useAuth';
 import { isTokenExpired } from '~/composables/useJWT';
 import { isSessionExpiredError } from '~/utils/httpError';
@@ -29,7 +30,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value);
   
   // Actions
-  const setAuth = async (authData: { user: User; accessToken: string; refreshToken: string }) => {
+  const setAuth = async (authData: {
+    user: User;
+    accessToken: string;
+    refreshToken: string;
+    entitlements?: ResolvedEntitlements | null;
+  }) => {
     console.log('[Auth Store] Setting auth data:', { 
       hasUser: !!authData.user,
       hasAccessToken: !!authData.accessToken,
@@ -43,6 +49,10 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = authData.user;
     accessToken.value = authData.accessToken;
     refreshToken.value = authData.refreshToken;
+
+    if (authData.entitlements) {
+      useSubscriptionStore().setEntitlements(authData.entitlements);
+    }
     
     // Identify user in PostHog (must match backend distinct_id format)
     if (import.meta.client && authData.user?.id) {
@@ -143,6 +153,17 @@ export const useAuthStore = defineStore('auth', () => {
       } catch (error) {
         // zzz
       }
+      try {
+        await Preferences.remove({ key: 'entitlements' });
+      } catch (error) {
+        // zzz
+      }
+      try {
+        await Preferences.remove({ key: 'entitlements_last_fetched' });
+      } catch (error) {
+        // zzz
+      }
+      useSubscriptionStore().clearCache();
     }
   };
   

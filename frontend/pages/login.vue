@@ -77,6 +77,9 @@
               {{ $t('Don\'t have an account?') }}
               <a class="link link-hover link-primary" data-testid="register-link" href="/registration/step-1">{{ $t('Register') }}</a>
             </p>
+            <p class="mt-2">
+              <NuxtLink class="link link-primary" to="/plans">{{ $t('plansPage.viewPlans') }}</NuxtLink>
+            </p>
           </div>
         </form>
         <LegalLinks class="mt-4" />
