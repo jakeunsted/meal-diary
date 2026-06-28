@@ -5,12 +5,14 @@ import { useAuthStore } from '~/stores/auth';
 import { isTokenExpired } from '~/composables/useJWT';
 import { useAuth } from '~/composables/useAuth';
 import {
+  extractEntitlementError,
   extractErrorMessage,
   isAuthError,
   isSessionExpiredError,
   isRetryableAuthError,
   getHttpStatusCode,
 } from '~/utils/httpError';
+import type { EntitlementFeature } from '~/types/Entitlements';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 import type { ApiResponse } from '~/types/Api';
 
@@ -197,8 +199,14 @@ export const useApi = () => {
         if (isSessionExpiredError(error)) {
           await handleAutoLogout();
         }
-      } else if (!silent) {
-        showError(errorMessage);
+      } else {
+        const entitlementError = extractEntitlementError(error);
+        if (entitlementError && import.meta.client) {
+          const { openPaywall } = usePaywall();
+          openPaywall(entitlementError.feature as EntitlementFeature);
+        } else if (!silent) {
+          showError(errorMessage);
+        }
       }
 
       throw error;

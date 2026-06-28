@@ -69,9 +69,18 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  canSelectWeek: {
+    type: Function,
+    default: null,
+  },
 });
 
-const emit = defineEmits(['weekChange', 'goToThisWeek']);
+const emit = defineEmits(['weekChange', 'goToThisWeek', 'weekBlocked']);
+
+const entitlementOptions = computed(() => ({
+  canSelectWeek: props.canSelectWeek ?? undefined,
+  onWeekBlocked: () => emit('weekBlocked'),
+}));
 
 // Use the composable with a ref to the prop
 const initialWeekStartDateRef = computed(() => props.initialWeekStartDate);
@@ -86,7 +95,7 @@ const {
   handleNextWeek,
   handleWeekSelect: handleWeekSelectInternal,
   getSelectedWeekStartDate,
-} = useWeekCalendar(initialWeekStartDateRef);
+} = useWeekCalendar(initialWeekStartDateRef, entitlementOptions);
 
 const viewingWeekMessageKey = computed(() => {
   const selectedStart = getSelectedWeekStartDate();

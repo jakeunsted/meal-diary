@@ -1,10 +1,16 @@
 export type ToastType = 'error' | 'success' | 'warning' | 'info';
 
+export interface ToastAction {
+  label: string;
+  handler: () => void | Promise<void>;
+}
+
 export interface Toast {
   id: string;
   message: string;
   type: ToastType;
   duration: number;
+  action?: ToastAction;
 }
 
 const toasts = ref<Toast[]>([]);
@@ -26,13 +32,14 @@ export const useToast = () => {
   /**
    * Show a toast notification
    */
-  const showToast = (message: string, type: ToastType, duration: number = 5000) => {
+  const showToast = (message: string, type: ToastType, duration: number = 5000, action?: ToastAction) => {
     const id = `${Date.now()}-${Math.random()}`;
     const toast: Toast = {
       id,
       message,
       type,
-      duration
+      duration,
+      action
     };
 
     toasts.value.push(toast);
@@ -45,6 +52,18 @@ export const useToast = () => {
     }
 
     return id;
+  };
+
+  /**
+   * Show a toast with an action button (e.g. an Undo snackbar)
+   */
+  const showActionToast = (
+    message: string,
+    action: ToastAction,
+    type: ToastType = 'info',
+    duration: number = 6000
+  ) => {
+    return showToast(message, type, duration, action);
   };
 
   /**
@@ -77,6 +96,8 @@ export const useToast = () => {
 
   return {
     toasts: readonly(toasts),
+    showToast,
+    showActionToast,
     showError,
     showSuccess,
     showWarning,

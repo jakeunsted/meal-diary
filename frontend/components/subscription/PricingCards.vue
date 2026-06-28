@@ -139,7 +139,7 @@ const handleUpgrade = async (interval) => {
       body: {
         family_group_id: familyGroupId,
         interval,
-        success_url: `${window.location.origin}/profile?upgraded=1`,
+        success_url: `${window.location.origin}/profile?upgraded=1&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${window.location.origin}/plans`,
       },
     });

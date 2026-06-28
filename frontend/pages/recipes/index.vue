@@ -2,6 +2,33 @@
   <div class="max-w-4xl mx-auto px-4">
     <h1 class="text-2xl font-bold text-center m-4">{{ $t('Recipe Book') }}</h1>
 
+    <div
+      v-if="recipeUsageLabel"
+      class="text-sm text-center text-base-content/70 mb-2"
+      data-testid="recipes-usage-label"
+    >
+      {{ recipeUsageLabel }}
+    </div>
+
+    <div
+      v-if="!canCreateRecipe"
+      class="alert alert-warning mb-4"
+      role="alert"
+      data-testid="recipes-limit-alert"
+    >
+      <div class="flex flex-col gap-2 w-full">
+        <span>{{ $t('recipesPage.limitReached') }}</span>
+        <span class="text-sm">{{ recipeLimitHelperText }}</span>
+        <NuxtLink
+          v-if="billing.isOwner"
+          class="btn btn-primary btn-sm w-fit"
+          to="/plans"
+        >
+          {{ $t('recipesPage.upgradeLink') }}
+        </NuxtLink>
+      </div>
+    </div>
+
     <div class="flex gap-2 mb-4">
       <div class="relative flex-1">
         <fa icon="magnifying-glass" class="absolute left-3 top-1/2 -translate-y-1/2 text-base-content/50" />
@@ -14,7 +41,12 @@
           @input="handleSearch"
         />
       </div>
-      <button class="btn btn-primary" data-testid="recipes-new-button" @click="navigateTo('/recipes/create')">
+      <button
+        class="btn btn-primary"
+        data-testid="recipes-new-button"
+        :disabled="!canCreateRecipe"
+        @click="handleCreateRecipe"
+      >
         <fa icon="plus" />
         <span class="hidden sm:inline">{{ $t('New Recipe') }}</span>
       </button>
@@ -28,7 +60,7 @@
       <fa icon="book-open" class="text-5xl text-base-content/30 mb-4" />
       <p class="text-lg font-medium">{{ $t('No recipes yet') }}</p>
       <p class="text-base-content/60 mb-4">{{ $t('Create your first recipe to get started!') }}</p>
-      <button class="btn btn-primary" @click="navigateTo('/recipes/create')">
+      <button class="btn btn-primary" :disabled="!canCreateRecipe" @click="handleCreateRecipe">
         <fa icon="plus" class="mr-1" />
         {{ $t('New Recipe') }}
       </button>
@@ -62,8 +94,53 @@ import RecipeCard from '~/components/recipe/RecipeCard.vue';
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
 const router = useRouter();
+const { t } = useI18n();
+const {
+  hasFeature,
+  entitlements,
+  billing,
+  refreshEntitlements,
+} = useEntitlements();
+const { openPaywall } = usePaywall();
 
 const searchQuery = ref('');
+const canCreateRecipe = hasFeature('recipes');
+
+const recipeUsageLabel = computed(() => {
+  const usage = entitlements.value?.usage.recipeCount ?? 0;
+  const maxRecipes = entitlements.value?.limits.maxRecipes;
+
+  if (maxRecipes === undefined) {
+    return null;
+  }
+
+  if (!Number.isFinite(maxRecipes)) {
+    return t('recipesPage.usageUnlimited', { count: usage });
+  }
+
+  return t('recipesPage.usageLabel', { count: usage, max: maxRecipes });
+});
+
+const recipeLimitHelperText = computed(() => {
+  if (billing.value.isOwner) {
+    return t('recipesPage.upgradeLink');
+  }
+
+  if (billing.value.ownerDisplayName) {
+    return t('recipesPage.askOwnerToUpgrade', { name: billing.value.ownerDisplayName });
+  }
+
+  return t('recipesPage.askOwnerToUpgradeGeneric');
+});
+
+const handleCreateRecipe = () => {
+  if (!canCreateRecipe.value) {
+    openPaywall('recipes');
+    return;
+  }
+
+  router.push('/recipes/create');
+};
 
 const recipes = computed(() => {
   if (!searchQuery.value) return recipeStore.recipes;
@@ -86,6 +163,7 @@ onMounted(async () => {
     if (!userStore.user?.family_group_id) {
       await userStore.fetchUser();
     }
+    await refreshEntitlements();
     await recipeStore.fetchRecipes();
   } catch (error) {
     console.error('Error loading recipes:', error);

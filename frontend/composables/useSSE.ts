@@ -48,9 +48,10 @@ export const useSSE = () => {
         },
         // Shopping list item events
         'add-item': (data) => {
-          // Ignore events from the current user
-          if (data.item?.created_by === authStore.user?.id) return;
-          
+          // Ignore events triggered by the current user
+          const actorId = data.actorUserId ?? data.item?.created_by;
+          if (actorId === authStore.user?.id) return;
+
           if (!shoppingListStore.shoppingList || !data.item) {
             return;
           }
@@ -68,9 +69,10 @@ export const useSSE = () => {
           shoppingListStore.saveToLocalStorage();
         },
         'delete-item': (data) => {
-          // Ignore events from the current user
-          if (data.item?.created_by === authStore.user?.id) return;
-          
+          // Ignore events triggered by the current user
+          const actorId = data.actorUserId ?? data.item?.created_by;
+          if (actorId === authStore.user?.id) return;
+
           if (!shoppingListStore.shoppingList || !data.item?.id) {
             return;
           }
@@ -81,6 +83,9 @@ export const useSSE = () => {
           shoppingListStore.saveToLocalStorage();
         },
         'check-item': (data) => {
+          // Ignore events triggered by the current user to avoid clobbering local state
+          if (data.actorUserId != null && data.actorUserId === authStore.user?.id) return;
+
           if (!shoppingListStore.shoppingList || !data.item?.id) {
             return;
           }
@@ -98,6 +103,9 @@ export const useSSE = () => {
           }
         },
         'uncheck-item': (data) => {
+          // Ignore events triggered by the current user to avoid clobbering local state
+          if (data.actorUserId != null && data.actorUserId === authStore.user?.id) return;
+
           if (!shoppingListStore.shoppingList || !data.item?.id) {
             return;
           }
@@ -115,6 +123,9 @@ export const useSSE = () => {
           }
         },
         'move-item': (data) => {
+          // Ignore events triggered by the current user to avoid clobbering an in-flight local drag
+          if (data.actorUserId != null && data.actorUserId === authStore.user?.id) return;
+
           if (!shoppingListStore.shoppingList || !data.item?.id) {
             return;
           }

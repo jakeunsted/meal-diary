@@ -12,6 +12,8 @@ interface RegisterData {
 }
 
 export const useRegister = () => {
+  const { t } = useI18n();
+
   /**
    * Store the register string in the capacitor storage
    * @param registerString - The register string to store
@@ -144,8 +146,7 @@ export const useRegister = () => {
           errorBody?.code === 'ENTITLEMENT_REQUIRED' &&
           errorBody?.feature === 'family_members'
         ) {
-          errors.value.general =
-            'This family group is full. The owner needs to upgrade to Family Plus to add more members.';
+          errors.value.general = t('registrationStep2.familyGroupFull');
         } else if (response.status === 400 && body?.message) {
           errors.value.general = body.message;
         } else {

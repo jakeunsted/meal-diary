@@ -66,15 +66,18 @@ export const sendDailyMealWebhook = async (
 /**
  * Sends a webhook for a shopping list item event
  * @param {number} familyGroupId - The ID of the family group
- * @param {string} eventType - The type of the event (add-item, check-item, uncheck-item, delete-item)
+ * @param {string} eventType - The type of the event (add-item, check-item, uncheck-item, move-item, delete-item)
  * @param {ShoppingListItem} item - The shopping list item
  * @param {ShoppingListCategory} category - The category the item belongs to
+ * @param {number} [actorUserId] - The id of the user who triggered the event, so
+ *   connected clients can ignore their own echoed changes
  */
 export const sendShoppingListItemWebhook = async (
   familyGroupId: number,
   eventType: string,
   item: ShoppingListItem,
-  category: ShoppingListCategory
+  category: ShoppingListCategory,
+  actorUserId?: number
 ) => {
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list/item`;
@@ -84,6 +87,7 @@ export const sendShoppingListItemWebhook = async (
       familyGroupId,
       item,
       category,
+      actorUserId: actorUserId ?? null,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

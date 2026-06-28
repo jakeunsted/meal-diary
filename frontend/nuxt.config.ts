@@ -77,6 +77,7 @@ export default defineNuxtConfig({
         'pencil',
         'grip',
         'grip-vertical',
+        'ellipsis-vertical',
         'copy',
         'pen',
         'apple-whole',

@@ -20,4 +20,12 @@ router.post('/create-portal-session', authenticateToken, async (req, res, next) 
   }
 });
 
+router.post('/confirm-checkout-session', authenticateToken, async (req, res, next) => {
+  try {
+    await billingController.confirmCheckout(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -18,6 +18,7 @@
             </label>
             <div class="flex gap-2">
               <input 
+                ref="inviteLinkInput"
                 type="text" 
                 :value="inviteLink" 
                 data-testid="profile-invite-link-input"
@@ -55,12 +56,13 @@
 import { ref, computed } from 'vue';
 // @ts-ignore
 import { useRuntimeConfig } from '#imports';
-import { Clipboard } from '@capacitor/clipboard';
+import { copyToClipboard } from '~/utils/copyToClipboard';
 
 const config = useRuntimeConfig();
 const origin = config.public.origin || 'https://meal-diary.co.uk'
 
 const modal = ref<HTMLDialogElement | null>(null);
+const inviteLinkInput = ref<HTMLInputElement | null>(null);
 const isCopying = ref(false);
 const showToast = ref(false);
 const toastMessage = ref('');
@@ -90,13 +92,9 @@ const handleCopyLink = async () => {
   isCopying.value = true;
   
   try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(inviteLink.value);
-    } else {
-      await Clipboard.write({
-        string: inviteLink.value
-      });
-    }
+    await copyToClipboard(inviteLink.value, {
+      sourceElement: inviteLinkInput.value,
+    });
     showToastNotification('Invite link copied to clipboard!', true);
   } catch (err) {
     console.error('Failed to copy:', err);
