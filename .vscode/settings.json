@@ -2,9 +2,6 @@
   "cSpell.words": [
     "posthog"
   ],
-  "git.autofetch": false,
-  "git.autorefresh": false,
-  "git.fetchOnClone": false,
   "files.watcherExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
