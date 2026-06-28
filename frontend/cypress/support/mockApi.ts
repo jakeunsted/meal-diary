@@ -152,7 +152,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     {
       id: 1001,
       shopping_list_id: 10,
-      shopping_list_categories: 101,
       name: 'Tomatoes',
       checked: false,
       deleted: false,
@@ -165,7 +164,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     {
       id: 1002,
       shopping_list_id: 10,
-      shopping_list_categories: 101,
       name: 'Bread',
       checked: false,
       deleted: false,
@@ -355,7 +353,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     const newItem = {
       id: nextItemId++,
       shopping_list_id: state.shoppingList.id,
-      shopping_list_categories: 101,
       name: req.body?.name || 'New Item',
       checked: false,
       deleted: false,
@@ -379,7 +376,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       return {
         id: nextItemId++,
         shopping_list_id: state.shoppingList.id,
-        shopping_list_categories: 101,
         name: entry.name || 'New Item',
         checked: false,
         deleted: false,

@@ -7,7 +7,6 @@ import {
   ShoppingList,
   MealDiary,
   DailyMeal,
-  ShoppingListCategory,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
@@ -17,7 +16,7 @@ import {
 /**
  * Delete a family group and every row scoped to it, inside the given
  * transaction. Deletion order respects foreign key constraints:
- * daily meals -> meal diaries, items -> categories -> shopping list,
+ * daily meals -> meal diaries, items -> shopping list,
  * ingredients -> recipes, then member unlinking and the group itself.
  */
 export const deleteFamilyGroupData = async (
@@ -44,10 +43,6 @@ export const deleteFamilyGroupData = async (
   const shoppingListIds = shoppingLists.map(list => list.dataValues.id);
   if (shoppingListIds.length > 0) {
     await ShoppingListItem.destroy({
-      where: { shopping_list_id: { [Op.in]: shoppingListIds } },
-      transaction,
-    });
-    await ShoppingListCategory.destroy({
       where: { shopping_list_id: { [Op.in]: shoppingListIds } },
       transaction,
     });

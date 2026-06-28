@@ -221,7 +221,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
       const tempItem: ShoppingListItem = {
         id: tempId,
         shopping_list_id: this.shoppingList?.id || 0,
-        shopping_list_categories: 0,
         name: item.name,
         checked: false,
         deleted: false,
@@ -994,7 +993,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
       const tempItem: ShoppingListItem = {
         id: tempId,
         shopping_list_id: this.shoppingList.id,
-        shopping_list_categories: 0,
         name,
         checked: false,
         deleted: false,

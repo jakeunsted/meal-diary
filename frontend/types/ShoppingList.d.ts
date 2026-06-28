@@ -1,7 +1,6 @@
 export interface ShoppingListItem {
   id: number | string;
   shopping_list_id: number;
-  shopping_list_categories: number;
   name: string;
   checked: boolean;
   deleted: boolean;

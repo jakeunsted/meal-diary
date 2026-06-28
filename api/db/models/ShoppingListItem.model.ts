@@ -1,12 +1,10 @@
 import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
-import ShoppingListCategory from './ShoppingListCategory.model.ts';
 
 export interface ShoppingListItemAttributes {
   id: number;
   shopping_list_id: number;
-  shopping_list_categories: number;
   name: string;
   checked: boolean;
   deleted: boolean;
@@ -19,9 +17,7 @@ export interface ShoppingListItemAttributes {
 
 interface ShoppingListItemCreationAttributes extends Optional<ShoppingListItemAttributes, 'id' | 'checked' | 'deleted' | 'parent_item_id' | 'position' | 'created_at' | 'updated_at'> {}
 
-class ShoppingListItem extends Model<ShoppingListItemAttributes, ShoppingListItemCreationAttributes> {
-  declare category: ShoppingListCategory;
-}
+class ShoppingListItem extends Model<ShoppingListItemAttributes, ShoppingListItemCreationAttributes> {}
 
 ShoppingListItem.init(
   {
@@ -31,10 +27,6 @@ ShoppingListItem.init(
       primaryKey: true,
     },
     shopping_list_id: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    shopping_list_categories: {
       type: DataTypes.INTEGER,
       allowNull: false,
     },
@@ -87,10 +79,7 @@ ShoppingListItem.init(
         fields: ['shopping_list_id'],
       },
       {
-        fields: ['shopping_list_categories'],
-      },
-      {
-        fields: ['shopping_list_categories', 'deleted'],
+        fields: ['shopping_list_id', 'deleted'],
       },
       {
         fields: ['shopping_list_id', 'parent_item_id', 'position'],

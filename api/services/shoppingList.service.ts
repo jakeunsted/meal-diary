@@ -1,12 +1,8 @@
 import { Transaction } from 'sequelize';
 import sequelize from '../db/models/index.ts';
 import ShoppingList from '../db/models/ShoppingList.model.ts';
-import ItemCategory from '../db/models/ItemCategory.model.ts';
-import ShoppingListCategory from '../db/models/ShoppingListCategory.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 import { sendShoppingListItemWebhook } from './webhook.service.ts';
-
-const DEFAULT_ITEM_CATEGORY_NAME = 'General';
 
 const assertValidShoppingListParent = async (
   shoppingListId: number,
@@ -32,67 +28,18 @@ const assertValidShoppingListParent = async (
   }
 };
 
-const findOrCreateDefaultItemCategory = async (transaction: Transaction): Promise<ItemCategory> => {
-  const existing = await ItemCategory.findOne({
-    where: { name: DEFAULT_ITEM_CATEGORY_NAME },
-    transaction,
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  return ItemCategory.create(
-    {
-      name: DEFAULT_ITEM_CATEGORY_NAME,
-      icon: 'box',
-    },
-    { transaction }
-  );
-};
-
-const ensureShoppingListCategory = async (
-  shoppingListId: number,
-  createdBy: number,
-  transaction: Transaction
-): Promise<ShoppingListCategory> => {
-  const existing = await ShoppingListCategory.findOne({
-    where: { shopping_list_id: shoppingListId },
-    transaction,
-  });
-
-  if (existing) {
-    return existing;
-  }
-
-  const itemCategory = await findOrCreateDefaultItemCategory(transaction);
-
-  return ShoppingListCategory.create(
-    {
-      shopping_list_id: shoppingListId,
-      item_categories_id: Number(itemCategory.get('id')),
-      created_by: createdBy,
-    },
-    { transaction }
-  );
-};
-
 /**
- * Create a base shopping list for a family group with default categories
+ * Create a base shopping list for a family group
  * @param {number} familyGroupId - Family group ID
  * @param {number} createdBy - User ID who created the shopping list
  * @returns {Promise<ShoppingList>} Created shopping list
  */
 export const createBaseShoppingList = async (familyGroupId: number, createdBy: number): Promise<ShoppingList> => {
   return await sequelize.transaction(async (t: Transaction) => {
-    const shoppingList = await ShoppingList.create(
+    return ShoppingList.create(
       { family_group_id: familyGroupId },
       { transaction: t }
     );
-
-    await ensureShoppingListCategory(Number(shoppingList.get('id')), createdBy, t);
-
-    return shoppingList;
   });
 };
 
@@ -128,7 +75,6 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
         attributes: [
           'id',
           'shopping_list_id',
-          'shopping_list_categories',
           'name',
           'checked',
           'deleted',
@@ -173,14 +119,6 @@ export const addItem = async (
       throw new Error('Shopping list not found');
     }
 
-    // Ensure there is at least one shopping list category to satisfy the foreign key,
-    // even though the new UI no longer surfaces categories.
-    const shoppingListCategory = await ensureShoppingListCategory(
-      Number(shoppingList.get('id')),
-      createdBy,
-      t
-    );
-
     const resolvedParentId = parentItemId ?? null;
     await assertValidShoppingListParent(Number(shoppingList.get('id')), resolvedParentId, t);
 
@@ -198,7 +136,6 @@ export const addItem = async (
     const item = await ShoppingListItem.create(
       {
         shopping_list_id: Number(shoppingList.get('id')),
-        shopping_list_categories: Number(shoppingListCategory.get('id')),
         name,
         created_by: createdBy,
         parent_item_id: resolvedParentId,
@@ -246,12 +183,6 @@ export const bulkAddItems = async (
       throw new Error('Shopping list not found');
     }
 
-    const shoppingListCategory = await ensureShoppingListCategory(
-      Number(shoppingList.get('id')),
-      createdBy,
-      t
-    );
-
     const createdItems: ShoppingListItem[] = [];
 
     for (const payload of items) {
@@ -272,7 +203,6 @@ export const bulkAddItems = async (
       const item = await ShoppingListItem.create(
         {
           shopping_list_id: Number(shoppingList.get('id')),
-          shopping_list_categories: Number(shoppingListCategory.get('id')),
           name: payload.name,
           created_by: createdBy,
           parent_item_id: resolvedParentId,
