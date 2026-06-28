@@ -1,5 +1,4 @@
 import { Capacitor } from '@capacitor/core';
-import { Purchases, LOG_LEVEL } from '@revenuecat/purchases-capacitor';
 
 export const useRevenueCat = () => {
   const config = useRuntimeConfig();
@@ -18,6 +17,13 @@ export const useRevenueCat = () => {
     return null;
   };
 
+  const getPurchasesModule = async () => {
+    if (!isNativePlatform.value) {
+      return null;
+    }
+    return import('@revenuecat/purchases-capacitor');
+  };
+
   const configure = async () => {
     if (!isNativePlatform.value || isConfigured.value) {
       return;
@@ -29,8 +35,13 @@ export const useRevenueCat = () => {
       return;
     }
 
-    await Purchases.setLogLevel({ level: LOG_LEVEL.WARN });
-    await Purchases.configure({ apiKey });
+    const purchasesModule = await getPurchasesModule();
+    if (!purchasesModule) {
+      return;
+    }
+
+    await purchasesModule.Purchases.setLogLevel({ level: purchasesModule.LOG_LEVEL.WARN });
+    await purchasesModule.Purchases.configure({ apiKey });
     isConfigured.value = true;
   };
 
@@ -40,7 +51,12 @@ export const useRevenueCat = () => {
       return;
     }
 
-    await Purchases.logIn({ appUserId });
+    const purchasesModule = await getPurchasesModule();
+    if (!purchasesModule) {
+      return;
+    }
+
+    await purchasesModule.Purchases.logIn({ appUserId });
   };
 
   const purchasePackage = async (interval: 'month' | 'year') => {
@@ -49,7 +65,12 @@ export const useRevenueCat = () => {
       throw new Error('RevenueCat is not configured');
     }
 
-    const offerings = await Purchases.getOfferings();
+    const purchasesModule = await getPurchasesModule();
+    if (!purchasesModule) {
+      throw new Error('RevenueCat is not available');
+    }
+
+    const offerings = await purchasesModule.Purchases.getOfferings();
     const selectedPackage = interval === 'year'
       ? offerings.current?.annual
       : offerings.current?.monthly;
@@ -58,7 +79,7 @@ export const useRevenueCat = () => {
       throw new Error('Subscription package not found');
     }
 
-    return Purchases.purchasePackage({ aPackage: selectedPackage });
+    return purchasesModule.Purchases.purchasePackage({ aPackage: selectedPackage });
   };
 
   const restorePurchases = async () => {
@@ -67,7 +88,12 @@ export const useRevenueCat = () => {
       throw new Error('RevenueCat is not configured');
     }
 
-    return Purchases.restorePurchases();
+    const purchasesModule = await getPurchasesModule();
+    if (!purchasesModule) {
+      throw new Error('RevenueCat is not available');
+    }
+
+    return purchasesModule.Purchases.restorePurchases();
   };
 
   return {
