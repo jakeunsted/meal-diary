@@ -15,7 +15,7 @@
       <div class="card-body">
         <div class="flex items-center gap-2">
           <h3 class="card-title">{{ $t('plansPage.monthly') }}</h3>
-          <span class="badge badge-primary badge-sm">{{ $t('plansPage.trialBadge') }}</span>
+          <span v-if="trialAvailable" class="badge badge-primary badge-sm">{{ $t('plansPage.trialBadge') }}</span>
         </div>
         <p class="text-3xl font-bold">£2.99<span class="text-base font-normal opacity-70">/mo</span></p>
         <button
@@ -35,7 +35,7 @@
       <div class="card-body">
         <div class="flex items-center gap-2">
           <h3 class="card-title">{{ $t('plansPage.yearly') }}</h3>
-          <span class="badge badge-primary badge-sm">{{ $t('plansPage.trialBadge') }}</span>
+          <span v-if="trialAvailable" class="badge badge-primary badge-sm">{{ $t('plansPage.trialBadge') }}</span>
         </div>
         <p class="text-3xl font-bold">£24.99<span class="text-base font-normal opacity-70">/yr</span></p>
         <button
@@ -70,6 +70,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  trialAvailable: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const { t } = useI18n();
@@ -86,7 +90,9 @@ const ctaLabel = computed(() => {
     return t('plansPage.getStarted');
   }
   if (props.isOwner) {
-    return t('plansPage.startFreeTrial');
+    return props.trialAvailable
+      ? t('plansPage.startFreeTrial')
+      : t('plansPage.subscribeNow');
   }
   if (props.ownerDisplayName) {
     return t('plansPage.askOwnerToUpgrade', { name: props.ownerDisplayName });
@@ -151,11 +157,7 @@ const handleUpgrade = async (interval) => {
 
     checkoutError.value = t('plansPage.checkoutFailed');
   } catch (error) {
-    const errorData = error?.data?.data ?? error?.data;
-    checkoutError.value =
-      errorData?.code === 'TRIAL_ALREADY_USED'
-        ? t('plansPage.trialAlreadyUsed')
-        : t('plansPage.checkoutFailed');
+    checkoutError.value = t('plansPage.checkoutFailed');
   } finally {
     loadingInterval.value = null;
   }

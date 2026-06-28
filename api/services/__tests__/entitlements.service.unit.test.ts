@@ -1,17 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import * as billingService from '../billing.service.ts';
 import {
+  assertCanCreateRecipe,
+  EntitlementRequiredError,
   getCurrentIsoWeekMonday,
   isPastWeekEditable,
   isWeekAheadAllowed,
   resolveEntitlements,
-  EntitlementRequiredError,
-  assertCanCreateRecipe,
 } from '../entitlements.service.ts';
 import { FamilyGroup, Recipe, Subscription, User } from '../../db/models/associations.ts';
 
 describe('entitlements.service', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    vi.spyOn(billingService, 'isTrialEligible').mockResolvedValue(true);
   });
 
   describe('getCurrentIsoWeekMonday', () => {
@@ -91,6 +93,7 @@ describe('entitlements.service', () => {
       expect(result.limits.maxRecipes).toBe(10);
       expect(result.billing.isOwner).toBe(true);
       expect(result.billing.ownerDisplayName).toBe('Alex');
+      expect(result.billing.trialAvailable).toBe(true);
       expect(result.features.edit_past_weeks).toBe(false);
     });
 

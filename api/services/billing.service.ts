@@ -242,6 +242,24 @@ export const assertTrialEligible = async (
   };
 };
 
+/**
+ * Returns whether the family owner is eligible for a free trial checkout.
+ */
+export const isTrialEligible = async (
+  ownerUserId: number,
+  stripeCustomerId?: string | null
+): Promise<boolean> => {
+  try {
+    await assertTrialEligible(ownerUserId, stripeCustomerId);
+    return true;
+  } catch (error) {
+    if (error instanceof TrialAlreadyUsedError) {
+      return false;
+    }
+    throw error;
+  }
+};
+
 const recordTrialRedemption = async (
   ownerUserId: number,
   familyGroupId: number,
@@ -279,7 +297,7 @@ export const createCheckoutSession = async (
   const priceId = getPriceId(interval);
   const stripe = getStripe();
 
-  await assertTrialEligible(ownerUserId, subscriptionData.stripe_customer_id);
+  const trialEligible = await isTrialEligible(ownerUserId, subscriptionData.stripe_customer_id);
 
   const successUrl = resolveCheckoutRedirectUrl(
     redirectUrls?.successUrl,
@@ -304,7 +322,7 @@ export const createCheckoutSession = async (
       },
     ],
     subscription_data: {
-      trial_period_days: TRIAL_DAYS,
+      ...(trialEligible ? { trial_period_days: TRIAL_DAYS } : {}),
       metadata: {
         family_group_id: String(familyGroupId),
         owner_user_id: String(ownerUserId),

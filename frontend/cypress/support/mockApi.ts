@@ -2,7 +2,7 @@ import { normalizeMealDiaryWeekKey } from '../../composables/mealDiaryWeekKey';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
-  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed';
+  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted';
 }
 
 export interface EntitlementsFixtureOptions {
@@ -16,6 +16,7 @@ export interface EntitlementsFixtureOptions {
     paymentFailedUntil?: string | null;
   };
   trial?: { endsAt: string; daysRemaining: number } | null;
+  billing?: { isOwner?: boolean; ownerDisplayName?: string | null; trialAvailable?: boolean };
 }
 
 export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = {}) => {
@@ -51,8 +52,9 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       paymentFailedUntil: options.prompts?.paymentFailedUntil ?? null,
     },
     billing: {
-      isOwner: true,
-      ownerDisplayName: 'Meal',
+      isOwner: options.billing?.isOwner ?? true,
+      ownerDisplayName: options.billing?.ownerDisplayName ?? 'Meal',
+      trialAvailable: options.billing?.trialAvailable ?? true,
     },
   };
 };
@@ -81,6 +83,11 @@ const resolveEntitlementsProfile = (profile: MockApiOptions['entitlementsProfile
           paymentFailed: true,
           paymentFailedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
         },
+      });
+    case 'trialExhausted':
+      return createEntitlementsFixture({
+        plan: 'free',
+        billing: { trialAvailable: false },
       });
     case 'premium':
     default:
@@ -317,6 +324,16 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       body: state.entitlements,
     });
   }).as('apiGetEntitlements');
+
+  cy.intercept('POST', '/api/billing/create-checkout-session', (req) => {
+    req.reply({
+      statusCode: 200,
+      body: {
+        id: 'cs_test',
+        url: 'https://checkout.stripe.com/c/pay/cs_test',
+      },
+    });
+  }).as('apiCreateCheckoutSession');
 
   cy.intercept('POST', /\/api\/family-groups\/\d+\/entitlements\/dismiss-prompt$/, (req) => {
     state.entitlements = {

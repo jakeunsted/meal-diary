@@ -18,6 +18,7 @@ export const useEntitlements = () => {
   const billing = computed(() => entitlements.value?.billing ?? {
     isOwner: false,
     ownerDisplayName: null,
+    trialAvailable: false,
   });
 
   const prompts = computed(() => entitlements.value?.prompts ?? {
