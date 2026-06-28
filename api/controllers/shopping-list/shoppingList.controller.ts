@@ -272,9 +272,11 @@ export const reorderItems = async (req: Request, res: Response) => {
     }
 
     try {
+      const actorUserId = (req.user as User)?.dataValues?.id;
       const updatedItems = await ShoppingListService.reorderItems(
         Number(family_group_id),
-        items
+        items,
+        actorUserId
       );
 
       return res.json(updatedItems);
@@ -290,6 +292,116 @@ export const reorderItems = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error reordering items:', error);
     res.status(500).json({ message: 'Failed to reorder items' });
+  }
+};
+
+/**
+ * Bulk update multiple shopping list items in a single request.
+ * @param {Request} req - Express request object containing items to update
+ * @param {Response} res - Express response object
+ * @returns {Promise<void>} - Returns the updated items
+ */
+export const bulkUpdateItems = async (req: Request, res: Response) => {
+  try {
+    const { family_group_id } = req.params;
+    const { items } = req.body as { items?: { id: number; name?: string; checked?: boolean; deleted?: boolean }[] };
+
+    if (!family_group_id || isNaN(Number(family_group_id))) {
+      return res.status(400).json({ message: 'Valid family group ID is required' });
+    }
+
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    try {
+      const actorUserId = (req.user as User)?.dataValues?.id;
+      const updatedItems = await ShoppingListService.bulkUpdateItems(
+        Number(family_group_id),
+        items,
+        actorUserId
+      );
+
+      const user = req.user as User;
+      if (user) {
+        await trackEvent(user.dataValues.id.toString(), 'shopping_list_items_bulk_updated', {
+          family_group_id: Number(family_group_id),
+          item_count: updatedItems.length,
+        });
+      }
+
+      return res.json(updatedItems);
+    } catch (serviceError) {
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to update items';
+
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      if (
+        errorMessage.includes('must be') ||
+        errorMessage.includes('At least one') ||
+        errorMessage.includes('valid id')
+      ) {
+        return res.status(400).json({ message: errorMessage });
+      }
+
+      throw serviceError;
+    }
+  } catch (error) {
+    console.error('Error bulk updating items:', error);
+    res.status(500).json({ message: 'Failed to update items' });
+  }
+};
+
+/**
+ * Bulk soft-delete multiple shopping list items in a single request.
+ * @param {Request} req - Express request object containing item ids to delete
+ * @param {Response} res - Express response object
+ * @returns {Promise<void>} - Returns the deleted items
+ */
+export const bulkDeleteItems = async (req: Request, res: Response) => {
+  try {
+    const { family_group_id } = req.params;
+    const { ids } = req.body as { ids?: number[] };
+
+    if (!family_group_id || isNaN(Number(family_group_id))) {
+      return res.status(400).json({ message: 'Valid family group ID is required' });
+    }
+
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ message: 'Ids array is required' });
+    }
+
+    try {
+      const actorUserId = (req.user as User)?.dataValues?.id;
+      const deletedItems = await ShoppingListService.bulkDeleteItems(
+        Number(family_group_id),
+        ids.map(Number),
+        actorUserId
+      );
+
+      const user = req.user as User;
+      if (user) {
+        await trackEvent(user.dataValues.id.toString(), 'shopping_list_items_bulk_deleted', {
+          family_group_id: Number(family_group_id),
+          item_count: deletedItems.length,
+        });
+      }
+
+      return res.json(deletedItems);
+    } catch (serviceError) {
+      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to delete items';
+
+      if (errorMessage.includes('not found')) {
+        return res.status(404).json({ message: errorMessage });
+      }
+
+      throw serviceError;
+    }
+  } catch (error) {
+    console.error('Error bulk deleting items:', error);
+    res.status(500).json({ message: 'Failed to delete items' });
   }
 };
 
@@ -313,17 +425,18 @@ export const updateItem = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Valid family group ID is required' });
     }
 
-    // Validate required fields
-    if (name === undefined || checked === undefined) {
-      return res.status(400).json({ message: 'Name and checked status are required' });
+    // Allow partial updates: at least one updatable field must be present
+    if (name === undefined && checked === undefined) {
+      return res.status(400).json({ message: 'At least one of name or checked is required' });
     }
 
     try {
+      const actorUserId = (req.user as User)?.dataValues?.id;
       const item = await ShoppingListService.updateItem(
         Number(family_group_id),
         Number(item_id),
-        name,
-        checked
+        { name, checked },
+        actorUserId
       );
 
       // Track shopping list item updated
@@ -366,9 +479,11 @@ export const deleteItem = async (req: Request, res: Response) => {
     const { family_group_id, item_id } = req.params;
 
     try {
+      const actorUserId = (req.user as User)?.dataValues?.id;
       const item = await ShoppingListService.deleteItem(
         Number(family_group_id),
-        Number(item_id)
+        Number(item_id),
+        actorUserId
       );
 
       // Track shopping list item deleted

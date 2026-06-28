@@ -8,6 +8,14 @@
     >
       <span>{{ toast.message }}</span>
       <button
+        v-if="toast.action"
+        class="btn btn-sm btn-ghost font-semibold"
+        data-testid="toast-action-button"
+        @click="handleAction(toast)"
+      >
+        {{ toast.action.label }}
+      </button>
+      <button
         class="btn btn-sm btn-circle btn-ghost"
         @click="handleRemove(toast.id)"
       >
@@ -18,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import { type ToastType, useToast } from '../composables/useToast';
+import { type Toast, type ToastType, useToast } from '../composables/useToast';
 
 const { toasts, removeToast } = useToast();
 
@@ -39,6 +47,13 @@ const getAlertClass = (type: ToastType) => {
 
 const handleRemove = (id: string) => {
   removeToast(id);
+};
+
+const handleAction = async (toast: Toast) => {
+  if (toast.action) {
+    await toast.action.handler();
+  }
+  removeToast(toast.id);
 };
 </script>
 

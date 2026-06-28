@@ -103,3 +103,49 @@ export function normalizeShoppingListParentId(
 
   return parentId;
 }
+
+/** Parent plus direct children, or a child's parent and all siblings. */
+export function getShoppingListFamilyIds(
+  item: ShoppingListItem,
+  allItems: ShoppingListItem[]
+): Array<number | string> {
+  if (item.parent_item_id !== null) {
+    const parent = allItems.find((entry) => entry.id === item.parent_item_id);
+    const siblings = allItems.filter((entry) => entry.parent_item_id === item.parent_item_id);
+    const ids: Array<number | string> = [];
+
+    if (parent) {
+      ids.push(parent.id);
+    }
+
+    for (const sibling of siblings) {
+      ids.push(sibling.id);
+    }
+
+    return ids.length > 0 ? ids : [item.id];
+  }
+
+  if (typeof item.id !== 'number') {
+    return [item.id];
+  }
+
+  const children = allItems.filter((entry) => entry.parent_item_id === item.id);
+  return [item.id, ...children.map((child) => child.id)];
+}
+
+/** IDs that should be checked/unchecked together for parent/child grouping. */
+export function getShoppingListCheckedUpdateIds(
+  item: ShoppingListItem,
+  allItems: ShoppingListItem[],
+  checked: boolean
+): Array<number | string> {
+  if (checked && item.parent_item_id === null) {
+    return getShoppingListFamilyIds(item, allItems);
+  }
+
+  if (!checked) {
+    return getShoppingListFamilyIds(item, allItems);
+  }
+
+  return [item.id];
+}

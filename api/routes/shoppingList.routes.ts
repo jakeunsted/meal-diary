@@ -556,6 +556,115 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
 
 /**
  * @openapi
+ * /shopping-list/{family_group_id}/items/bulk-update:
+ *   put:
+ *     summary: Bulk update shopping list items
+ *     description: Updates name and/or checked for one or more shopping list items in a single request
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - id
+ *                   minProperties: 2
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The id of the item to update
+ *                     name:
+ *                       type: string
+ *                       description: The new name of the item
+ *                     checked:
+ *                       type: boolean
+ *                       description: Whether the item is checked
+ *                     deleted:
+ *                       type: boolean
+ *                       description: Whether the item is soft-deleted (set false to restore)
+ *     responses:
+ *       200:
+ *         description: The updated items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to update items
+ */
+router.put('/:family_group_id/items/bulk-update', async (req, res, next) => {
+  try {
+    await shoppingListController.bulkUpdateItems(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/bulk-delete:
+ *   post:
+ *     summary: Bulk delete shopping list items
+ *     description: Soft deletes one or more shopping list items in a single request
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: The ids of the items to delete
+ *     responses:
+ *       200:
+ *         description: The deleted items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to delete items
+ */
+router.post('/:family_group_id/items/bulk-delete', async (req, res, next) => {
+  try {
+    await shoppingListController.bulkDeleteItems(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /shopping-list/{family_group_id}/items/{item_id}:
  *   put:
  *     summary: Update a shopping list item
@@ -573,13 +682,12 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
  *         description: The id of the item to update
  *     requestBody:
  *       required: true
+ *       description: At least one of name or checked must be provided (partial updates supported)
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - checked
+ *             minProperties: 1
  *             properties:
  *               name:
  *                 type: string
@@ -606,7 +714,7 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
  *                   examples:
  *                     - Valid item ID is required
  *                     - Valid family group ID is required
- *                     - Name and checked status are required
+ *                     - At least one of name or checked is required
  *                     - Name must be a non-empty string
  *                     - Checked status must be a boolean
  *       404:

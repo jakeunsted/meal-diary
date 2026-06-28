@@ -10,6 +10,8 @@ import { useApi } from '~/composables/useApi';
 import { useConnection } from '~/composables/useConnection';
 import {
   flattenShoppingListItems,
+  getShoppingListCheckedUpdateIds,
+  getShoppingListFamilyIds,
   isShoppingListDescendant,
   rebuildItemHierarchyFromFlatOrder,
   resolveShoppingListIndentParent,
@@ -300,11 +302,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
       }
     },
 
-    /**
-     * Update an existing item in the shopping list (offline-first)
-     * @param itemId - The ID of the item to update
-     * @param updates - The updates to apply to the item
-     */
     async updateItem(itemId: number | string, updates: Partial<ShoppingListItem>) {
       const userStore = useUserStore();
       const isTemp = this.isTempId(itemId);
@@ -368,6 +365,312 @@ export const useShoppingListStore = defineStore('shoppingList', {
         this.error = err instanceof Error ? err.message : 'Failed to sync item update';
         console.error('Failed to sync item update with server:', err);
       }
+    },
+
+    /**
+     * Apply a batch of item updates (name/checked) optimistically, persisting
+     * non-temporary items via a single bulk-update request. Temp items are kept
+     * fresh locally; persistable updates are queued for offline retry.
+     */
+    async applyBulkItemUpdates(
+      updates: { id: number | string; name?: string; checked?: boolean }[]
+    ) {
+      if (!this.shoppingList || !updates.length) {
+        return;
+      }
+
+      const userStore = useUserStore();
+
+      // Optimistic local update
+      for (const update of updates) {
+        const index = this.shoppingList.items.findIndex(i => i.id === update.id);
+        if (index === -1) {
+          continue;
+        }
+        const merged = { ...this.shoppingList.items[index] };
+        if (update.name !== undefined) {
+          merged.name = update.name;
+        }
+        if (update.checked !== undefined) {
+          merged.checked = update.checked;
+        }
+        this.shoppingList.items[index] = merged;
+
+        // Keep the pending add entry fresh for not-yet-persisted temp items
+        const pendingAddIdx = this.pendingChanges.add.findIndex(i => String(i.id) === String(update.id));
+        if (pendingAddIdx !== -1) {
+          this.pendingChanges.add[pendingAddIdx] = merged;
+        }
+      }
+      this.scheduleSaveToLocalStorage();
+
+      // Only non-temp items can be persisted to the server by id
+      const persistable = updates.filter(u => !this.isTempId(u.id));
+
+      // Queue updates for offline retry (dedupe by id)
+      for (const update of persistable) {
+        const item = this.shoppingList.items.find(i => i.id === update.id);
+        if (!item) {
+          continue;
+        }
+        const existingIdx = this.pendingChanges.update.findIndex(i => i.id === update.id);
+        if (existingIdx !== -1) {
+          this.pendingChanges.update[existingIdx] = item;
+        } else {
+          this.pendingChanges.update.push(item);
+        }
+      }
+
+      if (!persistable.length) {
+        await this.saveToLocalStorage();
+        return;
+      }
+
+      try {
+        const { api } = useApi();
+        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/bulk-update`, {
+          method: 'PUT',
+          body: {
+            items: persistable.map((u) => {
+              const payload: { id: number; name?: string; checked?: boolean } = { id: u.id as number };
+              if (u.name !== undefined) {
+                payload.name = u.name;
+              }
+              if (u.checked !== undefined) {
+                payload.checked = u.checked;
+              }
+              return payload;
+            }),
+          },
+        });
+
+        const serverItems = unwrapShoppingResponse<ShoppingListItem[]>(response);
+        if (this.shoppingList && Array.isArray(serverItems)) {
+          for (const serverItem of serverItems) {
+            const index = this.shoppingList.items.findIndex(i => i.id === serverItem.id);
+            if (index !== -1) {
+              this.shoppingList.items[index] = serverItem;
+            }
+          }
+        }
+
+        const persistedIds = new Set(persistable.map(u => u.id));
+        this.pendingChanges.update = this.pendingChanges.update.filter(i => !persistedIds.has(i.id));
+        await this.saveToLocalStorage();
+        this.error = null;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to sync item updates';
+        console.error('Failed to bulk update items:', err);
+      }
+    },
+
+    /**
+     * Remove a batch of items optimistically, persisting non-temporary items via
+     * a single bulk-delete request. Temp items are dropped from pending adds.
+     */
+    async applyBulkDelete(ids: Array<number | string>) {
+      if (!this.shoppingList || !ids.length) {
+        return;
+      }
+
+      const userStore = useUserStore();
+      const idSet = new Set(ids.map(String));
+
+      // Optimistic local removal
+      this.shoppingList.items = this.shoppingList.items.filter(i => !idSet.has(String(i.id)));
+      this.scheduleSaveToLocalStorage();
+
+      // Temp items only need to be dropped from pending adds
+      const tempIds = ids.filter(id => this.isTempId(id));
+      if (tempIds.length) {
+        const tempSet = new Set(tempIds.map(String));
+        this.pendingChanges.add = this.pendingChanges.add.filter(i => !tempSet.has(String(i.id)));
+      }
+
+      const persistableIds = ids.filter(id => !this.isTempId(id)) as number[];
+
+      // Queue deletes for offline retry
+      for (const id of persistableIds) {
+        if (!this.pendingChanges.delete.includes(id)) {
+          this.pendingChanges.delete.push(id);
+        }
+      }
+
+      if (!persistableIds.length) {
+        await this.saveToLocalStorage();
+        return;
+      }
+
+      try {
+        const { api } = useApi();
+        await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/bulk-delete`, {
+          method: 'POST',
+          body: { ids: persistableIds },
+        });
+
+        const deletedSet = new Set(persistableIds);
+        this.pendingChanges.delete = this.pendingChanges.delete.filter(id => !deletedSet.has(id as number));
+        await this.saveToLocalStorage();
+        this.error = null;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to sync deletes';
+        console.error('Failed to bulk delete items:', err);
+      }
+    },
+
+    /**
+     * Restore previously removed items from a snapshot (used by Undo). Non-temp
+     * items are un-soft-deleted on the server via the bulk-update endpoint; temp
+     * items are re-queued as pending adds.
+     */
+    async restoreItems(items: ShoppingListItem[]) {
+      if (!this.shoppingList || !items.length) {
+        return;
+      }
+
+      const userStore = useUserStore();
+
+      // Re-insert into local state, clearing the deleted flag
+      for (const snapshot of items) {
+        const index = this.shoppingList.items.findIndex(i => String(i.id) === String(snapshot.id));
+        if (index === -1) {
+          this.shoppingList.items.push({ ...snapshot, deleted: false });
+        } else {
+          this.shoppingList.items[index] = {
+            ...this.shoppingList.items[index],
+            ...snapshot,
+            deleted: false,
+          };
+        }
+      }
+      this.scheduleSaveToLocalStorage();
+
+      // Stop any queued deletes for restored items
+      const restoreIdSet = new Set(items.map(i => String(i.id)));
+      this.pendingChanges.delete = this.pendingChanges.delete.filter(id => !restoreIdSet.has(String(id)));
+
+      const tempItems = items.filter(i => this.isTempId(i.id));
+      for (const temp of tempItems) {
+        const already = this.pendingChanges.add.some(i => String(i.id) === String(temp.id));
+        if (!already) {
+          this.pendingChanges.add.push({ ...temp, deleted: false });
+        }
+      }
+
+      const persistable = items.filter(i => !this.isTempId(i.id));
+      if (!persistable.length) {
+        await this.saveToLocalStorage();
+        return;
+      }
+
+      try {
+        const { api } = useApi();
+        const response = await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/bulk-update`, {
+          method: 'PUT',
+          body: {
+            items: persistable.map(i => ({ id: i.id as number, deleted: false })),
+          },
+        });
+
+        const serverItems = unwrapShoppingResponse<ShoppingListItem[]>(response);
+        if (this.shoppingList && Array.isArray(serverItems)) {
+          for (const serverItem of serverItems) {
+            const index = this.shoppingList.items.findIndex(i => i.id === serverItem.id);
+            if (index !== -1) {
+              this.shoppingList.items[index] = serverItem;
+            }
+          }
+        }
+        await this.saveToLocalStorage();
+        this.error = null;
+      } catch (err) {
+        this.error = err instanceof Error ? err.message : 'Failed to restore items';
+        console.error('Failed to restore items:', err);
+      }
+    },
+
+    async setItemChecked(itemId: number | string, checked: boolean, name?: string) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const item = this.shoppingList.items.find((entry) => entry.id === itemId);
+      if (!item) {
+        return;
+      }
+
+      const idsToUpdate = [...new Set(getShoppingListCheckedUpdateIds(item, this.shoppingList.items, checked))];
+
+      const updates = idsToUpdate
+        .map((id) => {
+          const target = this.shoppingList?.items.find((entry) => entry.id === id);
+          if (!target) {
+            return null;
+          }
+          const update: { id: number | string; name?: string; checked: boolean } = { id, checked };
+          if (id === itemId && name !== undefined) {
+            update.name = name;
+          }
+          return update;
+        })
+        .filter((u): u is { id: number | string; name?: string; checked: boolean } => u !== null);
+
+      await this.applyBulkItemUpdates(updates);
+    },
+
+    /**
+     * Uncheck every checked item (and their families). Returns a snapshot of the
+     * affected items (with their prior checked state) so callers can offer Undo.
+     */
+    async uncheckAllCheckedItems(): Promise<ShoppingListItem[]> {
+      if (!this.shoppingList) {
+        return [];
+      }
+
+      const checkedItems = this.shoppingList.items.filter((item) => item.checked);
+      const ids = new Set<number | string>();
+
+      for (const item of checkedItems) {
+        for (const familyId of getShoppingListFamilyIds(item, this.shoppingList.items)) {
+          ids.add(familyId);
+        }
+      }
+
+      const snapshot = [...ids]
+        .map((id) => this.shoppingList?.items.find((entry) => entry.id === id))
+        .filter((item): item is ShoppingListItem => item !== undefined)
+        .map((item) => ({ ...item }));
+
+      const updates = snapshot.map((item) => ({ id: item.id, checked: false }));
+
+      await this.applyBulkItemUpdates(updates);
+      return snapshot;
+    },
+
+    /**
+     * Delete every checked item (and their families). Returns a snapshot of the
+     * removed items so callers can offer Undo.
+     */
+    async deleteAllCheckedItems(): Promise<ShoppingListItem[]> {
+      if (!this.shoppingList) {
+        return [];
+      }
+
+      const checkedItems = this.shoppingList.items.filter((item) => item.checked);
+      const ids = new Set<number | string>();
+
+      for (const item of checkedItems) {
+        for (const familyId of getShoppingListFamilyIds(item, this.shoppingList.items)) {
+          ids.add(familyId);
+        }
+      }
+
+      const snapshot = this.shoppingList.items
+        .filter((item) => ids.has(item.id))
+        .map((item) => ({ ...item }));
+
+      await this.applyBulkDelete([...ids]);
+      return snapshot;
     },
 
     /**

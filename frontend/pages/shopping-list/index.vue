@@ -1,9 +1,49 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4">
+  <div class="max-w-4xl mx-auto px-4" :class="{ 'hide-checkboxes': hideCheckboxes }">
     <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="handlePullRefresh" />
-    <h1 class="text-2xl font-bold text-center m-4" data-testid="shopping-list-title">
-      {{ $t('Shopping List') }}
-    </h1>
+    <div class="relative flex items-center justify-center m-4">
+      <h1 class="text-2xl font-bold text-center" data-testid="shopping-list-title">
+        {{ $t('Shopping List') }}
+      </h1>
+      <div class="dropdown dropdown-end absolute right-0">
+        <button
+          tabindex="0"
+          type="button"
+          class="btn btn-ghost btn-sm btn-circle"
+          data-testid="shopping-list-settings-button"
+          :aria-label="$t('View settings')"
+        >
+          <fa icon="ellipsis-vertical" />
+        </button>
+        <ul
+          tabindex="0"
+          class="dropdown-content menu bg-base-200 rounded-box z-50 w-60 p-2 shadow"
+        >
+          <li>
+            <label class="label cursor-pointer justify-between">
+              <span class="label-text">{{ $t('Hide checked items') }}</span>
+              <input
+                type="checkbox"
+                class="toggle toggle-primary toggle-sm"
+                data-testid="shopping-list-hide-checked-toggle"
+                v-model="hideCheckedItems"
+              />
+            </label>
+          </li>
+          <li>
+            <label class="label cursor-pointer justify-between">
+              <span class="label-text">{{ $t('Hide checkboxes') }}</span>
+              <input
+                type="checkbox"
+                class="toggle toggle-primary toggle-sm"
+                data-testid="shopping-list-hide-checkboxes-toggle"
+                v-model="hideCheckboxes"
+              />
+            </label>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <ShoppingListSkeleton v-if="!hasData" />
     <div v-else>
@@ -31,6 +71,7 @@
           <fa icon="plus" />
         </button>
         <input
+          ref="newItemInput"
           type="text"
           :placeholder="$t('Enter new item')"
           class="input input-ghost w-full pr-5"
@@ -41,32 +82,61 @@
         />
       </div>
 
-        <div v-if="hasCheckedItems" class="mt-4">
-          <div class="collapse collapse-arrow bg-base-200">
-            <input type="checkbox" />
-            <div class="collapse-title text-sm font-medium" data-testid="shopping-list-checked-items-title">
-              {{ $t('Checked items') }} ({{ checkedItems.length }})
-            </div>
-            <div class="collapse-content">
-              <div
-                v-for="item in checkedItems"
-                :key="item.id"
-                class="my-1"
+        <div v-if="hasCheckedItems && !hideCheckedItems" class="mt-4 bg-base-200 rounded-box">
+          <div class="flex items-center justify-between gap-2 px-4 py-2">
+            <button
+              type="button"
+              class="flex items-center gap-2 text-sm font-medium min-w-0 text-left"
+              data-testid="shopping-list-checked-items-toggle"
+              @click="checkedItemsExpanded = !checkedItemsExpanded"
+            >
+              <fa
+                icon="chevron-down"
+                class="transition-transform duration-200 shrink-0"
+                :class="{ '-rotate-90': !checkedItemsExpanded }"
+              />
+              <span data-testid="shopping-list-checked-items-title">
+                {{ $t('Checked items') }} ({{ checkedItems.length }})
+              </span>
+            </button>
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                class="btn btn-ghost btn-xs"
+                type="button"
+                data-testid="shopping-list-uncheck-all"
+                @click="handleUncheckAll"
               >
-                <div
-                  class="flex items-center gap-2"
-                  :style="{ marginLeft: `${(itemDepthMap[item.id] || 0) * 1.5}rem` }"
-                >
-                  <ShoppingListItem
-                    class="flex-1"
-                    :item="item"
-                    @update="handleItemUpdate"
-                    @remove="handleRemoveItem"
-                    @indent="handleIndent"
-                    @outdent="handleOutdent"
-                    @insertBelow="handleInsertBelow"
-                  />
-                </div>
+                {{ $t('Uncheck all') }}
+              </button>
+              <button
+                class="btn btn-ghost btn-xs text-error"
+                type="button"
+                data-testid="shopping-list-delete-all-checked"
+                @click="handleDeleteAllChecked"
+              >
+                {{ $t('Delete all') }}
+              </button>
+            </div>
+          </div>
+          <div v-show="checkedItemsExpanded" class="px-2 pb-2">
+            <div
+              v-for="item in checkedItems"
+              :key="item.id"
+              class="my-1"
+            >
+              <div
+                class="flex items-center gap-2"
+                :style="{ marginLeft: `${(itemDepthMap[item.id] || 0) * 1.5}rem` }"
+              >
+                <ShoppingListItem
+                  class="flex-1"
+                  :item="item"
+                  @update="handleItemUpdate"
+                  @remove="handleRemoveItem"
+                  @indent="handleIndent"
+                  @outdent="handleOutdent"
+                  @insertBelow="handleInsertBelow"
+                />
               </div>
             </div>
           </div>
@@ -81,6 +151,7 @@ definePageMeta({
   middleware: 'auth'
 });
 
+import { Preferences } from '@capacitor/preferences';
 import { DnDProvider, DragPreview } from '@vue-dnd-kit/core';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
@@ -95,6 +166,8 @@ const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const shoppingListStore = useShoppingListStore();
 const userStore = useUserStore();
 const { track } = useAnalytics();
+const { showActionToast } = useToast();
+const { t } = useI18n();
 
 const loading = ref(true);
 const hasData = computed(() => {
@@ -102,6 +175,48 @@ const hasData = computed(() => {
 });
 
 const newItemName = ref('');
+const newItemInput = ref<HTMLInputElement | null>(null);
+const checkedItemsExpanded = ref(false);
+
+const VIEW_SETTINGS_KEY = 'shoppingListViewSettings';
+const hideCheckedItems = ref(false);
+const hideCheckboxes = ref(false);
+let viewSettingsLoaded = false;
+
+const loadViewSettings = async () => {
+  if (!import.meta.client) {
+    return;
+  }
+  try {
+    const { value } = await Preferences.get({ key: VIEW_SETTINGS_KEY });
+    if (value) {
+      const parsed = JSON.parse(value);
+      hideCheckedItems.value = !!parsed.hideCheckedItems;
+      hideCheckboxes.value = !!parsed.hideCheckboxes;
+    }
+  } catch (error) {
+    console.warn('Failed to load shopping list view settings:', error);
+  } finally {
+    viewSettingsLoaded = true;
+  }
+};
+
+const persistViewSettings = async () => {
+  if (!import.meta.client || !viewSettingsLoaded) {
+    return;
+  }
+  await Preferences.set({
+    key: VIEW_SETTINGS_KEY,
+    value: JSON.stringify({
+      hideCheckedItems: hideCheckedItems.value,
+      hideCheckboxes: hideCheckboxes.value
+    })
+  });
+};
+
+watch([hideCheckedItems, hideCheckboxes], () => {
+  void persistViewSettings();
+});
 
 const handleError = (error: unknown) => {
   console.error('Error in shopping list page:', error);
@@ -207,6 +322,9 @@ const handleAddNewItem = async () => {
     });
     track('shopping_list_item_added');
     newItemName.value = '';
+    // Refocus the input so multiple items can be entered in sequence (Keep behavior)
+    await nextTick();
+    newItemInput.value?.focus();
   } catch (error) {
     console.error('Error adding item:', error);
   }
@@ -216,16 +334,61 @@ const handleItemUpdate = async (event: { id: number | string; name: string; chec
   if (!event?.id) {
     return;
   }
+
+  if (event.checked !== undefined) {
+    await shoppingListStore.setItemChecked(event.id, event.checked, event.name);
+    if (event.checked) {
+      track('shopping_list_item_checked');
+    }
+    return;
+  }
+
   await shoppingListStore.updateItem(event.id, {
     name: event.name,
-    checked: event.checked ?? false
   });
-  if (event.checked) track('shopping_list_item_checked');
+};
+
+const handleUncheckAll = async () => {
+  const snapshot = await shoppingListStore.uncheckAllCheckedItems();
+  const previouslyChecked = snapshot.filter(item => item.checked);
+  if (previouslyChecked.length) {
+    showActionToast(t('Items unchecked'), {
+      label: t('Undo'),
+      handler: async () => {
+        await shoppingListStore.applyBulkItemUpdates(
+          previouslyChecked.map(item => ({ id: item.id, checked: true }))
+        );
+      }
+    });
+  }
+};
+
+const handleDeleteAllChecked = async () => {
+  const snapshot = await shoppingListStore.deleteAllCheckedItems();
+  track('shopping_list_item_deleted');
+  if (snapshot.length) {
+    showActionToast(t('Items deleted'), {
+      label: t('Undo'),
+      handler: async () => {
+        await shoppingListStore.restoreItems(snapshot);
+      }
+    });
+  }
 };
 
 const handleRemoveItem = async (itemId: number | string) => {
+  const snapshot = shoppingListStore.shoppingList?.items.find(item => item.id === itemId);
+  const snapshotCopy = snapshot ? { ...snapshot } : null;
   await shoppingListStore.deleteItem(itemId);
   track('shopping_list_item_deleted');
+  if (snapshotCopy) {
+    showActionToast(t('Item deleted'), {
+      label: t('Undo'),
+      handler: async () => {
+        await shoppingListStore.restoreItems([snapshotCopy]);
+      }
+    });
+  }
 };
 
 const handleIndent = async (itemId: number | string) => {
@@ -243,6 +406,9 @@ const handleInsertBelow = async (itemId: number | string) => {
 onMounted(async () => {
   await nextTick();
   track('shopping_list_viewed');
+
+  // Load persisted view settings (hide checked items / hide checkboxes)
+  await loadViewSettings();
 
   // Start loading data after skeleton is visible
   const loadData = async () => {
@@ -333,6 +499,11 @@ onMounted(async () => {
 
 :deep(.dnd-kit-preview) {
   opacity: 0.7;
+}
+
+/* When "Hide checkboxes" is enabled, hide the item checkboxes across the list */
+.hide-checkboxes .checkbox {
+  display: none;
 }
 </style>
 

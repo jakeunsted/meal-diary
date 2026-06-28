@@ -33,10 +33,7 @@ Cypress.Commands.add('getActiveShoppingListItemNames', () => {
 });
 
 Cypress.Commands.add('expandCheckedShoppingListItems', () => {
-  cy.get('[data-testid="shopping-list-checked-items-title"]')
-    .parent()
-    .find('input[type="checkbox"]')
-    .check({ force: true });
+  cy.get('[data-testid="shopping-list-checked-items-toggle"]').click({ force: true });
 });
 
 Cypress.Commands.add(

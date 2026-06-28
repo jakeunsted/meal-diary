@@ -13,35 +13,40 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    // Validate required fields
-    if (body.name === undefined || body.checked === undefined) {
+    // Allow partial updates: at least one updatable field must be present
+    if (body.name === undefined && body.checked === undefined) {
       throw createError({
         statusCode: 400,
-        message: 'Name and checked status are required'
+        message: 'At least one of name or checked is required'
       });
     }
 
-    // Validate field types
-    if (typeof body.name !== 'string' || !body.name.trim()) {
+    // Validate field types only for the fields that are present
+    if (body.name !== undefined && (typeof body.name !== 'string' || !body.name.trim())) {
       throw createError({
         statusCode: 400,
         message: 'Name must be a non-empty string'
       });
     }
 
-    if (typeof body.checked !== 'boolean') {
+    if (body.checked !== undefined && typeof body.checked !== 'boolean') {
       throw createError({
         statusCode: 400,
         message: 'Checked status must be a boolean'
       });
     }
 
+    const payload: { name?: string; checked?: boolean } = {};
+    if (body.name !== undefined) {
+      payload.name = body.name;
+    }
+    if (body.checked !== undefined) {
+      payload.checked = body.checked;
+    }
+
     const result = await authenticatedFetch(event, `/shopping-list/${familyGroupId}/items/${itemId}`, {
       method: 'PUT',
-      body: JSON.stringify({
-        name: body.name,
-        checked: body.checked
-      }),
+      body: JSON.stringify(payload),
     });
 
     return result;

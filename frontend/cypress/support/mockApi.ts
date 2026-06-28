@@ -532,6 +532,45 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     req.reply({ statusCode: 200, body: { message: 'Reordered' } });
   }).as('apiReorderShoppingItems');
 
+  // Registered after the generic PUT /items/.+ so this literal path takes precedence
+  cy.intercept('PUT', /\/api\/shopping-list\/\d+\/items\/bulk-update$/, (req) => {
+    const updates = Array.isArray(req.body?.items) ? req.body.items : [];
+    const updatedItems: Record<string, any>[] = [];
+    updates.forEach((update: Record<string, any>) => {
+      const item = state.shoppingList.items.find((entry: Record<string, any>) => entry.id === update.id);
+      if (item) {
+        if (update.name !== undefined) {
+          item.name = update.name;
+        }
+        if (update.checked !== undefined) {
+          item.checked = update.checked;
+        }
+        if (update.deleted !== undefined) {
+          item.deleted = update.deleted;
+        }
+        item.updated_at = getIsoDate();
+        updatedItems.push(item);
+      }
+    });
+    req.reply({ statusCode: 200, body: { data: updatedItems } });
+  }).as('apiBulkUpdateShoppingItems');
+
+  cy.intercept('POST', /\/api\/shopping-list\/\d+\/items\/bulk-delete$/, (req) => {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(String) : [];
+    const deletedItems = state.shoppingList.items.filter(
+      (entry: Record<string, any>) => ids.includes(String(entry.id)),
+    );
+    state.shoppingList.items = state.shoppingList.items.filter(
+      (entry: Record<string, any>) => !ids.includes(String(entry.id)),
+    );
+    state.shoppingList.categories.forEach((category: Record<string, any>) => {
+      category.items = category.items.filter(
+        (entry: Record<string, any>) => !ids.includes(String(entry.id)),
+      );
+    });
+    req.reply({ statusCode: 200, body: { data: deletedItems } });
+  }).as('apiBulkDeleteShoppingItems');
+
   cy.intercept('GET', /\/api\/meal-diaries\/\d+\/.*\/daily-meals$/, (req) => {
     const weekMatch = req.url.match(/meal-diaries\/\d+\/([^/]+)\/daily-meals/);
     const weekStartDate = weekMatch?.[1] || getCurrentWeekStartKey();
