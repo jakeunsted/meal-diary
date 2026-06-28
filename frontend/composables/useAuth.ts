@@ -86,7 +86,6 @@ export const handleAutoLogout = async () => {
  */
 export const useAuth = () => {
   const authStore = useAuthStore();
-  const router = useRouter();
   
   const isLoading = ref(false);
   const error = ref<string | null>(null);

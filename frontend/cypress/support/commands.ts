@@ -2,6 +2,7 @@ import { installMockApi } from './mockApi';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
+  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed';
 }
 
 interface LoginViaUiOptions {

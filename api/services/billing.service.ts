@@ -461,6 +461,33 @@ const handleCheckoutCompleted = async (session: Stripe.Checkout.Session) => {
   return subscription;
 };
 
+export const confirmCheckoutSession = async (
+  sessionId: string,
+  familyGroupId: number,
+  ownerUserId: number
+): Promise<Subscription | null> => {
+  await assertFamilyOwner(familyGroupId, ownerUserId);
+
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+  if (session.status !== 'complete') {
+    throw new Error('Checkout session is not complete');
+  }
+
+  const sessionFamilyId = Number(session.metadata?.family_group_id ?? session.client_reference_id);
+  if (!sessionFamilyId || sessionFamilyId !== familyGroupId) {
+    throw new BillingAuthorizationError('Checkout session does not match family group');
+  }
+
+  const sessionOwnerId = Number(session.metadata?.owner_user_id);
+  if (sessionOwnerId && !Number.isNaN(sessionOwnerId) && sessionOwnerId !== ownerUserId) {
+    throw new BillingAuthorizationError('Checkout session does not match user');
+  }
+
+  return handleCheckoutCompleted(session);
+};
+
 const handleInvoicePaymentFailed = async (invoice: Stripe.Invoice) => {
   const stripeSubscriptionId = typeof invoice.subscription === 'string'
     ? invoice.subscription

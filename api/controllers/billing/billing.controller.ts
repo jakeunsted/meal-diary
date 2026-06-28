@@ -3,6 +3,7 @@ import type User from '../../db/models/User.model.ts';
 import {
   BillingAuthorizationError,
   BillingConfigError,
+  confirmCheckoutSession,
   createCheckoutSession,
   createPortalSession,
   constructStripeEvent,
@@ -93,6 +94,34 @@ export const createPortal = async (req: Request, res: Response) => {
       typeof req.body.return_url === 'string' ? req.body.return_url : undefined
     );
     return res.status(200).json(session);
+  } catch (error) {
+    return handleBillingError(error, res);
+  }
+};
+
+export const confirmCheckout = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = getFamilyGroupId(req.body.family_group_id);
+    const sessionId = typeof req.body.session_id === 'string' ? req.body.session_id.trim() : '';
+    const user = req.user as User | undefined;
+
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!familyGroupId || !sessionId) {
+      return res.status(400).json({ message: 'family_group_id and session_id are required' });
+    }
+
+    const subscription = await confirmCheckoutSession(
+      sessionId,
+      familyGroupId,
+      user.dataValues.id
+    );
+
+    return res.status(200).json({
+      synced: Boolean(subscription),
+    });
   } catch (error) {
     return handleBillingError(error, res);
   }

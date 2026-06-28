@@ -78,10 +78,11 @@ import AccountSettings from '~/components/profile/AccountSettings.vue';
 import FamilySettings from '~/components/profile/FamilySettings.vue';
 import LegalLinks from '~/components/LegalLinks.vue';
 import SubscriptionCard from '~/components/subscription/SubscriptionCard.vue';
+import { copyToClipboard } from '~/utils/copyToClipboard';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
-const { refreshEntitlements, entitlements, billing } = useEntitlements();
+const { refreshEntitlements, refreshEntitlementsAfterUpgrade, entitlements, billing } = useEntitlements();
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -152,22 +153,29 @@ onMounted(async () => {
         ]);
       }
 
-      if (userData?.family_group_id) {
-        await refreshEntitlements(route.query.upgraded === '1').catch(handleError);
-      }
+      const sessionId = typeof route.query.session_id === 'string'
+        ? route.query.session_id
+        : undefined;
 
-      if (route.query.upgraded === '1') {
-        track('subscription_upgraded');
-        const toast = document.createElement('div');
-        toast.className = 'toast toast-top toast-end';
-        toast.innerHTML = `
-          <div class="alert alert-success">
-            <span>${t('profilePage.upgradeSuccess')}</span>
-          </div>
-        `;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 4000);
+      if (route.query.upgraded === '1' && userData?.family_group_id) {
+        const updatedEntitlements = await refreshEntitlementsAfterUpgrade(sessionId).catch(handleError);
+
+        if (updatedEntitlements?.plan === 'premium') {
+          track('subscription_upgraded');
+          const toast = document.createElement('div');
+          toast.className = 'toast toast-top toast-end';
+          toast.innerHTML = `
+            <div class="alert alert-success">
+              <span>${t('profilePage.upgradeSuccess')}</span>
+            </div>
+          `;
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 4000);
+        }
+
         router.replace({ path: '/profile' });
+      } else if (userData?.family_group_id) {
+        await refreshEntitlements().catch(handleError);
       }
     } catch (error) {
       handleError(error);
@@ -185,7 +193,7 @@ const copyFamilyCode = async () => {
 
   if (familyGroup.value?.random_identifier) {
     try {
-      await navigator.clipboard.writeText(familyGroup.value.random_identifier);
+      await copyToClipboard(familyGroup.value.random_identifier);
       track('family_invite_copied');
       // Show success toast
       const toast = document.createElement('div');

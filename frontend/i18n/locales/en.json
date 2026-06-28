@@ -380,5 +380,80 @@
       "recipes": "Recipes",
       "recipeToShoppingList": "Add recipe ingredients to shopping list"
     }
+  },
+  "paywall": {
+    "close": "Close",
+    "viewPlans": "View plans",
+    "family_members": {
+      "title": "Family member limit reached",
+      "description": "Upgrade to Family Plus to add more people to your household.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "weeks_ahead": {
+      "title": "Planning horizon limit",
+      "description": "Free plans can only plan one week ahead. Upgrade to plan further into the future.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "edit_past_weeks": {
+      "title": "Past weeks are read-only",
+      "description": "Upgrade to Family Plus to edit meals in past weeks.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "recipes": {
+      "title": "Recipe limit reached",
+      "description": "You've reached the free recipe limit. Upgrade for unlimited recipes.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "recipe_to_shopping_list": {
+      "title": "Premium shopping list feature",
+      "description": "Adding recipe ingredients to your shopping list is a Family Plus feature.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "trialExpired": {
+      "title": "Your free trial has ended",
+      "description": "Subscribe to Family Plus to keep premium features for your household.",
+      "ownerCta": "View plans",
+      "dismiss": "Maybe later"
+    },
+    "paymentFailed": {
+      "title": "Payment failed",
+      "description": "We couldn't renew your subscription. Update your payment method to keep Family Plus.",
+      "ownerCta": "Manage billing",
+      "dismiss": "Dismiss"
+    },
+    "trialCountdown": {
+      "message": "{days} days left in your free trial",
+      "cta": "View plans",
+      "dismiss": "Dismiss"
+    }
+  },
+  "diaryPage": {
+    "weekReadOnly": "This week is view-only on your plan. Upgrade to edit past weeks.",
+    "weekAheadLimit": "You can only plan one week ahead on the free plan.",
+    "upgradeLink": "View plans to upgrade",
+    "askOwnerToUpgrade": "Ask {name} to upgrade for past-week editing.",
+    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for past-week editing."
+  },
+  "recipesPage": {
+    "usageLabel": "{count} of {max} recipes",
+    "usageUnlimited": "{count} recipes",
+    "limitReached": "You've reached your recipe limit.",
+    "upgradeLink": "View plans to upgrade",
+    "askOwnerToUpgrade": "Ask {name} to upgrade for more recipes.",
+    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for more recipes."
+  },
+  "recipeDetail": {
+    "shoppingListPremium": "Add recipe ingredients to your shopping list with Family Plus.",
+    "shoppingListUpgrade": "View plans"
   }
 }

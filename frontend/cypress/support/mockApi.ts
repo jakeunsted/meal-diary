@@ -2,7 +2,91 @@ import { normalizeMealDiaryWeekKey } from '../../composables/mealDiaryWeekKey';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
+  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed';
 }
+
+export interface EntitlementsFixtureOptions {
+  plan?: 'free' | 'premium';
+  status?: 'active' | 'trialing' | 'expired' | 'payment_failed';
+  features?: Partial<Record<string, boolean>>;
+  usage?: { familyMemberCount?: number; recipeCount?: number };
+  prompts?: {
+    trialExpired?: boolean;
+    paymentFailed?: boolean;
+    paymentFailedUntil?: string | null;
+  };
+  trial?: { endsAt: string; daysRemaining: number } | null;
+}
+
+export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = {}) => {
+  const plan = options.plan ?? 'premium';
+  const isPremium = plan === 'premium';
+
+  return {
+    plan,
+    status: options.status ?? (isPremium ? 'active' : 'active'),
+    isComplimentary: false,
+    features: {
+      family_members: options.features?.family_members ?? true,
+      weeks_ahead: options.features?.weeks_ahead ?? true,
+      edit_past_weeks: options.features?.edit_past_weeks ?? isPremium,
+      recipes: options.features?.recipes ?? true,
+      recipe_to_shopping_list: options.features?.recipe_to_shopping_list ?? isPremium,
+    },
+    limits: {
+      maxFamilyMembers: isPremium ? 8 : 2,
+      maxRecipes: isPremium ? Number.POSITIVE_INFINITY : 10,
+      maxWeeksAhead: isPremium ? Number.POSITIVE_INFINITY : 1,
+      canEditPastWeeks: isPremium,
+      canAddRecipeToShoppingList: isPremium,
+    },
+    usage: {
+      familyMemberCount: options.usage?.familyMemberCount ?? 1,
+      recipeCount: options.usage?.recipeCount ?? 1,
+    },
+    trial: options.trial ?? undefined,
+    prompts: {
+      trialExpired: options.prompts?.trialExpired ?? false,
+      paymentFailed: options.prompts?.paymentFailed ?? false,
+      paymentFailedUntil: options.prompts?.paymentFailedUntil ?? null,
+    },
+    billing: {
+      isOwner: true,
+      ownerDisplayName: 'Meal',
+    },
+  };
+};
+
+const resolveEntitlementsProfile = (profile: MockApiOptions['entitlementsProfile']) => {
+  switch (profile) {
+    case 'free':
+      return createEntitlementsFixture({ plan: 'free' });
+    case 'freeRecipeLimit':
+      return createEntitlementsFixture({
+        plan: 'free',
+        features: { recipes: false },
+        usage: { recipeCount: 10 },
+      });
+    case 'trialExpired':
+      return createEntitlementsFixture({
+        plan: 'free',
+        status: 'expired',
+        prompts: { trialExpired: true },
+      });
+    case 'paymentFailed':
+      return createEntitlementsFixture({
+        plan: 'free',
+        status: 'payment_failed',
+        prompts: {
+          paymentFailed: true,
+          paymentFailedUntil: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+        },
+      });
+    case 'premium':
+    default:
+      return createEntitlementsFixture({ plan: 'premium' });
+  }
+};
 
 interface MockApiState {
   accessToken: string;
@@ -13,6 +97,7 @@ interface MockApiState {
   shoppingList: Record<string, any>;
   itemCategories: Array<Record<string, any>>;
   recipes: Array<Record<string, any>>;
+  entitlements: Record<string, any>;
 }
 
 const STUB_TOKEN =
@@ -155,6 +240,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     shoppingList,
     itemCategories,
     recipes,
+    entitlements: resolveEntitlementsProfile(options.entitlementsProfile),
   };
 };
 
@@ -173,6 +259,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
         user: state.activeUser,
         accessToken: state.accessToken,
         refreshToken: state.refreshToken,
+        entitlements: state.entitlements,
       },
     });
   }).as('apiLogin');
@@ -223,6 +310,27 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       },
     });
   }).as('apiJoinFamilyGroup');
+
+  cy.intercept('GET', /\/api\/family-groups\/\d+\/entitlements$/, (req) => {
+    req.reply({
+      statusCode: 200,
+      body: state.entitlements,
+    });
+  }).as('apiGetEntitlements');
+
+  cy.intercept('POST', /\/api\/family-groups\/\d+\/entitlements\/dismiss-prompt$/, (req) => {
+    state.entitlements = {
+      ...state.entitlements,
+      prompts: {
+        ...state.entitlements.prompts,
+        trialExpired: false,
+      },
+    };
+    req.reply({
+      statusCode: 200,
+      body: state.entitlements,
+    });
+  }).as('apiDismissEntitlementPrompt');
 
   cy.intercept('GET', /\/api\/family-groups\/\d+$/, {
     statusCode: 200,
