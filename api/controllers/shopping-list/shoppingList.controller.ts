@@ -27,7 +27,7 @@ export const createBaseShoppingList = async (req: Request, res: Response) => {
 };
 
 /**
- * Retrieves the entire shopping list for a family group, including all categories and items
+ * Retrieves the entire shopping list for a family group, including all items
  * @param {Request} req - Express request object
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the shopping list with all its categories and items
@@ -60,107 +60,7 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
 };
 
 /**
- * Adds a new category to a shopping list
- * @param {Request} req - Express request object containing category name and icon
- * @param {Response} res - Express response object
- * @returns {Promise<void>} - Returns the newly created category
- */
-export const addCategory = async (req: Request, res: Response) => {
-  try {
-    const { family_group_id, category_id } = req.params;
-
-    if (!category_id) {
-      return res.status(412).json({ message: 'Category ID is required' });
-    }
-
-    const user = req.user as User;
-
-    try {
-      const category = await ShoppingListService.addCategory(
-        Number(family_group_id),
-        Number(category_id),
-        Number(user.dataValues.id)
-      );
-
-      // Track shopping list category added
-      await trackEvent(user.dataValues.id.toString(), 'shopping_list_category_added', {
-        family_group_id: Number(family_group_id),
-        category_id: Number(category_id),
-      });
-
-      res.json(category);
-    } catch (serviceError) {
-      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to add category';
-      
-      if (errorMessage.includes('not found')) {
-        return res.status(404).json({ message: errorMessage });
-      }
-
-      throw serviceError;
-    }
-  } catch (error) {
-    console.error('Error adding category:', error);
-    res.status(500).json({ message: 'Failed to add category' });
-  }
-};
-
-/**
- * Deletes a category from a family shopping list and soft deletes all its items
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- * @returns {Promise<void>} - Returns the deleted category
- */
-export const deleteCategory = async (req: Request, res: Response) => {
-  try {
-    const { family_group_id, category_id } = req.params;
-
-    try {
-      const category = await ShoppingListService.deleteCategory(
-        Number(family_group_id),
-        Number(category_id)
-      );
-
-      res.json(category);
-    } catch (serviceError) {
-      const errorMessage = serviceError instanceof Error ? serviceError.message : 'Failed to delete category';
-      
-      if (errorMessage.includes('not found')) {
-        return res.status(404).json({ message: errorMessage });
-      }
-
-      throw serviceError;
-    }
-  } catch (error) {
-    console.error('Error deleting category:', error);
-    res.status(500).json({ message: 'Failed to delete category' });
-  }
-};
-
-/**
- * Get all categories for a family group
- * @param {Request} req - Express request object
- * @param {Response} res - Express response object
- * @returns {Promise<void>} - Returns the categories
- */
-export const getFamilyCategories = async (req: Request, res: Response) => {
-  try {
-    const { family_group_id } = req.params;
-
-    if (!family_group_id) {
-      return res.status(412).json({ message: 'Family group ID is required' });
-    }
-
-    const categories = await ShoppingListService.getFamilyCategories(Number(family_group_id));
-
-    res.json(categories);
-  } catch (error) {
-    console.error('Error fetching categories:', error);
-    res.status(500).json({ message: 'Failed to fetch categories' });
-  }
-};
-
-/**
- * Adds a new item to a shopping list category
+ * Adds a new item to a shopping list
  * @param {Request} req - Express request object containing item details
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the newly created item

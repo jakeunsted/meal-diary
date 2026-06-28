@@ -28,14 +28,13 @@ vi.mock('../../services/recipe.service.ts', () => ({
 vi.mock('../../services/shoppingList.service.ts', () => ({
   createBaseShoppingList: vi.fn(),
   getEntireShoppingList: vi.fn(),
-  addCategory: vi.fn(),
-  deleteCategory: vi.fn(),
-  getFamilyCategories: vi.fn(),
   addItem: vi.fn(),
   bulkAddItems: vi.fn(),
   updateItem: vi.fn(),
+  bulkUpdateItems: vi.fn(),
   reorderItems: vi.fn(),
   deleteItem: vi.fn(),
+  bulkDeleteItems: vi.fn(),
 }));
 
 vi.mock('../../services/familyGroup.service.ts', () => ({
@@ -72,7 +71,6 @@ vi.mock('../../services/dailyMeal.service.ts', () => ({
 vi.mock('../../services/webhook.service.ts', () => ({
   sendDailyMealWebhook: vi.fn(),
   sendShoppingListItemWebhook: vi.fn(),
-  sendShoppingListCategoryWebhook: vi.fn(),
 }));
 
 import {

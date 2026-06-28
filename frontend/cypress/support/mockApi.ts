@@ -102,7 +102,6 @@ interface MockApiState {
   familyGroup: Record<string, any>;
   weeklyMeals: Array<Record<string, any>>;
   shoppingList: Record<string, any>;
-  itemCategories: Array<Record<string, any>>;
   recipes: Array<Record<string, any>>;
   entitlements: Record<string, any>;
 }
@@ -149,29 +148,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     created_at: getIsoDate(),
     updated_at: getIsoDate(),
   };
-  const itemCategories = [
-    {
-      id: 1,
-      name: 'Fruit & Veg',
-      icon: 'apple-whole',
-      created_at: getIsoDate(),
-      updated_at: getIsoDate(),
-    },
-    {
-      id: 2,
-      name: 'Bakery',
-      icon: 'bread-slice',
-      created_at: getIsoDate(),
-      updated_at: getIsoDate(),
-    },
-    {
-      id: 3,
-      name: 'Dairy',
-      icon: 'cheese',
-      created_at: getIsoDate(),
-      updated_at: getIsoDate(),
-    },
-  ];
   const shoppingListItems = [
     {
       id: 1001,
@@ -207,18 +183,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     created_at: getIsoDate(),
     updated_at: getIsoDate(),
     items: shoppingListItems,
-    categories: [
-      {
-        id: 101,
-        shopping_list_id: 10,
-        item_categories_id: 1,
-        created_by: 1,
-        created_at: getIsoDate(),
-        updated_at: getIsoDate(),
-        itemCategory: itemCategories[0],
-        items: shoppingListItems.filter((item) => item.shopping_list_categories === 101),
-      },
-    ],
   };
   const recipes = [
     {
@@ -245,7 +209,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     familyGroup,
     weeklyMeals: createWeeklyMeals(weekStartDate),
     shoppingList,
-    itemCategories,
     recipes,
     entitlements: resolveEntitlementsProfile(options.entitlementsProfile),
   };
@@ -254,7 +217,6 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
 export const installMockApi = (options: MockApiOptions = {}) => {
   const state = createMockApiState(options);
   let nextItemId = 2000;
-  let nextCategoryId = 300;
   let nextRecipeId = 900;
 
   cy.intercept('GET', '/api/health', { statusCode: 200, body: { status: 'ok' } });
@@ -375,13 +337,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     },
   }).as('apiGetFamilyMembers');
 
-  cy.intercept('GET', '/api/item-categories', {
-    statusCode: 200,
-    body: {
-      data: state.itemCategories,
-    },
-  }).as('apiGetItemCategories');
-
   cy.intercept('GET', /\/api\/shopping-list\/\d+$/, (req) => {
     req.reply({
       statusCode: 200,
@@ -392,59 +347,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     });
   }).as('apiGetShoppingList');
 
-  cy.intercept('GET', /\/api\/shopping-list\/\d+\/categories$/, (req) => {
-    req.reply({
-      statusCode: 200,
-      body: state.shoppingList.categories,
-    });
-  }).as('apiGetShoppingListCategories');
-
-  cy.intercept('POST', /\/api\/shopping-list\/\d+\/categories\/\d+$/, (req) => {
-    const urlParts = req.url.split('/');
-    const itemCategoryId = Number(urlParts[urlParts.length - 1]);
-    const itemCategory = state.itemCategories.find((category) => category.id === itemCategoryId);
-    if (!itemCategory) {
-      req.reply({ statusCode: 404, body: { message: 'Category not found' } });
-      return;
-    }
-    const newCategory = {
-      id: nextCategoryId++,
-      shopping_list_id: state.shoppingList.id,
-      item_categories_id: itemCategory.id,
-      created_by: state.activeUser.id,
-      created_at: getIsoDate(),
-      updated_at: getIsoDate(),
-      itemCategory,
-      items: [],
-    };
-    state.shoppingList.categories.push(newCategory);
-    req.reply({
-      statusCode: 200,
-      body: {
-        data: newCategory,
-      },
-    });
-  }).as('apiAddShoppingCategory');
-
-  cy.intercept('DELETE', /\/api\/shopping-list\/\d+\/categories\/\d+$/, (req) => {
-    const categoryId = Number(req.url.split('/').pop());
-    state.shoppingList.categories = state.shoppingList.categories.filter(
-      (category: Record<string, any>) => category.id !== categoryId,
-    );
-    req.reply({ statusCode: 200, body: { message: 'Deleted' } });
-  }).as('apiDeleteShoppingCategory');
-
-  cy.intercept('PUT', /\/api\/shopping-list\/\d+\/categories\/order$/, (req) => {
-    const categories = req.body?.categories || [];
-    state.shoppingList.categories = categories;
-    req.reply({ statusCode: 200, body: { message: 'Updated' } });
-  }).as('apiUpdateShoppingCategoryOrder');
-
   cy.intercept('POST', /\/api\/shopping-list\/\d+\/items$/, (req) => {
-    const categoryId = Number(req.body?.shopping_list_categories || 101);
-    const category = state.shoppingList.categories.find(
-      (entry: Record<string, any>) => entry.id === categoryId,
-    );
     const siblingPositions = state.shoppingList.items
       .filter((item: Record<string, any>) => item.parent_item_id === (req.body?.parent_item_id ?? null))
       .map((item: Record<string, any>) => item.position || 0);
@@ -452,7 +355,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     const newItem = {
       id: nextItemId++,
       shopping_list_id: state.shoppingList.id,
-      shopping_list_categories: categoryId,
+      shopping_list_categories: 101,
       name: req.body?.name || 'New Item',
       checked: false,
       deleted: false,
@@ -463,9 +366,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       updated_at: getIsoDate(),
     };
     state.shoppingList.items.push(newItem);
-    if (category) {
-      category.items.push(newItem);
-    }
     req.reply({ statusCode: 200, body: newItem });
   }).as('apiAddShoppingItem');
 
@@ -491,10 +391,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       };
     });
     state.shoppingList.items.push(...createdItems);
-    const defaultCategory = state.shoppingList.categories.find((entry: Record<string, any>) => entry.id === 101);
-    if (defaultCategory) {
-      defaultCategory.items.push(...createdItems);
-    }
     req.reply({
       statusCode: 200,
       body: {
@@ -508,12 +404,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     const item = state.shoppingList.items.find((entry: Record<string, any>) => String(entry.id) === itemId);
     if (item) {
       Object.assign(item, req.body, { updated_at: getIsoDate() });
-      state.shoppingList.categories.forEach((category: Record<string, any>) => {
-        const categoryItem = category.items.find((entry: Record<string, any>) => String(entry.id) === itemId);
-        if (categoryItem) {
-          Object.assign(categoryItem, req.body, { updated_at: getIsoDate() });
-        }
-      });
       req.reply({
         statusCode: 200,
         body: { data: item },
@@ -528,9 +418,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     const itemIndex = state.shoppingList.items.findIndex((entry: Record<string, any>) => String(entry.id) === itemId);
     if (itemIndex !== -1) {
       state.shoppingList.items.splice(itemIndex, 1);
-      state.shoppingList.categories.forEach((category: Record<string, any>) => {
-        category.items = category.items.filter((entry: Record<string, any>) => String(entry.id) !== itemId);
-      });
       req.reply({ statusCode: 200, body: { message: 'Deleted' } });
       return;
     }
@@ -580,11 +467,6 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     state.shoppingList.items = state.shoppingList.items.filter(
       (entry: Record<string, any>) => !ids.includes(String(entry.id)),
     );
-    state.shoppingList.categories.forEach((category: Record<string, any>) => {
-      category.items = category.items.filter(
-        (entry: Record<string, any>) => !ids.includes(String(entry.id)),
-      );
-    });
     req.reply({ statusCode: 200, body: { data: deletedItems } });
   }).as('apiBulkDeleteShoppingItems');
 

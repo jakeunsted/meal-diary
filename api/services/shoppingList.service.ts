@@ -4,7 +4,7 @@ import ShoppingList from '../db/models/ShoppingList.model.ts';
 import ItemCategory from '../db/models/ItemCategory.model.ts';
 import ShoppingListCategory from '../db/models/ShoppingListCategory.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
-import { sendShoppingListItemWebhook, sendShoppingListCategoryWebhook } from './webhook.service.ts';
+import { sendShoppingListItemWebhook } from './webhook.service.ts';
 
 const DEFAULT_ITEM_CATEGORY_NAME = 'General';
 
@@ -97,10 +97,10 @@ export const createBaseShoppingList = async (familyGroupId: number, createdBy: n
 };
 
 /**
- * Get entire shopping list with categories and items.
+ * Get entire shopping list with items.
  * If a shopping list does not exist for the family group, it will be created.
  * @param {number} familyGroupId - Family group ID
- * @returns {Promise<ShoppingList | null>} Shopping list with categories and items
+ * @returns {Promise<ShoppingList | null>} Shopping list with items
  */
 export const getEntireShoppingList = async (familyGroupId: number): Promise<ShoppingList | null> => {
   // Ensure there is exactly one shopping list per family group.
@@ -120,37 +120,6 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
     where: { family_group_id: familyGroupId },
     attributes: ['id', 'family_group_id', 'created_at', 'updated_at'],
     include: [
-      {
-        model: ShoppingListCategory,
-        as: 'categories',
-        attributes: ['id', 'shopping_list_id', 'item_categories_id', 'created_by', 'created_at', 'updated_at'],
-        include: [
-          {
-            model: ItemCategory,
-            as: 'itemCategory',
-            attributes: ['id', 'name', 'icon'],
-          },
-          {
-            model: ShoppingListItem,
-            as: 'items',
-            where: { deleted: false },
-            required: false,
-            attributes: [
-              'id',
-              'shopping_list_id',
-              'shopping_list_categories',
-              'name',
-              'checked',
-              'deleted',
-              'created_by',
-              'parent_item_id',
-              'position',
-              'created_at',
-              'updated_at'
-            ],
-          },
-        ],
-      },
       {
         model: ShoppingListItem,
         as: 'items',
@@ -181,165 +150,12 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
 };
 
 /**
- * Add a category to a shopping list
+ * Add an item to a shopping list
  * @param {number} familyGroupId - Family group ID
- * @param {number} categoryId - Item category ID
- * @param {number} createdBy - User ID who created the category
- * @returns {Promise<ShoppingListCategory>} Created shopping list category
- * @throws {Error} If shopping list or item category not found
- */
-export const addCategory = async (familyGroupId: number, categoryId: number, createdBy: number): Promise<ShoppingListCategory> => {
-  return await sequelize.transaction(async (t: Transaction) => {
-    const shoppingList = await ShoppingList.findOne({
-      where: { family_group_id: familyGroupId },
-      transaction: t,
-    });
-
-    if (!shoppingList) {
-      throw new Error('Shopping list not found');
-    }
-
-    const itemCategory = await ItemCategory.findOne({
-      where: { id: categoryId },
-      transaction: t,
-    });
-
-    if (!itemCategory) {
-      throw new Error('Item category not found');
-    }
-
-    const shoppingListCategory = await ShoppingListCategory.create(
-      {
-        shopping_list_id: Number(shoppingList.get('id')),
-        item_categories_id: categoryId,
-        created_by: createdBy,
-      },
-      { transaction: t }
-    );
-
-    // Fetch the complete category data with items
-    const completeCategory = await ShoppingListCategory.findOne({
-      where: { id: Number(shoppingListCategory.get('id')) },
-      include: [
-        {
-          model: ItemCategory,
-          as: 'itemCategory',
-          attributes: ['id', 'name', 'icon']
-        },
-        {
-          model: ShoppingListItem,
-          as: 'items',
-          where: { deleted: false },
-          required: false
-        }
-      ],
-      transaction: t
-    }) as any;
-
-    if (!completeCategory) {
-      throw new Error('Failed to create category');
-    }
-
-    // Ensure we have the itemCategory data
-    if (!completeCategory.itemCategory) {
-      completeCategory.itemCategory = itemCategory;
-    }
-
-    // Send webhook for category addition
-    await sendShoppingListCategoryWebhook(
-      familyGroupId,
-      'add-category',
-      completeCategory
-    );
-
-    return completeCategory;
-  });
-};
-
-/**
- * Delete a category from a shopping list and soft delete all its items
- * @param {number} familyGroupId - Family group ID
- * @param {number} categoryId - Shopping list category ID
- * @returns {Promise<ShoppingListCategory>} Deleted shopping list category
- * @throws {Error} If category not found
- */
-export const deleteCategory = async (familyGroupId: number, categoryId: number): Promise<ShoppingListCategory> => {
-  return await sequelize.transaction(async (t: Transaction) => {
-    const shoppingListCategory = await ShoppingListCategory.findOne({
-      where: { id: categoryId },
-      include: [
-        {
-          model: ShoppingList,
-          where: { family_group_id: familyGroupId },
-        },
-      ],
-      transaction: t,
-    });
-
-    if (!shoppingListCategory) {
-      throw new Error('Category not found');
-    }
-
-    // Soft delete all items in the category
-    await ShoppingListItem.update(
-      { deleted: true },
-      {
-        where: { shopping_list_categories: categoryId },
-        transaction: t,
-      }
-    );
-
-    // Delete the category
-    await shoppingListCategory.destroy({ transaction: t });
-
-    // Send webhook for category deletion
-    await sendShoppingListCategoryWebhook(
-      familyGroupId,
-      'delete-category',
-      shoppingListCategory
-    );
-
-    return shoppingListCategory;
-  });
-};
-
-/**
- * Get all categories for a shopping list
- * @param {number} familyGroupId - Family group ID
- * @returns {Promise<ShoppingListCategory[]>} Array of shopping list categories
- */
-export const getFamilyCategories = async (familyGroupId: number): Promise<ShoppingListCategory[]> => {
-  const shoppingList = await ShoppingList.findOne({
-    where: { family_group_id: familyGroupId },
-  });
-
-  if (!shoppingList) {
-    return [];
-  }
-
-  const categories = await ShoppingListCategory.findAll({
-    where: { shopping_list_id: Number(shoppingList.get('id')) },
-    attributes: ['id', 'shopping_list_id', 'item_categories_id', 'created_by', 'created_at', 'updated_at'],
-    include: [
-      {
-        model: ItemCategory,
-        as: 'itemCategory',
-        attributes: ['id', 'name', 'icon'],
-      },
-    ],
-  });
-
-  return categories;
-};
-
-/**
- * Add an item to a shopping list category
- * @param {number} familyGroupId - Family group ID
- * @param {number} categoryId - Shopping list category ID
  * @param {string} name - Item name
  * @param {number} createdBy - User ID who created the item
  * @returns {Promise<ShoppingListItem>} Created shopping list item
- * @throws {Error} If shopping list or category not found
+ * @throws {Error} If shopping list not found
  */
 export const addItem = async (
   familyGroupId: number,
@@ -396,7 +212,6 @@ export const addItem = async (
       familyGroupId,
       'add-item',
       item,
-      shoppingListCategory,
       createdBy
     );
 
@@ -472,7 +287,6 @@ export const bulkAddItems = async (
         familyGroupId,
         'add-item',
         item,
-        shoppingListCategory,
         createdBy
       );
     }
@@ -519,10 +333,6 @@ export const updateItem = async (
           model: ShoppingList,
           where: { family_group_id: familyGroupId },
         },
-        {
-          model: ShoppingListCategory,
-          required: true
-        }
       ],
       transaction: t,
     });
@@ -547,7 +357,6 @@ export const updateItem = async (
         familyGroupId,
         checked ? 'check-item' : 'uncheck-item',
         item,
-        item.category,
         actorUserId
       );
     }
@@ -604,10 +413,6 @@ export const bulkUpdateItems = async (
             model: ShoppingList,
             where: { family_group_id: familyGroupId },
           },
-          {
-            model: ShoppingListCategory,
-            required: true,
-          },
         ],
         transaction: t,
       });
@@ -635,7 +440,6 @@ export const bulkUpdateItems = async (
           familyGroupId,
           update.checked ? 'check-item' : 'uncheck-item',
           item,
-          item.category,
           actorUserId
         );
       }
@@ -675,13 +479,9 @@ export const reorderItems = async (
             model: ShoppingList,
             where: { family_group_id: familyGroupId },
           },
-          {
-            model: ShoppingListCategory,
-            required: true,
-          },
         ],
         transaction: t,
-      }) as ShoppingListItem & { category: ShoppingListCategory };
+      }) as ShoppingListItem;
 
       if (!item) {
         throw new Error('Item not found');
@@ -704,7 +504,6 @@ export const reorderItems = async (
         familyGroupId,
         'move-item',
         item,
-        item.category,
         actorUserId
       );
     }
@@ -730,10 +529,6 @@ export const deleteItem = async (familyGroupId: number, itemId: number, actorUse
           model: ShoppingList,
           where: { family_group_id: familyGroupId },
         },
-        {
-          model: ShoppingListCategory,
-          required: true
-        }
       ],
       transaction: t,
     });
@@ -749,7 +544,6 @@ export const deleteItem = async (familyGroupId: number, itemId: number, actorUse
       familyGroupId,
       'delete-item',
       item,
-      item.category,
       actorUserId
     );
 
@@ -785,10 +579,6 @@ export const bulkDeleteItems = async (
             model: ShoppingList,
             where: { family_group_id: familyGroupId },
           },
-          {
-            model: ShoppingListCategory,
-            required: true,
-          },
         ],
         transaction: t,
       });
@@ -804,7 +594,6 @@ export const bulkDeleteItems = async (
         familyGroupId,
         'delete-item',
         item,
-        item.category,
         actorUserId
       );
 
