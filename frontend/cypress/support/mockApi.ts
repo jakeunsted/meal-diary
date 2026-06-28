@@ -16,7 +16,7 @@ export interface EntitlementsFixtureOptions {
     paymentFailedUntil?: string | null;
   };
   trial?: { endsAt: string; daysRemaining: number } | null;
-  billing?: { isOwner?: boolean; ownerDisplayName?: string | null; trialAvailable?: boolean };
+  billing?: { isOwner?: boolean; ownerDisplayName?: string | null; trialAvailable?: boolean; storePlatform?: 'web' | 'ios' | 'android' | null };
 }
 
 export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = {}) => {
@@ -55,6 +55,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       isOwner: options.billing?.isOwner ?? true,
       ownerDisplayName: options.billing?.ownerDisplayName ?? 'Meal',
       trialAvailable: options.billing?.trialAvailable ?? true,
+      storePlatform: options.billing?.storePlatform ?? null,
     },
   };
 };

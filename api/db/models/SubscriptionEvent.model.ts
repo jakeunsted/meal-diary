@@ -6,6 +6,7 @@ export interface SubscriptionEventAttributes {
   id: number;
   subscription_id: number | null;
   stripe_event_id: string | null;
+  provider_event_id: string | null;
   event_type: string;
   provider: 'stripe' | 'revenuecat';
   payload: Record<string, unknown> | null;
@@ -17,6 +18,7 @@ interface SubscriptionEventCreationAttributes extends Optional<
   | 'id'
   | 'subscription_id'
   | 'stripe_event_id'
+  | 'provider_event_id'
   | 'payload'
   | 'created_at'
 > {}
@@ -38,6 +40,11 @@ SubscriptionEvent.init(
       allowNull: true,
     },
     stripe_event_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+    },
+    provider_event_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
       unique: true,

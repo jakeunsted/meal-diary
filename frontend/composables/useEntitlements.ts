@@ -19,6 +19,7 @@ export const useEntitlements = () => {
     isOwner: false,
     ownerDisplayName: null,
     trialAvailable: false,
+    storePlatform: null,
   });
 
   const prompts = computed(() => entitlements.value?.prompts ?? {

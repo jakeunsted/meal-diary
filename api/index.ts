@@ -33,6 +33,7 @@ if (posthog) {
 // Railway uses 1 proxy, so we trust only the first proxy
 app.set('trust proxy', 1);
 app.post('/billing/webhook', express.raw({ type: 'application/json' }), billingController.stripeWebhook);
+app.post('/billing/revenuecat-webhook', express.json(), billingController.revenueCatWebhook);
 app.use(express.json());
 // Note on CSRF: this API does not use cookie-based authentication. All
 // state-changing routes are protected by the `authenticateToken` middleware,

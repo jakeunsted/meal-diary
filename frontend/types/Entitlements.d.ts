@@ -44,5 +44,6 @@ export interface ResolvedEntitlements {
     isOwner: boolean;
     ownerDisplayName: string | null;
     trialAvailable: boolean;
+    storePlatform: 'web' | 'ios' | 'android' | null;
   };
 }

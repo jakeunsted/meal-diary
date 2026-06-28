@@ -9,6 +9,7 @@ import {
   isTrialEligible,
   syncSubscriptionFromStripe,
   TrialAlreadyUsedError,
+  BillingManagedByStoreError,
 } from '../billing.service.ts';
 
 const mockCheckoutSessionsCreate = vi.hoisted(() => vi.fn());
@@ -170,6 +171,19 @@ describe('billing.service', () => {
 
       const createArgs = mockCheckoutSessionsCreate.mock.calls[0]?.[0];
       expect(createArgs.subscription_data.trial_period_days).toBeUndefined();
+    });
+
+    it('throws when billing is managed by a mobile store', async () => {
+      vi.spyOn(entitlementsService, 'getOrCreateSubscription').mockResolvedValue({
+        dataValues: {
+          family_group_id: 1,
+          store_platform: 'ios',
+        },
+      } as never);
+
+      await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
+        BillingManagedByStoreError
+      );
     });
   });
 

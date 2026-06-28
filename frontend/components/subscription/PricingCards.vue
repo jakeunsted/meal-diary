@@ -80,6 +80,8 @@ const { t } = useI18n();
 const userStore = useUserStore();
 const { api } = useApi();
 const { track } = useAnalytics();
+const { purchasePackage, isNativePlatform } = useRevenueCat();
+const { refreshEntitlements } = useEntitlements();
 const loadingInterval = ref(null);
 const checkoutError = ref('');
 
@@ -108,7 +110,9 @@ const helperText = computed(() => {
     return t('plansPage.ownerManagesBilling', { name: props.ownerDisplayName });
   }
   if (props.isOwner) {
-    return t('plansPage.billingRedirectHint');
+    return isNativePlatform.value
+      ? t('plansPage.nativeBillingHint')
+      : t('plansPage.billingRedirectHint');
   }
   return '';
 });
@@ -139,6 +143,12 @@ const handleUpgrade = async (interval) => {
       interval,
     });
 
+    if (isNativePlatform.value) {
+      await purchasePackage(interval);
+      await refreshEntitlements(true);
+      return;
+    }
+
     const session = await api('/api/billing/create-checkout-session', {
       method: 'POST',
       silent: true,
@@ -157,7 +167,9 @@ const handleUpgrade = async (interval) => {
 
     checkoutError.value = t('plansPage.checkoutFailed');
   } catch (error) {
-    checkoutError.value = t('plansPage.checkoutFailed');
+    checkoutError.value = isNativePlatform.value
+      ? t('plansPage.nativeCheckoutFailed')
+      : t('plansPage.checkoutFailed');
   } finally {
     loadingInterval.value = null;
   }

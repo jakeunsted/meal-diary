@@ -94,6 +94,7 @@ describe('entitlements.service', () => {
       expect(result.billing.isOwner).toBe(true);
       expect(result.billing.ownerDisplayName).toBe('Alex');
       expect(result.billing.trialAvailable).toBe(true);
+      expect(result.billing.storePlatform).toBeNull();
       expect(result.features.edit_past_weeks).toBe(false);
     });
 

@@ -48,6 +48,15 @@ export class TrialAlreadyUsedError extends Error {
   }
 }
 
+export class BillingManagedByStoreError extends Error {
+  readonly code = 'BILLING_MANAGED_BY_STORE';
+
+  constructor() {
+    super('BILLING_MANAGED_BY_STORE');
+    this.name = 'BillingManagedByStoreError';
+  }
+}
+
 const getStripe = (): Stripe => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -284,12 +293,22 @@ interface CheckoutRedirectUrls {
   cancelUrl?: string;
 }
 
+const assertWebBillingAllowed = async (familyGroupId: number) => {
+  const subscription = await getOrCreateSubscription(familyGroupId);
+  const storePlatform = subscription.dataValues.store_platform;
+
+  if (storePlatform === 'ios' || storePlatform === 'android') {
+    throw new BillingManagedByStoreError();
+  }
+};
+
 export const createCheckoutSession = async (
   familyGroupId: number,
   ownerUserId: number,
   interval: BillingInterval,
   redirectUrls?: CheckoutRedirectUrls
 ): Promise<CheckoutSessionResult> => {
+  await assertWebBillingAllowed(familyGroupId);
   const familyGroup = await assertFamilyOwner(familyGroupId, ownerUserId);
   const owner = await getOwner(ownerUserId);
   const subscription = await getOrCreateSubscription(familyGroupId);
@@ -367,6 +386,7 @@ export const createPortalSession = async (
   ownerUserId: number,
   returnUrl?: string
 ): Promise<PortalSessionResult> => {
+  await assertWebBillingAllowed(familyGroupId);
   await assertFamilyOwner(familyGroupId, ownerUserId);
   const subscription = await getOrCreateSubscription(familyGroupId);
   const stripeCustomerId = subscription.dataValues.stripe_customer_id;

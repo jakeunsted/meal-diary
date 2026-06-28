@@ -19,7 +19,7 @@
           @click="handleManageBilling"
         >
           <span v-if="isOpeningPortal" class="loading loading-spinner loading-xs"></span>
-          <span v-else>{{ $t('paywall.paymentFailed.ownerCta') }}</span>
+          <span v-else>{{ manageBillingLabel }}</span>
         </button>
         <button type="button" class="btn btn-ghost btn-sm" @click="handleDismiss">
           {{ $t('paywall.paymentFailed.dismiss') }}
@@ -32,9 +32,24 @@
 <script setup>
 const { prompts, billing } = useEntitlements();
 const userStore = useUserStore();
+const { t } = useI18n();
 
 const dismissed = useState('payment-failed-banner-dismissed', () => false);
 const isOpeningPortal = ref(false);
+
+const isStoreManaged = computed(() =>
+  billing.value.storePlatform === 'ios' || billing.value.storePlatform === 'android'
+);
+
+const manageBillingLabel = computed(() => {
+  if (billing.value.storePlatform === 'ios') {
+    return t('plansPage.manageInAppStore');
+  }
+  if (billing.value.storePlatform === 'android') {
+    return t('plansPage.manageInPlayStore');
+  }
+  return t('paywall.paymentFailed.ownerCta');
+});
 
 const isVisible = computed(() => {
   if (dismissed.value || !billing.value.isOwner) {
@@ -57,6 +72,14 @@ const handleManageBilling = async () => {
   isOpeningPortal.value = true;
 
   try {
+    if (isStoreManaged.value) {
+      const storeUrl = billing.value.storePlatform === 'ios'
+        ? 'https://apps.apple.com/account/subscriptions'
+        : 'https://play.google.com/store/account/subscriptions';
+      window.open(storeUrl, '_blank');
+      return;
+    }
+
     const { api } = useApi();
     const session = await api('/api/billing/create-portal-session', {
       method: 'POST',

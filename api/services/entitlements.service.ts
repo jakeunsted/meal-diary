@@ -33,6 +33,7 @@ export interface ResolvedEntitlements {
     isOwner: boolean;
     ownerDisplayName: string | null;
     trialAvailable: boolean;
+    storePlatform: 'web' | 'ios' | 'android' | null;
   };
 }
 
@@ -234,6 +235,7 @@ export const resolveEntitlements = async (
       isOwner,
       ownerDisplayName,
       trialAvailable,
+      storePlatform: subscription.store_platform ?? null,
     },
   };
 

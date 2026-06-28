@@ -28,4 +28,12 @@ router.post('/confirm-checkout-session', authenticateToken, async (req, res, nex
   }
 });
 
+router.post('/link-revenuecat', authenticateToken, async (req, res, next) => {
+  try {
+    await billingController.linkRevenueCat(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
