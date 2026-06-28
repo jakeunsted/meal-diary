@@ -6,6 +6,77 @@ import ShoppingListCategory from '../db/models/ShoppingListCategory.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 import { sendShoppingListItemWebhook, sendShoppingListCategoryWebhook } from './webhook.service.ts';
 
+const DEFAULT_ITEM_CATEGORY_NAME = 'General';
+
+const assertValidShoppingListParent = async (
+  shoppingListId: number,
+  parentItemId: number | null,
+  transaction: Transaction
+): Promise<void> => {
+  if (parentItemId === null) {
+    return;
+  }
+
+  const parent = await ShoppingListItem.findOne({
+    where: {
+      id: parentItemId,
+      shopping_list_id: shoppingListId,
+      parent_item_id: null,
+      deleted: false,
+    },
+    transaction,
+  });
+
+  if (!parent) {
+    throw new Error('Invalid parent item: shopping list items can only be nested one level deep');
+  }
+};
+
+const findOrCreateDefaultItemCategory = async (transaction: Transaction): Promise<ItemCategory> => {
+  const existing = await ItemCategory.findOne({
+    where: { name: DEFAULT_ITEM_CATEGORY_NAME },
+    transaction,
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  return ItemCategory.create(
+    {
+      name: DEFAULT_ITEM_CATEGORY_NAME,
+      icon: 'box',
+    },
+    { transaction }
+  );
+};
+
+const ensureShoppingListCategory = async (
+  shoppingListId: number,
+  createdBy: number,
+  transaction: Transaction
+): Promise<ShoppingListCategory> => {
+  const existing = await ShoppingListCategory.findOne({
+    where: { shopping_list_id: shoppingListId },
+    transaction,
+  });
+
+  if (existing) {
+    return existing;
+  }
+
+  const itemCategory = await findOrCreateDefaultItemCategory(transaction);
+
+  return ShoppingListCategory.create(
+    {
+      shopping_list_id: shoppingListId,
+      item_categories_id: Number(itemCategory.get('id')),
+      created_by: createdBy,
+    },
+    { transaction }
+  );
+};
+
 /**
  * Create a base shopping list for a family group with default categories
  * @param {number} familyGroupId - Family group ID
@@ -19,24 +90,7 @@ export const createBaseShoppingList = async (familyGroupId: number, createdBy: n
       { transaction: t }
     );
 
-    // Get all item categories to seed as default shopping list categories
-    const itemCategories = await ItemCategory.findAll({
-      transaction: t,
-    });
-
-    // Create shopping list categories for each item category
-    await Promise.all(
-      itemCategories.map((itemCategory) =>
-        ShoppingListCategory.create(
-          {
-            shopping_list_id: Number(shoppingList.get('id')),
-            item_categories_id: Number(itemCategory.get('id')),
-            created_by: createdBy,
-          },
-          { transaction: t }
-        )
-      )
-    );
+    await ensureShoppingListCategory(Number(shoppingList.get('id')), createdBy, t);
 
     return shoppingList;
   });
@@ -305,29 +359,14 @@ export const addItem = async (
 
     // Ensure there is at least one shopping list category to satisfy the foreign key,
     // even though the new UI no longer surfaces categories.
-    let shoppingListCategory = await ShoppingListCategory.findOne({
-      where: { shopping_list_id: Number(shoppingList.get('id')) },
-      transaction: t,
-    });
-
-    if (!shoppingListCategory) {
-      const fallbackItemCategory = await ItemCategory.findOne({ transaction: t });
-
-      if (!fallbackItemCategory) {
-        throw new Error('No item categories configured for shopping list');
-      }
-
-      shoppingListCategory = await ShoppingListCategory.create(
-        {
-          shopping_list_id: Number(shoppingList.get('id')),
-          item_categories_id: Number(fallbackItemCategory.get('id')),
-          created_by: createdBy,
-        },
-        { transaction: t }
-      );
-    }
+    const shoppingListCategory = await ensureShoppingListCategory(
+      Number(shoppingList.get('id')),
+      createdBy,
+      t
+    );
 
     const resolvedParentId = parentItemId ?? null;
+    await assertValidShoppingListParent(Number(shoppingList.get('id')), resolvedParentId, t);
 
     const maxPosition = await ShoppingListItem.max('position', {
       where: {
@@ -391,32 +430,17 @@ export const bulkAddItems = async (
       throw new Error('Shopping list not found');
     }
 
-    let shoppingListCategory = await ShoppingListCategory.findOne({
-      where: { shopping_list_id: Number(shoppingList.get('id')) },
-      transaction: t,
-    });
-
-    if (!shoppingListCategory) {
-      const fallbackItemCategory = await ItemCategory.findOne({ transaction: t });
-
-      if (!fallbackItemCategory) {
-        throw new Error('No item categories configured for shopping list');
-      }
-
-      shoppingListCategory = await ShoppingListCategory.create(
-        {
-          shopping_list_id: Number(shoppingList.get('id')),
-          item_categories_id: Number(fallbackItemCategory.get('id')),
-          created_by: createdBy,
-        },
-        { transaction: t }
-      );
-    }
+    const shoppingListCategory = await ensureShoppingListCategory(
+      Number(shoppingList.get('id')),
+      createdBy,
+      t
+    );
 
     const createdItems: ShoppingListItem[] = [];
 
     for (const payload of items) {
       const resolvedParentId = payload.parent_item_id ?? null;
+      await assertValidShoppingListParent(Number(shoppingList.get('id')), resolvedParentId, t);
 
       const maxPosition = await ShoppingListItem.max('position', {
         where: {
@@ -551,9 +575,12 @@ export const reorderItems = async (
         throw new Error('Item not found');
       }
 
+      const resolvedParentId = change.parent_item_id ?? null;
+      await assertValidShoppingListParent(Number(item.get('shopping_list_id')), resolvedParentId, t);
+
       await item.update(
         {
-          parent_item_id: change.parent_item_id ?? null,
+          parent_item_id: resolvedParentId,
           position: change.position,
         },
         { transaction: t }

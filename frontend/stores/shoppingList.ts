@@ -8,6 +8,12 @@ import type {
 } from '~/types/ShoppingList';
 import { useApi } from '~/composables/useApi';
 import { useConnection } from '~/composables/useConnection';
+import {
+  flattenShoppingListItems,
+  isShoppingListDescendant,
+  rebuildItemHierarchyFromFlatOrder,
+  resolveShoppingListIndentParent,
+} from '~/utils/shoppingListTree';
 
 // Temporary ID prefix for offline items
 const TEMP_ID_PREFIX = 'temp_';
@@ -591,11 +597,42 @@ export const useShoppingListStore = defineStore('shoppingList', {
       if (typeof change.id === 'number') {
         const existingIndex = this.pendingChanges.reorder.findIndex(entry => entry.id === change.id);
         if (existingIndex !== -1) {
-          this.pendingChanges.reorder[existingIndex] = change;
+          this.pendingChanges.reorder[existingIndex] = {
+            id: change.id,
+            parent_item_id: change.parent_item_id,
+            position: change.position,
+          };
         } else {
-          this.pendingChanges.reorder.push(change);
+          this.pendingChanges.reorder.push({
+            id: change.id,
+            parent_item_id: change.parent_item_id,
+            position: change.position,
+          });
         }
       }
+    },
+
+    applyActiveFlatOrder(flatActiveItems: ShoppingListItem[]) {
+      if (!this.shoppingList) {
+        return;
+      }
+
+      const changes = rebuildItemHierarchyFromFlatOrder(flatActiveItems);
+      for (const change of changes) {
+        this.recordReorder(change);
+      }
+
+      this.scheduleSaveToLocalStorage();
+    },
+
+    getActiveFlatItems(): ShoppingListItem[] {
+      if (!this.shoppingList?.items) {
+        return [];
+      }
+
+      return flattenShoppingListItems(
+        this.shoppingList.items.filter(item => !item.checked)
+      );
     },
 
     /**
@@ -606,27 +643,32 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const orderedItems = [...this.shoppingList.items].sort((a, b) => a.position - b.position);
-      const index = orderedItems.findIndex(item => item.id === itemId);
+      const activeItems = this.getActiveFlatItems();
+      const index = activeItems.findIndex(item => item.id === itemId);
 
       if (index <= 0) {
         return;
       }
 
-      const target = orderedItems[index];
-      const previous = orderedItems[index - 1];
-
-      if (!previous || typeof previous.id !== 'number') {
+      const previous = activeItems[index - 1];
+      if (!previous) {
         return;
       }
 
-      this.recordReorder({
-        id: target.id,
-        parent_item_id: previous.id,
-        position: target.position
-      });
+      const newParentId = resolveShoppingListIndentParent(previous);
+      const target = activeItems[index];
+      if (target.parent_item_id === newParentId) {
+        return;
+      }
 
-      this.scheduleSaveToLocalStorage();
+      const updatedItems = activeItems.map((item) => (
+        item.id === itemId
+          ? { ...item, parent_item_id: newParentId }
+          : item
+      ));
+
+      this.applyActiveFlatOrder(updatedItems);
+      await this.syncPendingChanges();
     },
 
     /**
@@ -637,18 +679,21 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const target = this.shoppingList.items.find(item => item.id === itemId);
+      const activeItems = this.getActiveFlatItems();
+      const target = activeItems.find(item => item.id === itemId);
       if (!target || target.parent_item_id === null) {
         return;
       }
 
-      this.recordReorder({
-        id: target.id,
-        parent_item_id: null,
-        position: target.position
-      });
+      const parent = this.shoppingList.items.find(item => item.id === target.parent_item_id);
+      const updatedItems = activeItems.map((item) => (
+        item.id === itemId
+          ? { ...item, parent_item_id: parent?.parent_item_id ?? null }
+          : item
+      ));
 
-      this.scheduleSaveToLocalStorage();
+      this.applyActiveFlatOrder(updatedItems);
+      await this.syncPendingChanges();
     },
 
     /**

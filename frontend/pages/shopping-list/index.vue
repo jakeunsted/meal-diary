@@ -8,6 +8,9 @@
     <ShoppingListSkeleton v-if="!hasData" />
     <div v-else>
       <DnDProvider>
+        <template #preview>
+          <DragPreview />
+        </template>
         <ShoppingListDndZone
           :active-items="activeItems"
           :item-depth-map="itemDepthMap"
@@ -78,7 +81,7 @@ definePageMeta({
   middleware: 'auth'
 });
 
-import { DnDProvider } from '@vue-dnd-kit/core';
+import { DnDProvider, DragPreview } from '@vue-dnd-kit/core';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
 import ShoppingListDndZone from '~/components/shopping-list/ShoppingListDndZone.vue';
@@ -86,6 +89,7 @@ import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
+import { flattenShoppingListItems } from '~/utils/shoppingListTree';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const shoppingListStore = useShoppingListStore();
@@ -111,7 +115,7 @@ const orderedItems = computed(() => {
   if (!shoppingListStore.shoppingList?.items) {
     return [];
   }
-  return [...shoppingListStore.shoppingList.items].sort((a, b) => a.position - b.position);
+  return flattenShoppingListItems(shoppingListStore.shoppingList.items);
 });
 
 const activeItems = computed(() => {
@@ -325,6 +329,10 @@ onMounted(async () => {
 .input:focus {
   position: relative;
   z-index: 10;
+}
+
+:deep(.dnd-kit-preview) {
+  opacity: 0.7;
 }
 </style>
 
