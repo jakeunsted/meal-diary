@@ -4,6 +4,104 @@ import type { Request } from 'express';
 
 let posthogClient: PostHog | null = null;
 
+const MAX_ERROR_MESSAGE_LENGTH = 200;
+
+export interface SanitizedError {
+  error_message: string;
+  error_type: string;
+}
+
+const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+const SENSITIVE_PATTERNS = [
+  /Bearer\s+[^\s]+/gi,
+  /accessToken[=:][^\s&]+/gi,
+  /refreshToken[=:][^\s&]+/gi,
+  /authorization_code[=:][^\s&]+/gi,
+  /idToken[=:][^\s&]+/gi,
+  /id_token[=:][^\s&]+/gi,
+  /\bcode=[^\s&]+/gi,
+];
+
+/**
+ * Redact PII and secrets from error text before sending to PostHog Logs / analytics.
+ * Filter PostHog Logs by category=auth + time window + posthogDistinctId to debug auth incidents.
+ */
+const redactSensitiveText = (text: string): string => {
+  let result = text.replace(EMAIL_REGEX, '[email]');
+  for (const pattern of SENSITIVE_PATTERNS) {
+    result = result.replace(pattern, '[redacted]');
+  }
+  if (result.length > MAX_ERROR_MESSAGE_LENGTH) {
+    return `${result.slice(0, MAX_ERROR_MESSAGE_LENGTH)}…`;
+  }
+  return result;
+};
+
+const extractErrorMessage = (error: unknown): string => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data as { error?: string; error_description?: string } | undefined;
+    if (data?.error_description) {
+      return `${data.error ?? 'error'}: ${data.error_description}`;
+    }
+    if (data?.error) {
+      return String(data.error);
+    }
+    return error.message;
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null && 'message' in error) {
+    return String((error as { message: unknown }).message);
+  }
+
+  return String(error);
+};
+
+const classifyErrorType = (message: string, errorName?: string): string => {
+  const lower = message.toLowerCase();
+
+  if (lower.includes('invalid_grant') || lower.includes('redirect_uri_mismatch')) {
+    return 'token_exchange';
+  }
+  if (message.includes('No email in Google profile') || lower.includes('no email in google profile')) {
+    return 'no_email';
+  }
+  if (
+    errorName === 'SequelizeValidationError' ||
+    errorName === 'SequelizeUniqueConstraintError' ||
+    lower.includes('unique violation') ||
+    lower.includes('validation error') ||
+    lower.includes('value too long for type character varying')
+  ) {
+    return 'db_error';
+  }
+  if (lower.includes('jwt secrets not configured')) {
+    return 'jwt_error';
+  }
+  if (lower.includes('invalid token') || lower.includes('token audience')) {
+    return 'invalid_token';
+  }
+  if (lower.includes('oauth credentials not configured')) {
+    return 'token_exchange';
+  }
+
+  return 'unknown';
+};
+
+export const sanitizeErrorForAnalytics = (error: unknown): SanitizedError => {
+  const rawMessage = extractErrorMessage(error);
+  const errorName = error instanceof Error ? error.name : undefined;
+
+  return {
+    error_message: redactSensitiveText(rawMessage),
+    error_type: classifyErrorType(rawMessage, errorName),
+  };
+};
+
 /**
  * Get or create PostHog client instance
  */

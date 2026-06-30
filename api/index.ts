@@ -14,19 +14,23 @@ import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
+import { initializeOtelLogs, shutdownOtelLogs } from './utils/otelLogs.ts';
 import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Initialise PostHog
+// Initialise PostHog analytics events
 const posthog = getPostHog();
 if (posthog) {
   console.log('PostHog initialized successfully');
 } else if (process.env.NODE_ENV === 'production') {
   console.warn('PostHog: Not initialized - POSTHOG_KEY may be missing or invalid');
 }
+
+// Initialise PostHog Logs (OpenTelemetry)
+initializeOtelLogs();
 
 // Middleware
 // Trust proxy for Railway (needed for rate limiting and correct IP addresses)
@@ -97,12 +101,14 @@ app.use(errorTrackingMiddleware);
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received, shutting down gracefully...');
+  await shutdownOtelLogs();
   await shutdownPostHog();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
   console.log('SIGINT received, shutting down gracefully...');
+  await shutdownOtelLogs();
   await shutdownPostHog();
   process.exit(0);
 });
