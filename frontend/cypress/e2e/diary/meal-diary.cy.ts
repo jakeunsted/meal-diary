@@ -60,9 +60,13 @@ describe('Meal diary', () => {
   });
 
   it('loads the week from the URL query param', () => {
-    const weekStart = '2026-05-18';
+    const frozenNow = new Date('2026-06-15T12:00:00');
+    cy.clock(frozenNow, ['Date']);
+    const weekStart = '2026-06-09';
+
+    cy.intercept('GET', `**/api/meal-diaries/**/${weekStart}/daily-meals`).as('apiGetMealDiaryWeek');
     cy.visitApp(`/diary?week=${weekStart}`);
-    cy.wait('@apiGetMealDiary')
+    cy.wait('@apiGetMealDiaryWeek')
       .its('request.url')
       .should('include', `${weekStart}/daily-meals`);
     cy.location('search').should('include', `week=${weekStart}`);

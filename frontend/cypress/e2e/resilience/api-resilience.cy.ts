@@ -22,7 +22,7 @@ describe('API resilience and auth handling', () => {
     cy.intercept('GET', /\/api\/recipes\/family\/\d+(\?.*)?$/, {
       statusCode: 401,
       body: {
-        message: 'Invalid token',
+        message: 'Invalid or expired refresh token',
       },
     }).as('apiGetRecipes');
 
