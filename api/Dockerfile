@@ -1,13 +1,15 @@
 FROM node:26-alpine
 
+# bcrypt must compile on Alpine/musl; node-gyp needs Python and a C++ toolchain.
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
 
 COPY package*.json ./
 COPY . ./
 
-# Install dependencies and rebuild bcrypt for the current architecture
-RUN npm install
-RUN npm rebuild bcrypt --build-from-source
+RUN npm install \
+  && npm rebuild bcrypt --build-from-source
 
 # Build the TypeScript code
 RUN npm run build
