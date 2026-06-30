@@ -6,7 +6,7 @@ import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
 import Subscription from '../../db/models/Subscription.model.ts';
-import { createUser, deleteUserAccount } from '../user.service.ts';
+import { createUser, deleteUserAccount, isValidEmail } from '../user.service.ts';
 import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
 import { TrialRedemption } from '../../db/models/associations.ts';
@@ -26,6 +26,24 @@ beforeEach(() => {
   vi.restoreAllMocks();
   // No existing user with the same username/email
   vi.spyOn(User, 'findOne').mockResolvedValue(null);
+});
+
+describe('isValidEmail', () => {
+  it('accepts typical email addresses', () => {
+    expect(isValidEmail('user@example.com')).toBe(true);
+    expect(isValidEmail('New@Example.com')).toBe(true);
+    expect(isValidEmail('a@b.co')).toBe(true);
+  });
+
+  it('rejects malformed or hostile inputs in linear time', () => {
+    expect(isValidEmail('child')).toBe(false);
+    expect(isValidEmail('@example.com')).toBe(false);
+    expect(isValidEmail('user@')).toBe(false);
+    expect(isValidEmail('user@example')).toBe(false);
+    expect(isValidEmail('user @example.com')).toBe(false);
+    expect(isValidEmail('!@!.' + '!.'.repeat(10_000))).toBe(false);
+    expect(isValidEmail('a@b.co' + 'x'.repeat(250))).toBe(false);
+  });
 });
 
 describe('createUser', () => {

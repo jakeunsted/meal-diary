@@ -68,14 +68,43 @@ const userExists = async (username: string, email: string): Promise<boolean> => 
   return !!existingUser;
 };
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_EMAIL_LENGTH = 254;
 
 /**
- * Validate an email address format
+ * Validate an email address format (linear-time; avoids ReDoS-prone regex).
  * @param {string} email - Email to validate
  * @returns {boolean} True if the email format is valid
  */
-export const isValidEmail = (email: string): boolean => EMAIL_REGEX.test(email);
+export const isValidEmail = (email: string): boolean => {
+  if (typeof email !== 'string' || email.length === 0 || email.length > MAX_EMAIL_LENGTH) {
+    return false;
+  }
+
+  const atIndex = email.indexOf('@');
+  if (atIndex <= 0 || atIndex !== email.lastIndexOf('@')) {
+    return false;
+  }
+
+  const localPart = email.slice(0, atIndex);
+  const domain = email.slice(atIndex + 1);
+  if (localPart.length === 0 || domain.length === 0) {
+    return false;
+  }
+
+  const dotIndex = domain.indexOf('.');
+  if (dotIndex <= 0 || dotIndex === domain.length - 1) {
+    return false;
+  }
+
+  for (let i = 0; i < email.length; i++) {
+    const code = email.charCodeAt(i);
+    if (code <= 32 || code === 127) {
+      return false;
+    }
+  }
+
+  return true;
+};
 
 /**
  * Hash password
