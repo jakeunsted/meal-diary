@@ -4,11 +4,12 @@ import ShoppingList from './ShoppingList.model.ts';
 import MealDiary from './MealDiary.model.ts';
 import DailyMeal from './DailyMeal.model.ts';
 import RefreshToken from './RefreshToken.model.ts';
-import ItemCategory from './ItemCategory.model.ts';
-import ShoppingListCategory from './ShoppingListCategory.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
+import Subscription from './Subscription.model.ts';
+import TrialRedemption from './TrialRedemption.model.ts';
+import SubscriptionEvent from './SubscriptionEvent.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -16,6 +17,37 @@ User.belongsTo(FamilyGroup, {
   foreignKeyConstraint: true,
 });
 FamilyGroup.hasMany(User, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+// FamilyGroup <-> Subscription associations
+FamilyGroup.hasOne(Subscription, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'subscription',
+});
+Subscription.belongsTo(FamilyGroup, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+Subscription.hasMany(SubscriptionEvent, {
+  foreignKey: 'subscription_id',
+  foreignKeyConstraint: true,
+  as: 'events',
+});
+SubscriptionEvent.belongsTo(Subscription, {
+  foreignKey: 'subscription_id',
+  foreignKeyConstraint: true,
+});
+
+FamilyGroup.hasMany(TrialRedemption, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'trialRedemptions',
+});
+TrialRedemption.belongsTo(FamilyGroup, {
   foreignKey: 'family_group_id',
   foreignKeyConstraint: true,
 });
@@ -28,40 +60,6 @@ FamilyGroup.hasOne(ShoppingList, {
 });
 ShoppingList.belongsTo(FamilyGroup, { 
   foreignKey: 'family_group_id',
-  foreignKeyConstraint: true
-});
-
-// ShoppingList <-> ShoppingListCategory associations
-ShoppingList.hasMany(ShoppingListCategory, {
-  foreignKey: 'shopping_list_id',
-  foreignKeyConstraint: true,
-  as: 'categories'
-});
-ShoppingListCategory.belongsTo(ShoppingList, {
-  foreignKey: 'shopping_list_id',
-  foreignKeyConstraint: true
-});
-
-// ItemCategory <-> ShoppingListCategory associations
-ItemCategory.hasMany(ShoppingListCategory, {
-  foreignKey: 'item_categories_id',
-  foreignKeyConstraint: true,
-  as: 'shoppingListCategories'
-});
-ShoppingListCategory.belongsTo(ItemCategory, {
-  foreignKey: 'item_categories_id',
-  foreignKeyConstraint: true,
-  as: 'itemCategory'
-});
-
-// ShoppingListCategory <-> ShoppingListItem associations
-ShoppingListCategory.hasMany(ShoppingListItem, {
-  foreignKey: 'shopping_list_categories',
-  foreignKeyConstraint: true,
-  as: 'items'
-});
-ShoppingListItem.belongsTo(ShoppingListCategory, {
-  foreignKey: 'shopping_list_categories',
   foreignKeyConstraint: true
 });
 
@@ -180,9 +178,10 @@ export {
   MealDiary,
   DailyMeal,
   RefreshToken,
-  ItemCategory,
-  ShoppingListCategory,
   ShoppingListItem,
   Recipe,
-  RecipeIngredient
+  RecipeIngredient,
+  Subscription,
+  TrialRedemption,
+  SubscriptionEvent,
 };

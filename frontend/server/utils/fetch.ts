@@ -65,7 +65,11 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     const error = await response.json().catch(() => ({ message: 'Unknown error' }));
     throw {
       statusCode: response.status,
-      message: error.message || `API error: ${response.statusText}`
+      message: error.message || `API error: ${response.statusText}`,
+      code: error.code,
+      feature: error.feature,
+      upgradeUrl: error.upgradeUrl,
+      plan: error.plan,
     };
   }
 

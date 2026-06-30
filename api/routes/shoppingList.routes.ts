@@ -1,6 +1,7 @@
 import express from 'express';
 import * as shoppingListController from '../controllers/shopping-list/shoppingList.controller.ts';
 import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
+import { requireEntitlement } from '../middleware/entitlement.middleware.ts';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -249,145 +250,6 @@ router.get('/:family_group_id', async (req, res, next) => {
 
 /**
  * @openapi
- * /shopping-list/{family_group_id}/categories:
- *   post:
- *     summary: Add a new category to a shopping list
- *     description: Creates a new category in the shopping list
- *     tags:
- *       - Shopping List
- *     parameters:
- *       - name: family_group_id
- *         in: path
- *         required: true
- *         description: The id of the family group
- *       - name: id
- *         in: path
- *         required: true
- *         description: The id of the category to add
- *     responses:
- *       200:
- *         description: The newly created category
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ShoppingListCategoryWithItems'
- *       404:
- *         description: Shopping list category not found
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Shopping list not found
- *       412:
- *         description: Category ID is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Category ID is required
- *       500:
- *         description: Failed to add new category
- */
-router.post('/:family_group_id/categories/:category_id', async (req, res, next) => {
-  try {
-    await shoppingListController.addCategory(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
- * /shopping-list/{family_group_id}/categories:
- *   get:
- *     summary: Get all categories for a shopping list
- *     description: Retrieves all categories for a shopping list
- *     tags:
- *       - Shopping List
- *     parameters:
- *       - name: family_group_id
- *         in: path
- *         required: true
- *         description: The id of the family group
- *     responses:
- *       200:
- *         description: The categories for the shopping list (returns empty array if shopping list not found)
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/ShoppingListCategoryWithItems'
- *       412:
- *         description: Family group ID is required
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Family group ID is required
- *       500:
- *         description: Server error
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Failed to get categories
- */
-router.get('/:family_group_id/categories', async (req, res, next) => {
-  try {
-    await shoppingListController.getFamilyCategories(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
- * /shopping-list/{family_group_id}/categories/{category_id}:
- *   delete:
- *     summary: Delete a category from the family shopping list
- *     description: Deletes a category and all its items from the family shopping list
- *     tags:
- *       - Shopping List
- *     parameters:
- *       - name: family_group_id
- *         in: path
- *         required: true
- *         description: The id of the family group
- *       - name: category_id
- *         in: path
- *         required: true
- *         description: The id of the category to delete
- *     responses:
- *       200:
- *         description: The deleted category
- *       404:
- *         description: Category not found
- *       500:
- *         description: Failed to delete category
- */
-router.delete('/:family_group_id/categories/:category_id', async (req, res, next) => {
-  try {
-    await shoppingListController.deleteCategory(req, res);
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * @openapi
  * /shopping-list/{family_group_id}/items:
  *   post:
  *     summary: Add a new item to a shopping list
@@ -487,7 +349,7 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *       500:
  *         description: Failed to add new items
  */
-router.post('/:family_group_id/items/bulk', async (req, res, next) => {
+router.post('/:family_group_id/items/bulk', requireEntitlement('recipe_to_shopping_list'), async (req, res, next) => {
   try {
     await shoppingListController.bulkAddItems(req, res);
   } catch (error) {
@@ -555,6 +417,115 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
 
 /**
  * @openapi
+ * /shopping-list/{family_group_id}/items/bulk-update:
+ *   put:
+ *     summary: Bulk update shopping list items
+ *     description: Updates name and/or checked for one or more shopping list items in a single request
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - items
+ *             properties:
+ *               items:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - id
+ *                   minProperties: 2
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                       description: The id of the item to update
+ *                     name:
+ *                       type: string
+ *                       description: The new name of the item
+ *                     checked:
+ *                       type: boolean
+ *                       description: Whether the item is checked
+ *                     deleted:
+ *                       type: boolean
+ *                       description: Whether the item is soft-deleted (set false to restore)
+ *     responses:
+ *       200:
+ *         description: The updated items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to update items
+ */
+router.put('/:family_group_id/items/bulk-update', async (req, res, next) => {
+  try {
+    await shoppingListController.bulkUpdateItems(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /shopping-list/{family_group_id}/items/bulk-delete:
+ *   post:
+ *     summary: Bulk delete shopping list items
+ *     description: Soft deletes one or more shopping list items in a single request
+ *     tags:
+ *       - Shopping List
+ *     parameters:
+ *       - name: family_group_id
+ *         in: path
+ *         required: true
+ *         description: The id of the family group
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - ids
+ *             properties:
+ *               ids:
+ *                 type: array
+ *                 items:
+ *                   type: integer
+ *                 description: The ids of the items to delete
+ *     responses:
+ *       200:
+ *         description: The deleted items
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: Item not found
+ *       500:
+ *         description: Failed to delete items
+ */
+router.post('/:family_group_id/items/bulk-delete', async (req, res, next) => {
+  try {
+    await shoppingListController.bulkDeleteItems(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /shopping-list/{family_group_id}/items/{item_id}:
  *   put:
  *     summary: Update a shopping list item
@@ -572,13 +543,12 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
  *         description: The id of the item to update
  *     requestBody:
  *       required: true
+ *       description: At least one of name or checked must be provided (partial updates supported)
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - name
- *               - checked
+ *             minProperties: 1
  *             properties:
  *               name:
  *                 type: string
@@ -605,7 +575,7 @@ router.put('/:family_group_id/items/reorder', async (req, res, next) => {
  *                   examples:
  *                     - Valid item ID is required
  *                     - Valid family group ID is required
- *                     - Name and checked status are required
+ *                     - At least one of name or checked is required
  *                     - Name must be a non-empty string
  *                     - Checked status must be a boolean
  *       404:

@@ -1,5 +1,6 @@
 import express from 'express';
 import * as familyGroupController from '../controllers/family-group/familyGroup.controller.ts';
+import * as entitlementsController from '../controllers/entitlements/entitlements.controller.ts';
 import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
@@ -285,6 +286,22 @@ router.post('/:family_group_id/transfer-ownership', authenticateToken, requireFa
 router.delete('/:family_group_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await familyGroupController.deleteFamilyGroup(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get('/:family_group_id/entitlements', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await entitlementsController.getFamilyEntitlements(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:family_group_id/entitlements/dismiss-prompt', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await entitlementsController.dismissEntitlementPrompt(req, res);
   } catch (error) {
     next(error);
   }

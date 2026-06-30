@@ -28,7 +28,28 @@
       <h3 class="font-semibold">{{ $t('Wow its empty here!') }}</h3>
     </div>
     <div class="flex flex-col items-center justify-center mx-auto rounded-xl">
-      <button class="btn btn-primary mt-4" data-testid="profile-add-family-member-button" @click="handleAddFamilyMember">{{ $t('Add family member') }}</button>
+      <p
+        v-if="!canAddFamilyMember && memberLimitMessage"
+        class="text-sm text-center opacity-80 mt-4 max-w-md"
+        data-testid="profile-family-member-limit-message"
+      >
+        {{ memberLimitMessage }}
+        <NuxtLink
+          v-if="showUpgradeLink"
+          class="link link-primary"
+          to="/plans"
+        >
+          {{ $t('profilePage.viewPlansToUpgrade') }}
+        </NuxtLink>
+      </p>
+      <button
+        class="btn btn-primary mt-4"
+        data-testid="profile-add-family-member-button"
+        :disabled="!canAddFamilyMember"
+        @click="handleAddFamilyMember"
+      >
+        {{ $t('Add family member') }}
+      </button>
     </div>
   </div>
 </template>
@@ -36,10 +57,28 @@
 <script setup lang="ts">
 import type { DisplayMember } from '../../../types/FamilyGroup';
 
-defineProps<{
-  members: DisplayMember[];
-  ownerId?: number | null;
-}>();
+defineProps({
+  members: {
+    type: Array as () => DisplayMember[],
+    required: true,
+  },
+  ownerId: {
+    type: Number as () => number | null | undefined,
+    default: null,
+  },
+  canAddFamilyMember: {
+    type: Boolean,
+    default: true,
+  },
+  memberLimitMessage: {
+    type: String,
+    default: '',
+  },
+  showUpgradeLink: {
+    type: Boolean,
+    default: false,
+  },
+});
 
 const emit = defineEmits<{
   (e: 'addFamilyMember'): void;

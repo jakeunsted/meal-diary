@@ -67,10 +67,18 @@ export const getWeekInfoForDate = (date: Date | string): WeekInfo => {
   };
 };
 
+export interface WeekCalendarEntitlementOptions {
+  canSelectWeek?: (weekStart: Date) => boolean;
+  onWeekBlocked?: () => void;
+}
+
 /**
  * Composable for managing week calendar state and logic
  */
-export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | ComputedRef<Date | null> | null) => {
+export const useWeekCalendar = (
+  initialWeekStartDate?: Ref<Date | null> | ComputedRef<Date | null> | null,
+  entitlementOptions?: Ref<WeekCalendarEntitlementOptions | undefined> | ComputedRef<WeekCalendarEntitlementOptions | undefined>
+) => {
   // Get initial week info
   const getInitialWeekInfo = (): WeekInfo => {
     if (initialWeekStartDate && 'value' in initialWeekStartDate && initialWeekStartDate.value) {
@@ -231,6 +239,42 @@ export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | Comput
   // Computed property for the select dropdown key
   const selectedWeekKey = computed(() => `${selectedYear.value}-${selectedWeek.value}`);
 
+  const isWeekSelectable = (weekStart: Date): boolean => {
+    const canSelectWeek = entitlementOptions && 'value' in entitlementOptions
+      ? entitlementOptions.value?.canSelectWeek
+      : undefined;
+
+    if (!canSelectWeek) {
+      return true;
+    }
+
+    return canSelectWeek(weekStart);
+  };
+
+  const notifyWeekBlocked = () => {
+    const onWeekBlocked = entitlementOptions && 'value' in entitlementOptions
+      ? entitlementOptions.value?.onWeekBlocked
+      : undefined;
+
+    onWeekBlocked?.();
+  };
+
+  const getNextWeek = (): WeekData | null => {
+    if (weeks.value.length === 0) {
+      return null;
+    }
+
+    const currentWeekData = weeks.value.find(w => w.year === selectedYear.value && w.number === selectedWeek.value);
+    if (!currentWeekData) {
+      return null;
+    }
+
+    const currentStartDate = currentWeekData.startDate;
+    return weeks.value
+      .filter(w => w.startDate.getTime() > currentStartDate.getTime())
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0] ?? null;
+  };
+
   // Filter weeks to only show 3 weeks before and after the selected week
   // Also deduplicates weeks with the same date range
   const filteredWeeks = computed(() => {
@@ -248,7 +292,7 @@ export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | Comput
     const filtered = weeks.value.filter(week => {
       const weekStartDate = week.startDate;
       const daysDiff = Math.abs((weekStartDate.getTime() - selectedStartDate.getTime()) / (1000 * 60 * 60 * 24));
-      return daysDiff <= 21; // 3 weeks = 21 days
+      return daysDiff <= 21 && isWeekSelectable(weekStartDate);
     });
     
     // Deduplicate weeks with the same date range
@@ -340,16 +384,12 @@ export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | Comput
   });
 
   const canGoForward = computed(() => {
-    if (weeks.value.length === 0) return false;
-    const currentWeekData = weeks.value.find(w => w.year === selectedYear.value && w.number === selectedWeek.value);
-    if (!currentWeekData) return false;
-    
-    const currentStartDate = currentWeekData.startDate;
-    const nextWeek = weeks.value
-      .filter(w => w.startDate.getTime() > currentStartDate.getTime())
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
-    
-    return !!nextWeek;
+    const nextWeek = getNextWeek();
+    if (!nextWeek) {
+      return false;
+    }
+
+    return isWeekSelectable(nextWeek.startDate);
   });
 
   // Navigation handlers
@@ -420,23 +460,27 @@ export const useWeekCalendar = (initialWeekStartDate?: Ref<Date | null> | Comput
   };
 
   const handleNextWeek = () => {
-    if (!canGoForward.value) return;
-    
-    const currentWeekData = weeks.value.find(w => w.year === selectedYear.value && w.number === selectedWeek.value);
-    if (!currentWeekData) return;
-    
-    const currentStartDate = currentWeekData.startDate;
-    const nextWeek = weeks.value
-      .filter(w => w.startDate.getTime() > currentStartDate.getTime())
-      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
-    
-    if (nextWeek) {
-      selectedYear.value = nextWeek.year;
-      selectedWeek.value = nextWeek.number;
+    const nextWeek = getNextWeek();
+    if (!nextWeek) {
+      return;
     }
+
+    if (!isWeekSelectable(nextWeek.startDate)) {
+      notifyWeekBlocked();
+      return;
+    }
+
+    selectedYear.value = nextWeek.year;
+    selectedWeek.value = nextWeek.number;
   };
 
   const handleWeekSelect = (year: number, week: number) => {
+    const weekData = weeks.value.find(w => w.year === year && w.number === week);
+    if (weekData && !isWeekSelectable(weekData.startDate)) {
+      notifyWeekBlocked();
+      return;
+    }
+
     selectedYear.value = year;
     selectedWeek.value = week;
   };

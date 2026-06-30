@@ -20,14 +20,38 @@
       </button>
     </div>
 
+    <div
+      v-if="isWeekReadOnly"
+      class="alert alert-info mx-4 mb-4"
+      role="status"
+      data-testid="diary-week-read-only-alert"
+    >
+      <div class="flex flex-col gap-2 w-full sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex flex-col gap-1">
+          <span>{{ $t('diaryPage.weekReadOnly') }}</span>
+          <span v-if="!billing.isOwner" class="text-sm">{{ weekReadOnlyHelperText }}</span>
+        </div>
+        <NuxtLink
+          v-if="billing.isOwner"
+          class="btn btn-primary btn-sm w-fit shrink-0"
+          to="/plans"
+          data-testid="diary-week-read-only-upgrade"
+        >
+          {{ $t('diaryPage.upgradeLink') }}
+        </NuxtLink>
+      </div>
+    </div>
+
     <MealDiarySkeleton v-if="showSkeleton" />
     <div v-else class="relative">
       <WeekCalendarPicker
         :key="resolvedWeekKey"
         :initialWeekStartDate="displayWeekStartDate"
         :is-current-week="isCurrentWeek"
+        :can-select-week="canSelectWeek"
         @weekChange="handleWeekChange"
         @go-to-this-week="handleGoToThisWeek"
+        @weekBlocked="handleWeekBlocked"
       />
       <div
         class="relative"
@@ -42,6 +66,7 @@
           :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
           :dinner="{ name: dayMeal.dinner, recipeId: dayMeal.dinner_recipe_id }"
           :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
+          :readOnly="isWeekReadOnly"
           @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
         />
       </div>
@@ -88,8 +113,13 @@ const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
 const { showSuccess } = useToast();
 const { track } = useAnalytics();
+const { refreshEntitlements, canNavigateToWeek, isWeekReadOnly: checkWeekReadOnly, billing } = useEntitlements();
+const { openPaywall } = usePaywall();
 
-onMounted(() => track('diary_viewed'));
+onMounted(() => {
+  track('diary_viewed');
+  void refreshEntitlements(true);
+});
 const { t } = useI18n();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
 
@@ -108,7 +138,30 @@ const hasMealData = computed(() => mealDiaryStore.weeklyMeals?.length > 0);
 const showSkeleton = computed(() => loading.value && !hasMealData.value);
 const showWeekLoading = computed(() => loading.value && hasMealData.value);
 
+const isWeekReadOnly = computed(() => {
+  if (!displayWeekStartDate.value) {
+    return false;
+  }
+
+  return checkWeekReadOnly(displayWeekStartDate.value);
+});
+
+const weekReadOnlyHelperText = computed(() => {
+  if (billing.value.ownerDisplayName) {
+    return t('diaryPage.askOwnerToUpgrade', { name: billing.value.ownerDisplayName });
+  }
+
+  return t('diaryPage.askOwnerToUpgradeGeneric');
+});
+
+const canSelectWeek = (weekStart) => canNavigateToWeek(weekStart);
+
 const handleSetMeal = (mealType, dayOfWeek) => {
+  if (isWeekReadOnly.value) {
+    openPaywall('edit_past_weeks');
+    return;
+  }
+
   mealDiaryStore.setSelectedMeal(mealType, dayOfWeek);
   set_meal_modal.showModal();
 };
@@ -131,6 +184,10 @@ const handleWeekChange = (weekStartDate) => {
 
 const handleGoToThisWeek = () => {
   void goToCurrentWeek();
+};
+
+const handleWeekBlocked = () => {
+  openPaywall('weeks_ahead');
 };
 
 const handleRetry = () => {

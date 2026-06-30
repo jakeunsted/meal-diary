@@ -12,6 +12,8 @@ interface RegisterData {
 }
 
 export const useRegister = () => {
+  const { t } = useI18n();
+
   /**
    * Store the register string in the capacitor storage
    * @param registerString - The register string to store
@@ -69,6 +71,9 @@ export const useRegister = () => {
   
     if (!registrationData.email) {
       errors.value.email = 'Email is required';
+      hasErrors = true;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registrationData.email)) {
+      errors.value.email = 'Please enter a valid email address';
       hasErrors = true;
     }
   
@@ -130,11 +135,18 @@ export const useRegister = () => {
 
       if (!response.ok) {
         const body = await response.json().catch(() => null);
+        const errorBody = body?.data ?? body;
 
         if (response.status === 409) {
           // Deliberately vague between username and email to limit
           // account-enumeration value while staying helpful
           errors.value.general = 'An account with these details already exists. Try logging in instead.';
+        } else if (
+          response.status === 403 &&
+          errorBody?.code === 'ENTITLEMENT_REQUIRED' &&
+          errorBody?.feature === 'family_members'
+        ) {
+          errors.value.general = t('registrationStep2.familyGroupFull');
         } else if (response.status === 400 && body?.message) {
           errors.value.general = body.message;
         } else {

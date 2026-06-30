@@ -5,14 +5,21 @@ import { useAuthStore } from '~/stores/auth';
 import { isTokenExpired } from '~/composables/useJWT';
 import { useAuth } from '~/composables/useAuth';
 import {
+  extractEntitlementError,
   extractErrorMessage,
   isAuthError,
   isSessionExpiredError,
   isRetryableAuthError,
   getHttpStatusCode,
 } from '~/utils/httpError';
+import type { EntitlementFeature } from '~/types/Entitlements';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 import type { ApiResponse } from '~/types/Api';
+
+interface ApiOptions extends FetchOptions {
+  /** When true, errors are thrown without showing a global toast */
+  silent?: boolean;
+}
 
 /**
  * Get default error message based on status code.
@@ -134,13 +141,15 @@ export const useApi = () => {
     return headers;
   };
 
-  const api = async <T = any>(url: string, options?: FetchOptions): Promise<T> => {
+  const api = async <T = any>(url: string, options?: ApiOptions): Promise<T> => {
+    const { silent = false, ...fetchOptions } = options ?? {};
+
     try {
       await ensureFreshTokens(url);
 
       const result = await $fetch<T>(url, {
-        ...options,
-        headers: buildHeaders(options),
+        ...fetchOptions,
+        headers: buildHeaders(fetchOptions),
       } as any);
 
       // Sync any server-rotated tokens back into the client store.
@@ -171,8 +180,8 @@ export const useApi = () => {
         console.log('[Token Debug] useApi: retrying after rotation-race 401');
         try {
           const result = await $fetch<T>(url, {
-            ...options,
-            headers: buildHeaders(options),
+            ...fetchOptions,
+            headers: buildHeaders(fetchOptions),
           } as any);
           await applyRefreshedTokensFromResponse(result, authStore);
           return result;
@@ -191,7 +200,13 @@ export const useApi = () => {
           await handleAutoLogout();
         }
       } else {
-        showError(errorMessage);
+        const entitlementError = extractEntitlementError(error);
+        if (entitlementError && import.meta.client) {
+          const { openPaywall } = usePaywall();
+          openPaywall(entitlementError.feature as EntitlementFeature);
+        } else if (!silent) {
+          showError(errorMessage);
+        }
       }
 
       throw error;

@@ -1,5 +1,24 @@
 {
   "cSpell.words": [
     "posthog"
-  ]
+  ],
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/api/dist/**": true,
+    "**/frontend/.nuxt/**": true,
+    "**/frontend/.output/**": true,
+    "**/frontend/.cache/**": true,
+    "**/frontend/dist/**": true,
+    "**/frontend/ios/**": true,
+    "**/frontend/android/**": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/api/dist": true,
+    "**/frontend/.nuxt": true,
+    "**/frontend/.output": true,
+    "**/frontend/.cache": true
+  }
 }
