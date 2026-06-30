@@ -74,7 +74,8 @@ const classifyErrorType = (message: string, errorName?: string): string => {
     errorName === 'SequelizeValidationError' ||
     errorName === 'SequelizeUniqueConstraintError' ||
     lower.includes('unique violation') ||
-    lower.includes('validation error')
+    lower.includes('validation error') ||
+    lower.includes('value too long for type character varying')
   ) {
     return 'db_error';
   }

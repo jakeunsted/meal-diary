@@ -57,7 +57,7 @@ User.init(
       allowNull: true,
     },
     avatar_url: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
       allowNull: true,
     },
     terms_accepted_at: {
