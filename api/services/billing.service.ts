@@ -48,6 +48,15 @@ export class TrialAlreadyUsedError extends Error {
   }
 }
 
+export class BillingManagedByStoreError extends Error {
+  readonly code = 'BILLING_MANAGED_BY_STORE';
+
+  constructor() {
+    super('BILLING_MANAGED_BY_STORE');
+    this.name = 'BillingManagedByStoreError';
+  }
+}
+
 const getStripe = (): Stripe => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -242,6 +251,24 @@ export const assertTrialEligible = async (
   };
 };
 
+/**
+ * Returns whether the family owner is eligible for a free trial checkout.
+ */
+export const isTrialEligible = async (
+  ownerUserId: number,
+  stripeCustomerId?: string | null
+): Promise<boolean> => {
+  try {
+    await assertTrialEligible(ownerUserId, stripeCustomerId);
+    return true;
+  } catch (error) {
+    if (error instanceof TrialAlreadyUsedError) {
+      return false;
+    }
+    throw error;
+  }
+};
+
 const recordTrialRedemption = async (
   ownerUserId: number,
   familyGroupId: number,
@@ -266,12 +293,22 @@ interface CheckoutRedirectUrls {
   cancelUrl?: string;
 }
 
+const assertWebBillingAllowed = async (familyGroupId: number) => {
+  const subscription = await getOrCreateSubscription(familyGroupId);
+  const storePlatform = subscription.dataValues.store_platform;
+
+  if (storePlatform === 'ios' || storePlatform === 'android') {
+    throw new BillingManagedByStoreError();
+  }
+};
+
 export const createCheckoutSession = async (
   familyGroupId: number,
   ownerUserId: number,
   interval: BillingInterval,
   redirectUrls?: CheckoutRedirectUrls
 ): Promise<CheckoutSessionResult> => {
+  await assertWebBillingAllowed(familyGroupId);
   const familyGroup = await assertFamilyOwner(familyGroupId, ownerUserId);
   const owner = await getOwner(ownerUserId);
   const subscription = await getOrCreateSubscription(familyGroupId);
@@ -279,7 +316,7 @@ export const createCheckoutSession = async (
   const priceId = getPriceId(interval);
   const stripe = getStripe();
 
-  await assertTrialEligible(ownerUserId, subscriptionData.stripe_customer_id);
+  const trialEligible = await isTrialEligible(ownerUserId, subscriptionData.stripe_customer_id);
 
   const successUrl = resolveCheckoutRedirectUrl(
     redirectUrls?.successUrl,
@@ -304,7 +341,7 @@ export const createCheckoutSession = async (
       },
     ],
     subscription_data: {
-      trial_period_days: TRIAL_DAYS,
+      ...(trialEligible ? { trial_period_days: TRIAL_DAYS } : {}),
       metadata: {
         family_group_id: String(familyGroupId),
         owner_user_id: String(ownerUserId),
@@ -349,6 +386,7 @@ export const createPortalSession = async (
   ownerUserId: number,
   returnUrl?: string
 ): Promise<PortalSessionResult> => {
+  await assertWebBillingAllowed(familyGroupId);
   await assertFamilyOwner(familyGroupId, ownerUserId);
   const subscription = await getOrCreateSubscription(familyGroupId);
   const stripeCustomerId = subscription.dataValues.stripe_customer_id;

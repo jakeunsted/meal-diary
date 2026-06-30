@@ -7,7 +7,6 @@ import mealDiaryRoutes from './routes/mealDiary.routes.ts';
 import familyGroupRoutes from './routes/familyGroups.routes.ts';
 import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
-import itemCategoriesRoutes from './routes/itemCategories.routes.ts';
 import recipeRoutes from './routes/recipes.routes.ts';
 import billingRoutes from './routes/billing.routes.ts';
 import * as billingController from './controllers/billing/billing.controller.ts';
@@ -34,6 +33,7 @@ if (posthog) {
 // Railway uses 1 proxy, so we trust only the first proxy
 app.set('trust proxy', 1);
 app.post('/billing/webhook', express.raw({ type: 'application/json' }), billingController.stripeWebhook);
+app.post('/billing/revenuecat-webhook', express.json(), billingController.revenueCatWebhook);
 app.use(express.json());
 // Note on CSRF: this API does not use cookie-based authentication. All
 // state-changing routes are protected by the `authenticateToken` middleware,
@@ -63,7 +63,6 @@ app.use('/meal-diaries', mealDiaryRoutes);
 app.use('/family-groups', familyGroupRoutes);
 app.use('/shopping-list', shoppingListRoutes);
 app.use('/auth', authRoutes);
-app.use('/item-categories', itemCategoriesRoutes);
 app.use('/recipes', recipeRoutes);
 app.use('/billing', billingRoutes);
 

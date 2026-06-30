@@ -32,6 +32,7 @@
         :is-logged-in="isLoggedIn"
         :is-owner="billing.isOwner"
         :owner-display-name="billing.ownerDisplayName"
+        :trial-available="billing.trialAvailable"
         class="mb-8"
       />
 

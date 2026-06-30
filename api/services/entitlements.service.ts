@@ -8,6 +8,7 @@ import {
   User,
 } from '../db/models/associations.ts';
 import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
+import { isTrialEligible } from './billing.service.ts';
 
 export interface ResolvedEntitlements {
   plan: SubscriptionPlan;
@@ -31,6 +32,8 @@ export interface ResolvedEntitlements {
   billing: {
     isOwner: boolean;
     ownerDisplayName: string | null;
+    trialAvailable: boolean;
+    storePlatform: 'web' | 'ios' | 'android' | null;
   };
 }
 
@@ -210,6 +213,13 @@ export const resolveEntitlements = async (
     Recipe.count({ where: { family_group_id: familyGroupId } }),
   ]);
 
+  const trialAvailable = isOwner && familyGroup
+    ? await isTrialEligible(
+        familyGroup.dataValues.created_by,
+        subscription.stripe_customer_id
+      )
+    : false;
+
   const entitlements: ResolvedEntitlements = {
     plan: effectivePlan,
     status: subscription.status,
@@ -224,6 +234,8 @@ export const resolveEntitlements = async (
     billing: {
       isOwner,
       ownerDisplayName,
+      trialAvailable,
+      storePlatform: subscription.store_platform ?? null,
     },
   };
 

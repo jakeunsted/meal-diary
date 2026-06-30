@@ -33,19 +33,6 @@ export const useSSE = () => {
         // Token refresh events
         'token-refresh': handleTokenRefresh,
 
-        // Shopping list events
-        'add-new-category': () => {
-          // Categories are no longer used in the single-list UI.
-        },
-        'save-category': () => {
-          // Categories are no longer used in the single-list UI.
-        },
-        'delete-category': () => {
-          // Categories are no longer used in the single-list UI.
-        },
-        'update-category-order': () => {
-          // Categories are no longer used in the single-list UI.
-        },
         // Shopping list item events
         'add-item': (data) => {
           // Ignore events triggered by the current user

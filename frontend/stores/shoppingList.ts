@@ -3,7 +3,6 @@ import { Preferences } from '@capacitor/preferences';
 import type {
   ShoppingList,
   ShoppingListItem,
-  ItemCategory,
   ShoppingListState,
 } from '~/types/ShoppingList';
 import { useApi } from '~/composables/useApi';
@@ -46,7 +45,6 @@ const PERSIST_DEBOUNCE_MS = 400;
 export const useShoppingListStore = defineStore('shoppingList', {
   state: (): ShoppingListState => ({
     shoppingList: null,
-    itemCategories: [],
     isLoading: false,
     error: null,
     pendingChanges: emptyPendingChanges(),
@@ -78,7 +76,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
           key: 'shoppingList',
           value: JSON.stringify({
             shoppingList: this.shoppingList,
-            itemCategories: this.itemCategories,
             pendingChanges: this.pendingChanges
           })
         });
@@ -112,7 +109,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
           try {
             const data = JSON.parse(value);
             this.shoppingList = data.shoppingList;
-            this.itemCategories = data.itemCategories;
             const p = data.pendingChanges;
             this.pendingChanges = {
               add: Array.isArray(p?.add) ? p.add : [],
@@ -206,30 +202,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Fetch all item categories
-     */
-    async fetchItemCategories() {
-      let loadingStarted = false;
-      try {
-        loadingStarted = true;
-        this.isLoading = true;
-        this.error = null;
-        const { api } = useApi();
-        const response = await api('/api/item-categories');
-        const itemCategories = unwrapShoppingResponse<ItemCategory[]>(response);
-        this.itemCategories = itemCategories;
-        await this.saveToLocalStorage();
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'Failed to fetch item categories';
-        throw err;
-      } finally {
-        if (loadingStarted) {
-          this.isLoading = false;
-        }
-      }
-    },
-
-    /**
      * Add a new item to the shopping list (offline-first)
      * @param item - The item data to add
      */
@@ -249,7 +221,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
       const tempItem: ShoppingListItem = {
         id: tempId,
         shopping_list_id: this.shoppingList?.id || 0,
-        shopping_list_categories: 0,
         name: item.name,
         checked: false,
         deleted: false,
@@ -1022,7 +993,6 @@ export const useShoppingListStore = defineStore('shoppingList', {
       const tempItem: ShoppingListItem = {
         id: tempId,
         shopping_list_id: this.shoppingList.id,
-        shopping_list_categories: 0,
         name,
         checked: false,
         deleted: false,

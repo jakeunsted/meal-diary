@@ -6,7 +6,6 @@ import {
   ShoppingList,
   MealDiary,
   DailyMeal,
-  ShoppingListCategory,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
@@ -115,7 +114,6 @@ describe('deleteFamilyGroup', () => {
       dailyMeals: vi.spyOn(DailyMeal, 'destroy').mockResolvedValue(0),
       diaries: vi.spyOn(MealDiary, 'destroy').mockResolvedValue(0),
       items: vi.spyOn(ShoppingListItem, 'destroy').mockResolvedValue(0),
-      categories: vi.spyOn(ShoppingListCategory, 'destroy').mockResolvedValue(0),
       lists: vi.spyOn(ShoppingList, 'destroy').mockResolvedValue(0),
       ingredients: vi.spyOn(RecipeIngredient, 'destroy').mockResolvedValue(0),
       recipes: vi.spyOn(Recipe, 'destroy').mockResolvedValue(0),
@@ -147,7 +145,6 @@ describe('deleteFamilyGroup', () => {
     expect(spies.dailyMeals).toHaveBeenCalled();
     expect(spies.diaries).toHaveBeenCalled();
     expect(spies.items).toHaveBeenCalled();
-    expect(spies.categories).toHaveBeenCalled();
     expect(spies.lists).toHaveBeenCalled();
     expect(spies.ingredients).toHaveBeenCalled();
     expect(spies.recipes).toHaveBeenCalled();

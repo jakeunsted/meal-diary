@@ -43,5 +43,7 @@ export interface ResolvedEntitlements {
   billing: {
     isOwner: boolean;
     ownerDisplayName: string | null;
+    trialAvailable: boolean;
+    storePlatform: 'web' | 'ios' | 'android' | null;
   };
 }

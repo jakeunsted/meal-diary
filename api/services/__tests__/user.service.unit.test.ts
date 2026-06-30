@@ -9,6 +9,7 @@ import Subscription from '../../db/models/Subscription.model.ts';
 import { createUser, deleteUserAccount } from '../user.service.ts';
 import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
+import { TrialRedemption } from '../../db/models/associations.ts';
 
 vi.mock('../familyGroup.service.ts', () => ({
   deleteFamilyGroupData: vi.fn(),
@@ -66,9 +67,17 @@ describe('createUser', () => {
     } as never);
 
     vi.spyOn(User, 'findByPk').mockResolvedValue({
-      dataValues: { id: 1, first_name: 'Jake', username: 'jake' },
+      dataValues: {
+        id: 1,
+        first_name: 'Jake',
+        username: 'jake',
+        email: 'jake@example.com',
+        normalized_email: 'jake@example.com',
+        google_id: null,
+      },
     } as never);
 
+    vi.spyOn(TrialRedemption, 'findOne').mockResolvedValue(null);
     vi.spyOn(User, 'count').mockResolvedValue(2 as never);
     vi.spyOn(Recipe, 'count').mockResolvedValue(0 as never);
 
