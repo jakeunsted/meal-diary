@@ -27,6 +27,7 @@ export const useGoogleAuth = () => {
   const authStore = useAuthStore();
   const router = useRouter();
   const { api } = useApi();
+  const { reportAuthError } = useAuthAnalytics();
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   let isInitialized = false;
@@ -153,6 +154,13 @@ export const useGoogleAuth = () => {
     } catch (err: any) {
       console.error('[Google Auth] Sign in error:', err);
       error.value = err.data?.message || err.message || 'Google authentication failed. Please try again.';
+      if (Capacitor.isNativePlatform()) {
+        reportAuthError('google_auth_client_error', {
+          error_type: 'native_sign_in',
+          error_message: error.value,
+          flow: 'native_google_token',
+        });
+      }
       throw err;
     } finally {
       isLoading.value = false;

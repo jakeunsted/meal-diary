@@ -50,6 +50,7 @@
     "nuxt": "^3.21.5",
     "pinia": "^3.0.4",
     "posthog-js": "^1.388.1",
+    "posthog-node": "^5.39.0",
     "tailwindcss": "^4.3.0",
     "vue": "latest",
     "vue-router": "^4.6.4"

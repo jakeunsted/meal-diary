@@ -1,7 +1,7 @@
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../../db/models/User.model.ts';
-import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
+import { trackEvent, getDistinctId, trackAuthLog, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import * as AuthService from '../../services/auth.service.ts';
 
 /**
@@ -318,9 +318,11 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
     // Validate state parameter for CSRF protection
     if (!state || state !== storedState) {
       console.error('[Google OAuth] Invalid state parameter');
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_oauth_callback_failure', {
+      await trackAuthLog(req, 'google_oauth_callback_failure', {
         reason: 'invalid_state',
+        error_type: 'invalid_state',
+        error_message: 'Invalid authentication state',
+        flow: 'web_oauth_callback',
       });
       res.redirect(`${FRONTEND_URL}/login?error=invalid_state`);
       return;
@@ -331,9 +333,11 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
 
     if (!code) {
       console.error('[Google OAuth] No authorization code received');
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_oauth_callback_failure', {
+      await trackAuthLog(req, 'google_oauth_callback_failure', {
         reason: 'no_code',
+        error_type: 'no_code',
+        error_message: 'Authorization code not received',
+        flow: 'web_oauth_callback',
       });
       res.redirect(`${FRONTEND_URL}/login?error=no_code`);
       return;
@@ -394,19 +398,24 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
       res.redirect(redirectUrl);
     } catch (serviceError) {
       console.error('[Google OAuth] Service error:', serviceError);
-      const errorMessage = serviceError instanceof Error ? serviceError.message : 'OAuth failed';
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_oauth_callback_failure', {
+      const { error_message, error_type } = sanitizeErrorForAnalytics(serviceError);
+      await trackAuthLog(req, 'google_oauth_callback_failure', {
         reason: 'server_error',
+        error_type,
+        error_message,
+        flow: 'web_oauth_callback',
       });
       res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
     }
   } catch (error) {
     console.error('[Google OAuth] Callback error:', error);
     const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
-    const distinctId = getDistinctId(req);
-    await trackEvent(distinctId, 'google_oauth_callback_failure', {
+    const { error_message, error_type } = sanitizeErrorForAnalytics(error);
+    await trackAuthLog(req, 'google_oauth_callback_failure', {
       reason: 'server_error',
+      error_type,
+      error_message,
+      flow: 'web_oauth_callback',
     });
     res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
   }

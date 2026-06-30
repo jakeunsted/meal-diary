@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import * as AuthService from '../../services/auth.service.ts';
-import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
+import { trackEvent, trackAuthLog, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 
 /**
  * Verify Google ID token and authenticate user
@@ -14,9 +14,11 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
 
     if (!idToken) {
       res.status(400).json({ message: 'ID token is required' });
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_token_verification_failure', {
+      await trackAuthLog(req, 'google_token_verification_failure', {
         reason: 'missing_token',
+        error_type: 'missing_token',
+        error_message: 'ID token is required',
+        flow: 'native_google_token',
       });
       return;
     }
@@ -91,9 +93,12 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
 
       res.status(statusCode).json({ message: errorMessage });
       
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_token_verification_failure', {
+      const { error_message, error_type } = sanitizeErrorForAnalytics(serviceError);
+      await trackAuthLog(req, 'google_token_verification_failure', {
         reason,
+        error_type: reason === 'no_email' ? 'no_email' : error_type,
+        error_message,
+        flow: 'native_google_token',
       });
     }
   } catch (error) {
@@ -102,17 +107,22 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     
     if (errorObj.response?.status === 400) {
       res.status(400).json({ message: 'Invalid ID token' });
-      const distinctId = getDistinctId(req);
-      await trackEvent(distinctId, 'google_token_verification_failure', {
+      await trackAuthLog(req, 'google_token_verification_failure', {
         reason: 'invalid_token',
+        error_type: 'invalid_token',
+        error_message: 'Invalid ID token',
+        flow: 'native_google_token',
       });
       return;
     }
     
     res.status(500).json({ message: 'Server error during token verification' });
-    const distinctId = getDistinctId(req);
-    await trackEvent(distinctId, 'google_token_verification_failure', {
+    const { error_message, error_type } = sanitizeErrorForAnalytics(error);
+    await trackAuthLog(req, 'google_token_verification_failure', {
       reason: 'server_error',
+      error_type,
+      error_message,
+      flow: 'native_google_token',
     });
   }
 };

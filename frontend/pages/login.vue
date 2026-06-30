@@ -96,12 +96,25 @@ import LegalLinks from '~/components/LegalLinks.vue';
 const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
 const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
 const { track } = useAnalytics();
+const { reportAuthError } = useAuthAnalytics();
+const route = useRoute();
 const email = ref('');
 const password = ref('');
-const accountDeleted = computed(() => useRoute().query.deleted === '1');
+const accountDeleted = computed(() => route.query.deleted === '1');
 
 const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
 const error = computed(() => emailLoginError.value || googleLoginError.value);
+
+onMounted(() => {
+  const errorCode = String(route.query.error || '');
+  if (errorCode) {
+    reportAuthError('oauth_login_redirect_error', {
+      error_code: errorCode,
+      path: route.path,
+      flow: 'web_oauth_redirect',
+    });
+  }
+});
 
 const handleLogin = async () => {
   try {

@@ -10,6 +10,8 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     apiInternalUrl: process.env.API_INTERNAL_URL || '',
+    posthogKey: process.env.POSTHOG_KEY || '',
+    posthogHost: process.env.POSTHOG_HOST || 'https://eu.i.posthog.com',
     public: {
       baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,
