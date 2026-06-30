@@ -1,4 +1,4 @@
-import { trackServerAuthEvent } from '~/server/utils/posthog';
+import { logAuthError } from '~/server/utils/otelLogs';
 
 const ALLOWED_EVENTS = new Set([
   'oauth_login_redirect_error',
@@ -12,7 +12,7 @@ const ALLOWED_PROPERTY_KEYS = new Set([
   'error_message',
   'path',
   'flow',
-  '$session_id',
+  'session_id',
 ]);
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -60,7 +60,6 @@ const sanitizeProperties = (properties?: Record<string, unknown>): Record<string
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig();
   const apiKey = config.posthogKey as string;
-  const host = config.posthogHost as string;
 
   if (!apiKey) {
     return { ok: false };
@@ -86,7 +85,10 @@ export default defineEventHandler(async (event) => {
 
   const properties = sanitizeProperties(body?.properties as Record<string, unknown> | undefined);
 
-  await trackServerAuthEvent(apiKey, host, ip, eventName, properties);
+  logAuthError(ip, eventName, {
+    event: eventName,
+    ...properties,
+  });
 
   return { ok: true };
 });

@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../../db/models/User.model.ts';
-import { trackEvent, getDistinctId, trackAuthLog, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
+import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
+import { trackAuthLog } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 
 /**
