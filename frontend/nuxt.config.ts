@@ -31,8 +31,6 @@ export default defineNuxtConfig({
       posthogPublicKey: 'phc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN',
       posthogHost: 'https://eu.i.posthog.com',
       posthogDefaults: '2025-11-30',
-      revenueCatIosPublicKey: process.env.REVENUECAT_IOS_PUBLIC_KEY || '',
-      revenueCatAndroidPublicKey: process.env.REVENUECAT_ANDROID_PUBLIC_KEY || '',
       // GA4 is dormant unless this is set; analytics still gated on consent
       gaMeasurementId: process.env.GA_MEASUREMENT_ID || ''
     }
