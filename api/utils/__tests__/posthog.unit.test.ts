@@ -51,4 +51,11 @@ describe('sanitizeErrorForAnalytics', () => {
     const result = sanitizeErrorForAnalytics(error);
     expect(result.error_type).toBe('db_error');
   });
+
+  it('classifies postgres varchar length errors', () => {
+    const result = sanitizeErrorForAnalytics(
+      new Error('value too long for type character varying(255)')
+    );
+    expect(result.error_type).toBe('db_error');
+  });
 });

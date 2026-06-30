@@ -56,4 +56,14 @@ describe('User Model', () => {
 
     await expect(user.validate()).resolves.not.toThrow();
   });
+
+  it('should allow long avatar URLs (e.g. Google profile picture links)', async () => {
+    const user = User.build({
+      username: 'vitest_test_long_avatar',
+      email: 'vitest_test_long_avatar@example.com',
+      avatar_url: `https://lh3.googleusercontent.com/a/${'x'.repeat(400)}`,
+    });
+
+    await expect(user.validate()).resolves.not.toThrow();
+  });
 });
