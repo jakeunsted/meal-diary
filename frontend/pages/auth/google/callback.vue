@@ -40,6 +40,7 @@ definePageMeta({
 const authStore = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+const { reportAuthError } = useAuthAnalytics();
 
 const error = ref('');
 
@@ -71,8 +72,20 @@ onMounted(async () => {
       const errorParam = String(route.query.error || '');
       if (errorParam) {
         error.value = getErrorMessage(errorParam);
+        reportAuthError('oauth_callback_client_error', {
+          error_code: errorParam,
+          error_type: errorParam,
+          path: route.path,
+          flow: 'web_oauth_callback',
+        });
       } else {
         error.value = 'Authentication failed. Missing tokens.';
+        reportAuthError('oauth_callback_client_error', {
+          error_type: 'missing_tokens',
+          error_message: 'Authentication failed. Missing tokens.',
+          path: route.path,
+          flow: 'web_oauth_callback',
+        });
       }
       setTimeout(() => {
         router.push('/login');
@@ -85,6 +98,12 @@ onMounted(async () => {
     try {
       userData = JSON.parse(decodeURIComponent(userParam));
     } catch (parseError) {
+      reportAuthError('oauth_callback_client_error', {
+        error_type: 'parse_user_data',
+        error_message: 'Failed to parse user data',
+        path: route.path,
+        flow: 'web_oauth_callback',
+      });
       throw new Error('Failed to parse user data');
     }
 
@@ -105,6 +124,12 @@ onMounted(async () => {
     console.error('Google OAuth callback error:', err);
     const errorObj = err as { data?: { message?: string }; message?: string };
     error.value = errorObj.data?.message || errorObj.message || 'Authentication failed. Please try again.';
+    reportAuthError('oauth_callback_client_error', {
+      error_type: 'unexpected',
+      error_message: error.value,
+      path: route.path,
+      flow: 'web_oauth_callback',
+    });
     setTimeout(() => {
       router.push('/login');
     }, 3000);
