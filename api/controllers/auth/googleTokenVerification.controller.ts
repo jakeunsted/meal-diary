@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import * as AuthService from '../../services/auth.service.ts';
-import { trackEvent, trackAuthLog, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
+import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
+import { trackAuthLog } from '../../utils/otelLogs.ts';
 
 /**
  * Verify Google ID token and authenticate user

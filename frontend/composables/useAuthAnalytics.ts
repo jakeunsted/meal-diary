@@ -9,9 +9,9 @@ export const useAuthAnalytics = () => {
     }
 
     try {
-      const posthogModule = (window as { posthog?: { get_session_id?: () => string } }).posthog;
-      if (posthogModule && typeof posthogModule.get_session_id === 'function') {
-        return posthogModule.get_session_id();
+      const posthogModule = (window as { posthog?: { getSessionId?: () => string } }).posthog;
+      if (posthogModule && typeof posthogModule.getSessionId === 'function') {
+        return posthogModule.getSessionId();
       }
     } catch {
       /* ignore */
@@ -40,7 +40,7 @@ export const useAuthAnalytics = () => {
     }
 
     if (sessionId) {
-      payload.$session_id = sessionId;
+      payload.session_id = sessionId;
     }
 
     $fetch('/api/analytics/auth-event', {

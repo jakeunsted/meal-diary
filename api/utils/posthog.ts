@@ -24,8 +24,8 @@ const SENSITIVE_PATTERNS = [
 ];
 
 /**
- * Redact PII and secrets from error text before sending to PostHog.
- * Filter PostHog by google_oauth_callback_failure + time window + IP to debug auth incidents.
+ * Redact PII and secrets from error text before sending to PostHog Logs / analytics.
+ * Filter PostHog Logs by category=auth + time window + posthogDistinctId to debug auth incidents.
  */
 const redactSensitiveText = (text: string): string => {
   let result = text.replace(EMAIL_REGEX, '[email]');
@@ -218,20 +218,6 @@ export const identifyUser = async (
       console.error('Error identifying user in PostHog:', err);
     }
   }
-};
-
-/**
- * Track an auth-related event in PostHog
- */
-export const trackAuthLog = async (
-  req: Request,
-  event: string,
-  properties?: Record<string, unknown>
-): Promise<void> => {
-  await trackEvent(getDistinctId(req), event, {
-    ...properties,
-    category: 'auth',
-  });
 };
 
 /**
