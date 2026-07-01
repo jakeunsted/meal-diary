@@ -1,7 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
 import DailyMeal from '../db/models/DailyMeal.model.ts';
-import ShoppingListCategory from '../db/models/ShoppingListCategory.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 
 dotenv.config();
@@ -66,15 +65,16 @@ export const sendDailyMealWebhook = async (
 /**
  * Sends a webhook for a shopping list item event
  * @param {number} familyGroupId - The ID of the family group
- * @param {string} eventType - The type of the event (add-item, check-item, uncheck-item, delete-item)
+ * @param {string} eventType - The type of the event (add-item, check-item, uncheck-item, move-item, delete-item)
  * @param {ShoppingListItem} item - The shopping list item
- * @param {ShoppingListCategory} category - The category the item belongs to
+ * @param {number} [actorUserId] - The id of the user who triggered the event, so
+ *   connected clients can ignore their own echoed changes
  */
 export const sendShoppingListItemWebhook = async (
   familyGroupId: number,
   eventType: string,
   item: ShoppingListItem,
-  category: ShoppingListCategory
+  actorUserId?: number
 ) => {
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list/item`;
@@ -83,32 +83,7 @@ export const sendShoppingListItemWebhook = async (
       eventType,
       familyGroupId,
       item,
-      category,
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    console.error('Error sending webhook: ', error);
-  }
-}
-
-/**
- * Sends a webhook for a shopping list category event
- * @param {number} familyGroupId - The ID of the family group
- * @param {string} eventType - The type of the event (add-category, delete-category)
- * @param {ShoppingListCategory} category - The shopping list category
- */
-export const sendShoppingListCategoryWebhook = async (
-  familyGroupId: number,
-  eventType: string,
-  category: ShoppingListCategory
-) => {
-  try {
-    const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list/category`;
-
-    await axios.post(webHookUrl, {
-      eventType,
-      familyGroupId,
-      category,
+      actorUserId: actorUserId ?? null,
       timestamp: new Date().toISOString()
     });
   } catch (error) {

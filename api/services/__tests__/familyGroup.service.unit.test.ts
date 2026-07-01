@@ -6,10 +6,10 @@ import {
   ShoppingList,
   MealDiary,
   DailyMeal,
-  ShoppingListCategory,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
+  Subscription,
 } from '../../db/models/associations.ts';
 import {
   leaveFamilyGroup,
@@ -114,10 +114,10 @@ describe('deleteFamilyGroup', () => {
       dailyMeals: vi.spyOn(DailyMeal, 'destroy').mockResolvedValue(0),
       diaries: vi.spyOn(MealDiary, 'destroy').mockResolvedValue(0),
       items: vi.spyOn(ShoppingListItem, 'destroy').mockResolvedValue(0),
-      categories: vi.spyOn(ShoppingListCategory, 'destroy').mockResolvedValue(0),
       lists: vi.spyOn(ShoppingList, 'destroy').mockResolvedValue(0),
       ingredients: vi.spyOn(RecipeIngredient, 'destroy').mockResolvedValue(0),
       recipes: vi.spyOn(Recipe, 'destroy').mockResolvedValue(0),
+      subscriptions: vi.spyOn(Subscription, 'destroy').mockResolvedValue(0),
       unlink: vi.spyOn(User, 'update').mockResolvedValue([1]),
       group: vi.spyOn(FamilyGroup, 'destroy').mockResolvedValue(1),
     };
@@ -145,10 +145,10 @@ describe('deleteFamilyGroup', () => {
     expect(spies.dailyMeals).toHaveBeenCalled();
     expect(spies.diaries).toHaveBeenCalled();
     expect(spies.items).toHaveBeenCalled();
-    expect(spies.categories).toHaveBeenCalled();
     expect(spies.lists).toHaveBeenCalled();
     expect(spies.ingredients).toHaveBeenCalled();
     expect(spies.recipes).toHaveBeenCalled();
+    expect(spies.subscriptions).toHaveBeenCalled();
     expect(spies.unlink).toHaveBeenCalledWith(
       { family_group_id: null },
       expect.objectContaining({ where: { family_group_id: 5 } })

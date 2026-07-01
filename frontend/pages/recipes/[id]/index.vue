@@ -47,10 +47,21 @@
             </ul>
           </div>
         </div>
-        <button class="btn btn-outline btn-primary btn-sm mt-3" data-testid="recipe-add-to-shopping-list-button" @click="handleAddToShoppingList">
+        <button
+          class="btn btn-outline btn-primary btn-sm mt-3"
+          data-testid="recipe-add-to-shopping-list-button"
+          :disabled="!canAddToShoppingList"
+          @click="handleAddToShoppingList"
+        >
           <fa icon="list" class="mr-1" />
           {{ $t('Add to Shopping List') }}
         </button>
+        <p v-if="!canAddToShoppingList" class="text-sm text-base-content/60 mt-2" data-testid="recipe-shopping-list-premium-hint">
+          {{ $t('recipeDetail.shoppingListPremium') }}
+          <NuxtLink v-if="billing.isOwner" class="link link-primary ml-1" to="/plans">
+            {{ $t('recipeDetail.shoppingListUpgrade') }}
+          </NuxtLink>
+        </p>
       </div>
 
       <!-- Instructions -->
@@ -92,6 +103,7 @@ import { useRecipeStore } from '~/stores/recipe';
 import { useUserStore } from '~/stores/user';
 import { useApi } from '~/composables/useApi';
 import { useToast } from '~/composables/useToast';
+import { extractEntitlementError } from '~/utils/httpError';
 
 const route = useRoute();
 const router = useRouter();
@@ -99,8 +111,11 @@ const recipeStore = useRecipeStore();
 const userStore = useUserStore();
 const { showError } = useToast();
 const { track } = useAnalytics();
+const { hasFeature, billing, refreshEntitlements } = useEntitlements();
+const { openPaywall } = usePaywall();
 
 const recipe = computed(() => recipeStore.currentRecipe);
+const canAddToShoppingList = hasFeature('recipe_to_shopping_list');
 
 const handleEdit = () => {
   router.push(`/recipes/${route.params.id}/edit`);
@@ -124,6 +139,11 @@ const handleDelete = async () => {
 };
 
 const handleAddToShoppingList = async () => {
+  if (!canAddToShoppingList.value) {
+    openPaywall('recipe_to_shopping_list');
+    return;
+  }
+
   if (!recipe.value?.ingredients?.length || !userStore.user?.family_group_id) return;
 
   try {
@@ -145,6 +165,7 @@ const handleAddToShoppingList = async () => {
 
     await api(`/api/shopping-list/${familyGroupId}/items/bulk`, {
       method: 'POST',
+      silent: true,
       body: {
         items
       }
@@ -154,7 +175,14 @@ const handleAddToShoppingList = async () => {
     const { showSuccess } = useToast();
     showSuccess('Ingredients added to shopping list!');
   } catch (error) {
+    const entitlementError = extractEntitlementError(error);
+    if (entitlementError?.feature === 'recipe_to_shopping_list') {
+      openPaywall('recipe_to_shopping_list');
+      return;
+    }
+
     console.error('Error adding ingredients to shopping list:', error);
+    showError('Failed to add ingredients to shopping list');
   }
 };
 
@@ -162,6 +190,7 @@ onMounted(async () => {
   if (!userStore.user?.family_group_id) {
     await userStore.fetchUser();
   }
+  await refreshEntitlements();
   await recipeStore.fetchRecipeById(parseInt(route.params.id));
   track('recipe_viewed');
 });

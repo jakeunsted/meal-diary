@@ -46,24 +46,6 @@
       />
     </div>
     <div class="flex items-center gap-1">
-      <button
-        class="btn btn-ghost btn-xs"
-        type="button"
-        :data-testid="`shopping-item-outdent-${item.id}`"
-        @click="handleOutdent"
-        :aria-label="$t('Outdent item')"
-      >
-        <fa icon="angle-left" />
-      </button>
-      <button
-        class="btn btn-ghost btn-xs"
-        type="button"
-        :data-testid="`shopping-item-indent-${item.id}`"
-        @click="handleIndent"
-        :aria-label="$t('Indent item')"
-      >
-        <fa icon="angle-right" />
-      </button>
       <button 
         class="btn btn-ghost btn-sm"
         :data-testid="`shopping-item-remove-${item.id}`"

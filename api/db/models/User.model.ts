@@ -6,6 +6,7 @@ export interface UserAttributes {
   id: number;
   username: string;
   email: string;
+  normalized_email?: string | null;
   password_hash?: string;
   google_id?: string;
   first_name?: string;
@@ -35,6 +36,10 @@ User.init(
     email: {
       type: DataTypes.STRING(100),
       allowNull: false,
+    },
+    normalized_email: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
     },
     password_hash: {
       type: DataTypes.STRING(255),
@@ -94,6 +99,10 @@ User.init(
         unique: true,
         name: 'users_email_unique',
         fields: ['email'],
+      },
+      {
+        name: 'users_normalized_email_idx',
+        fields: ['normalized_email'],
       },
       {
         unique: true,

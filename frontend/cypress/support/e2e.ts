@@ -1,4 +1,5 @@
 import './commands';
+import './shoppingListCommands';
 
 beforeEach(() => {
   cy.clearCookies();

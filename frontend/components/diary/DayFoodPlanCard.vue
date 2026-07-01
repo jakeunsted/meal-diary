@@ -22,14 +22,15 @@
               <span
                 v-else
                 class="badge badge-primary"
+                :class="{ 'cursor-pointer': !readOnly }"
                 data-testid="breakfast-custom-badge"
-                @click="$emit('setMeal', 'breakfast')"
+                @click="!readOnly && $emit('setMeal', 'breakfast')"
               >
                 {{ breakfast.name }}
-                <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
+                <fa v-if="!readOnly" :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
               <button
-                v-if="breakfast.recipeId"
+                v-if="breakfast.recipeId && !readOnly"
                 class="btn btn-ghost btn-xs btn-circle"
                 data-testid="edit-breakfast-button"
                 @click.stop="$emit('setMeal', 'breakfast')"
@@ -37,7 +38,7 @@
                 <fa :icon="['fas', 'pencil']" class="text-xs" />
               </button>
             </div>
-            <button v-else class="btn btn-xs" data-testid="set-meal-breakfast-button" @click="$emit('setMeal', 'breakfast')">{{ $t('Set Meal +') }}</button>
+            <button v-else-if="!readOnly" class="btn btn-xs" data-testid="set-meal-breakfast-button" @click="$emit('setMeal', 'breakfast')">{{ $t('Set Meal +') }}</button>
           </div>
           <div class="flex justify-between mb-3 items-center" data-testid="lunch-row">
             <h3 class="">{{ $t('Lunch') }}</h3>
@@ -54,14 +55,15 @@
               <span
                 v-else
                 class="badge badge-primary"
+                :class="{ 'cursor-pointer': !readOnly }"
                 data-testid="lunch-custom-badge"
-                @click="$emit('setMeal', 'lunch')"
+                @click="!readOnly && $emit('setMeal', 'lunch')"
               >
                 {{ lunch.name }}
-                <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
+                <fa v-if="!readOnly" :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
               <button
-                v-if="lunch.recipeId"
+                v-if="lunch.recipeId && !readOnly"
                 class="btn btn-ghost btn-xs btn-circle"
                 data-testid="edit-lunch-button"
                 @click.stop="$emit('setMeal', 'lunch')"
@@ -69,7 +71,7 @@
                 <fa :icon="['fas', 'pencil']" class="text-xs" />
               </button>
             </div>
-            <button v-else class="btn btn-xs" data-testid="set-meal-lunch-button" @click="$emit('setMeal', 'lunch')">{{ $t('Set Meal +') }}</button>
+            <button v-else-if="!readOnly" class="btn btn-xs" data-testid="set-meal-lunch-button" @click="$emit('setMeal', 'lunch')">{{ $t('Set Meal +') }}</button>
           </div>
           <div class="flex justify-between mb-3 items-center" data-testid="dinner-row">
             <h3 class="">{{ $t('Dinner') }}</h3>
@@ -86,14 +88,15 @@
               <span
                 v-else
                 class="badge badge-primary"
+                :class="{ 'cursor-pointer': !readOnly }"
                 data-testid="dinner-custom-badge"
-                @click="$emit('setMeal', 'dinner')"
+                @click="!readOnly && $emit('setMeal', 'dinner')"
               >
                 {{ dinner.name }}
-                <fa :icon="['fas', 'pencil']" class="ml-2 text-xs" />
+                <fa v-if="!readOnly" :icon="['fas', 'pencil']" class="ml-2 text-xs" />
               </span>
               <button
-                v-if="dinner.recipeId"
+                v-if="dinner.recipeId && !readOnly"
                 class="btn btn-ghost btn-xs btn-circle"
                 data-testid="edit-dinner-button"
                 @click.stop="$emit('setMeal', 'dinner')"
@@ -101,7 +104,7 @@
                 <fa :icon="['fas', 'pencil']" class="text-xs" />
               </button>
             </div>
-            <button v-else class="btn btn-xs" data-testid="set-meal-dinner-button" @click="$emit('setMeal', 'dinner')">{{ $t('Set Meal +') }}</button>
+            <button v-else-if="!readOnly" class="btn btn-xs" data-testid="set-meal-dinner-button" @click="$emit('setMeal', 'dinner')">{{ $t('Set Meal +') }}</button>
           </div>
         </div>
       </div>
@@ -137,7 +140,12 @@ const props = defineProps({
     required: false,
     type: Boolean,
     default: false
-  }
+  },
+  readOnly: {
+    required: false,
+    type: Boolean,
+    default: false,
+  },
 });
 
 defineEmits(['setMeal']);

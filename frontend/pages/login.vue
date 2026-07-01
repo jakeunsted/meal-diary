@@ -77,6 +77,9 @@
               {{ $t('Don\'t have an account?') }}
               <a class="link link-hover link-primary" data-testid="register-link" href="/registration/step-1">{{ $t('Register') }}</a>
             </p>
+            <p class="mt-2">
+              <NuxtLink class="link link-primary" to="/plans">{{ $t('plansPage.viewPlans') }}</NuxtLink>
+            </p>
           </div>
         </form>
         <LegalLinks class="mt-4" />
@@ -102,6 +105,14 @@ const email = ref('');
 const password = ref('');
 const accountDeleted = computed(() => route.query.deleted === '1');
 
+const resolvePostLoginRedirect = (defaultRedirect) => {
+  const redirect = route.query.redirect;
+  if (typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')) {
+    return redirect;
+  }
+  return defaultRedirect;
+};
+
 const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
 const error = computed(() => emailLoginError.value || googleLoginError.value);
 
@@ -121,7 +132,7 @@ const handleLogin = async () => {
     const response = await login(email.value, password.value);
     track('login', { method: 'email' });
     if (response && response.redirect) {
-      navigateTo(response.redirect);
+      navigateTo(resolvePostLoginRedirect(response.redirect));
     }
   } catch (err) {
     track('login_failed', { method: 'email' });

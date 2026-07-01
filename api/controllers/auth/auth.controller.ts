@@ -4,6 +4,7 @@ import User, { type UserAttributes } from '../../db/models/User.model.ts';
 import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import { trackAuthLog } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
+import { buildAuthResponse } from '../../services/authResponse.service.ts';
 
 /**
  * Login controller
@@ -41,12 +42,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
         hasFamilyGroup: !!user.family_group_id
       });
       
-      // Return user data and tokens
-      res.status(200).json({
-        user,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken
-      });
+      const response = await buildAuthResponse(user as User & UserAttributes, tokens);
+      res.status(200).json(response);
     } catch (authError) {
       const errorMessage = authError instanceof Error ? authError.message : 'Invalid credentials';
       const statusCode = errorMessage.includes('required') ? 400 : 401;
@@ -116,10 +113,8 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       // Track successful token refresh
       await trackEvent(user.id.toString(), 'token_refresh_success', {});
       
-      res.status(200).json({
-        ...tokens,
-        user
-      });
+      const response = await buildAuthResponse(user as User & UserAttributes, tokens);
+      res.status(200).json(response);
     } catch (serviceError) {
       const errorMessage = serviceError instanceof Error ? serviceError.message : 'Invalid or expired refresh token';
       

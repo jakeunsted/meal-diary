@@ -4,9 +4,7 @@ import {
   MealDiary,
   DailyMeal,
   ShoppingList,
-  ShoppingListCategory,
   ShoppingListItem,
-  ItemCategory,
   Recipe,
   RecipeIngredient,
 } from '../db/models/associations.ts';
@@ -62,17 +60,7 @@ export const exportUserData = async (userId: number): Promise<UserDataExport> =>
 
     const shoppingListRows = await ShoppingList.findAll({
       where: { family_group_id: familyGroupId },
-      include: [
-        {
-          model: ShoppingListCategory,
-          as: 'categories',
-          include: [
-            { model: ItemCategory, as: 'itemCategory' },
-            { model: ShoppingListItem, as: 'items' },
-          ],
-        },
-        { model: ShoppingListItem, as: 'items' },
-      ],
+      include: [{ model: ShoppingListItem, as: 'items' }],
     });
     shoppingLists = shoppingListRows.map((s) => s.toJSON() as Record<string, any>);
   }

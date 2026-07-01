@@ -52,7 +52,7 @@
     "@vesp/nuxt-fontawesome": "^1.2.1",
     "@vue-dnd-kit/core": "^2.4.6",
     "date-fns": "^4.1.0",
-    "nuxt": "^3.21.5",
+    "nuxt": "^3.21.8",
     "pinia": "^3.0.4",
     "posthog-js": "^1.388.1",
     "tailwindcss": "^4.3.0",

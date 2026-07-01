@@ -15,8 +15,52 @@ export interface HttpErrorLike {
   statusCode?: number;
   status?: number;
   message?: string;
-  data?: { message?: string; statusCode?: number };
+  code?: string;
+  feature?: string;
+  data?: {
+    message?: string;
+    statusCode?: number;
+    code?: string;
+    feature?: string;
+    upgradeUrl?: string;
+    data?: {
+      code?: string;
+      feature?: string;
+      upgradeUrl?: string;
+      plan?: string;
+    };
+  };
   response?: { status?: number; data?: { message?: string } };
+}
+
+export interface EntitlementErrorData {
+  code: 'ENTITLEMENT_REQUIRED';
+  feature: string;
+  upgradeUrl?: string;
+  plan?: string;
+}
+
+/**
+ * Extract entitlement error payload from API / Nuxt proxy errors.
+ */
+export function extractEntitlementError(error: unknown): EntitlementErrorData | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const e = error as HttpErrorLike;
+  const payload = e.data?.data ?? e.data ?? e;
+
+  if (payload?.code === 'ENTITLEMENT_REQUIRED' && payload.feature) {
+    return {
+      code: 'ENTITLEMENT_REQUIRED',
+      feature: payload.feature,
+      upgradeUrl: payload.upgradeUrl,
+      plan: payload.plan,
+    };
+  }
+
+  return null;
 }
 
 /**

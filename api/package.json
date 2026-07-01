@@ -10,7 +10,8 @@
     "build": "tsc && tsc-alias",
     "start": "node --experimental-strip-types --experimental-transform-types index.ts",
     "reset-shopping-lists": "node --experimental-strip-types --experimental-transform-types scripts/resetShoppingLists.ts",
-    "seed": "node --experimental-strip-types --experimental-transform-types scripts/seed.ts"
+    "seed": "node --experimental-strip-types --experimental-transform-types scripts/seed.ts",
+    "set-complimentary": "node --experimental-strip-types --experimental-transform-types scripts/setComplimentaryPremium.ts"
   },
   "author": "Jake Unsted",
   "license": "ISC",
@@ -56,6 +57,7 @@
     "pg-hstore": "^2.3.4",
     "posthog-node": "^5.34.1",
     "sequelize": "^6.37.8",
+    "stripe": "^17.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   }

@@ -5,8 +5,11 @@ import User from '../../db/models/User.model.ts';
 import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
-import { createUser, deleteUserAccount } from '../user.service.ts';
+import Subscription from '../../db/models/Subscription.model.ts';
+import { createUser, deleteUserAccount, isValidEmail } from '../user.service.ts';
+import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
+import { TrialRedemption } from '../../db/models/associations.ts';
 
 vi.mock('../familyGroup.service.ts', () => ({
   deleteFamilyGroupData: vi.fn(),
@@ -25,11 +28,80 @@ beforeEach(() => {
   vi.spyOn(User, 'findOne').mockResolvedValue(null);
 });
 
+describe('isValidEmail', () => {
+  it('accepts typical email addresses', () => {
+    expect(isValidEmail('user@example.com')).toBe(true);
+    expect(isValidEmail('New@Example.com')).toBe(true);
+    expect(isValidEmail('a@b.co')).toBe(true);
+  });
+
+  it('rejects malformed or hostile inputs in linear time', () => {
+    expect(isValidEmail('child')).toBe(false);
+    expect(isValidEmail('@example.com')).toBe(false);
+    expect(isValidEmail('user@')).toBe(false);
+    expect(isValidEmail('user@example')).toBe(false);
+    expect(isValidEmail('user @example.com')).toBe(false);
+    expect(isValidEmail('!@!.' + '!.'.repeat(10_000))).toBe(false);
+    expect(isValidEmail('a@b.co' + 'x'.repeat(250))).toBe(false);
+  });
+});
+
 describe('createUser', () => {
   it('throws when username, email, or password is missing', async () => {
     await expect(
       createUser({ ...validInput, username: '' })
     ).rejects.toThrow('Username, email, and password are required');
+  });
+
+  it('throws when the email format is invalid', async () => {
+    await expect(
+      createUser({ ...validInput, email: 'child' })
+    ).rejects.toThrow('A valid email address is required');
+  });
+
+  it('throws when joining a family group that is at the member limit', async () => {
+    vi.spyOn(FamilyGroup, 'findOne').mockResolvedValue({
+      get: () => 1,
+      dataValues: { id: 1, created_by: 1 },
+    } as never);
+
+    vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+      {
+        dataValues: {
+          family_group_id: 1,
+          plan: 'free',
+          status: 'active',
+          is_complimentary: false,
+          trial_ends_at: null,
+          trial_expired_prompt_seen_at: null,
+          payment_failed_at: null,
+        },
+      },
+      false,
+    ] as never);
+
+    vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+      dataValues: { id: 1, created_by: 1 },
+    } as never);
+
+    vi.spyOn(User, 'findByPk').mockResolvedValue({
+      dataValues: {
+        id: 1,
+        first_name: 'Jake',
+        username: 'jake',
+        email: 'jake@example.com',
+        normalized_email: 'jake@example.com',
+        google_id: null,
+      },
+    } as never);
+
+    vi.spyOn(TrialRedemption, 'findOne').mockResolvedValue(null);
+    vi.spyOn(User, 'count').mockResolvedValue(2 as never);
+    vi.spyOn(Recipe, 'count').mockResolvedValue(0 as never);
+
+    await expect(
+      createUser({ ...validInput, family_group_code: 'invite-code' })
+    ).rejects.toThrow(EntitlementRequiredError);
   });
 
   it('throws when the terms have not been accepted', async () => {

@@ -17,13 +17,13 @@ export default defineEventHandler(async (event) => {
   // Only emit the event to connected clients
   SSE_EMITTER.emit(`family-${familyGroupId}`, body.eventType, {
     item: body.item,
-    category: body.category
+    actorUserId: body.actorUserId ?? null
   });
 
   // Record the event for new SSE subscribers
   addWebhookEvent(Number(familyGroupId), body.eventType, {
     item: body.item,
-    category: body.category
+    actorUserId: body.actorUserId ?? null
   });
 
   return { success: true };

@@ -1,5 +1,10 @@
 <template>
   <div class="pb-20">
+    <ClientOnly>
+      <UpgradeBanner v-if="showSubscriptionChrome" />
+      <TrialExpiredModal v-if="showSubscriptionChrome" />
+      <PaywallModal />
+    </ClientOnly>
     <slot />
     <BottomNavigator />
   </div>
@@ -7,8 +12,16 @@
 
 <script setup>
 import BottomNavigator from '~/components/nav/BottomNavigator.vue';
+import PaywallModal from '~/components/subscription/PaywallModal.vue';
+import TrialExpiredModal from '~/components/subscription/TrialExpiredModal.vue';
+import UpgradeBanner from '~/components/subscription/UpgradeBanner.vue';
 
 const route = useRoute();
+
+const showSubscriptionChrome = computed(() => {
+  const path = route.path;
+  return !path.startsWith('/login') && !path.startsWith('/registration');
+});
 
 const shouldHideScrollbarMobile = computed(() => {
   const p = route.path;

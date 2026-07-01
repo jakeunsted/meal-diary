@@ -14,8 +14,9 @@ describe('Bottom navigation', () => {
 
     cy.get('[data-testid="nav-profile"]').click();
     cy.location('pathname').should('eq', '/profile');
+    cy.wait('@apiGetFamilyGroup');
 
-    cy.get('[data-testid="nav-diary"]').click();
+    cy.get('[data-testid="nav-diary"]').scrollIntoView().should('be.visible').click();
     cy.location('pathname').should('eq', '/diary');
   });
 });
