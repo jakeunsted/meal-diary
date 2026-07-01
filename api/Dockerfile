@@ -11,6 +11,7 @@ COPY api/package.json api/
 COPY frontend/package.json frontend/
 COPY packages/shared/package.json packages/shared/
 COPY scripts/docker-install-api.sh scripts/
+COPY scripts/linux-platform.sh scripts/
 
 RUN sh scripts/docker-install-api.sh
 

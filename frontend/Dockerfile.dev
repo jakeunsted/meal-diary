@@ -8,6 +8,7 @@ COPY frontend/package.json frontend/
 COPY packages/shared/package.json packages/shared/
 COPY scripts/docker-install-frontend.sh scripts/
 COPY scripts/install-frontend-native-deps.sh scripts/
+COPY scripts/linux-platform.sh scripts/
 
 RUN sh scripts/docker-install-frontend.sh
 

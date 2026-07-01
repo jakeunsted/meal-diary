@@ -21,6 +21,7 @@ ENV GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID}
 
 COPY scripts/docker-install-frontend.sh scripts/
 COPY scripts/install-frontend-native-deps.sh scripts/
+COPY scripts/linux-platform.sh scripts/
 
 RUN sh scripts/docker-install-frontend.sh
 
