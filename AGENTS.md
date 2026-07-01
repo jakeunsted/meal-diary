@@ -37,7 +37,8 @@ Docker requires these workarounds in the Cloud Agent environment:
 - **Unit tests (all workspaces)**: `npm test` (runs `turbo run test`)
 - **API tests only**: `npm test --workspace=meal-diary-api` (vitest; unit tests mock DB — no Postgres required, but `DEV_DB_*` env vars must be set at import time)
 - **Frontend e2e**: `npm run test:e2e` (Cypress; requires API + frontend running)
-- **CI**: GitHub Actions runs unit tests, build, and e2e on push/PR via `.github/workflows/ci.yml` using `scripts/ci-install.sh` for Linux native deps
+- **CI**: GitHub Actions runs `turbo run build` on push/PR via `.github/workflows/ci.yml` using `scripts/ci-install.sh` for Linux native deps
+- **CodeQL**: Security analysis for JavaScript/TypeScript via `.github/workflows/codeql.yml` (also runs weekly on Mondays)
 - **No ESLint** configured in either package
 - **TypeScript check (API)**: `npm run build --workspace=meal-diary-api`
 - **Frontend build**: `npm run build --workspace=nuxt-app`
