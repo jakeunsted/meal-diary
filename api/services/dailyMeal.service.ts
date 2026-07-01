@@ -1,4 +1,4 @@
-import DailyMeal from "../db/models/DailyMeal.model";
+import DailyMeal from "../db/models/DailyMeal.model.ts";
 import { User } from "../db/models/associations.ts";
 import { trackEvent } from "../utils/posthog.ts";
 

@@ -1,11 +1,16 @@
-FROM node:24-alpine
+FROM node:26.3.0-bookworm-slim
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+COPY api/package.json api/
+COPY frontend/package.json frontend/
+COPY packages/shared/package.json packages/shared/
+COPY scripts/docker-install-frontend.sh scripts/
+COPY scripts/install-frontend-native-deps.sh scripts/
 
-RUN npm install
+RUN sh scripts/docker-install-frontend.sh
 
 EXPOSE 3000
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--workspace=nuxt-app"]

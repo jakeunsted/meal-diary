@@ -1,4 +1,4 @@
-import type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus } from '../constants/entitlementFeatures.ts';
+import type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 import { PAYMENT_FAILED_BANNER_DAYS, PLANS } from '../constants/subscriptionPlans.ts';
 import type { PlanLimits } from '../constants/subscriptionPlans.ts';
 import {

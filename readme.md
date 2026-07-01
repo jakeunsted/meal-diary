@@ -11,22 +11,57 @@ A food diary and shopping list that are shareable amongst your household with fa
 
 ## How to install (DEV)
 
-### API
+This repo is an npm workspaces monorepo. Install once from the root:
 
-1) `cd api`
-2) `npm i`
-3) Set environment variables like in .env.example
-i) DB can be local postgres db from docker-compose.yml, for quick startup
-ii) `WEBHOOK_BASE_URL` is nuxt server address with path `/api/webhook`
-4) `npm run dev` to start
+```bash
+npm install
+```
 
-### Frontend
+### Environment
 
-1) `cd frontend`
-2) `npm i`
-3) Set environment variables like in .env.example
-i) Environment variables just contains URL of api
-4) `npm run dev` to start
+- **API** — copy `api/.env.example` to `api/.env`. DB can be the local Postgres from `docker-compose.yml`. Set `WEBHOOK_BASE_URL` to the Nuxt server address with path `/api/webhook`.
+- **Frontend** — copy `frontend/.env.example` to `frontend/.env`. Set `BASE_URL` to the API URL (e.g. `http://localhost:3001`).
+
+### Run locally (host)
+
+```bash
+# API (port 3001)
+npm run dev --workspace=meal-diary-api
+
+# Frontend (port 3000)
+npm run dev --workspace=nuxt-app
+
+# Or both via Turborepo
+npm run dev
+```
+
+### Run with Docker Compose
+
+Starts Postgres, API, and frontend with a single root install:
+
+```bash
+docker compose up
+```
+
+### Tests
+
+```bash
+# Unit tests (API vitest, etc.)
+npm test
+
+# Frontend Cypress e2e (requires API + frontend running)
+npm run test:e2e
+```
+
+## Monorepo layout
+
+```
+meal-diary/
+  api/                  # Express API
+  frontend/             # Nuxt app
+  apps/                 # Future deployable services
+  packages/shared/      # Shared types and constants
+```
 
 ## Deployment currently
 
@@ -34,4 +69,4 @@ i) Environment variables just contains URL of api
 The postgres database is currently deployed on AWS RDS.
 
 ### API & Frontend
-Will be deployed on AWS via github actions on merge to master. Will utilise ECR, ECS and perhaps codebuild if necessary.
+Deployed on AWS via GitHub Actions on merge to master. Uses ECR, ECS and perhaps CodeBuild if necessary.
