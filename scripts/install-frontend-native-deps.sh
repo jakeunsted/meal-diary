@@ -20,6 +20,7 @@ npm install ${npm_platform_flags} \
 npm install ${npm_platform_flags} \
   --workspace=nuxt-app \
   --ignore-scripts \
+  --no-save \
   "@esbuild/${LINUX_ESBUILD_ARCH}@0.25.12" \
   "@esbuild/${LINUX_ESBUILD_ARCH}@0.28.1" \
   "@oxc-parser/binding-${oxc_platform}@${oxc_version}" \
