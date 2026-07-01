@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as billingService from '../billing.service.ts';
 import {
   assertCanCreateRecipe,
+  assertCanNavigateWeek,
   EntitlementRequiredError,
   getCurrentIsoWeekMonday,
   isPastWeekEditable,
@@ -132,6 +133,80 @@ describe('entitlements.service', () => {
       expect(result.features.edit_past_weeks).toBe(true);
       expect(result.billing.isOwner).toBe(false);
       expect(result.billing.ownerDisplayName).toBe('owner');
+    });
+  });
+
+  describe('assertCanNavigateWeek', () => {
+    it('throws when viewing beyond the free planning horizon', async () => {
+      vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+        {
+          dataValues: {
+            family_group_id: 1,
+            plan: 'free',
+            status: 'active',
+            is_complimentary: false,
+            trial_ends_at: null,
+            trial_expired_prompt_seen_at: null,
+            payment_failed_at: null,
+          },
+        },
+        false,
+      ] as never);
+
+      vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+        dataValues: { id: 1, created_by: 10 },
+      } as never);
+
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, username: 'owner' },
+      } as never);
+
+      vi.spyOn(User, 'count').mockResolvedValue(1 as never);
+      vi.spyOn(Recipe, 'count').mockResolvedValue(1 as never);
+
+      const currentMonday = getCurrentIsoWeekMonday();
+      const twoWeeksAhead = new Date(currentMonday);
+      twoWeeksAhead.setDate(twoWeeksAhead.getDate() + 14);
+
+      await expect(
+        assertCanNavigateWeek(1, 10, twoWeeksAhead)
+      ).rejects.toBeInstanceOf(EntitlementRequiredError);
+    });
+
+    it('allows viewing past weeks on free tier', async () => {
+      vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+        {
+          dataValues: {
+            family_group_id: 1,
+            plan: 'free',
+            status: 'active',
+            is_complimentary: false,
+            trial_ends_at: null,
+            trial_expired_prompt_seen_at: null,
+            payment_failed_at: null,
+          },
+        },
+        false,
+      ] as never);
+
+      vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+        dataValues: { id: 1, created_by: 10 },
+      } as never);
+
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, username: 'owner' },
+      } as never);
+
+      vi.spyOn(User, 'count').mockResolvedValue(1 as never);
+      vi.spyOn(Recipe, 'count').mockResolvedValue(1 as never);
+
+      const currentMonday = getCurrentIsoWeekMonday();
+      const lastMonday = new Date(currentMonday);
+      lastMonday.setDate(lastMonday.getDate() - 7);
+
+      await expect(assertCanNavigateWeek(1, 10, lastMonday)).resolves.toMatchObject({
+        plan: 'free',
+      });
     });
   });
 

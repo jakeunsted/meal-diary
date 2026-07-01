@@ -300,6 +300,20 @@ export const assertCanUpdateMealWeek = async (
   return entitlements;
 };
 
+export const assertCanNavigateWeek = async (
+  familyGroupId: number,
+  requestingUserId: number,
+  weekStartDate: Date
+): Promise<ResolvedEntitlements> => {
+  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId);
+
+  if (!isWeekAheadAllowed(weekStartDate, entitlements.limits.maxWeeksAhead)) {
+    throw new EntitlementRequiredError('weeks_ahead', entitlements.plan);
+  }
+
+  return entitlements;
+};
+
 export const assertFeature = async (
   familyGroupId: number,
   requestingUserId: number,

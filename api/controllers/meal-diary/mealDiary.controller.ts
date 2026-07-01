@@ -87,6 +87,19 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       return res.status(400).json({ message: 'Invalid week_start_date format' });
     }
 
+    try {
+      await EntitlementsService.assertCanNavigateWeek(
+        parseInt(family_group_id),
+        user.dataValues.id,
+        parsedDate
+      );
+    } catch (error) {
+      if (handleEntitlementError(error, res)) {
+        return;
+      }
+      throw error;
+    }
+
     let weeklyMeals = await getWeeklyMeals(
       parseInt(family_group_id),
       parsedDate

@@ -4,6 +4,7 @@ import {
   BillingAuthorizationError,
   BillingConfigError,
   BillingManagedByStoreError,
+  AlreadySubscribedError,
   confirmCheckoutSession,
   createCheckoutSession,
   createPortalSession,
@@ -40,6 +41,13 @@ const handleBillingError = (error: unknown, res: Response) => {
     return res.status(409).json({
       code: error.code,
       message: 'Billing is managed by the App Store or Play Store',
+    });
+  }
+
+  if (error instanceof AlreadySubscribedError) {
+    return res.status(409).json({
+      code: error.code,
+      message: 'This family already has an active subscription',
     });
   }
 

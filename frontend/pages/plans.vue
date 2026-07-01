@@ -33,6 +33,8 @@
         :is-owner="billing.isOwner"
         :owner-display-name="billing.ownerDisplayName"
         :trial-available="billing.trialAvailable"
+        :current-plan="currentPlan"
+        :is-complimentary="entitlements?.isComplimentary ?? false"
         class="mb-8"
       />
 
@@ -62,17 +64,60 @@ const currentPlanLabel = computed(() =>
   currentPlan.value === 'premium' ? t('plansPage.familyPlus') : t('plansPage.free')
 );
 
+const PLANS_RETURN_PATH_KEY = 'plansReturnPath';
+
 const showBack = computed(() => route.query.from !== 'login');
 
-const handleBack = () => {
-  if (window.history.length > 1) {
-    window.history.back();
-  } else {
-    navigateTo(isLoggedIn.value ? '/profile' : '/login');
+const capturePlansReturnPath = () => {
+  if (typeof window === 'undefined') {
+    return;
   }
+
+  if (route.query.session_id) {
+    return;
+  }
+
+  if (document.referrer.includes('stripe.com')) {
+    return;
+  }
+
+  let returnPath = isLoggedIn.value ? '/profile' : '/login';
+
+  if (document.referrer) {
+    try {
+      const referrerUrl = new URL(document.referrer);
+      if (
+        referrerUrl.origin === window.location.origin &&
+        referrerUrl.pathname !== '/plans'
+      ) {
+        returnPath = `${referrerUrl.pathname}${referrerUrl.search}`;
+      }
+    } catch {
+      // Ignore malformed referrer values.
+    }
+  }
+
+  sessionStorage.setItem(PLANS_RETURN_PATH_KEY, returnPath);
+};
+
+const handleBack = () => {
+  if (typeof window === 'undefined') {
+    navigateTo(isLoggedIn.value ? '/profile' : '/login');
+    return;
+  }
+
+  const storedReturnPath = sessionStorage.getItem(PLANS_RETURN_PATH_KEY);
+  if (storedReturnPath) {
+    navigateTo(storedReturnPath);
+    return;
+  }
+
+  navigateTo(isLoggedIn.value ? '/profile' : '/login');
 };
 
 onMounted(async () => {
+  capturePlansReturnPath();
+
   if (authStore.isAuthenticated && !userStore.user) {
     await userStore.fetchUser();
   }

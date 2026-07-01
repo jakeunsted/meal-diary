@@ -1,4 +1,5 @@
-import { normalizeMealDiaryWeekKey } from '../../composables/mealDiaryWeekKey';
+import { normalizeMealDiaryWeekKey, weekStartKeyToLocalDate } from '../../composables/mealDiaryWeekKey';
+import { isWeekAheadAllowed } from '../../utils/weekEntitlements';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
@@ -470,6 +471,26 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   cy.intercept('GET', /\/api\/meal-diaries\/\d+\/.*\/daily-meals$/, (req) => {
     const weekMatch = req.url.match(/meal-diaries\/\d+\/([^/]+)\/daily-meals/);
     const weekStartDate = weekMatch?.[1] || getCurrentWeekStartKey();
+    const maxWeeksAhead = state.entitlements.limits?.maxWeeksAhead;
+    const requestedWeekStart = weekStartKeyToLocalDate(weekStartDate);
+
+    if (
+      requestedWeekStart &&
+      Number.isFinite(maxWeeksAhead) &&
+      !isWeekAheadAllowed(requestedWeekStart, maxWeeksAhead)
+    ) {
+      req.reply({
+        statusCode: 403,
+        body: {
+          code: 'ENTITLEMENT_REQUIRED',
+          feature: 'weeks_ahead',
+          plan: state.entitlements.plan ?? 'free',
+          upgradeUrl: '/plans',
+        },
+      });
+      return;
+    }
+
     req.reply({
       statusCode: 200,
       body: createWeeklyMeals(weekStartDate),
