@@ -66,7 +66,7 @@ meal-diary/
 ## Deployment currently
 
 ### DB
-The postgres database is currently deployed on AWS RDS.
+The postgres database is currently deployed on Railway.
 
 ### API & Frontend
-Deployed on AWS via GitHub Actions on merge to master. Uses ECR, ECS and perhaps CodeBuild if necessary.
+Deployed on Railway
