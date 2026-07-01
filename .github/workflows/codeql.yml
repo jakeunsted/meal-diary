@@ -1,5 +1,9 @@
 name: CodeQL
 
+# Requires CodeQL "default setup" to be disabled in repo settings:
+# Settings → Code security → Code scanning → CodeQL analysis → Disable CodeQL
+# (GitHub only allows default setup OR an advanced workflow, not both.)
+
 on:
   push:
     branches: [master, main, staging]
@@ -33,7 +37,7 @@ jobs:
           node-version: 26.3.0
           cache: npm
 
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
 
@@ -41,4 +45,4 @@ jobs:
 
       - run: npx turbo run build
 
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
