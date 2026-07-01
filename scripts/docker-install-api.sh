@@ -3,16 +3,22 @@ set -e
 
 . "$(dirname "$0")/linux-platform.sh"
 
-npm_platform_flags="--os=${NPM_OS} --cpu=${NPM_CPU}"
+echo "Installing API workspace for ${NPM_OS}/${NPM_CPU} (${LINUX_ESBUILD_ARCH})"
 
-npm install ${npm_platform_flags} \
+npm install \
+  --os="${NPM_OS}" \
+  --cpu="${NPM_CPU}" \
   --workspace=meal-diary-api \
   --workspace=@meal-diary/shared \
-  --ignore-scripts
+  --ignore-scripts \
+  --omit=optional
 
-npm install ${npm_platform_flags} \
+npm install \
+  --os="${NPM_OS}" \
+  --cpu="${NPM_CPU}" \
   --workspace=meal-diary-api \
   --ignore-scripts \
+  --no-save \
   "@esbuild/${LINUX_ESBUILD_ARCH}@0.28.1"
 
 npm rebuild bcrypt --build-from-source --workspace=meal-diary-api
