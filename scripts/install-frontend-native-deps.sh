@@ -3,16 +3,23 @@ set -e
 
 . "$(dirname "$0")/linux-platform.sh"
 
+npm_platform_flags="--os=${NPM_OS} --cpu=${NPM_CPU}"
+
 oxc_version="0.132.0"
 lightningcss_version="1.32.0"
 oxide_version="4.3.0"
 rollup_version="4.60.3"
 rolldown_version="1.0.3"
 
-# Lockfile is often generated on macOS; re-resolve Linux optional deps before lifecycle scripts.
-npm install --workspace=nuxt-app --ignore-scripts --include=optional
+# Lockfile is often generated on macOS; install for the actual Linux build CPU.
+npm install ${npm_platform_flags} \
+  --workspace=nuxt-app \
+  --ignore-scripts \
+  --include=optional
 
-npm install --workspace=nuxt-app --ignore-scripts \
+npm install ${npm_platform_flags} \
+  --workspace=nuxt-app \
+  --ignore-scripts \
   "@esbuild/${LINUX_ESBUILD_ARCH}@0.25.12" \
   "@esbuild/${LINUX_ESBUILD_ARCH}@0.28.1" \
   "@oxc-parser/binding-${oxc_platform}@${oxc_version}" \
