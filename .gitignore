@@ -8,6 +8,7 @@ node_modules
 api/dist
 .nuxt
 .output
+.turbo
 
 # IDE / editor (keep .cursor/rules/ tracked)
 .cursor/settings.json

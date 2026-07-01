@@ -1,7 +1,7 @@
 import { DataTypes, Model } from 'sequelize';
 import type { Optional } from 'sequelize';
 import sequelize from './index.ts';
-import type { SubscriptionPlan, SubscriptionStatus } from '../../constants/entitlementFeatures.ts';
+import type { SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 
 export interface SubscriptionAttributes {
   id: number;

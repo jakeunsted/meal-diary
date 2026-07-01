@@ -1,17 +1,10 @@
-export type EntitlementFeature =
-  | 'family_members'
-  | 'weeks_ahead'
-  | 'edit_past_weeks'
-  | 'recipes'
-  | 'recipe_to_shopping_list';
+import type {
+  EntitlementFeature,
+  SubscriptionPlan,
+  SubscriptionStatus,
+} from '@meal-diary/shared';
 
-export type SubscriptionPlan = 'free' | 'premium';
-
-export type SubscriptionStatus =
-  | 'active'
-  | 'trialing'
-  | 'expired'
-  | 'payment_failed';
+export type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus };
 
 export interface PlanLimits {
   maxFamilyMembers: number;

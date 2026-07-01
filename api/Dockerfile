@@ -1,15 +1,23 @@
-FROM node:26-alpine
+FROM node:26.3.0-bookworm-slim
 
-# bcrypt must compile on Alpine/musl; node-gyp needs Python and a C++ toolchain.
-RUN apk add --no-cache python3 make g++
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY package*.json ./
-COPY . ./
+COPY package.json package-lock.json ./
+COPY api/package.json api/
+COPY frontend/package.json frontend/
+COPY packages/shared/package.json packages/shared/
+COPY scripts/docker-install-api.sh scripts/
 
-RUN npm install \
-  && npm rebuild bcrypt --build-from-source
+RUN sh scripts/docker-install-api.sh
+
+COPY api api/
+COPY packages/shared packages/shared/
+
+WORKDIR /app/api
 
 EXPOSE 3001
 
