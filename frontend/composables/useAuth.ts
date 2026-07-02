@@ -2,6 +2,8 @@ import { ref } from 'vue';
 import { useAuthStore } from '~/stores/auth';
 import { useRouter } from 'vue-router';
 import { useApi } from '~/composables/useApi';
+import { isTokenExpired } from '~/composables/useJWT';
+import { getHttpStatusCode } from '~/utils/httpError';
 import type { ResolvedEntitlements } from '~/types/Entitlements';
 
 /**
@@ -176,6 +178,7 @@ export const useAuth = () => {
         throw new Error('No refresh token available');
       }
 
+      const refreshTokenUsed = authStore.refreshToken;
       console.log('[Token Debug] refreshTokens: calling /api/auth/refresh-token');
       
       // Use $fetch directly instead of useApi to prevent recursion
@@ -183,7 +186,7 @@ export const useAuth = () => {
       const response = await $fetch('/api/auth/refresh-token', {
         method: 'POST',
         body: {
-          refreshToken: authStore.refreshToken
+          refreshToken: refreshTokenUsed
         }
       }) as TokenResponse;
 
@@ -199,6 +202,19 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
+      const statusCode = getHttpStatusCode(err);
+
+      // Another caller (parallel tab, SSE, or a prior in-flight request) may have
+      // already rotated the refresh token — don't treat that as session expiry.
+      if (statusCode === 403 && authStore.accessToken && !isTokenExpired(authStore.accessToken, 0)) {
+        console.warn('[Token Debug] refreshTokens: 403 but access token still valid — keeping session');
+        return {
+          accessToken: authStore.accessToken,
+          refreshToken: authStore.refreshToken!,
+          user: authStore.user ?? undefined,
+        };
+      }
+
       console.error('[Token Debug] refreshTokens: failed', {
         statusCode: err?.statusCode ?? err?.status ?? err?.data?.statusCode,
         message: err?.data?.message ?? err?.message,

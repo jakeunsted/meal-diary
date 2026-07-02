@@ -216,8 +216,13 @@ export const useAuthStore = defineStore('auth', () => {
               console.log('[Token Debug] initializeAuth: proactive refresh succeeded');
             } catch (err: unknown) {
               if (isSessionExpiredError(err)) {
-                console.error('[Token Debug] initializeAuth: session expired, clearing auth');
-                await clearAuth();
+                // Refresh can 403 when another request already rotated tokens.
+                if (accessToken.value && !isTokenExpired(accessToken.value, 0)) {
+                  console.warn('[Token Debug] initializeAuth: refresh 403 but access still valid, keeping session');
+                } else {
+                  console.error('[Token Debug] initializeAuth: session expired, clearing auth');
+                  await clearAuth();
+                }
               } else {
                 // Network/transient failure — keep the session; useApi will retry on next request.
                 console.warn('[Token Debug] initializeAuth: proactive refresh failed (non-fatal)', err);
