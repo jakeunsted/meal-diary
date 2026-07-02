@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import axios from 'axios';
 import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
+import { HttpError } from '../utils/httpError.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
 
@@ -335,24 +335,46 @@ export const exchangeGoogleCode = async (code: string): Promise<{ accessToken: s
   }
 
   // Exchange authorization code for access token
-  const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-    code,
-    client_id: GOOGLE_CLIENT_ID,
-    client_secret: GOOGLE_CLIENT_SECRET,
-    redirect_uri: GOOGLE_CALLBACK_URL,
-    grant_type: 'authorization_code',
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: GOOGLE_CALLBACK_URL,
+      grant_type: 'authorization_code',
+    }),
   });
 
-  const { access_token } = tokenResponse.data;
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google token exchange failed with status ${tokenResponse.status}`,
+      tokenResponse.status,
+      errorData
+    );
+  }
+
+  const { access_token } = await tokenResponse.json();
 
   // Fetch user profile from Google
-  const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+  const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${access_token}`,
     },
   });
 
-  const profile = profileResponse.data as GoogleProfile;
+  if (!profileResponse.ok) {
+    const errorData = await profileResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google profile fetch failed with status ${profileResponse.status}`,
+      profileResponse.status,
+      errorData
+    );
+  }
+
+  const profile = await profileResponse.json() as GoogleProfile;
 
   return { accessToken: access_token, profile };
 };
@@ -375,13 +397,20 @@ export const verifyGoogleIdToken = async (idToken: string): Promise<GoogleProfil
   }
 
   // Verify ID token with Google
-  const tokenResponse = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-    params: {
-      id_token: idToken
-    }
-  });
+  const tokenInfoUrl = new URL('https://oauth2.googleapis.com/tokeninfo');
+  tokenInfoUrl.searchParams.set('id_token', idToken);
+  const tokenResponse = await fetch(tokenInfoUrl);
 
-  const tokenInfo = tokenResponse.data;
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google ID token verification failed with status ${tokenResponse.status}`,
+      tokenResponse.status,
+      errorData
+    );
+  }
+
+  const tokenInfo = await tokenResponse.json();
 
   // Verify the token is for our client
   if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {

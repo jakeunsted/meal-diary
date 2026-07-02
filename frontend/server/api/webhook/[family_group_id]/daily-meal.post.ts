@@ -1,4 +1,4 @@
-import { addMealDiaryEvent } from '~/server/utils/mealDiaryState';
+import { mealDiaryEventStore } from '~/server/utils/eventStore';
 import { SSE_EMITTER } from '~/server/plugins/sse';
 
 export default defineEventHandler(async (event) => {
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   
   // Store the event
-  addMealDiaryEvent(Number(familyGroupId), body.eventType, {
+  mealDiaryEventStore.addEvent(Number(familyGroupId), body.eventType, {
     dailyMeal: body.dailyMeal
   });
   

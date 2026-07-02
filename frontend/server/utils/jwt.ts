@@ -12,6 +12,10 @@ export function decodeJWT(token: string): { exp?: number; iat?: number; [key: st
     // Decode the payload (second part)
     // JWT uses base64url encoding which uses - and _ instead of + and /
     let payload = parts[1];
+    if (!payload) {
+      return null;
+    }
+
     
     // Convert base64url to base64
     payload = payload.replace(/-/g, '+').replace(/_/g, '/');
@@ -45,36 +49,8 @@ export function isTokenExpired(token: string, bufferSeconds: number = 60): boole
   const expirationTime = decoded.exp * 1000; // Convert to milliseconds
   const currentTime = Date.now();
   const bufferTime = bufferSeconds * 1000;
-  const timeUntilExpiration = expirationTime - currentTime;
-  const timeUntilExpirationSeconds = Math.floor(timeUntilExpiration / 1000);
-  
-  // If token was issued very recently (within last 10 seconds), it's likely just refreshed
-  // Don't consider it expired to avoid unnecessary server-side refresh attempts
-  const issuedAt = decoded.iat ? decoded.iat * 1000 : null;
-  const tokenAge = issuedAt ? currentTime - issuedAt : null;
-  const isVeryNew = tokenAge !== null && tokenAge < 10000; // Less than 10 seconds old
 
   // Token is expired if current time + buffer is past expiration
-  const expired = currentTime + bufferTime >= expirationTime;
-
-  // If token is very new, don't consider it expired (client likely just refreshed)
-  if (isVeryNew && !expired) {
-    return false;
-  }
-
-  return expired;
-}
-
-/**
- * Get the expiration time of a JWT token in milliseconds
- * @param token - The JWT token
- * @returns Expiration time in milliseconds, or null if unable to decode
- */
-export function getTokenExpiration(token: string): number | null {
-  const decoded = decodeJWT(token);
-  if (!decoded || !decoded.exp) {
-    return null;
-  }
-  return decoded.exp * 1000; // Convert to milliseconds
+  return currentTime + bufferTime >= expirationTime;
 }
 

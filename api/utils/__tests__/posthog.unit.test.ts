@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { AxiosError } from 'axios';
+import { HttpError } from '../httpError.ts';
 import { sanitizeErrorForAnalytics } from '../posthog.ts';
 
 describe('sanitizeErrorForAnalytics', () => {
@@ -9,23 +9,11 @@ describe('sanitizeErrorForAnalytics', () => {
     expect(result.error_message).toBe('No email in Google profile');
   });
 
-  it('classifies token exchange errors from axios', () => {
-    const error = new AxiosError(
-      'Request failed',
-      'ERR_BAD_REQUEST',
-      undefined,
-      undefined,
-      {
-        status: 400,
-        statusText: 'Bad Request',
-        headers: {},
-        config: {} as never,
-        data: {
-          error: 'invalid_grant',
-          error_description: 'Code was already redeemed.',
-        },
-      }
-    );
+  it('classifies token exchange errors from http responses', () => {
+    const error = new HttpError('Request failed', 400, {
+      error: 'invalid_grant',
+      error_description: 'Code was already redeemed.',
+    });
 
     const result = sanitizeErrorForAnalytics(error);
     expect(result.error_type).toBe('token_exchange');

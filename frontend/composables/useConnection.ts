@@ -22,35 +22,7 @@ export const useConnection = () => {
     }
   };
 
-  /**
-   * Watch for connection changes and execute a callback
-   * @param callback - Function to execute when connection status changes
-   * @param interval - Check interval in milliseconds (default: 30000)
-   * @returns Function to stop watching
-   */
-  const watchConnection = (callback: (isConnected: boolean) => void, interval = 30000) => {
-    let isWatching = true;
-
-    const check = async () => {
-      if (!isWatching) return;
-      
-      const isConnected = await checkConnection();
-      callback(isConnected);
-      
-      if (isWatching) {
-        setTimeout(check, interval);
-      }
-    };
-
-    check();
-
-    return () => {
-      isWatching = false;
-    };
-  };
-
   return {
-    checkConnection,
-    watchConnection
+    checkConnection
   };
 };

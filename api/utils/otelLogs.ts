@@ -4,6 +4,7 @@ import { resourceFromAttributes } from '@opentelemetry/resources';
 import { NodeSDK } from '@opentelemetry/sdk-node';
 import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
 import type { Request } from 'express';
+import { toLogAttributes } from '@meal-diary/shared';
 import { getDistinctId } from './posthog.ts';
 
 let sdk: NodeSDK | null = null;
@@ -71,28 +72,6 @@ export const shutdownOtelLogs = async (): Promise<void> => {
     sdk = null;
     initialized = false;
   }
-};
-
-const toLogAttributes = (
-  properties?: Record<string, unknown>
-): Record<string, string | number | boolean> => {
-  const attributes: Record<string, string | number | boolean> = {};
-
-  if (!properties) {
-    return attributes;
-  }
-
-  for (const [key, value] of Object.entries(properties)) {
-    if (key === 'session_id' && typeof value === 'string') {
-      attributes.sessionId = value;
-      continue;
-    }
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
-      attributes[key] = value;
-    }
-  }
-
-  return attributes;
 };
 
 /**

@@ -2,7 +2,6 @@ import { useAuthStore } from '~/stores/auth';
 import { useMealDiaryStore } from '~/stores/mealDiary';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
-import { useTokenRefreshSSE } from '~/composables/useTokenRefreshSSE';
 
 /**
  * Composable for managing Server-Sent Events (SSE) connection
@@ -14,7 +13,6 @@ export const useSSE = () => {
   const shoppingListStore = useShoppingListStore();
   const userStore = useUserStore();
   const { $sse } = useNuxtApp();
-  const { handleTokenRefresh } = useTokenRefreshSSE();
   const router = useRouter();
 
   let sseConnection: EventSource | null = null;
@@ -31,7 +29,7 @@ export const useSSE = () => {
     if (!sseConnection) {
       sseConnection = $sse.setup(familyGroupId, {
         // Token refresh events
-        'token-refresh': handleTokenRefresh,
+        'token-refresh': (data) => authStore.updateTokensFromSSE(data),
 
         // Shopping list item events
         'add-item': (data) => {
