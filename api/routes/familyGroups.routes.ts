@@ -291,6 +291,31 @@ router.delete('/:family_group_id', authenticateToken, requireFamilyMember, async
   }
 });
 
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/entitlements:
+ *   get:
+ *     summary: Get the resolved entitlements for a family group
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The family group id
+ *     responses:
+ *       200:
+ *         description: The family group's entitlements (plan, status, and feature limits)
+ *       400:
+ *         description: Invalid family group ID
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden — members only
+ *       500:
+ *         description: Failed to get entitlements
+ */
 router.get('/:family_group_id/entitlements', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await entitlementsController.getFamilyEntitlements(req, res);
@@ -299,6 +324,46 @@ router.get('/:family_group_id/entitlements', authenticateToken, requireFamilyMem
   }
 });
 
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/entitlements/dismiss-prompt:
+ *   post:
+ *     summary: Dismiss an entitlement prompt for a family group (owner only)
+ *     tags: [FamilyGroups]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: The family group id
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - prompt
+ *             properties:
+ *               prompt:
+ *                 type: string
+ *                 enum: [trial_expired]
+ *                 description: The prompt type to dismiss
+ *     responses:
+ *       200:
+ *         description: The refreshed entitlements after dismissing the prompt
+ *       400:
+ *         description: Invalid family group ID or prompt type
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Only the family owner can dismiss prompts
+ *       404:
+ *         description: Family group not found
+ *       500:
+ *         description: Failed to dismiss prompt
+ */
 router.post('/:family_group_id/entitlements/dismiss-prompt', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await entitlementsController.dismissEntitlementPrompt(req, res);

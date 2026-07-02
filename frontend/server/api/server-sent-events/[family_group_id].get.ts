@@ -1,5 +1,4 @@
-import { getLatestEvents } from '~/server/utils/shoppingListState';
-import { getLatestMealDiaryEvents } from '~/server/utils/mealDiaryState';
+import { shoppingListEventStore, mealDiaryEventStore } from '~/server/utils/eventStore';
 import { SSE_EMITTER } from '~/server/plugins/sse';
 
 export default defineEventHandler(async (event) => {
@@ -32,8 +31,8 @@ export default defineEventHandler(async (event) => {
   
   // Send initial data with error handling
   try {
-    const initialShoppingEvents = getLatestEvents(Number(familyGroupId));
-    const initialMealDiaryEvents = getLatestMealDiaryEvents(Number(familyGroupId));
+    const initialShoppingEvents = shoppingListEventStore.getLatestEvents(Number(familyGroupId));
+    const initialMealDiaryEvents = mealDiaryEventStore.getLatestEvents(Number(familyGroupId));
     
     const initialData = { 
       type: 'initial', 
