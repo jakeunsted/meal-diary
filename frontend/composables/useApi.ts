@@ -14,6 +14,7 @@ import {
 } from '~/utils/httpError';
 import type { EntitlementFeature } from '~/types/Entitlements';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
+import { tokenMeta } from '~/utils/tokenDebug';
 import type { ApiResponse } from '~/types/Api';
 
 interface ApiOptions extends FetchOptions {
@@ -105,20 +106,32 @@ export const useApi = () => {
     if (!authStore.accessToken || !authStore.refreshToken) return;
 
     const expired = isTokenExpired(authStore.accessToken);
-    console.log(`[Token Debug] ensureFreshTokens: url=${url} accessTokenExpired=${expired}`);
+    console.log('[Token Debug] ensureFreshTokens:', {
+      url,
+      accessTokenExpired: expired,
+      accessToken: tokenMeta(authStore.accessToken),
+      refreshToken: tokenMeta(authStore.refreshToken),
+    });
     if (!expired) return;
 
-    console.log('[Token Debug] ensureFreshTokens: starting token refresh');
+    console.log('[Token Debug] ensureFreshTokens: starting token refresh', { url });
     try {
       await runWithTokenRefreshLock(async () => {
         await refreshTokens();
       });
-      console.log('[Token Debug] ensureFreshTokens: token refresh succeeded');
+      console.log('[Token Debug] ensureFreshTokens: token refresh succeeded', {
+        url,
+        accessToken: tokenMeta(authStore.accessToken),
+        refreshToken: tokenMeta(authStore.refreshToken),
+      });
     } catch (err: unknown) {
       console.error('[Token Debug] ensureFreshTokens: token refresh failed', {
+        url,
         statusCode: getHttpStatusCode(err),
         message: extractErrorMessage(err),
         isSessionExpired: isSessionExpiredError(err),
+        accessToken: tokenMeta(authStore.accessToken),
+        refreshToken: tokenMeta(authStore.refreshToken),
       });
       if (isSessionExpiredError(err)) {
         await handleAutoLogout();

@@ -99,6 +99,43 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
   return user;
 };
 
+const tokenPreview = (token: string | null | undefined): string => {
+  if (!token) return 'none';
+  if (token.length < 16) return `[len=${token.length}]`;
+  return `${token.slice(0, 12)}…${token.slice(-8)} (len=${token.length})`;
+};
+
+const decodeRefreshTokenMeta = (token: string): {
+  preview: string;
+  userId?: number;
+  tokenId?: string;
+  exp?: string;
+  iat?: string;
+  expiresInSeconds?: number;
+} => {
+  const preview = tokenPreview(token);
+  try {
+    const decoded = jwt.decode(token) as {
+      userId?: number;
+      tokenId?: string;
+      exp?: number;
+      iat?: number;
+    } | null;
+    if (!decoded) return { preview };
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    return {
+      preview,
+      userId: decoded.userId,
+      tokenId: decoded.tokenId,
+      exp: decoded.exp != null ? new Date(decoded.exp * 1000).toISOString() : undefined,
+      iat: decoded.iat != null ? new Date(decoded.iat * 1000).toISOString() : undefined,
+      expiresInSeconds: decoded.exp != null ? decoded.exp - nowSeconds : undefined,
+    };
+  } catch {
+    return { preview };
+  }
+};
+
 /**
  * Generate JWT tokens
  * @param {number} userId - The user id
@@ -115,7 +152,7 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
   const accessToken = jwt.sign(
     { userId },
     accessSecret,
-    { expiresIn: '15m' } // Short-lived access token
+    { expiresIn: '2m' } // Short-lived access token
   );
   
   // Generate a unique identifier for the refresh token
@@ -134,10 +171,10 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
   
-  console.log('[generateTokens] Generating tokens for user:', {
+  console.log('[Token Debug][API] generateTokens: start', {
     userId,
-    tokenId,
-    expiresAt: expiresAt.toISOString()
+    jwtTokenId: tokenId,
+    expiresAt: expiresAt.toISOString(),
   });
   
   // Delete any existing refresh token for this user
@@ -145,9 +182,9 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
     where: { user_id: userId }
   });
   
-  console.log('[generateTokens] Deleted existing refresh tokens:', {
+  console.log('[Token Debug][API] generateTokens: deleted existing refresh tokens', {
     userId,
-    deletedCount
+    deletedCount,
   });
   
   // Create new refresh token
@@ -158,11 +195,12 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
     is_revoked: false
   });
   
-  console.log('[generateTokens] Created new refresh token:', {
+  console.log('[Token Debug][API] generateTokens: created', {
     userId,
-    tokenId: newRefreshToken.get('id'),
+    rowId: newRefreshToken.get('id'),
+    jwtTokenId: tokenId,
     expiresAt: expiresAt.toISOString(),
-    refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
+    refreshToken: tokenPreview(refreshToken),
   });
   
   return { accessToken, refreshToken };
@@ -210,7 +248,10 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<L
  * @returns {Promise<{ userId: number; storedToken: RefreshToken }>} User ID and stored token
  * @throws {Error} If token is invalid or expired
  */
-export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId: number; storedToken: RefreshToken }> => {
+export const verifyRefreshToken = async (
+  refreshToken: string,
+  requestId?: string
+): Promise<{ userId: number; storedToken: RefreshToken }> => {
   if (!refreshToken) {
     throw new Error('Refresh token is required');
   }
@@ -219,27 +260,31 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
   if (!refreshSecret) {
     throw new Error('JWT_REFRESH_SECRET not configured');
   }
+
+  const presented = decodeRefreshTokenMeta(refreshToken);
+  console.log('[Token Debug][API] verifyRefreshToken: start', {
+    requestId,
+    presented,
+  });
   
   // Verify refresh token
-  let decoded: { userId: number };
+  let decoded: { userId: number; tokenId?: string };
   try {
-    decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
-    console.log('[verifyRefreshToken] JWT verification successful:', {
-      userId: decoded.userId
+    decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number; tokenId?: string };
+    console.log('[Token Debug][API] verifyRefreshToken: JWT ok', {
+      requestId,
+      userId: decoded.userId,
+      tokenId: decoded.tokenId,
     });
   } catch (jwtError) {
-    console.error('[verifyRefreshToken] JWT verification failed:', {
+    console.error('[Token Debug][API] verifyRefreshToken: JWT verification failed', {
+      requestId,
+      presented,
       error: jwtError instanceof Error ? jwtError.message : 'Unknown error',
-      errorName: jwtError instanceof Error ? jwtError.name : 'Unknown'
+      errorName: jwtError instanceof Error ? jwtError.name : 'Unknown',
     });
     throw new Error('Invalid or expired refresh token');
   }
-  
-  // Check if token exists and is not revoked
-  console.log('[verifyRefreshToken] Checking stored token in database:', {
-    userId: decoded.userId,
-    tokenPreview: `${refreshToken.substring(0, 20)}...`
-  });
   
   const storedToken = await RefreshToken.findOne({
     where: {
@@ -251,19 +296,44 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
     }
   });
   
-  console.log('[verifyRefreshToken] Database lookup result:', {
-    found: !!storedToken,
+  console.log('[Token Debug][API] verifyRefreshToken: DB exact match', {
+    requestId,
     userId: decoded.userId,
-    tokenId: storedToken?.get('id'),
+    found: !!storedToken,
+    rowId: storedToken?.get('id'),
     isRevoked: storedToken?.get('is_revoked'),
-    expiresAt: storedToken?.get('expires_at') ? new Date(storedToken.get('expires_at') as Date).toISOString() : 'N/A',
-    now: new Date().toISOString()
+    expiresAt: storedToken?.get('expires_at')
+      ? new Date(storedToken.get('expires_at') as Date).toISOString()
+      : 'N/A',
+    now: new Date().toISOString(),
   });
   
   if (!storedToken) {
-    console.error('[verifyRefreshToken] Token not found or invalid in database:', {
+    // Diagnostic: what tokens does this user currently have?
+    // A mismatch here usually means another request already rotated the token.
+    const userTokens = await RefreshToken.findAll({
+      where: { user_id: decoded.userId },
+      order: [['updated_at', 'DESC']],
+      limit: 5,
+    });
+
+    console.error('[Token Debug][API] verifyRefreshToken: presented token not in DB', {
+      requestId,
       userId: decoded.userId,
-      reason: 'Token may be revoked, expired, or not found'
+      presented,
+      reason: 'Token may be revoked, expired, or already rotated',
+      tokensForUser: userTokens.map((row) => ({
+        rowId: row.get('id'),
+        preview: tokenPreview(row.get('token') as string),
+        isRevoked: row.get('is_revoked'),
+        expiresAt: row.get('expires_at')
+          ? new Date(row.get('expires_at') as Date).toISOString()
+          : null,
+        updatedAt: row.get('updated_at')
+          ? new Date(row.get('updated_at') as Date).toISOString()
+          : null,
+        matchesPresented: (row.get('token') as string) === refreshToken,
+      })),
     });
     throw new Error('Invalid or expired refresh token');
   }
@@ -277,30 +347,45 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
  * @returns {Promise<{ user: User & UserAttributes; tokens: TokenPair }>} User and new tokens
  * @throws {Error} If token is invalid or user not found
  */
-export const refreshUserTokens = async (refreshToken: string): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
-  const { userId } = await verifyRefreshToken(refreshToken);
+export const refreshUserTokens = async (
+  refreshToken: string,
+  requestId?: string
+): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
+  const startedAt = Date.now();
+  console.log('[Token Debug][API] refreshUserTokens: start', {
+    requestId,
+    presented: decodeRefreshTokenMeta(refreshToken),
+  });
+
+  const { userId } = await verifyRefreshToken(refreshToken, requestId);
   
   // Find user
   const user = await User.findByPk(userId) as User & UserAttributes;
   if (!user) {
-    console.error('[refreshUserTokens] User not found:', {
-      userId
+    console.error('[Token Debug][API] refreshUserTokens: user not found', {
+      requestId,
+      userId,
     });
     throw new Error('User not found');
   }
   
-  console.log('[refreshUserTokens] Generating new tokens for user:', {
+  console.log('[Token Debug][API] refreshUserTokens: rotating tokens', {
+    requestId,
     userId: user.id,
-    familyGroupId: user.family_group_id
+    familyGroupId: user.family_group_id,
+    oldRefreshToken: tokenPreview(refreshToken),
   });
   
   // Generate new tokens (this will automatically delete the old one)
   const tokens = await generateTokens(user.id);
   
-  console.log('[refreshUserTokens] Token refresh successful:', {
+  console.log('[Token Debug][API] refreshUserTokens: success', {
+    requestId,
     userId: user.id,
-    hasAccessToken: !!tokens.accessToken,
-    hasRefreshToken: !!tokens.refreshToken
+    oldRefreshToken: tokenPreview(refreshToken),
+    newRefreshToken: tokenPreview(tokens.refreshToken),
+    newAccessToken: tokenPreview(tokens.accessToken),
+    durationMs: Date.now() - startedAt,
   });
   
   return { user, tokens };

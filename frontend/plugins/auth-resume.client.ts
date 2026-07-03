@@ -3,6 +3,7 @@ import { useAuth, handleAutoLogout } from '~/composables/useAuth';
 import { isTokenExpired } from '~/composables/useJWT';
 import { isSessionExpiredError } from '~/utils/httpError';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
+import { tokenMeta } from '~/utils/tokenDebug';
 
 /**
  * Refreshes expired access tokens when the Capacitor app returns to the
@@ -20,16 +21,25 @@ export default defineNuxtPlugin(() => {
     if (!authStore.accessToken || !authStore.refreshToken) return;
     if (!isTokenExpired(authStore.accessToken, 0)) return;
 
-    console.log('[Token Debug] app resume: access token expired, refreshing');
+    console.log('[Token Debug] app resume: access token expired, refreshing', {
+      accessToken: tokenMeta(authStore.accessToken),
+      refreshToken: tokenMeta(authStore.refreshToken),
+    });
     try {
       await runWithTokenRefreshLock(async () => {
         const { refreshTokens } = useAuth();
         await refreshTokens();
       });
-      console.log('[Token Debug] app resume: token refresh succeeded');
+      console.log('[Token Debug] app resume: token refresh succeeded', {
+        accessToken: tokenMeta(authStore.accessToken),
+        refreshToken: tokenMeta(authStore.refreshToken),
+      });
     } catch (err: unknown) {
       console.error('[Token Debug] app resume: token refresh failed', {
         isSessionExpired: isSessionExpiredError(err),
+        accessToken: tokenMeta(authStore.accessToken),
+        refreshToken: tokenMeta(authStore.refreshToken),
+        error: err instanceof Error ? err.message : String(err),
       });
       if (isSessionExpiredError(err)) {
         await handleAutoLogout();

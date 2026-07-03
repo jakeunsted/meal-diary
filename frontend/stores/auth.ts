@@ -8,6 +8,7 @@ import { hasFamilyGroup } from '~/composables/useAuth';
 import { isTokenExpired } from '~/composables/useJWT';
 import { isSessionExpiredError } from '~/utils/httpError';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
+import { tokenMeta, tokenPreview } from '~/utils/tokenDebug';
 
 interface AuthState {
   user: User | null;
@@ -188,12 +189,16 @@ export const useAuthStore = defineStore('auth', () => {
           userId: authState.user?.id,
           userEmail: authState.user?.email,
           family_group_id: authState.user?.family_group_id,
-          hasFamilyGroup: hasFamilyGroup(authState.user)
+          hasFamilyGroup: hasFamilyGroup(authState.user),
+          accessToken: tokenMeta(authState.accessToken),
+          refreshToken: tokenMeta(authState.refreshToken),
         });
         // Only restore if we have all required data
         if (authState.user && authState.accessToken && authState.refreshToken) {
           if (isTokenExpired(authState.refreshToken, 0)) {
-            console.log('[Auth Store] Refresh token expired, clearing stale auth state');
+            console.log('[Auth Store] Refresh token expired, clearing stale auth state', {
+              refreshToken: tokenMeta(authState.refreshToken),
+            });
             await clearAuth();
             return;
           }
@@ -201,31 +206,50 @@ export const useAuthStore = defineStore('auth', () => {
           user.value = authState.user;
           accessToken.value = authState.accessToken;
           refreshToken.value = authState.refreshToken;
-          console.log('[Auth Store] Successfully restored auth state');
+          console.log('[Auth Store] Successfully restored auth state', {
+            accessToken: tokenMeta(authState.accessToken),
+            refreshToken: tokenMeta(authState.refreshToken),
+          });
 
           // Proactively refresh an expired access token so the first API call
           // after returning from background doesn't hit a stale-token round-trip.
           if (isTokenExpired(authState.accessToken, 0)) {
-            console.log('[Token Debug] initializeAuth: access token expired, attempting proactive refresh');
+            console.log('[Token Debug] initializeAuth: access token expired, attempting proactive refresh', {
+              accessToken: tokenMeta(authState.accessToken),
+              refreshToken: tokenMeta(authState.refreshToken),
+            });
             try {
               await runWithTokenRefreshLock(async () => {
                 const { useAuth } = await import('~/composables/useAuth');
                 const { refreshTokens } = useAuth();
                 await refreshTokens();
               });
-              console.log('[Token Debug] initializeAuth: proactive refresh succeeded');
+              console.log('[Token Debug] initializeAuth: proactive refresh succeeded', {
+                accessToken: tokenMeta(accessToken.value),
+                refreshToken: tokenMeta(refreshToken.value),
+              });
             } catch (err: unknown) {
               if (isSessionExpiredError(err)) {
                 // Refresh can 403 when another request already rotated tokens.
                 if (accessToken.value && !isTokenExpired(accessToken.value, 0)) {
-                  console.warn('[Token Debug] initializeAuth: refresh 403 but access still valid, keeping session');
+                  console.warn('[Token Debug] initializeAuth: refresh 403 but access still valid, keeping session', {
+                    accessToken: tokenMeta(accessToken.value),
+                    refreshToken: tokenMeta(refreshToken.value),
+                  });
                 } else {
-                  console.error('[Token Debug] initializeAuth: session expired, clearing auth');
+                  console.error('[Token Debug] initializeAuth: session expired, clearing auth', {
+                    accessToken: tokenMeta(accessToken.value),
+                    refreshToken: tokenMeta(refreshToken.value),
+                  });
                   await clearAuth();
                 }
               } else {
                 // Network/transient failure — keep the session; useApi will retry on next request.
-                console.warn('[Token Debug] initializeAuth: proactive refresh failed (non-fatal)', err);
+                console.warn('[Token Debug] initializeAuth: proactive refresh failed (non-fatal)', {
+                  error: err instanceof Error ? err.message : String(err),
+                  accessToken: tokenMeta(accessToken.value),
+                  refreshToken: tokenMeta(refreshToken.value),
+                });
               }
             }
           }
@@ -311,16 +335,31 @@ export const useAuthStore = defineStore('auth', () => {
   const updateTokensFromSSE = async (tokens: { accessToken: string; refreshToken: string; userId: number }) => {
     // Validate input
     if (!tokens.accessToken || !tokens.refreshToken || !tokens.userId) {
-      console.error('[Auth Store] Invalid token data received from SSE:', tokens);
+      console.error('[Token Debug] updateTokensFromSSE: invalid token data', {
+        hasAccessToken: !!tokens.accessToken,
+        hasRefreshToken: !!tokens.refreshToken,
+        userId: tokens.userId,
+      });
       return;
     }
 
     // Only update if the tokens are for the current user
     if (user.value?.id !== tokens.userId) {
+      console.log('[Token Debug] updateTokensFromSSE: ignoring tokens for other user', {
+        currentUserId: user.value?.id,
+        eventUserId: tokens.userId,
+      });
       return;
     }
     
     try {
+      console.log('[Token Debug] updateTokensFromSSE: applying rotated tokens from SSE', {
+        userId: tokens.userId,
+        oldRefreshToken: tokenPreview(refreshToken.value),
+        newRefreshToken: tokenMeta(tokens.refreshToken),
+        newAccessToken: tokenMeta(tokens.accessToken),
+      });
+
       // Update store state
       accessToken.value = tokens.accessToken;
       refreshToken.value = tokens.refreshToken;
@@ -339,7 +378,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } catch (error) {
-      console.error('[Auth Store] Failed to update auth state from SSE:', error);
+      console.error('[Token Debug] updateTokensFromSSE: failed', error);
     }
   };
   

@@ -83,16 +83,25 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  */
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { refreshToken } = req.body;
+    const { refreshToken, requestId } = req.body as {
+      refreshToken?: string;
+      requestId?: string;
+    };
+    const correlationId = requestId ?? `api-${Date.now().toString(36)}`;
     
-    console.log('[Refresh Token Controller] Received refresh request:', {
+    console.log('[Token Debug][API] controller: received refresh request', {
+      requestId: correlationId,
       hasToken: !!refreshToken,
       tokenLength: refreshToken?.length,
-      tokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'none'
+      tokenPreview: refreshToken
+        ? `${refreshToken.slice(0, 12)}…${refreshToken.slice(-8)} (len=${refreshToken.length})`
+        : 'none',
     });
     
     if (!refreshToken) {
-      console.error('[Refresh Token Controller] No refresh token provided');
+      console.error('[Token Debug][API] controller: no refresh token provided', {
+        requestId: correlationId,
+      });
       res.status(400).json({ message: 'Refresh token is required' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -102,12 +111,13 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     try {
-      const { user, tokens } = await AuthService.refreshUserTokens(refreshToken);
+      const { user, tokens } = await AuthService.refreshUserTokens(refreshToken, correlationId);
       
-      console.log('[Refresh Token Controller] Token refresh successful:', {
+      console.log('[Token Debug][API] controller: refresh successful', {
+        requestId: correlationId,
         userId: user.id,
         hasAccessToken: !!tokens.accessToken,
-        hasRefreshToken: !!tokens.refreshToken
+        hasRefreshToken: !!tokens.refreshToken,
       });
       
       // Track successful token refresh
@@ -135,10 +145,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
         reason = 'expired_token';
       }
       
-      console.error('[Refresh Token Controller] Service error:', {
+      console.error('[Token Debug][API] controller: service error', {
+        requestId: correlationId,
         error: errorMessage,
         reason,
-        statusCode
+        statusCode,
       });
       
       res.status(statusCode).json({ message: errorMessage });
