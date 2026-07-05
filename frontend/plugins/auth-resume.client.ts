@@ -20,17 +20,12 @@ export default defineNuxtPlugin(() => {
     if (!authStore.accessToken || !authStore.refreshToken) return;
     if (!isTokenExpired(authStore.accessToken, 0)) return;
 
-    console.log('[Token Debug] app resume: access token expired, refreshing');
     try {
       await runWithTokenRefreshLock(async () => {
         const { refreshTokens } = useAuth();
         await refreshTokens();
       });
-      console.log('[Token Debug] app resume: token refresh succeeded');
     } catch (err: unknown) {
-      console.error('[Token Debug] app resume: token refresh failed', {
-        isSessionExpired: isSessionExpiredError(err),
-      });
       if (isSessionExpiredError(err)) {
         await handleAutoLogout();
       }

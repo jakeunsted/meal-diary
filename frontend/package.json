@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=26"
+    "node": ">=26.3.0"
   },
   "scripts": {
     "build": "nuxt build",
@@ -40,7 +40,7 @@
     "@capacitor/share": "^8.0.1",
     "@capgo/capacitor-social-login": "^8.3.22",
     "@formkit/auto-animate": "^0.8.4",
-    "@nuxtjs/dotenv": "^1.4.2",
+    "@meal-diary/shared": "*",
     "@nuxtjs/i18n": "^9.5.6",
     "@opentelemetry/api-logs": "^0.219.0",
     "@opentelemetry/exporter-logs-otlp-http": "^0.219.0",

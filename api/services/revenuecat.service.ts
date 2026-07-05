@@ -1,6 +1,6 @@
 import { FamilyGroup, Subscription, SubscriptionEvent } from '../db/models/associations.ts';
 import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
-import type { SubscriptionPlan, SubscriptionStatus } from '../constants/entitlementFeatures.ts';
+import type { SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 import { getOrCreateSubscription } from './entitlements.service.ts';
 
 export class RevenueCatConfigError extends Error {

@@ -2,6 +2,8 @@ import { ref } from 'vue';
 import { useAuthStore } from '~/stores/auth';
 import { useRouter } from 'vue-router';
 import { useApi } from '~/composables/useApi';
+import { isTokenExpired } from '~/composables/useJWT';
+import { getHttpStatusCode } from '~/utils/httpError';
 import type { ResolvedEntitlements } from '~/types/Entitlements';
 
 /**
@@ -172,22 +174,17 @@ export const useAuth = () => {
   const refreshTokens = async () => {
     try {
       if (!authStore.refreshToken) {
-        console.error('[Token Debug] refreshTokens: no refresh token in store');
         throw new Error('No refresh token available');
       }
 
-      console.log('[Token Debug] refreshTokens: calling /api/auth/refresh-token');
+      const refreshTokenUsed = authStore.refreshToken;
       
       // Use $fetch directly instead of useApi to prevent recursion
       // The refresh endpoint doesn't require an access token, only the refresh token in the body
       const response = await $fetch('/api/auth/refresh-token', {
         method: 'POST',
-        body: {
-          refreshToken: authStore.refreshToken
-        }
+        body: { refreshToken: refreshTokenUsed }
       }) as TokenResponse;
-
-      console.log('[Token Debug] refreshTokens: succeeded, updating store');
       
       // Update tokens in store
       authStore.setAuth({
@@ -199,11 +196,18 @@ export const useAuth = () => {
       
       return response;
     } catch (err: any) {
-      console.error('[Token Debug] refreshTokens: failed', {
-        statusCode: err?.statusCode ?? err?.status ?? err?.data?.statusCode,
-        message: err?.data?.message ?? err?.message,
-        errorData: err?.data,
-      });
+      const statusCode = getHttpStatusCode(err);
+
+      // Another caller (parallel tab, SSE, or a prior in-flight request) may have
+      // already rotated the refresh token — don't treat that as session expiry.
+      if (statusCode === 403 && authStore.accessToken && !isTokenExpired(authStore.accessToken, 0)) {
+        return {
+          accessToken: authStore.accessToken,
+          refreshToken: authStore.refreshToken!,
+          user: authStore.user ?? undefined,
+        };
+      }
+
       throw err;
     }
   };

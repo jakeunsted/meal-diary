@@ -85,14 +85,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
   try {
     const { refreshToken } = req.body;
     
-    console.log('[Refresh Token Controller] Received refresh request:', {
-      hasToken: !!refreshToken,
-      tokenLength: refreshToken?.length,
-      tokenPreview: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'none'
-    });
-    
     if (!refreshToken) {
-      console.error('[Refresh Token Controller] No refresh token provided');
       res.status(400).json({ message: 'Refresh token is required' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -103,12 +96,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     
     try {
       const { user, tokens } = await AuthService.refreshUserTokens(refreshToken);
-      
-      console.log('[Refresh Token Controller] Token refresh successful:', {
-        userId: user.id,
-        hasAccessToken: !!tokens.accessToken,
-        hasRefreshToken: !!tokens.refreshToken
-      });
       
       // Track successful token refresh
       await trackEvent(user.id.toString(), 'token_refresh_success', {});
@@ -134,12 +121,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       } else if (errorMessage.includes('expired')) {
         reason = 'expired_token';
       }
-      
-      console.error('[Refresh Token Controller] Service error:', {
-        error: errorMessage,
-        reason,
-        statusCode
-      });
       
       res.status(statusCode).json({ message: errorMessage });
       

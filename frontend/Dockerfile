@@ -1,17 +1,17 @@
-FROM node:26-alpine
+FROM node:26.3.0-bookworm-slim
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+COPY api/package.json api/
+COPY frontend/package.json frontend/
+COPY packages/shared/package.json packages/shared/
 
-# Build arguments for environment variables needed at build time
-# These are baked into the Nuxt build output
 ARG GOOGLE_CLIENT_ID
 ARG BASE_URL=https://api.mealdiary.co.uk
 ARG ORIGIN
 ARG GA_MEASUREMENT_ID
 
-# Set as environment variables for the build process
 ENV HOST=0.0.0.0
 ENV PORT=3000
 ENV BASE_URL=${BASE_URL}
@@ -19,11 +19,18 @@ ENV GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
 ENV ORIGIN=${ORIGIN}
 ENV GA_MEASUREMENT_ID=${GA_MEASUREMENT_ID}
 
-RUN npm install
+COPY scripts/docker-install-frontend.sh scripts/
+COPY scripts/install-frontend-native-deps.sh scripts/
+COPY scripts/linux-platform.sh scripts/
 
-COPY . .
+RUN sh scripts/docker-install-frontend.sh
 
-RUN npm run build
+COPY frontend frontend/
+COPY packages/shared packages/shared/
+
+RUN npm run build --workspace=nuxt-app
+
+WORKDIR /app/frontend
 
 EXPOSE 3000
 

@@ -1,5 +1,5 @@
 import { SSE_EMITTER } from '~/server/plugins/sse';
-import { addWebhookEvent } from '~/server/utils/shoppingListState';
+import { shoppingListEventStore } from '~/server/utils/eventStore';
 
 export default defineEventHandler(async (event) => {
   const familyGroupId = getRouterParam(event, 'family_group_id');
@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   });
 
   // Record the event for new SSE subscribers
-  addWebhookEvent(Number(familyGroupId), body.eventType, {
+  shoppingListEventStore.addEvent(Number(familyGroupId), body.eventType, {
     item: body.item,
     actorUserId: body.actorUserId ?? null
   });

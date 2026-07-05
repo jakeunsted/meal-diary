@@ -10,6 +10,7 @@ import {
   syncSubscriptionFromStripe,
   TrialAlreadyUsedError,
   BillingManagedByStoreError,
+  AlreadySubscribedError,
 } from '../billing.service.ts';
 
 const mockCheckoutSessionsCreate = vi.hoisted(() => vi.fn());
@@ -183,6 +184,40 @@ describe('billing.service', () => {
 
       await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
         BillingManagedByStoreError
+      );
+    });
+
+    it('throws when family already has an active premium subscription', async () => {
+      setupCheckoutMocks(false);
+      vi.spyOn(entitlementsService, 'getOrCreateSubscription').mockResolvedValue({
+        dataValues: {
+          family_group_id: 1,
+          stripe_customer_id: 'cus_123',
+          plan: 'premium',
+          status: 'active',
+          is_complimentary: false,
+        },
+      } as never);
+
+      await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
+        AlreadySubscribedError
+      );
+    });
+
+    it('throws when family already has a complimentary premium subscription', async () => {
+      setupCheckoutMocks(false);
+      vi.spyOn(entitlementsService, 'getOrCreateSubscription').mockResolvedValue({
+        dataValues: {
+          family_group_id: 1,
+          stripe_customer_id: 'cus_123',
+          plan: 'premium',
+          status: 'active',
+          is_complimentary: true,
+        },
+      } as never);
+
+      await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
+        AlreadySubscribedError
       );
     });
   });

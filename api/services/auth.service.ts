@@ -1,11 +1,11 @@
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import axios from 'axios';
 import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
+import { HttpError } from '../utils/httpError.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
 
@@ -115,7 +115,7 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
   const accessToken = jwt.sign(
     { userId },
     accessSecret,
-    { expiresIn: '15m' } // Short-lived access token
+    { expiresIn: '2m' } // Short-lived access token
   );
   
   // Generate a unique identifier for the refresh token
@@ -134,35 +134,17 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
   
-  console.log('[generateTokens] Generating tokens for user:', {
-    userId,
-    tokenId,
-    expiresAt: expiresAt.toISOString()
-  });
-  
   // Delete any existing refresh token for this user
-  const deletedCount = await RefreshToken.destroy({
+  await RefreshToken.destroy({
     where: { user_id: userId }
   });
   
-  console.log('[generateTokens] Deleted existing refresh tokens:', {
-    userId,
-    deletedCount
-  });
-  
   // Create new refresh token
-  const newRefreshToken = await RefreshToken.create({
+  await RefreshToken.create({
     token: refreshToken,
     user_id: userId,
     expires_at: expiresAt,
     is_revoked: false
-  });
-  
-  console.log('[generateTokens] Created new refresh token:', {
-    userId,
-    tokenId: newRefreshToken.get('id'),
-    expiresAt: expiresAt.toISOString(),
-    refreshTokenPreview: `${refreshToken.substring(0, 20)}...`
   });
   
   return { accessToken, refreshToken };
@@ -210,7 +192,9 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<L
  * @returns {Promise<{ userId: number; storedToken: RefreshToken }>} User ID and stored token
  * @throws {Error} If token is invalid or expired
  */
-export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId: number; storedToken: RefreshToken }> => {
+export const verifyRefreshToken = async (
+  refreshToken: string
+): Promise<{ userId: number; storedToken: RefreshToken }> => {
   if (!refreshToken) {
     throw new Error('Refresh token is required');
   }
@@ -221,25 +205,12 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
   }
   
   // Verify refresh token
-  let decoded: { userId: number };
+  let decoded: { userId: number; tokenId?: string };
   try {
-    decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number };
-    console.log('[verifyRefreshToken] JWT verification successful:', {
-      userId: decoded.userId
-    });
-  } catch (jwtError) {
-    console.error('[verifyRefreshToken] JWT verification failed:', {
-      error: jwtError instanceof Error ? jwtError.message : 'Unknown error',
-      errorName: jwtError instanceof Error ? jwtError.name : 'Unknown'
-    });
+    decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number; tokenId?: string };
+  } catch {
     throw new Error('Invalid or expired refresh token');
   }
-  
-  // Check if token exists and is not revoked
-  console.log('[verifyRefreshToken] Checking stored token in database:', {
-    userId: decoded.userId,
-    tokenPreview: `${refreshToken.substring(0, 20)}...`
-  });
   
   const storedToken = await RefreshToken.findOne({
     where: {
@@ -251,20 +222,7 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
     }
   });
   
-  console.log('[verifyRefreshToken] Database lookup result:', {
-    found: !!storedToken,
-    userId: decoded.userId,
-    tokenId: storedToken?.get('id'),
-    isRevoked: storedToken?.get('is_revoked'),
-    expiresAt: storedToken?.get('expires_at') ? new Date(storedToken.get('expires_at') as Date).toISOString() : 'N/A',
-    now: new Date().toISOString()
-  });
-  
   if (!storedToken) {
-    console.error('[verifyRefreshToken] Token not found or invalid in database:', {
-      userId: decoded.userId,
-      reason: 'Token may be revoked, expired, or not found'
-    });
     throw new Error('Invalid or expired refresh token');
   }
   
@@ -277,31 +235,19 @@ export const verifyRefreshToken = async (refreshToken: string): Promise<{ userId
  * @returns {Promise<{ user: User & UserAttributes; tokens: TokenPair }>} User and new tokens
  * @throws {Error} If token is invalid or user not found
  */
-export const refreshUserTokens = async (refreshToken: string): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
+export const refreshUserTokens = async (
+  refreshToken: string
+): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
   const { userId } = await verifyRefreshToken(refreshToken);
   
   // Find user
   const user = await User.findByPk(userId) as User & UserAttributes;
   if (!user) {
-    console.error('[refreshUserTokens] User not found:', {
-      userId
-    });
     throw new Error('User not found');
   }
   
-  console.log('[refreshUserTokens] Generating new tokens for user:', {
-    userId: user.id,
-    familyGroupId: user.family_group_id
-  });
-  
   // Generate new tokens (this will automatically delete the old one)
   const tokens = await generateTokens(user.id);
-  
-  console.log('[refreshUserTokens] Token refresh successful:', {
-    userId: user.id,
-    hasAccessToken: !!tokens.accessToken,
-    hasRefreshToken: !!tokens.refreshToken
-  });
   
   return { user, tokens };
 };
@@ -335,24 +281,46 @@ export const exchangeGoogleCode = async (code: string): Promise<{ accessToken: s
   }
 
   // Exchange authorization code for access token
-  const tokenResponse = await axios.post('https://oauth2.googleapis.com/token', {
-    code,
-    client_id: GOOGLE_CLIENT_ID,
-    client_secret: GOOGLE_CLIENT_SECRET,
-    redirect_uri: GOOGLE_CALLBACK_URL,
-    grant_type: 'authorization_code',
+  const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      code,
+      client_id: GOOGLE_CLIENT_ID,
+      client_secret: GOOGLE_CLIENT_SECRET,
+      redirect_uri: GOOGLE_CALLBACK_URL,
+      grant_type: 'authorization_code',
+    }),
   });
 
-  const { access_token } = tokenResponse.data;
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google token exchange failed with status ${tokenResponse.status}`,
+      tokenResponse.status,
+      errorData
+    );
+  }
+
+  const { access_token } = await tokenResponse.json();
 
   // Fetch user profile from Google
-  const profileResponse = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+  const profileResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${access_token}`,
     },
   });
 
-  const profile = profileResponse.data as GoogleProfile;
+  if (!profileResponse.ok) {
+    const errorData = await profileResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google profile fetch failed with status ${profileResponse.status}`,
+      profileResponse.status,
+      errorData
+    );
+  }
+
+  const profile = await profileResponse.json() as GoogleProfile;
 
   return { accessToken: access_token, profile };
 };
@@ -375,13 +343,20 @@ export const verifyGoogleIdToken = async (idToken: string): Promise<GoogleProfil
   }
 
   // Verify ID token with Google
-  const tokenResponse = await axios.get('https://oauth2.googleapis.com/tokeninfo', {
-    params: {
-      id_token: idToken
-    }
-  });
+  const tokenInfoUrl = new URL('https://oauth2.googleapis.com/tokeninfo');
+  tokenInfoUrl.searchParams.set('id_token', idToken);
+  const tokenResponse = await fetch(tokenInfoUrl);
 
-  const tokenInfo = tokenResponse.data;
+  if (!tokenResponse.ok) {
+    const errorData = await tokenResponse.json().catch(() => undefined);
+    throw new HttpError(
+      `Google ID token verification failed with status ${tokenResponse.status}`,
+      tokenResponse.status,
+      errorData
+    );
+  }
+
+  const tokenInfo = await tokenResponse.json();
 
   // Verify the token is for our client
   if (tokenInfo.aud !== GOOGLE_CLIENT_ID) {

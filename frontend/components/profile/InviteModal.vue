@@ -59,7 +59,7 @@ import { useRuntimeConfig } from '#imports';
 import { copyToClipboard } from '~/utils/copyToClipboard';
 
 const config = useRuntimeConfig();
-const origin = config.public.origin || 'https://meal-diary.co.uk'
+const origin = config.public.origin || 'https://mealdiary.co.uk'
 
 const modal = ref<HTMLDialogElement | null>(null);
 const inviteLinkInput = ref<HTMLInputElement | null>(null);

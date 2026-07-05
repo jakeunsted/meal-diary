@@ -1,12 +1,20 @@
-FROM node:23.6
+FROM node:26.3.0-bookworm-slim
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends python3 make g++ \
+  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json package-lock.json ./
+COPY api/package.json api/
+COPY frontend/package.json frontend/
+COPY packages/shared/package.json packages/shared/
+COPY scripts/docker-install-api.sh scripts/
+COPY scripts/linux-platform.sh scripts/
 
-RUN npm install
-RUN npm rebuild bcrypt --build-from-source
+RUN sh scripts/docker-install-api.sh
 
 EXPOSE 3001
 
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--workspace=meal-diary-api"]

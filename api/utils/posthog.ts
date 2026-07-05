@@ -1,6 +1,6 @@
 import { PostHog } from 'posthog-node';
-import axios from 'axios';
 import type { Request } from 'express';
+import { HttpError } from './httpError.ts';
 
 let posthogClient: PostHog | null = null;
 
@@ -39,8 +39,8 @@ const redactSensitiveText = (text: string): string => {
 };
 
 const extractErrorMessage = (error: unknown): string => {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as { error?: string; error_description?: string } | undefined;
+  if (error instanceof HttpError) {
+    const data = error.data as { error?: string; error_description?: string } | undefined;
     if (data?.error_description) {
       return `${data.error ?? 'error'}: ${data.error_description}`;
     }
@@ -287,17 +287,24 @@ export const deletePersonData = async (distinctId: string): Promise<void> => {
 
   try {
     const headers = { Authorization: `Bearer ${apiKey}` };
-    const search = await axios.get(`${host}/api/projects/${projectId}/persons/`, {
-      headers,
-      params: { distinct_id: distinctId },
-    });
+    const searchUrl = new URL(`${host}/api/projects/${projectId}/persons/`);
+    searchUrl.searchParams.set('distinct_id', distinctId);
+    const search = await fetch(searchUrl, { headers });
 
-    const persons: Array<{ id: string }> = search.data?.results ?? [];
+    if (!search.ok) {
+      throw new HttpError(`PostHog person search failed with status ${search.status}`, search.status);
+    }
+
+    const searchData = await search.json() as { results?: Array<{ id: string }> };
+    const persons: Array<{ id: string }> = searchData?.results ?? [];
     for (const person of persons) {
-      await axios.delete(`${host}/api/projects/${projectId}/persons/${person.id}/`, {
-        headers,
-        params: { delete_events: 'true' },
-      });
+      const deleteUrl = new URL(`${host}/api/projects/${projectId}/persons/${person.id}/`);
+      deleteUrl.searchParams.set('delete_events', 'true');
+      const deleteResponse = await fetch(deleteUrl, { method: 'DELETE', headers });
+
+      if (!deleteResponse.ok) {
+        throw new HttpError(`PostHog person deletion failed with status ${deleteResponse.status}`, deleteResponse.status);
+      }
     }
     console.log(`PostHog: Deleted ${persons.length} person record(s) for user ${distinctId}`);
   } catch (err) {

@@ -57,6 +57,15 @@ export class BillingManagedByStoreError extends Error {
   }
 }
 
+export class AlreadySubscribedError extends Error {
+  readonly code = 'ALREADY_SUBSCRIBED';
+
+  constructor() {
+    super('ALREADY_SUBSCRIBED');
+    this.name = 'AlreadySubscribedError';
+  }
+}
+
 const getStripe = (): Stripe => {
   const secretKey = process.env.STRIPE_SECRET_KEY;
   if (!secretKey) {
@@ -302,6 +311,19 @@ const assertWebBillingAllowed = async (familyGroupId: number) => {
   }
 };
 
+const assertNotAlreadySubscribed = (subscription: SubscriptionAttributes) => {
+  if (subscription.is_complimentary) {
+    throw new AlreadySubscribedError();
+  }
+
+  if (
+    subscription.plan === 'premium' &&
+    (subscription.status === 'active' || subscription.status === 'trialing')
+  ) {
+    throw new AlreadySubscribedError();
+  }
+};
+
 export const createCheckoutSession = async (
   familyGroupId: number,
   ownerUserId: number,
@@ -313,6 +335,7 @@ export const createCheckoutSession = async (
   const owner = await getOwner(ownerUserId);
   const subscription = await getOrCreateSubscription(familyGroupId);
   const subscriptionData = subscription.dataValues as SubscriptionAttributes;
+  assertNotAlreadySubscribed(subscriptionData);
   const priceId = getPriceId(interval);
   const stripe = getStripe();
 

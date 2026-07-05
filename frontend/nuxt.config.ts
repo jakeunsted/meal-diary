@@ -17,6 +17,7 @@ function getViteAllowedHosts(): string[] {
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  transpile: ['@meal-diary/shared'],
   devtools: { enabled: false },
   devServer: {
     host: '0.0.0.0', // Listen on all interfaces so Android emulator can connect

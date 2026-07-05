@@ -77,7 +77,6 @@ const applyRefreshedTokensFromResponse = async (
   const newAccess = res.headers['x-new-access-token'];
   const newRefresh = res.headers['x-new-refresh-token'];
   if (newAccess && newRefresh && authStore.user) {
-    console.log('[Token Debug] applyRefreshedTokensFromResponse: applying rotated tokens from server response');
     await authStore.setAuth({
       user: authStore.user,
       accessToken: newAccess,
@@ -104,22 +103,13 @@ export const useApi = () => {
     if (isRefreshEndpoint) return;
     if (!authStore.accessToken || !authStore.refreshToken) return;
 
-    const expired = isTokenExpired(authStore.accessToken);
-    console.log(`[Token Debug] ensureFreshTokens: url=${url} accessTokenExpired=${expired}`);
-    if (!expired) return;
+    if (!isTokenExpired(authStore.accessToken)) return;
 
-    console.log('[Token Debug] ensureFreshTokens: starting token refresh');
     try {
       await runWithTokenRefreshLock(async () => {
         await refreshTokens();
       });
-      console.log('[Token Debug] ensureFreshTokens: token refresh succeeded');
     } catch (err: unknown) {
-      console.error('[Token Debug] ensureFreshTokens: token refresh failed', {
-        statusCode: getHttpStatusCode(err),
-        message: extractErrorMessage(err),
-        isSessionExpired: isSessionExpiredError(err),
-      });
       if (isSessionExpiredError(err)) {
         await handleAutoLogout();
       }
@@ -161,23 +151,11 @@ export const useApi = () => {
         throw error;
       }
 
-      const statusCode = getHttpStatusCode(error);
       const errorMessage = resolveErrorMessage(error);
-      const rawMessage = extractErrorMessage(error);
-      console.error('[Token Debug] useApi catch:', {
-        url,
-        statusCode,
-        rawMessage,
-        errorMessage,
-        isRetryable: isRetryableAuthError(error),
-        isAuth: isAuthError(error),
-        isSessionExpired: isSessionExpiredError(error),
-      });
 
       // Retryable 401: server rotated tokens mid-flight; client store now has
       // fresher tokens (via SSE or a parallel request) — retry once.
       if (isRetryableAuthError(error)) {
-        console.log('[Token Debug] useApi: retrying after rotation-race 401');
         try {
           const result = await $fetch<T>(url, {
             ...fetchOptions,
@@ -185,17 +163,12 @@ export const useApi = () => {
           } as any);
           await applyRefreshedTokensFromResponse(result, authStore);
           return result;
-        } catch (retryErr: unknown) {
-          console.error('[Token Debug] useApi: retry also failed', {
-            statusCode: getHttpStatusCode(retryErr),
-            message: extractErrorMessage(retryErr),
-          });
+        } catch {
           // Fall through to session-expired handling below.
         }
       }
 
       if (isAuthError(error)) {
-        console.error('[Token Debug] useApi: auth error — isSessionExpired:', isSessionExpiredError(error));
         if (isSessionExpiredError(error)) {
           await handleAutoLogout();
         }

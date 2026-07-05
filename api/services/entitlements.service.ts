@@ -1,4 +1,4 @@
-import type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus } from '../constants/entitlementFeatures.ts';
+import type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 import { PAYMENT_FAILED_BANNER_DAYS, PLANS } from '../constants/subscriptionPlans.ts';
 import type { PlanLimits } from '../constants/subscriptionPlans.ts';
 import {
@@ -292,6 +292,20 @@ export const assertCanUpdateMealWeek = async (
   if (!isPastWeekEditable(weekStartDate, entitlements.limits.canEditPastWeeks)) {
     throw new EntitlementRequiredError('edit_past_weeks', entitlements.plan);
   }
+
+  if (!isWeekAheadAllowed(weekStartDate, entitlements.limits.maxWeeksAhead)) {
+    throw new EntitlementRequiredError('weeks_ahead', entitlements.plan);
+  }
+
+  return entitlements;
+};
+
+export const assertCanNavigateWeek = async (
+  familyGroupId: number,
+  requestingUserId: number,
+  weekStartDate: Date
+): Promise<ResolvedEntitlements> => {
+  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId);
 
   if (!isWeekAheadAllowed(weekStartDate, entitlements.limits.maxWeeksAhead)) {
     throw new EntitlementRequiredError('weeks_ahead', entitlements.plan);

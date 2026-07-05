@@ -188,7 +188,7 @@ export const useAuthStore = defineStore('auth', () => {
           userId: authState.user?.id,
           userEmail: authState.user?.email,
           family_group_id: authState.user?.family_group_id,
-          hasFamilyGroup: hasFamilyGroup(authState.user)
+          hasFamilyGroup: hasFamilyGroup(authState.user),
         });
         // Only restore if we have all required data
         if (authState.user && authState.accessToken && authState.refreshToken) {
@@ -206,22 +206,20 @@ export const useAuthStore = defineStore('auth', () => {
           // Proactively refresh an expired access token so the first API call
           // after returning from background doesn't hit a stale-token round-trip.
           if (isTokenExpired(authState.accessToken, 0)) {
-            console.log('[Token Debug] initializeAuth: access token expired, attempting proactive refresh');
             try {
               await runWithTokenRefreshLock(async () => {
                 const { useAuth } = await import('~/composables/useAuth');
                 const { refreshTokens } = useAuth();
                 await refreshTokens();
               });
-              console.log('[Token Debug] initializeAuth: proactive refresh succeeded');
             } catch (err: unknown) {
               if (isSessionExpiredError(err)) {
-                console.error('[Token Debug] initializeAuth: session expired, clearing auth');
-                await clearAuth();
-              } else {
-                // Network/transient failure — keep the session; useApi will retry on next request.
-                console.warn('[Token Debug] initializeAuth: proactive refresh failed (non-fatal)', err);
+                // Refresh can 403 when another request already rotated tokens.
+                if (!accessToken.value || isTokenExpired(accessToken.value, 0)) {
+                  await clearAuth();
+                }
               }
+              // Network/transient failure — keep the session; useApi will retry on next request.
             }
           }
           
@@ -306,7 +304,6 @@ export const useAuthStore = defineStore('auth', () => {
   const updateTokensFromSSE = async (tokens: { accessToken: string; refreshToken: string; userId: number }) => {
     // Validate input
     if (!tokens.accessToken || !tokens.refreshToken || !tokens.userId) {
-      console.error('[Auth Store] Invalid token data received from SSE:', tokens);
       return;
     }
 
@@ -334,7 +331,7 @@ export const useAuthStore = defineStore('auth', () => {
         }
       }
     } catch (error) {
-      console.error('[Auth Store] Failed to update auth state from SSE:', error);
+      console.error('[Auth Store] Failed to update tokens from SSE:', error);
     }
   };
   

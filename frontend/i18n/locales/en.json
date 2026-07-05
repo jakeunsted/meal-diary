@@ -383,6 +383,7 @@
     "missingFamilyGroup": "Create or join a family group before upgrading",
     "checkoutFailed": "Unable to start checkout. Please try again.",
     "manageBilling": "Manage billing",
+    "complimentaryPlanMessage": "You have a complimentary Family Plus plan.",
     "portalFailed": "Unable to open billing portal. Please try again.",
     "currentPlanLabel": "Your plan: {plan}",
     "trialDaysRemaining": "{days} days left in your free trial",

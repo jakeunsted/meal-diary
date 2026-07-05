@@ -1,4 +1,3 @@
-import axios from 'axios';
 import dotenv from 'dotenv';
 import DailyMeal from '../db/models/DailyMeal.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
@@ -51,12 +50,20 @@ export const sendDailyMealWebhook = async (
       dinner_recipe_id: dailyMeal.dataValues.dinner_recipe_id ?? null,
     };
 
-    await axios.post(webHookUrl, {
-      eventType,
-      familyGroupId,
-      dailyMeal: payload,
-      timestamp: new Date().toISOString()
+    const response = await fetch(webHookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType,
+        familyGroupId,
+        dailyMeal: payload,
+        timestamp: new Date().toISOString()
+      })
     });
+
+    if (!response.ok) {
+      console.error('Error sending webhook: ', `${response.status} ${response.statusText}`);
+    }
   } catch (error) {
     console.error('Error sending webhook: ', error);
   }
@@ -79,13 +86,21 @@ export const sendShoppingListItemWebhook = async (
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list/item`;
 
-    await axios.post(webHookUrl, {
-      eventType,
-      familyGroupId,
-      item,
-      actorUserId: actorUserId ?? null,
-      timestamp: new Date().toISOString()
+    const response = await fetch(webHookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        eventType,
+        familyGroupId,
+        item,
+        actorUserId: actorUserId ?? null,
+        timestamp: new Date().toISOString()
+      })
     });
+
+    if (!response.ok) {
+      console.error('Error sending webhook: ', `${response.status} ${response.statusText}`);
+    }
   } catch (error) {
     console.error('Error sending webhook: ', error);
   }

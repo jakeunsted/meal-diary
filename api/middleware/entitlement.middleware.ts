@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
-import type { EntitlementFeature } from '../constants/entitlementFeatures.ts';
+import type { EntitlementFeature } from '@meal-diary/shared';
 import {
   assertFeature,
   EntitlementRequiredError,

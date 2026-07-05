@@ -19,6 +19,7 @@
         </div>
         <p class="text-3xl font-bold">£2.99<span class="text-base font-normal opacity-70">/mo</span></p>
         <button
+          v-if="showPurchaseButtons"
           type="button"
           class="btn btn-primary w-full"
           :disabled="!canPurchase || loadingInterval === 'month'"
@@ -27,7 +28,7 @@
           <span v-if="loadingInterval === 'month'" class="loading loading-spinner loading-sm"></span>
           <span v-else>{{ ctaLabel }}</span>
         </button>
-        <p v-if="helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
+        <p v-if="showPurchaseButtons && helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
       </div>
     </div>
 
@@ -39,6 +40,7 @@
         </div>
         <p class="text-3xl font-bold">£24.99<span class="text-base font-normal opacity-70">/yr</span></p>
         <button
+          v-if="showPurchaseButtons"
           type="button"
           class="btn btn-primary w-full"
           :disabled="!canPurchase || loadingInterval === 'year'"
@@ -47,9 +49,28 @@
           <span v-if="loadingInterval === 'year'" class="loading loading-spinner loading-sm"></span>
           <span v-else>{{ ctaLabel }}</span>
         </button>
-        <p v-if="helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
+        <p v-if="showPurchaseButtons && helperText" class="text-xs opacity-70 text-center">{{ helperText }}</p>
       </div>
     </div>
+    <div v-if="showComplimentaryState" class="md:col-span-3">
+      <div class="alert alert-info">
+        <span>{{ $t('plansPage.complimentaryPlanMessage') }}</span>
+      </div>
+    </div>
+
+    <div v-else-if="showManageBilling" class="md:col-span-3 flex flex-col items-center gap-2">
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="isOpeningPortal"
+        @click="handleManageBilling"
+      >
+        <span v-if="isOpeningPortal" class="loading loading-spinner loading-sm"></span>
+        <span v-else>{{ $t('plansPage.manageBilling') }}</span>
+      </button>
+      <p v-if="portalError" class="text-sm text-error text-center">{{ portalError }}</p>
+    </div>
+
     <p v-if="checkoutError" class="md:col-span-3 text-sm text-error text-center">
       {{ checkoutError }}
     </p>
@@ -74,6 +95,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  currentPlan: {
+    type: String,
+    default: 'free',
+  },
+  isComplimentary: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const { t } = useI18n();
@@ -82,6 +111,25 @@ const { api } = useApi();
 const { track } = useAnalytics();
 const loadingInterval = ref(null);
 const checkoutError = ref('');
+const isOpeningPortal = ref(false);
+const portalError = ref('');
+
+const showManageBilling = computed(() =>
+  props.isLoggedIn &&
+  props.isOwner &&
+  props.currentPlan === 'premium' &&
+  !props.isComplimentary
+);
+
+const showComplimentaryState = computed(() =>
+  props.isLoggedIn &&
+  props.isOwner &&
+  props.isComplimentary
+);
+
+const showPurchaseButtons = computed(() =>
+  !showManageBilling.value && !showComplimentaryState.value
+);
 
 const canPurchase = computed(() => !props.isLoggedIn || props.isOwner);
 
@@ -160,6 +208,38 @@ const handleUpgrade = async (interval) => {
     checkoutError.value = t('plansPage.checkoutFailed');
   } finally {
     loadingInterval.value = null;
+  }
+};
+
+const handleManageBilling = async () => {
+  const familyGroupId = userStore.user?.family_group_id;
+  if (!familyGroupId || isOpeningPortal.value) {
+    return;
+  }
+
+  isOpeningPortal.value = true;
+  portalError.value = '';
+
+  try {
+    const session = await api('/api/billing/create-portal-session', {
+      method: 'POST',
+      silent: true,
+      body: {
+        family_group_id: familyGroupId,
+        return_url: `${window.location.origin}/profile?upgraded=1`,
+      },
+    });
+
+    if (session?.url) {
+      window.location.href = session.url;
+      return;
+    }
+
+    portalError.value = t('plansPage.portalFailed');
+  } catch (error) {
+    portalError.value = t('plansPage.portalFailed');
+  } finally {
+    isOpeningPortal.value = false;
   }
 };
 </script>

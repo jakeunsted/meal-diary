@@ -52,4 +52,4 @@ export default defineEventHandler(async (event) => {
       message: error.message || 'An error occurred during token refresh'
     });
   }
-}); 
+});

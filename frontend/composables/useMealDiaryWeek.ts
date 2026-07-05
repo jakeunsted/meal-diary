@@ -1,5 +1,6 @@
 import { useMealDiaryStore } from '~/stores/mealDiary';
 import { useUserStore } from '~/stores/user';
+import { useEntitlements } from '~/composables/useEntitlements';
 import {
   normalizeMealDiaryWeekKey,
   weekKeysEqual,
@@ -27,6 +28,7 @@ export const useMealDiaryWeek = () => {
   const router = useRouter();
   const mealDiaryStore = useMealDiaryStore();
   const userStore = useUserStore();
+  const { canNavigateToWeek, limits } = useEntitlements();
 
   let hasHydratedFromStorage = false;
 
@@ -113,6 +115,26 @@ export const useMealDiaryWeek = () => {
   );
 
   const goToCurrentWeek = () => setWeek(mealDiaryStore.getWeekStartDate());
+
+  const clampWeekToEntitlements = async () => {
+    if (!limits.value) {
+      return;
+    }
+
+    const weekDate = displayWeekStartDate.value;
+    if (!weekDate || canNavigateToWeek(weekDate)) {
+      return;
+    }
+
+    await goToCurrentWeek();
+  };
+
+  watch(
+    () => limits.value,
+    () => {
+      void clampWeekToEntitlements();
+    }
+  );
 
   watch(
     () => route.query.week,
