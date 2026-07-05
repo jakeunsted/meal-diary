@@ -83,25 +83,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
  */
 export const refreshToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { refreshToken, requestId } = req.body as {
-      refreshToken?: string;
-      requestId?: string;
-    };
-    const correlationId = requestId ?? `api-${Date.now().toString(36)}`;
-    
-    console.log('[Token Debug][API] controller: received refresh request', {
-      requestId: correlationId,
-      hasToken: !!refreshToken,
-      tokenLength: refreshToken?.length,
-      tokenPreview: refreshToken
-        ? `${refreshToken.slice(0, 12)}…${refreshToken.slice(-8)} (len=${refreshToken.length})`
-        : 'none',
-    });
+    const { refreshToken } = req.body;
     
     if (!refreshToken) {
-      console.error('[Token Debug][API] controller: no refresh token provided', {
-        requestId: correlationId,
-      });
       res.status(400).json({ message: 'Refresh token is required' });
       const distinctId = getDistinctId(req);
       await trackEvent(distinctId, 'token_refresh_failure', {
@@ -111,14 +95,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     }
     
     try {
-      const { user, tokens } = await AuthService.refreshUserTokens(refreshToken, correlationId);
-      
-      console.log('[Token Debug][API] controller: refresh successful', {
-        requestId: correlationId,
-        userId: user.id,
-        hasAccessToken: !!tokens.accessToken,
-        hasRefreshToken: !!tokens.refreshToken,
-      });
+      const { user, tokens } = await AuthService.refreshUserTokens(refreshToken);
       
       // Track successful token refresh
       await trackEvent(user.id.toString(), 'token_refresh_success', {});
@@ -144,13 +121,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       } else if (errorMessage.includes('expired')) {
         reason = 'expired_token';
       }
-      
-      console.error('[Token Debug][API] controller: service error', {
-        requestId: correlationId,
-        error: errorMessage,
-        reason,
-        statusCode,
-      });
       
       res.status(statusCode).json({ message: errorMessage });
       

@@ -4,7 +4,6 @@ import { useRouter } from 'vue-router';
 import { useApi } from '~/composables/useApi';
 import { isTokenExpired } from '~/composables/useJWT';
 import { getHttpStatusCode } from '~/utils/httpError';
-import { newRefreshRequestId, tokenMeta, tokenPreview } from '~/utils/tokenDebug';
 import type { ResolvedEntitlements } from '~/types/Entitlements';
 
 /**
@@ -173,39 +172,19 @@ export const useAuth = () => {
    * @returns {Promise<TokenResponse>} A promise that resolves to the token response.
    */
   const refreshTokens = async () => {
-    const requestId = newRefreshRequestId();
     try {
       if (!authStore.refreshToken) {
-        console.error('[Token Debug] refreshTokens: no refresh token in store', { requestId });
         throw new Error('No refresh token available');
       }
 
       const refreshTokenUsed = authStore.refreshToken;
-      console.log('[Token Debug] refreshTokens: calling /api/auth/refresh-token', {
-        requestId,
-        userId: authStore.user?.id,
-        refreshToken: tokenMeta(refreshTokenUsed),
-        accessToken: tokenMeta(authStore.accessToken),
-      });
       
       // Use $fetch directly instead of useApi to prevent recursion
       // The refresh endpoint doesn't require an access token, only the refresh token in the body
       const response = await $fetch('/api/auth/refresh-token', {
         method: 'POST',
-        body: {
-          refreshToken: refreshTokenUsed,
-          requestId,
-        }
+        body: { refreshToken: refreshTokenUsed }
       }) as TokenResponse;
-
-      console.log('[Token Debug] refreshTokens: succeeded, updating store', {
-        requestId,
-        userId: response.user?.id ?? authStore.user?.id,
-        oldRefreshToken: tokenPreview(refreshTokenUsed),
-        newRefreshToken: tokenMeta(response.refreshToken),
-        newAccessToken: tokenMeta(response.accessToken),
-        refreshTokenRotated: response.refreshToken !== refreshTokenUsed,
-      });
       
       // Update tokens in store
       authStore.setAuth({
@@ -222,13 +201,6 @@ export const useAuth = () => {
       // Another caller (parallel tab, SSE, or a prior in-flight request) may have
       // already rotated the refresh token — don't treat that as session expiry.
       if (statusCode === 403 && authStore.accessToken && !isTokenExpired(authStore.accessToken, 0)) {
-        console.warn('[Token Debug] refreshTokens: 403 but access token still valid — keeping session', {
-          requestId,
-          accessToken: tokenMeta(authStore.accessToken),
-          refreshTokenInStore: tokenMeta(authStore.refreshToken),
-          statusCode,
-          message: err?.data?.message ?? err?.message,
-        });
         return {
           accessToken: authStore.accessToken,
           refreshToken: authStore.refreshToken!,
@@ -236,14 +208,6 @@ export const useAuth = () => {
         };
       }
 
-      console.error('[Token Debug] refreshTokens: failed', {
-        requestId,
-        statusCode: err?.statusCode ?? err?.status ?? err?.data?.statusCode,
-        message: err?.data?.message ?? err?.message,
-        errorData: err?.data,
-        refreshTokenInStore: tokenMeta(authStore.refreshToken),
-        accessTokenInStore: tokenMeta(authStore.accessToken),
-      });
       throw err;
     }
   };
