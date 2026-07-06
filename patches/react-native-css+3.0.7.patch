@@ -1,0 +1,35 @@
+diff --git a/node_modules/react-native-css/dist/commonjs/babel/react-native-web.js b/node_modules/react-native-css/dist/commonjs/babel/react-native-web.js
+index 9414040..c0dcc85 100644
+--- a/node_modules/react-native-css/dist/commonjs/babel/react-native-web.js
++++ b/node_modules/react-native-css/dist/commonjs/babel/react-native-web.js
+@@ -9,6 +9,13 @@ exports.handleReactNativeWebObjectPatternRequire = handleReactNativeWebObjectPat
+ var _path = require("path");
+ var _allowedModules = require("./allowedModules.js");
+ function parseReactNativeWebSource(source, filename) {
++  // Don't rewrite imports made from within react-native-web's own dist files (e.g. AnimatedFlatList
++  // importing the plain FlatList via a relative path). Rewriting these creates a self-referential
++  // circular import back into react-native-web's index.js and crashes with "reading 'default' of undefined".
++  // Only external consumers should get the css-wrapped version.
++  if (filename.includes(`${_path.sep}react-native-web${_path.sep}dist${_path.sep}`)) {
++    return;
++  }
+   if (source.startsWith(".")) {
+     source = (0, _path.resolve)(filename, source);
+     const internalPath = source.split("react-native-web/dist")[1];
+diff --git a/node_modules/react-native-css/dist/commonjs/metro/resolver.js b/node_modules/react-native-css/dist/commonjs/metro/resolver.js
+index 314ffa1..08f24c0 100644
+--- a/node_modules/react-native-css/dist/commonjs/metro/resolver.js
++++ b/node_modules/react-native-css/dist/commonjs/metro/resolver.js
+@@ -42,7 +42,11 @@ function webResolver(resolver, context, moduleName, platform) {
+   // Skip anything that isn't importing from `react-native-web`
+   !resolution.filePath.includes(`${_nodePath.sep}react-native-web${_nodePath.sep}`) ||
+   // Skip internal react-native-web files
+-  resolution.filePath.includes(`${_nodePath.sep}react-native-web${_nodePath.sep}dist${_nodePath.sep}vendor`)) {
++  resolution.filePath.includes(`${_nodePath.sep}react-native-web${_nodePath.sep}dist${_nodePath.sep}vendor`) ||
++  // Skip imports made from within react-native-web itself (e.g. index.js re-exporting its own
++  // FlatList) - substituting these creates a self-referential circular import back into
++  // react-native-web's index.js. Only external consumers should get the css-wrapped version.
++  context.originModulePath.includes(`${_nodePath.sep}react-native-web${_nodePath.sep}`)) {
+     return resolution;
+   }
+ 
