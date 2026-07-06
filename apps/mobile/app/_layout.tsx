@@ -1,6 +1,6 @@
 import { Inter_400Regular, Inter_600SemiBold, useFonts } from '@expo-google-fonts/inter';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
@@ -9,7 +9,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import '@/global.css';
 import '@/lib/i18n';
+import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
+import { useAuthStore } from '@/lib/auth/authStore';
 
 if (Platform.OS !== 'web') {
   require('react-native-gesture-handler');
@@ -27,6 +29,7 @@ export const unstable_settings = {
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  const router = useRouter();
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
@@ -35,6 +38,15 @@ export default function RootLayout() {
   useEffect(() => {
     if (error) throw error;
   }, [error]);
+
+  // Kick the user back to login when a 401 can't be recovered by a refresh
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      useAuthStore.getState().clearSession();
+      router.replace('/(auth)/login');
+    });
+    return () => setSessionExpiredHandler(null);
+  }, [router]);
 
   useEffect(() => {
     if (loaded) {

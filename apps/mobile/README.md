@@ -57,6 +57,15 @@ EAS Build profiles are in [`eas.json`](./eas.json). iOS builds require an Apple 
 - TanStack Query, Zustand, i18next
 - `@meal-diary/shared` workspace package
 
+## Gotchas
+
+- **`lightningcss` is pinned to `1.30.1`** in this workspace's `package.json`. Versions 1.30.2+ have a
+  [visitor deserialization regression](https://github.com/parcel-bundler/lightningcss/issues/1081) that breaks
+  react-native-css / NativeWind bundling (`failed to deserialize; expected an object-like struct named Specifier`).
+  The root `patches/react-native-css+3.0.7.patch` also makes the compiler prefer this project-local copy over the
+  hoisted monorepo copy (which other workspaces like Tailwind/Vite keep at a newer version). Don't remove either
+  without re-testing `npx expo export --platform android`.
+
 ## Typecheck
 
 ```bash

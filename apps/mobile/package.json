@@ -22,6 +22,7 @@
     "@tanstack/react-query-persist-client": "^5.101.2",
     "date-fns": "^4.4.0",
     "expo": "~57.0.2",
+    "expo-clipboard": "~57.0.0",
     "expo-constants": "~57.0.3",
     "expo-font": "~57.0.0",
     "expo-linking": "~57.0.1",
@@ -35,6 +36,7 @@
     "expo-symbols": "~57.0.0",
     "expo-web-browser": "~57.0.0",
     "i18next": "^26.3.4",
+    "lightningcss": "1.30.1",
     "nativewind": "^5.0.0-preview.4",
     "react": "19.2.3",
     "react-aria": "^3.50.0",
@@ -71,11 +73,5 @@
     "android": "BROWSER=none expo start --android",
     "ios": "BROWSER=none expo start --ios"
   },
-  "private": true,
-  "overrides": {
-    "lightningcss": "1.30.1"
-  },
-  "resolutions": {
-    "lightningcss": "1.30.1"
-  }
+  "private": true
 }
