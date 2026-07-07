@@ -7,7 +7,7 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v57.0.0/ before 
 `platforms` in `app.json` includes `"web"` — required, otherwise Expo falls back to the legacy `App.js`
 entry instead of `expo-router/entry` and bundling fails with "Unable to resolve '../../App'".
 
-Run web dev **from `apps/mobile`**, not the repo root (`cd apps/mobile && npx expo start --web`) — running
+Run web dev **from `apps/mobile`**, not the repo root (`cd apps/mobile && npx expo start --web --port 3002`) — running
 it from the monorepo root points Expo at the wrong project and hits the same wrong-entry-point error.
 
 ### react-native-css / react-native-web patch

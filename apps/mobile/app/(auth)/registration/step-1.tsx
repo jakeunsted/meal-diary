@@ -12,6 +12,7 @@ import {
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
+import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
@@ -284,6 +285,17 @@ export default function RegistrationStep1Screen() {
             {isSubmitting && <ButtonSpinner color="#F1F5F9" />}
             <ButtonText>{t('registration.register')}</ButtonText>
           </Button>
+
+          <GoogleSignInSection
+            label={t('registration.signUpWithGoogle')}
+            showLegal
+            disabled={isSubmitting}
+            testID="google-signup-button"
+            onSuccess={() => {
+              const currentUser = useAuthStore.getState().user;
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
 
           <Box className="mt-4 flex-row justify-center gap-1">
             <Text className="text-ice/60">{t('registration.alreadyHaveAccount')}</Text>

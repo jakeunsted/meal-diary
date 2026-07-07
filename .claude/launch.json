@@ -4,9 +4,12 @@
     {
       "name": "mobile-web",
       "runtimeExecutable": "npx",
-      "runtimeArgs": ["expo", "start", "--web"],
+      "runtimeArgs": ["expo", "start", "--web", "--port", "3002"],
+      "env": {
+        "EXPO_PACKAGER_PROXY_URL": "https://dev-app.mealdiary.co.uk"
+      },
       "cwd": "apps/mobile",
-      "port": 8081
+      "port": 3002
     }
   ]
 }

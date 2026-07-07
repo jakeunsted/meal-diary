@@ -32,6 +32,12 @@ const resources = {
         password: 'Password',
         passwordPlaceholder: 'Your password',
         signIn: 'Sign in',
+        or: 'OR',
+        signInWithGoogle: 'Sign in with Google',
+        googleLegalPrefix: 'By continuing with Google, you agree to our',
+        googleFailed: 'Google sign-in failed. Please try again.',
+        googleRequiresSecureOrigin:
+          'Google Sign-In on web requires HTTPS or localhost. Use https://dev-app.mealdiary.co.uk or http://localhost:3002.',
         networkError: 'Unable to reach the server. Please try again.',
         noAccount: "Don't have an account?",
         register: 'Register',
@@ -56,6 +62,7 @@ const resources = {
         and: 'and',
         privacyPolicy: 'Privacy Policy',
         register: 'Register',
+        signUpWithGoogle: 'Sign up with Google',
         alreadyHaveAccount: 'Already have an account?',
         signIn: 'Sign in',
         errors: {

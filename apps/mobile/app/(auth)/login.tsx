@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput } from 'react-native';
 
+import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
+
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -106,6 +108,17 @@ export default function LoginScreen() {
             {isSubmitting && <ButtonSpinner color="#F1F5F9" />}
             <ButtonText>{t('login.signIn')}</ButtonText>
           </Button>
+
+          <GoogleSignInSection
+            label={t('login.signInWithGoogle')}
+            showLegal
+            disabled={isSubmitting}
+            testID="google-login-button"
+            onSuccess={() => {
+              const currentUser = useAuthStore.getState().user ?? user;
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
 
           <Box className="mt-6 flex-row justify-center gap-1">
             <Text className="text-ice/60">{t('login.noAccount')}</Text>

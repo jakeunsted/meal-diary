@@ -22,8 +22,10 @@
     "@tanstack/react-query-persist-client": "^5.101.2",
     "date-fns": "^4.4.0",
     "expo": "~57.0.2",
+    "expo-auth-session": "^57.0.2",
     "expo-clipboard": "~57.0.0",
     "expo-constants": "~57.0.3",
+    "expo-crypto": "^57.0.0",
     "expo-font": "~57.0.0",
     "expo-linking": "~57.0.1",
     "expo-localization": "^57.0.0",
@@ -66,12 +68,14 @@
     "typescript": "~6.0.3"
   },
   "scripts": {
-    "dev": "BROWSER=none expo start",
-    "dev:android": "BROWSER=none expo start --android",
+    "dev": "BROWSER=none expo start --port 3002",
+    "dev:proxy": "EXPO_PACKAGER_PROXY_URL=http://dev-app.mealdiary.co.uk BROWSER=none expo start --port 3002",
+    "dev:proxy:https": "EXPO_PACKAGER_PROXY_URL=https://dev-app.mealdiary.co.uk BROWSER=none expo start --port 3002",
+    "dev:android": "BROWSER=none expo start --port 3002 --android",
     "build": "tsc --noEmit",
-    "start": "BROWSER=none expo start",
-    "android": "BROWSER=none expo start --android",
-    "ios": "BROWSER=none expo start --ios"
+    "start": "BROWSER=none expo start --port 3002",
+    "android": "BROWSER=none expo start --port 3002 --android",
+    "ios": "BROWSER=none expo start --port 3002 --ios"
   },
   "private": true
 }

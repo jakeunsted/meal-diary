@@ -18,7 +18,7 @@ See `readme.md` for standard setup steps.
 2. **PostgreSQL**: `sudo dockerd &>/tmp/dockerd.log &` then `sudo docker compose up -d postgres` from `/workspace`. Requires Docker + fuse-overlayfs + iptables-legacy (see below).
 3. **API**: `npm run dev --workspace=meal-diary-api` — runs on port 3001. Requires `api/.env` with `DEV_DB_*`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `NODE_ENV=development`.
 4. **Frontend**: `npm run dev --workspace=nuxt-app` — runs on port 3000. Requires `frontend/.env` with `BASE_URL=http://localhost:3001`.
-5. **Mobile**: `npm run dev:mobile` — Expo dev server. Requires `apps/mobile/.env` with `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001` (Android emulator) or your LAN IP for a physical device. Calls the Express API directly (not Nuxt). iOS builds are deferred (Apple Developer Program required).
+5. **Mobile**: `npm run dev:mobile` — Expo dev server on port **3002**. Requires `apps/mobile/.env` with `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001` (Android emulator) or your LAN IP for a physical device. For web via `dev-app.mealdiary.co.uk`, use `npm run dev:mobile:proxy:https` (HTTPS required for Google Sign-In). Calls the Express API directly (not Nuxt). iOS builds are deferred (Apple Developer Program required).
 6. **All services via Docker Compose**: `sudo docker compose up` from `/workspace` (installs from monorepo root).
 
 ### Docker in Cloud VM
