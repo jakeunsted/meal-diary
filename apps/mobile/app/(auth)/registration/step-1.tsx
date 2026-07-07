@@ -17,6 +17,7 @@ import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
 import { ApiError } from '@/lib/api/client';
+import { applyPendingFamilyInvite } from '@/lib/auth/applyPendingFamilyInvite';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { getPostAuthRoute } from '@/lib/auth/helpers';
 import {
@@ -291,8 +292,11 @@ export default function RegistrationStep1Screen() {
             showLegal
             disabled={isSubmitting}
             testID="google-signup-button"
-            onSuccess={() => {
-              const currentUser = useAuthStore.getState().user;
+            onSuccess={async () => {
+              let currentUser = useAuthStore.getState().user;
+              if (currentUser) {
+                currentUser = await applyPendingFamilyInvite(currentUser);
+              }
               router.replace(getPostAuthRoute(currentUser));
             }}
           />

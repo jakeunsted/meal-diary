@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -16,6 +16,7 @@ import { Text } from '@/components/ui/text';
 import { ApiError } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { hasFamilyGroup } from '@/lib/auth/helpers';
+import { getRegisterCode } from '@/lib/auth/registerStorage';
 import {
   createFamilyGroup,
   joinFamilyGroup,
@@ -47,6 +48,15 @@ export default function RegistrationStep2Screen() {
   const [familyKey, setFamilyKey] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    void getRegisterCode().then((code) => {
+      if (code) {
+        setActiveTab('join');
+        setFamilyKey(code);
+      }
+    });
+  }, []);
 
   if (status === 'signedOut') {
     return <Redirect href="/(auth)/login" />;

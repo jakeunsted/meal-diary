@@ -1,6 +1,7 @@
 import { apiFetch } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
+import { getAuthState, setAuthState } from '@/lib/auth/tokenStorage';
 import type { FamilyGroup, User } from '@/types/api';
 
 export async function createFamilyGroup(name: string): Promise<FamilyGroup> {
@@ -63,6 +64,10 @@ export async function fetchUserById(userId: number): Promise<User> {
 
 export async function refreshUserAfterFamilyChange(userId: number): Promise<User> {
   const user = await fetchUserById(userId);
+  const stored = await getAuthState();
+  if (stored) {
+    await setAuthState({ ...stored, user });
+  }
   useAuthStore.getState().setUser(user);
   await queryClient.invalidateQueries({ queryKey: ['user', userId] });
   await queryClient.invalidateQueries({ queryKey: ['familyGroup'] });
