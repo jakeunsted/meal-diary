@@ -2,6 +2,7 @@ import { Redirect, Tabs } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 
 import { TabBar } from '@/components/navigation/TabBar';
+import { PaywallModal } from '@/components/subscription/PaywallModal';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { hasFamilyGroup } from '@/lib/auth/helpers';
 
@@ -26,16 +27,19 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs
-      tabBar={(props) => <TabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen name="diary" />
-      <Tabs.Screen name="recipes" />
-      <Tabs.Screen name="shopping-list" />
-      <Tabs.Screen name="profile" />
-    </Tabs>
+    <>
+      <Tabs
+        tabBar={(props) => <TabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
+        }}
+      >
+        <Tabs.Screen name="diary" />
+        <Tabs.Screen name="recipes" />
+        <Tabs.Screen name="shopping-list" />
+        <Tabs.Screen name="profile" />
+      </Tabs>
+      <PaywallModal />
+    </>
   );
 }

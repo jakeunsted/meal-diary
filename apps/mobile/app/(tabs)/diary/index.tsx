@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -6,32 +7,80 @@ import { DayFoodPlanCard } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
 import { SetMealModal } from '@/components/diary/SetMealModal';
 import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
+import { WarningAlert } from '@/components/profile/WarningAlert';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
+import { usePaywallStore } from '@/lib/entitlements/paywallStore';
+import { useDiaryEntitlements } from '@/lib/entitlements/useDiaryEntitlements';
 import { getDateForDay, getDayName, isDayInPast } from '@/lib/diary/dateUtils';
 import { useMealDiaryEditor } from '@/lib/diary/useMealDiaryEditor';
 import { useMealDiaryWeek } from '@/lib/diary/useMealDiaryWeek';
 import { buildWeekDayMeals, toMealSlot } from '@/lib/diary/weeklyMeals';
-import { useCurrentUser } from '@/lib/queries/profile';
+import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 import type { MealType } from '@/types/mealDiary';
 
 export default function DiaryScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const userQuery = useCurrentUser();
+  const entitlementsQuery = useEntitlements(userQuery.data?.family_group_id);
   const diary = useMealDiaryWeek(userQuery.data?.family_group_id);
   const mealEditor = useMealDiaryEditor();
+  const openPaywall = usePaywallStore((state) => state.openPaywall);
   const familyGroupId = userQuery.data?.family_group_id;
+  const diaryEntitlements = useDiaryEntitlements(entitlementsQuery.data);
 
   const hasMealData = diary.weeklyMeals.length > 0;
   const showSkeleton = diary.loading && !hasMealData;
   const showWeekLoading = diary.isFetching && hasMealData;
   const weekMeals = buildWeekDayMeals(diary.weeklyMeals, diary.resolvedWeekKey);
+  const isWeekReadOnly = diaryEntitlements.isWeekReadOnly(diary.displayWeekStartDate);
+
+  const weekReadOnlyMessage = useMemo(() => {
+    if (!isWeekReadOnly) {
+      return '';
+    }
+
+    const billing = entitlementsQuery.data?.billing;
+    if (billing?.isOwner) {
+      return t('diaryPage.weekReadOnly');
+    }
+
+    if (billing?.ownerDisplayName) {
+      return `${t('diaryPage.weekReadOnly')} ${t('diaryPage.askOwnerToUpgrade', {
+        name: billing.ownerDisplayName,
+      })}`;
+    }
+
+    return `${t('diaryPage.weekReadOnly')} ${t('diaryPage.askOwnerToUpgradeGeneric')}`;
+  }, [entitlementsQuery.data?.billing, isWeekReadOnly, t]);
+
+  useEffect(() => {
+    if (familyGroupId) {
+      void entitlementsQuery.refetch();
+    }
+  }, [familyGroupId]);
+
+  useEffect(() => {
+    if (!entitlementsQuery.data?.limits) {
+      return;
+    }
+
+    if (!diaryEntitlements.canNavigateToWeek(diary.displayWeekStartDate)) {
+      diary.goToCurrentWeek();
+    }
+  }, [
+    diary.displayWeekStartDate,
+    diary.goToCurrentWeek,
+    diaryEntitlements.canNavigateToWeek,
+    entitlementsQuery.data?.limits,
+  ]);
 
   const handleRefresh = () => {
     void userQuery.refetch();
+    void entitlementsQuery.refetch();
     void diary.refreshWeek();
   };
 
@@ -40,6 +89,11 @@ export default function DiaryScreen() {
   };
 
   const handleSetMeal = (mealType: MealType, dayOfWeek: number) => {
+    if (isWeekReadOnly) {
+      openPaywall('edit_past_weeks');
+      return;
+    }
+
     mealEditor.openMealEditor(mealType, dayOfWeek, diary.weeklyMeals);
   };
 
@@ -49,6 +103,10 @@ export default function DiaryScreen() {
 
   const handleClearMeal = () => {
     void mealEditor.handleClear(familyGroupId, diary.resolvedWeekKey, diary.weeklyMeals);
+  };
+
+  const handleWeekBlocked = () => {
+    openPaywall('weeks_ahead');
   };
 
   return (
@@ -85,6 +143,15 @@ export default function DiaryScreen() {
           </Box>
         ) : null}
 
+        {isWeekReadOnly ? (
+          <WarningAlert
+            className="mx-4 mb-4"
+            message={weekReadOnlyMessage}
+            showUpgradeLink={entitlementsQuery.data?.billing.isOwner ?? false}
+            testID="diary-week-read-only-alert"
+          />
+        ) : null}
+
         {showSkeleton ? (
           <DiarySkeleton />
         ) : (
@@ -93,9 +160,10 @@ export default function DiaryScreen() {
               key={diary.resolvedWeekKey}
               initialWeekStartDate={diary.displayWeekStartDate}
               isCurrentWeek={diary.isCurrentWeek}
-              canSelectWeek={() => true}
+              canSelectWeek={diaryEntitlements.canNavigateToWeek}
               onWeekChange={diary.setWeek}
               onGoToThisWeek={diary.goToCurrentWeek}
+              onWeekBlocked={handleWeekBlocked}
             />
             <Box className="relative">
               <Box className={showWeekLoading ? 'opacity-50' : ''}>
@@ -108,6 +176,7 @@ export default function DiaryScreen() {
                     lunch={toMealSlot(dayMeal.lunch, dayMeal.lunch_recipe_id)}
                     dinner={toMealSlot(dayMeal.dinner, dayMeal.dinner_recipe_id)}
                     isPastDay={isDayInPast(diary.resolvedWeekKey, dayMeal.day_of_week)}
+                    readOnly={isWeekReadOnly}
                     onSetMeal={(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)}
                   />
                 ))}

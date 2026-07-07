@@ -104,8 +104,8 @@ export function GoogleSignInSection(props: GoogleSignInSectionProps) {
 
   if (!isGoogleWebSignInAvailable()) {
     return (
-      <Box className="rounded-lg border border-warning/30 bg-warning/10 px-4 py-3">
-        <Text className="text-warning-content text-center text-sm">
+      <Box className="rounded-lg border border-warning/40 bg-warning/15 px-4 py-3">
+        <Text className="text-ice text-center text-sm">
           {t('login.googleRequiresSecureOrigin')}
         </Text>
       </Box>

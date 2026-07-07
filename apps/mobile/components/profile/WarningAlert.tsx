@@ -26,16 +26,16 @@ export function WarningAlert({
 
   return (
     <Box
-      className={`rounded-lg border border-warning/30 bg-warning/10 px-4 py-3 ${className ?? ''}`}
+      className={`rounded-lg border border-warning/40 bg-warning/15 px-4 py-3 ${className ?? ''}`}
       testID={testID}
     >
-      <Text className="text-warning-content text-sm">
+      <Text className="text-ice text-sm">
         {message}
         {showUpgradeLink ? (
           <>
             {' '}
             <Pressable onPress={handleOpenPlans} accessibilityRole="link">
-              <Text className="text-primary text-sm underline">
+              <Text className="text-violet text-sm font-medium underline">
                 {t('profile.viewPlansToUpgrade')}
               </Text>
             </Pressable>
