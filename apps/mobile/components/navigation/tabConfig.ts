@@ -1,10 +1,10 @@
 import type { ComponentProps } from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 
 export interface TabConfigItem {
   name: string;
   titleKey: 'tabs.diary' | 'tabs.recipes' | 'tabs.shoppingList' | 'tabs.profile';
-  icon: ComponentProps<typeof FontAwesome>['name'];
+  icon: ComponentProps<typeof FontAwesome6>['name'];
   testID: string;
 }
 
@@ -12,13 +12,13 @@ export const tabConfig: TabConfigItem[] = [
   {
     name: 'diary',
     titleKey: 'tabs.diary',
-    icon: 'home',
+    icon: 'house',
     testID: 'nav-diary',
   },
   {
     name: 'recipes',
     titleKey: 'tabs.recipes',
-    icon: 'book',
+    icon: 'book-open',
     testID: 'nav-recipes',
   },
   {
@@ -30,7 +30,7 @@ export const tabConfig: TabConfigItem[] = [
   {
     name: 'profile',
     titleKey: 'tabs.profile',
-    icon: 'user-circle',
+    icon: 'circle-user',
     testID: 'nav-profile',
   },
 ];

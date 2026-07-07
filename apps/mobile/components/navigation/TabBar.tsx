@@ -1,4 +1,4 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
+import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -43,7 +43,7 @@ export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             onPress={handlePress}
             className="flex-1 items-center justify-center py-3"
           >
-            <FontAwesome
+            <FontAwesome6
               name={config?.icon ?? 'circle'}
               size={22}
               color={isFocused ? '#6366F1' : 'rgba(241, 245, 249, 0.6)'}
