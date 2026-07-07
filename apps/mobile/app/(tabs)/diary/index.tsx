@@ -128,11 +128,13 @@ export default function DiaryScreen() {
 
       <SetMealModal
         visible={mealEditor.isModalVisible}
+        familyGroupId={familyGroupId}
         mealName={mealEditor.selectedMeal.name}
         recipeId={mealEditor.selectedMeal.recipeId}
         isLoading={mealEditor.isSaving}
         error={mealEditor.saveError}
         onMealNameChange={mealEditor.updateMealName}
+        onRecipeSelect={mealEditor.updateRecipeSelection}
         onSave={handleSaveMeal}
         onClear={handleClearMeal}
         onClose={mealEditor.closeMealEditor}

@@ -63,6 +63,14 @@ export function useMealDiaryEditor() {
     }));
   }, []);
 
+  const updateRecipeSelection = useCallback((recipeId: number | null, name: string) => {
+    setSelectedMeal((current) => ({
+      ...current,
+      recipeId,
+      name,
+    }));
+  }, []);
+
   const performSave = useCallback(
     async (
       familyGroupId: number,
@@ -146,6 +154,7 @@ export function useMealDiaryEditor() {
     openMealEditor,
     closeMealEditor,
     updateMealName,
+    updateRecipeSelection,
     handleSave,
     handleClear,
   };

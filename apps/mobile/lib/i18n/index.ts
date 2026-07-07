@@ -35,6 +35,8 @@ const resources = {
         save: 'Save',
         mealSaved: 'Meal saved',
         saveFailed: 'Failed to save meal',
+        selectRecipe: 'Select Recipe',
+        orTypeMealName: 'Or type a meal name',
         weekSelection: 'Week Selection',
         thisWeek: 'This week',
         week: 'Week',
