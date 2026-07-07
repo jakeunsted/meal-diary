@@ -40,12 +40,28 @@ function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal }: MealRowProp
       <Text className="text-ice font-medium">{label}</Text>
       {meal?.name ? (
         <Box className="max-w-[60%] flex-row items-center gap-1">
-          <Box
-            className="rounded-full bg-primary px-3 py-1"
-            testID={meal.recipeId ? `${testIdPrefix}-recipe-badge` : `${testIdPrefix}-custom-badge`}
-          >
-            <Text className="text-ice text-sm">{meal.name}</Text>
-          </Box>
+          {meal.recipeId ? (
+            <Box
+              className="rounded-full bg-primary px-3 py-1"
+              testID={`${testIdPrefix}-recipe-badge`}
+            >
+              <Text className="text-ice text-sm">{meal.name}</Text>
+            </Box>
+          ) : (
+            <Pressable
+              onPress={readOnly ? undefined : onSetMeal}
+              disabled={readOnly}
+              testID={`${testIdPrefix}-custom-badge`}
+              accessibilityRole="button"
+            >
+              <Box className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-1">
+                <Text className="text-ice text-sm">{meal.name}</Text>
+                {!readOnly ? (
+                  <FontAwesome name="pencil" size={12} color="rgba(241, 245, 249, 0.7)" />
+                ) : null}
+              </Box>
+            </Pressable>
+          )}
           {meal.recipeId && !readOnly ? (
             <Pressable
               onPress={onSetMeal}

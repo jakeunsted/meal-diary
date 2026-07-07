@@ -4,21 +4,26 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayFoodPlanCard } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
+import { SetMealModal } from '@/components/diary/SetMealModal';
 import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { getDateForDay, getDayName, isDayInPast } from '@/lib/diary/dateUtils';
+import { useMealDiaryEditor } from '@/lib/diary/useMealDiaryEditor';
 import { useMealDiaryWeek } from '@/lib/diary/useMealDiaryWeek';
 import { buildWeekDayMeals, toMealSlot } from '@/lib/diary/weeklyMeals';
 import { useCurrentUser } from '@/lib/queries/profile';
+import type { MealType } from '@/types/mealDiary';
 
 export default function DiaryScreen() {
   const { t, i18n } = useTranslation();
   const insets = useSafeAreaInsets();
   const userQuery = useCurrentUser();
   const diary = useMealDiaryWeek(userQuery.data?.family_group_id);
+  const mealEditor = useMealDiaryEditor();
+  const familyGroupId = userQuery.data?.family_group_id;
 
   const hasMealData = diary.weeklyMeals.length > 0;
   const showSkeleton = diary.loading && !hasMealData;
@@ -32,6 +37,18 @@ export default function DiaryScreen() {
 
   const handleRetry = () => {
     void diary.refreshWeek();
+  };
+
+  const handleSetMeal = (mealType: MealType, dayOfWeek: number) => {
+    mealEditor.openMealEditor(mealType, dayOfWeek, diary.weeklyMeals);
+  };
+
+  const handleSaveMeal = () => {
+    void mealEditor.handleSave(familyGroupId, diary.resolvedWeekKey, diary.weeklyMeals);
+  };
+
+  const handleClearMeal = () => {
+    void mealEditor.handleClear(familyGroupId, diary.resolvedWeekKey, diary.weeklyMeals);
   };
 
   return (
@@ -91,7 +108,7 @@ export default function DiaryScreen() {
                     lunch={toMealSlot(dayMeal.lunch, dayMeal.lunch_recipe_id)}
                     dinner={toMealSlot(dayMeal.dinner, dayMeal.dinner_recipe_id)}
                     isPastDay={isDayInPast(diary.resolvedWeekKey, dayMeal.day_of_week)}
-                    readOnly
+                    onSetMeal={(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)}
                   />
                 ))}
               </Box>
@@ -108,6 +125,18 @@ export default function DiaryScreen() {
           </>
         )}
       </ScrollView>
+
+      <SetMealModal
+        visible={mealEditor.isModalVisible}
+        mealName={mealEditor.selectedMeal.name}
+        recipeId={mealEditor.selectedMeal.recipeId}
+        isLoading={mealEditor.isSaving}
+        error={mealEditor.saveError}
+        onMealNameChange={mealEditor.updateMealName}
+        onSave={handleSaveMeal}
+        onClear={handleClearMeal}
+        onClose={mealEditor.closeMealEditor}
+      />
     </Box>
   );
 }

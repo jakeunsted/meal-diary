@@ -1,4 +1,4 @@
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch, ApiError } from '@/lib/api/client';
 import type { DailyMeal, SaveDailyMealPayload } from '@/types/mealDiary';
@@ -58,6 +58,44 @@ export function useInvalidateWeeklyMeals() {
       queryKey: mealDiaryKeys.weekly(familyGroupId, weekKey),
     });
   };
+}
+
+function updateWeeklyMealsCache(
+  weeklyMeals: DailyMeal[] | undefined,
+  savedMeal: DailyMeal
+): DailyMeal[] {
+  if (!weeklyMeals) {
+    return [savedMeal];
+  }
+
+  const existingIndex = weeklyMeals.findIndex((meal) => meal.day_of_week === savedMeal.day_of_week);
+  if (existingIndex === -1) {
+    return [...weeklyMeals, savedMeal];
+  }
+
+  const next = [...weeklyMeals];
+  next[existingIndex] = savedMeal;
+  return next;
+}
+
+export function useSaveDailyMeal() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      payload,
+    }: {
+      familyGroupId: number;
+      payload: SaveDailyMealPayload;
+    }) => saveDailyMeal(familyGroupId, payload),
+    onSuccess: (savedMeal, { familyGroupId, payload }) => {
+      queryClient.setQueryData<DailyMeal[]>(
+        mealDiaryKeys.weekly(familyGroupId, payload.week_start_date),
+        (weeklyMeals) => updateWeeklyMealsCache(weeklyMeals, savedMeal)
+      );
+    },
+  });
 }
 
 export function resolveMealDiaryErrorMessage(error: unknown): string {
