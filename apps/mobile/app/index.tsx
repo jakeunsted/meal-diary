@@ -1,5 +1,4 @@
 import { Redirect } from 'expo-router';
-import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -8,12 +7,6 @@ import { getPostAuthRoute } from '@/lib/auth/helpers';
 export default function Index() {
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
-  const hydrate = useAuthStore((state) => state.hydrate);
-
-  useEffect(() => {
-    void hydrate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   if (status === 'loading') {
     return (

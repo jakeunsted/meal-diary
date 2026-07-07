@@ -12,6 +12,7 @@ import '@/lib/i18n';
 import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
+import { useAuthResume } from '@/lib/auth/useAuthResume';
 
 if (Platform.OS !== 'web') {
   require('react-native-gesture-handler');
@@ -30,19 +31,24 @@ SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const router = useRouter();
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
   });
 
+  useAuthResume();
+
   useEffect(() => {
     if (error) throw error;
   }, [error]);
 
-  // Kick the user back to login when a 401 can't be recovered by a refresh
+  useEffect(() => {
+    void initializeAuth();
+  }, [initializeAuth]);
+
   useEffect(() => {
     setSessionExpiredHandler(() => {
-      useAuthStore.getState().clearSession();
       router.replace('/(auth)/login');
     });
     return () => setSessionExpiredHandler(null);
