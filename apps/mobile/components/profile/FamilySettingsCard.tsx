@@ -27,7 +27,7 @@ export function FamilySettingsCard({
 
   return (
     <>
-      <ProfileCard title={t('familySettings.title')} className="mt-4">
+      <ProfileCard title={t('familySettings.title')} className="mb-6">
         <Text className="text-ice/70 mb-4 text-sm">
           {isOwner ? t('familySettings.ownerDescription') : t('familySettings.memberDescription')}
         </Text>
