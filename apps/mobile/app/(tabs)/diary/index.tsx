@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DayFoodPlanCard } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
+import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -70,31 +71,41 @@ export default function DiaryScreen() {
         {showSkeleton ? (
           <DiarySkeleton />
         ) : (
-          <Box className="relative">
-            <Box className={showWeekLoading ? 'opacity-50' : ''}>
-              {weekMeals.map((dayMeal) => (
-                <DayFoodPlanCard
-                  key={`${diary.resolvedWeekKey}-${dayMeal.day_of_week}`}
-                  day={getDayName(dayMeal.day_of_week, diary.resolvedWeekKey, i18n.language)}
-                  date={getDateForDay(diary.resolvedWeekKey, dayMeal.day_of_week, i18n.language)}
-                  breakfast={toMealSlot(dayMeal.breakfast, dayMeal.breakfast_recipe_id)}
-                  lunch={toMealSlot(dayMeal.lunch, dayMeal.lunch_recipe_id)}
-                  dinner={toMealSlot(dayMeal.dinner, dayMeal.dinner_recipe_id)}
-                  isPastDay={isDayInPast(diary.resolvedWeekKey, dayMeal.day_of_week)}
-                  readOnly
-                />
-              ))}
-            </Box>
-
-            {showWeekLoading ? (
-              <Box
-                className="absolute inset-0 items-center justify-center"
-                testID="diary-week-loading"
-              >
-                <ActivityIndicator size="large" color="#6366F1" />
+          <>
+            <WeekCalendarPicker
+              key={diary.resolvedWeekKey}
+              initialWeekStartDate={diary.displayWeekStartDate}
+              isCurrentWeek={diary.isCurrentWeek}
+              canSelectWeek={() => true}
+              onWeekChange={diary.setWeek}
+              onGoToThisWeek={diary.goToCurrentWeek}
+            />
+            <Box className="relative">
+              <Box className={showWeekLoading ? 'opacity-50' : ''}>
+                {weekMeals.map((dayMeal) => (
+                  <DayFoodPlanCard
+                    key={`${diary.resolvedWeekKey}-${dayMeal.day_of_week}`}
+                    day={getDayName(dayMeal.day_of_week, diary.resolvedWeekKey, i18n.language)}
+                    date={getDateForDay(diary.resolvedWeekKey, dayMeal.day_of_week, i18n.language)}
+                    breakfast={toMealSlot(dayMeal.breakfast, dayMeal.breakfast_recipe_id)}
+                    lunch={toMealSlot(dayMeal.lunch, dayMeal.lunch_recipe_id)}
+                    dinner={toMealSlot(dayMeal.dinner, dayMeal.dinner_recipe_id)}
+                    isPastDay={isDayInPast(diary.resolvedWeekKey, dayMeal.day_of_week)}
+                    readOnly
+                  />
+                ))}
               </Box>
-            ) : null}
-          </Box>
+
+              {showWeekLoading ? (
+                <Box
+                  className="absolute inset-0 items-center justify-center"
+                  testID="diary-week-loading"
+                >
+                  <ActivityIndicator size="large" color="#6366F1" />
+                </Box>
+              ) : null}
+            </Box>
+          </>
         )}
       </ScrollView>
     </Box>

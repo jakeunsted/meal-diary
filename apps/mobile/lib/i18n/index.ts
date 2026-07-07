@@ -29,6 +29,12 @@ const resources = {
         lunch: 'Lunch',
         dinner: 'Dinner',
         setMeal: 'Set Meal +',
+        weekSelection: 'Week Selection',
+        thisWeek: 'This week',
+        week: 'Week',
+        viewingPreviousWeek: 'Viewing a previous week',
+        viewingFutureWeek: 'Viewing a future week',
+        viewingAnotherWeek: 'Viewing another week',
       },
       common: {
         close: 'Close',
