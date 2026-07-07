@@ -21,6 +21,15 @@ const resources = {
         login: 'Login',
         comingSoon: 'Coming soon',
       },
+      diary: {
+        title: 'Meal diary',
+        loadFailed: 'Failed to load meal diary',
+        retry: 'Retry',
+        breakfast: 'Breakfast',
+        lunch: 'Lunch',
+        dinner: 'Dinner',
+        setMeal: 'Set Meal +',
+      },
       common: {
         close: 'Close',
         cancel: 'Cancel',
