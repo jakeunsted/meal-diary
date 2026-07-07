@@ -8,9 +8,9 @@ const resources = {
   en: {
     translation: {
       tabs: {
-        diary: 'Home',
+        diary: 'Diary',
         recipes: 'Recipes',
-        shoppingList: 'Shopping List',
+        shoppingList: 'Shopping',
         profile: 'Profile',
       },
       screens: {

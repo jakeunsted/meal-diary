@@ -1,4 +1,5 @@
 import { Inter_400Regular, Inter_600SemiBold, useFonts } from '@expo-google-fonts/inter';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -7,6 +8,7 @@ import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { colors } from '@/constants/theme';
 import '@/global.css';
 import '@/lib/i18n';
 import { setSessionExpiredHandler } from '@/lib/api/client';
@@ -35,6 +37,7 @@ export default function RootLayout() {
   const [loaded, error] = useFonts({
     Inter_400Regular,
     Inter_600SemiBold,
+    ...FontAwesome.font,
   });
 
   useAuthResume();
@@ -68,7 +71,7 @@ export default function RootLayout() {
     <GluestackUIProvider mode="dark">
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#1A1F2E' } }}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />

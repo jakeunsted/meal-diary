@@ -1,10 +1,11 @@
-import type { ComponentProps } from 'react';
-import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+
+import type { TabBarIconName } from '@/components/navigation/TabBarIcon';
 
 export interface TabConfigItem {
   name: string;
   titleKey: 'tabs.diary' | 'tabs.recipes' | 'tabs.shoppingList' | 'tabs.profile';
-  icon: ComponentProps<typeof FontAwesome6>['name'];
+  icon: TabBarIconName;
   testID: string;
 }
 
@@ -12,13 +13,13 @@ export const tabConfig: TabConfigItem[] = [
   {
     name: 'diary',
     titleKey: 'tabs.diary',
-    icon: 'house',
+    icon: 'home',
     testID: 'nav-diary',
   },
   {
     name: 'recipes',
     titleKey: 'tabs.recipes',
-    icon: 'book-open',
+    icon: 'book',
     testID: 'nav-recipes',
   },
   {
@@ -30,7 +31,18 @@ export const tabConfig: TabConfigItem[] = [
   {
     name: 'profile',
     titleKey: 'tabs.profile',
-    icon: 'circle-user',
+    icon: 'user',
     testID: 'nav-profile',
   },
 ];
+
+export function normalizeTabRouteName(routeName: string): string {
+  const withoutIndex = routeName.replace(/\/index$/, '');
+  const segments = withoutIndex.split('/').filter(Boolean);
+  return segments[segments.length - 1] ?? routeName;
+}
+
+export function getTabConfig(routeName: string): TabConfigItem | undefined {
+  const normalizedName = normalizeTabRouteName(routeName);
+  return tabConfig.find((item) => item.name === routeName || item.name === normalizedName);
+}
