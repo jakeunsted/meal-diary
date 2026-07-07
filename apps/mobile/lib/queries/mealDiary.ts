@@ -1,5 +1,10 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
+import {
+  loadWeeklyMealsCache,
+  saveWeeklyMealsCache,
+} from '@/lib/diary/mealDiaryStorage';
 import { apiFetch, ApiError } from '@/lib/api/client';
 import type { DailyMeal, SaveDailyMealPayload } from '@/types/mealDiary';
 
@@ -25,6 +30,23 @@ export async function fetchWeeklyMeals(
   }));
 }
 
+async function fetchWeeklyMealsWithCache(
+  familyGroupId: number,
+  weekKey: string
+): Promise<DailyMeal[]> {
+  try {
+    const meals = await fetchWeeklyMeals(familyGroupId, weekKey);
+    await saveWeeklyMealsCache(familyGroupId, weekKey, meals);
+    return meals;
+  } catch (error) {
+    const cached = await loadWeeklyMealsCache(familyGroupId, weekKey);
+    if (cached) {
+      return cached.meals;
+    }
+    throw error;
+  }
+}
+
 export async function saveDailyMeal(
   familyGroupId: number,
   payload: SaveDailyMealPayload
@@ -41,9 +63,31 @@ export async function saveDailyMeal(
 }
 
 export function useWeeklyMeals(familyGroupId: number | undefined, weekKey: string) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!familyGroupId || !weekKey) {
+      return;
+    }
+
+    const queryKey = mealDiaryKeys.weekly(familyGroupId, weekKey);
+    if (queryClient.getQueryData(queryKey)) {
+      return;
+    }
+
+    void (async () => {
+      const cached = await loadWeeklyMealsCache(familyGroupId, weekKey);
+      if (!cached) {
+        return;
+      }
+
+      queryClient.setQueryData(queryKey, cached.meals);
+    })();
+  }, [familyGroupId, queryClient, weekKey]);
+
   return useQuery({
     queryKey: mealDiaryKeys.weekly(familyGroupId ?? 0, weekKey),
-    queryFn: () => fetchWeeklyMeals(familyGroupId!, weekKey),
+    queryFn: () => fetchWeeklyMealsWithCache(familyGroupId!, weekKey),
     enabled: !!familyGroupId && !!weekKey,
     staleTime: WEEKLY_MEALS_STALE_MS,
     placeholderData: keepPreviousData,
@@ -90,10 +134,13 @@ export function useSaveDailyMeal() {
       payload: SaveDailyMealPayload;
     }) => saveDailyMeal(familyGroupId, payload),
     onSuccess: (savedMeal, { familyGroupId, payload }) => {
-      queryClient.setQueryData<DailyMeal[]>(
-        mealDiaryKeys.weekly(familyGroupId, payload.week_start_date),
-        (weeklyMeals) => updateWeeklyMealsCache(weeklyMeals, savedMeal)
-      );
+      const queryKey = mealDiaryKeys.weekly(familyGroupId, payload.week_start_date);
+
+      queryClient.setQueryData<DailyMeal[]>(queryKey, (weeklyMeals) => {
+        const next = updateWeeklyMealsCache(weeklyMeals, savedMeal);
+        void saveWeeklyMealsCache(familyGroupId, payload.week_start_date, next);
+        return next;
+      });
     },
   });
 }

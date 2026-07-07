@@ -1,12 +1,14 @@
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { queryClient } from '@/lib/api/queryClient';
 import { isSessionExpiredError } from '@/lib/auth/httpError';
 import { isTokenExpired } from '@/lib/auth/jwt';
 import { refreshTokens } from '@/lib/auth/refreshTokens';
 import { runWithTokenRefreshLock } from '@/lib/auth/tokenRefreshLock';
 import { getAccessToken, getRefreshToken } from '@/lib/auth/tokenStorage';
 import { useAuthStore } from '@/lib/auth/authStore';
+import { mealDiaryKeys } from '@/lib/queries/mealDiary';
 
 async function handleAppResume(): Promise<void> {
   const status = useAuthStore.getState().status;
@@ -15,7 +17,10 @@ async function handleAppResume(): Promise<void> {
   const accessToken = await getAccessToken();
   const refreshToken = await getRefreshToken();
   if (!accessToken || !refreshToken) return;
-  if (!isTokenExpired(accessToken, 0)) return;
+  if (!isTokenExpired(accessToken, 0)) {
+    void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
+    return;
+  }
 
   try {
     await runWithTokenRefreshLock(async () => {
@@ -25,6 +30,7 @@ async function handleAppResume(): Promise<void> {
         user: response.user,
         entitlements: response.entitlements ?? null,
       });
+      void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
     });
   } catch (error) {
     if (isSessionExpiredError(error)) {

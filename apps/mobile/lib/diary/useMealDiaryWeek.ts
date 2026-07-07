@@ -1,4 +1,4 @@
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
@@ -27,6 +27,11 @@ function resolveWeekParam(week: string | string[] | undefined): string {
   return parseWeekQueryParam(raw);
 }
 
+function hasWeekQueryValue(week: string | string[] | undefined): boolean {
+  const raw = Array.isArray(week) ? week[0] : week;
+  return typeof raw === 'string' && raw.trim().length > 0;
+}
+
 export interface UseMealDiaryWeekResult {
   resolvedWeekKey: string;
   displayWeekStartDate: Date;
@@ -42,7 +47,9 @@ export interface UseMealDiaryWeekResult {
 
 export function useMealDiaryWeek(familyGroupId: number | undefined): UseMealDiaryWeekResult {
   const router = useRouter();
-  const { week: weekParam } = useLocalSearchParams<{ week?: string | string[] }>();
+  const localParams = useLocalSearchParams<{ week?: string | string[] }>();
+  const globalParams = useGlobalSearchParams<{ week?: string | string[] }>();
+  const weekParam = localParams.week ?? globalParams.week;
 
   const [weekKey, setWeekKeyState] = useState(() => {
     const fromParam = resolveWeekParam(weekParam);
@@ -50,11 +57,20 @@ export function useMealDiaryWeek(familyGroupId: number | undefined): UseMealDiar
   });
 
   useEffect(() => {
+    if (!hasWeekQueryValue(weekParam)) {
+      return;
+    }
+
     const fromParam = resolveWeekParam(weekParam);
-    if (fromParam && !weekKeysEqual(fromParam, weekKey)) {
+    if (!fromParam) {
+      router.setParams({ week: getCurrentWeekStartDate() });
+      return;
+    }
+
+    if (!weekKeysEqual(fromParam, weekKey)) {
       setWeekKeyState(fromParam);
     }
-  }, [weekParam, weekKey]);
+  }, [weekParam, weekKey, router]);
 
   const resolvedWeekKey = useMemo(() => {
     const fromParam = resolveWeekParam(weekParam);
