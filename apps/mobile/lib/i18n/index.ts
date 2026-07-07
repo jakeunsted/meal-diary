@@ -2,6 +2,8 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
 
+import { privacyPage, supportPage, termsPage } from '@/lib/i18n/legalContent';
+
 const resources = {
   en: {
     translation: {
@@ -23,6 +25,14 @@ const resources = {
         close: 'Close',
         cancel: 'Cancel',
         back: 'Back',
+      },
+      legal: {
+        privacyPolicy: 'Privacy Policy',
+        termsOfService: 'Terms of Service',
+        support: 'Support',
+        lastUpdated: 'Last updated',
+        contactUs: 'Contact us',
+        supportEmail: 'support@mealdiary.co.uk',
       },
       login: {
         title: 'Meal Diary',
@@ -163,6 +173,9 @@ const resources = {
           yourDataTitle: 'Your Meal Diary data',
         },
       },
+      privacyPage,
+      termsPage,
+      supportPage,
     },
   },
 };

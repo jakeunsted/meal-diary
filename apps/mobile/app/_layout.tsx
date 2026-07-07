@@ -72,6 +72,9 @@ export default function RootLayout() {
             <Stack.Screen name="index" />
             <Stack.Screen name="(tabs)" />
             <Stack.Screen name="(auth)" />
+            <Stack.Screen name="privacy" />
+            <Stack.Screen name="terms" />
+            <Stack.Screen name="support" />
           </Stack>
         </SafeAreaProvider>
       </QueryClientProvider>

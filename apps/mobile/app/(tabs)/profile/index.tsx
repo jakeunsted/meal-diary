@@ -9,6 +9,7 @@ import { FamilyMembersCard } from '@/components/profile/FamilyMembersCard';
 import { FamilySettingsCard } from '@/components/profile/FamilySettingsCard';
 import { InviteModal } from '@/components/profile/InviteModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
+import { LegalLinks } from '@/components/legal/LegalLinks';
 import { Box } from '@/components/ui/box';
 import {
   useCurrentUser,
@@ -109,6 +110,8 @@ export default function ProfileScreen() {
         />
 
         <AccountCard />
+
+        <LegalLinks className="mt-8" />
       </ScrollView>
 
       <InviteModal
