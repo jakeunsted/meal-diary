@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
 import { apiFetch, ApiError } from '@/lib/api/client';
@@ -35,6 +35,17 @@ export async function deleteShoppingListItem(
 ): Promise<void> {
   await apiFetch<void>(`/shopping-list/${familyGroupId}/items/${itemId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function updateShoppingListItem(
+  familyGroupId: number,
+  itemId: number,
+  updates: { name?: string; checked?: boolean }
+): Promise<ShoppingListItem> {
+  return apiFetch<ShoppingListItem>(`/shopping-list/${familyGroupId}/items/${itemId}`, {
+    method: 'PUT',
+    body: updates,
   });
 }
 
@@ -107,6 +118,22 @@ function updateShoppingListItems(
   };
 }
 
+export function setShoppingListQueryData(
+  queryClient: QueryClient,
+  familyGroupId: number,
+  updater: (shoppingList: ShoppingList | undefined) => ShoppingList | undefined
+): void {
+  const queryKey = shoppingListKeys.family(familyGroupId);
+
+  queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
+    const next = updater(shoppingList);
+    if (next) {
+      void saveShoppingListCache(familyGroupId, next);
+    }
+    return next;
+  });
+}
+
 async function fetchShoppingListWithCache(familyGroupId: number): Promise<ShoppingList> {
   try {
     const shoppingList = await fetchShoppingList(familyGroupId);
@@ -174,16 +201,57 @@ export function useAddShoppingListItem() {
       familyGroupId: number;
       name: string;
       parentItemId?: number | null;
+      replaceTempId?: number | string;
     }) =>
       addShoppingListItem(familyGroupId, {
         name,
         parent_item_id: parentItemId,
       }),
-    onSuccess: (newItem, { familyGroupId }) => {
+    onSuccess: (newItem, { familyGroupId, replaceTempId }) => {
       const queryKey = shoppingListKeys.family(familyGroupId);
 
       queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
-        const next = updateShoppingListItems(shoppingList, (items) => [...items, newItem]);
+        const next = updateShoppingListItems(shoppingList, (items) => {
+          if (replaceTempId !== undefined) {
+            const index = items.findIndex((item) => item.id === replaceTempId);
+            if (index === -1) {
+              return [...items, newItem];
+            }
+            const updated = [...items];
+            updated[index] = newItem;
+            return updated;
+          }
+          return [...items, newItem];
+        });
+        if (next) {
+          void saveShoppingListCache(familyGroupId, next);
+        }
+        return next;
+      });
+    },
+  });
+}
+
+export function useUpdateShoppingListItem() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      itemId,
+      updates,
+    }: {
+      familyGroupId: number;
+      itemId: number;
+      updates: { name?: string; checked?: boolean };
+    }) => updateShoppingListItem(familyGroupId, itemId, updates),
+    onSuccess: (updatedItem, { familyGroupId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
+        const next = updateShoppingListItems(shoppingList, (items) =>
+          items.map((item) => (item.id === updatedItem.id ? updatedItem : item))
+        );
         if (next) {
           void saveShoppingListCache(familyGroupId, next);
         }

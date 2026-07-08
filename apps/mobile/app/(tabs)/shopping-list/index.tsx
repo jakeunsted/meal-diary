@@ -1,7 +1,9 @@
-import { useMemo, useRef } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -31,9 +33,11 @@ export default function ShoppingListScreen() {
   const insets = useSafeAreaInsets();
   const userQuery = useCurrentUser();
   const familyGroupId = userQuery.data?.family_group_id;
+  const userId = userQuery.data?.id ?? 0;
   const shoppingList = useShoppingList(familyGroupId);
   const editor = useShoppingListEditor();
   const newItemInputRef = useRef<TextInput>(null);
+  const itemInputRefs = useRef(new Map<string, TextInput>());
 
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
@@ -49,6 +53,24 @@ export default function ShoppingListScreen() {
 
   const getItemDepth = (item: ShoppingListItem) =>
     getShoppingListItemDepth(item, itemDepthMap);
+
+  const setItemInputRef = useCallback((itemId: number | string, ref: TextInput | null) => {
+    const key = String(itemId);
+    if (ref) {
+      itemInputRefs.current.set(key, ref);
+      return;
+    }
+    itemInputRefs.current.delete(key);
+  }, []);
+
+  useEffect(() => {
+    if (!editor.focusedItemId) {
+      return;
+    }
+
+    const input = itemInputRefs.current.get(String(editor.focusedItemId));
+    input?.focus();
+  }, [editor.focusedItemId]);
 
   const handleRefresh = () => {
     void userQuery.refetch();
@@ -82,123 +104,146 @@ export default function ShoppingListScreen() {
     void editor.handleDeleteAllChecked(familyGroupId, listItems);
   };
 
+  const renderEditableItem = (item: ShoppingListItem) => (
+    <ShoppingListItemRow
+      item={item}
+      depth={getItemDepth(item)}
+      editable
+      isFocused={editor.focusedItemId === item.id}
+      inputRef={(ref) => setItemInputRef(item.id, ref)}
+      onFocus={() => editor.focusItem(item.id)}
+      onNameChange={(name) => editor.handleItemNameChange(familyGroupId, item.id, name)}
+      onBlur={(name) => {
+        void editor.handleItemBlur(familyGroupId, item.id, name);
+      }}
+      onSubmitEditing={(name) => {
+        void editor.handleItemSubmitEditing(familyGroupId, item.id, name, userId);
+      }}
+      onCheckedChange={handleCheckedChange}
+      onRemove={handleRemoveItem}
+      isRemoving={editor.removingItemId === item.id}
+      isUpdating={editor.isUpdatingItems || editor.isPersistingItem}
+    />
+  );
+
   return (
     <Box className="flex-1 bg-base">
-      <ScrollView
-        contentContainerClassName="pb-8"
-        contentContainerStyle={{ paddingTop: insets.top + 24 }}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={
-          <RefreshControl
-            refreshing={shoppingList.isFetching && !shoppingList.loading}
-            onRefresh={handleRefresh}
-            tintColor="#6366F1"
-          />
-        }
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <Heading size="2xl" className="text-ice mb-4 text-center" testID="shopping-list-title">
-          {t('shoppingList.title')}
-        </Heading>
+        <ScrollView
+          contentContainerClassName="pb-8"
+          contentContainerStyle={{ paddingTop: insets.top + 24 }}
+          keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={shoppingList.isFetching && !shoppingList.loading}
+              onRefresh={handleRefresh}
+              tintColor="#6366F1"
+            />
+          }
+        >
+          <Heading size="2xl" className="text-ice mb-4 text-center" testID="shopping-list-title">
+            {t('shoppingList.title')}
+          </Heading>
 
-        {shoppingList.lastFetchError && !shoppingList.loading ? (
-          <Box
-            className="mx-4 mb-4 flex-row items-center justify-between rounded-xl bg-red-500/15 px-4 py-3"
-            testID="shopping-list-load-error"
-          >
-            <Text className="text-red-400 flex-1 text-sm">{t('shoppingList.loadFailed')}</Text>
-            <Button
-              size="sm"
-              variant="outline"
-              onPress={handleRetry}
-              testID="shopping-list-retry-button"
+          {shoppingList.lastFetchError && !shoppingList.loading ? (
+            <Box
+              className="mx-4 mb-4 flex-row items-center justify-between rounded-xl bg-red-500/15 px-4 py-3"
+              testID="shopping-list-load-error"
             >
-              <ButtonText>{t('shoppingList.retry')}</ButtonText>
-            </Button>
-          </Box>
-        ) : null}
+              <Text className="text-red-400 flex-1 text-sm">{t('shoppingList.loadFailed')}</Text>
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={handleRetry}
+                testID="shopping-list-retry-button"
+              >
+                <ButtonText>{t('shoppingList.retry')}</ButtonText>
+              </Button>
+            </Box>
+          ) : null}
 
-        {editor.actionError ? (
-          <Box className="mx-4 mb-4 rounded-xl bg-red-500/15 px-4 py-3" testID="shopping-list-action-error">
-            <Text className="text-red-400 text-sm">{t('shoppingList.actionFailed')}</Text>
-          </Box>
-        ) : null}
+          {editor.actionError ? (
+            <Box
+              className="mx-4 mb-4 rounded-xl bg-red-500/15 px-4 py-3"
+              testID="shopping-list-action-error"
+            >
+              <Text className="text-red-400 text-sm">{t('shoppingList.actionFailed')}</Text>
+            </Box>
+          ) : null}
 
-        {showSkeleton ? (
-          <ShoppingListSkeleton />
-        ) : (
-          <Box className="relative mx-4">
-            <Box className={showListLoading ? 'opacity-50' : ''}>
-              {shoppingList.activeItems.length > 0 ? (
-                <Box className="overflow-hidden rounded-2xl bg-surface px-2 py-2">
-                  {shoppingList.activeItems.map((item) => (
-                    <ShoppingListItemRow
-                      key={String(item.id)}
-                      item={item}
-                      depth={getItemDepth(item)}
-                      onCheckedChange={handleCheckedChange}
-                      onRemove={handleRemoveItem}
-                      isRemoving={editor.removingItemId === item.id}
-                      isUpdating={editor.isUpdatingItems}
-                    />
-                  ))}
+          {showSkeleton ? (
+            <ShoppingListSkeleton />
+          ) : (
+            <Box className="relative mx-4">
+              <Box className={showListLoading ? 'opacity-50' : ''}>
+                {shoppingList.activeItems.length > 0 ? (
+                  <Box className="overflow-hidden rounded-2xl bg-surface px-2 py-2">
+                    {shoppingList.activeItems.map((item) => (
+                      <Fragment key={String(item.id)}>{renderEditableItem(item)}</Fragment>
+                    ))}
+                  </Box>
+                ) : null}
+
+                <Box className="mt-4 flex-row items-center gap-2">
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={t('shoppingList.addItem')}
+                    className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
+                    disabled={editor.isAdding}
+                    onPress={handleAddNewItem}
+                    testID="shopping-list-new-item-button"
+                  >
+                    {editor.isAdding ? (
+                      <ActivityIndicator size="small" color="#6366F1" />
+                    ) : (
+                      <FontAwesome name="plus" size={12} color="#6366F1" />
+                    )}
+                  </Pressable>
+                  <TextInput
+                    ref={newItemInputRef}
+                    className="flex-1 px-2 py-2 text-base text-ice"
+                    placeholder={t('shoppingList.enterNewItem')}
+                    placeholderTextColor="rgba(241, 245, 249, 0.4)"
+                    value={editor.newItemName}
+                    onChangeText={(value) => {
+                      editor.clearActionError();
+                      editor.setNewItemName(value);
+                    }}
+                    onSubmitEditing={handleAddNewItem}
+                    returnKeyType="done"
+                    testID="shopping-list-new-item-input"
+                  />
                 </Box>
-              ) : null}
 
-              <Box className="mt-4 flex-row items-center gap-2">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('shoppingList.addItem')}
-                  className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
-                  disabled={editor.isAdding}
-                  onPress={handleAddNewItem}
-                  testID="shopping-list-new-item-button"
-                >
-                  {editor.isAdding ? (
-                    <ActivityIndicator size="small" color="#6366F1" />
-                  ) : (
-                    <FontAwesome name="plus" size={12} color="#6366F1" />
-                  )}
-                </Pressable>
-                <TextInput
-                  ref={newItemInputRef}
-                  className="flex-1 px-2 py-2 text-base text-ice"
-                  placeholder={t('shoppingList.enterNewItem')}
-                  placeholderTextColor="rgba(241, 245, 249, 0.4)"
-                  value={editor.newItemName}
-                  onChangeText={(value) => {
-                    editor.clearActionError();
-                    editor.setNewItemName(value);
-                  }}
-                  onSubmitEditing={handleAddNewItem}
-                  returnKeyType="done"
-                  testID="shopping-list-new-item-input"
+                <CheckedItemsSection
+                  items={shoppingList.checkedItems}
+                  getItemDepth={getItemDepth}
+                  isUpdating={editor.isUpdatingItems}
+                  isDeleting={editor.isDeletingChecked}
+                  onCheckedChange={handleCheckedChange}
+                  onRemove={handleRemoveItem}
+                  onUncheckAll={handleUncheckAll}
+                  onDeleteAll={handleDeleteAllChecked}
+                  removingItemId={editor.removingItemId}
+                  renderItem={renderEditableItem}
                 />
               </Box>
 
-              <CheckedItemsSection
-                items={shoppingList.checkedItems}
-                getItemDepth={getItemDepth}
-                isUpdating={editor.isUpdatingItems}
-                isDeleting={editor.isDeletingChecked}
-                onCheckedChange={handleCheckedChange}
-                onRemove={handleRemoveItem}
-                onUncheckAll={handleUncheckAll}
-                onDeleteAll={handleDeleteAllChecked}
-                removingItemId={editor.removingItemId}
-              />
+              {showListLoading ? (
+                <Box
+                  className="absolute inset-0 items-center justify-center"
+                  testID="shopping-list-loading"
+                >
+                  <ActivityIndicator size="large" color="#6366F1" />
+                </Box>
+              ) : null}
             </Box>
-
-            {showListLoading ? (
-              <Box
-                className="absolute inset-0 items-center justify-center"
-                testID="shopping-list-loading"
-              >
-                <ActivityIndicator size="large" color="#6366F1" />
-              </Box>
-            ) : null}
-          </Box>
-        )}
-      </ScrollView>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Box>
   );
 }

@@ -151,3 +151,44 @@ export function isTempShoppingListItemId(id: number | string): boolean {
 export function generateTempShoppingListItemId(): string {
   return `temp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+export function insertShoppingListItemAfter(
+  items: ShoppingListItem[],
+  shoppingListId: number,
+  existingItemId: number | string,
+  createdBy: number,
+  name = ''
+): { items: ShoppingListItem[]; tempItem: ShoppingListItem } | null {
+  const existingIndex = items.findIndex((item) => item.id === existingItemId);
+  if (existingIndex === -1) {
+    return null;
+  }
+
+  const existing = items[existingIndex];
+  const parentId = existing.parent_item_id ?? null;
+  const tempItem: ShoppingListItem = {
+    id: generateTempShoppingListItemId(),
+    shopping_list_id: shoppingListId,
+    name,
+    checked: false,
+    deleted: false,
+    parent_item_id: parentId,
+    position: existing.position,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    created_by: createdBy,
+  };
+
+  const nextItems = [...items];
+  nextItems.splice(existingIndex + 1, 0, tempItem);
+
+  const siblings = nextItems
+    .filter((item) => item.parent_item_id === parentId)
+    .sort((a, b) => a.position - b.position);
+
+  siblings.forEach((item, index) => {
+    item.position = index;
+  });
+
+  return { items: nextItems, tempItem };
+}

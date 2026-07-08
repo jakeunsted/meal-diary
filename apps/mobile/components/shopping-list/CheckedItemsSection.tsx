@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
@@ -19,6 +19,7 @@ interface CheckedItemsSectionProps {
   onUncheckAll: () => void;
   onDeleteAll: () => void;
   removingItemId?: number | string | null;
+  renderItem?: (item: ShoppingListItem) => ReactNode;
 }
 
 export function CheckedItemsSection({
@@ -32,6 +33,7 @@ export function CheckedItemsSection({
   onUncheckAll,
   onDeleteAll,
   removingItemId = null,
+  renderItem,
 }: CheckedItemsSectionProps) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
@@ -84,18 +86,22 @@ export function CheckedItemsSection({
 
       {expanded ? (
         <Box className="px-2 pb-2">
-          {items.map((item) => (
-            <ShoppingListItemRow
-              key={String(item.id)}
-              item={item}
-              depth={getItemDepth(item)}
-              hideCheckbox={hideCheckboxes}
-              onCheckedChange={onCheckedChange}
-              onRemove={onRemove}
-              isRemoving={removingItemId === item.id}
-              isUpdating={isUpdating}
-            />
-          ))}
+          {items.map((item) =>
+            renderItem ? (
+              <Fragment key={String(item.id)}>{renderItem(item)}</Fragment>
+            ) : (
+              <ShoppingListItemRow
+                key={String(item.id)}
+                item={item}
+                depth={getItemDepth(item)}
+                hideCheckbox={hideCheckboxes}
+                onCheckedChange={onCheckedChange}
+                onRemove={onRemove}
+                isRemoving={removingItemId === item.id}
+                isUpdating={isUpdating}
+              />
+            )
+          )}
         </Box>
       ) : null}
     </Box>

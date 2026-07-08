@@ -1,5 +1,7 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { ActivityIndicator, Pressable } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { ActivityIndicator, Pressable, TextInput } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
@@ -11,6 +13,13 @@ interface ShoppingListItemRowProps {
   item: ShoppingListItem;
   depth?: number;
   hideCheckbox?: boolean;
+  isFocused?: boolean;
+  editable?: boolean;
+  inputRef?: (ref: TextInput | null) => void;
+  onFocus?: () => void;
+  onNameChange?: (name: string) => void;
+  onBlur?: (name: string) => void;
+  onSubmitEditing?: (name: string) => void;
   onCheckedChange?: (itemId: number | string, checked: boolean) => void;
   onRemove?: (itemId: number | string) => void;
   isRemoving?: boolean;
@@ -21,12 +30,40 @@ export function ShoppingListItemRow({
   item,
   depth = 0,
   hideCheckbox = false,
+  isFocused = false,
+  editable = false,
+  inputRef,
+  onFocus,
+  onNameChange,
+  onBlur,
+  onSubmitEditing,
   onCheckedChange,
   onRemove,
   isRemoving = false,
   isUpdating = false,
 }: ShoppingListItemRowProps) {
+  const { t } = useTranslation();
+  const [draftName, setDraftName] = useState(item.name);
   const isDisabled = isRemoving || isUpdating;
+  const showInput = editable && isFocused;
+  const previousItemIdRef = useRef(item.id);
+
+  useEffect(() => {
+    if (previousItemIdRef.current !== item.id) {
+      previousItemIdRef.current = item.id;
+      setDraftName(item.name);
+      return;
+    }
+
+    if (!isFocused) {
+      setDraftName(item.name);
+    }
+  }, [isFocused, item.id, item.name]);
+
+  const handleNameChange = (name: string) => {
+    setDraftName(name);
+    onNameChange?.(name);
+  };
 
   return (
     <Box
@@ -48,12 +85,38 @@ export function ShoppingListItemRow({
           {item.checked ? <FontAwesome name="check" size={10} color="#F1F5F9" /> : null}
         </Pressable>
       ) : null}
-      <Text
-        className={`flex-1 text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
-        testID={`shopping-item-name-${item.id}`}
-      >
-        {item.name}
-      </Text>
+
+      {showInput ? (
+        <TextInput
+          ref={inputRef}
+          className={`flex-1 px-2 py-1 text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
+          placeholder={t('shoppingList.enterItemName')}
+          placeholderTextColor="rgba(241, 245, 249, 0.4)"
+          value={draftName}
+          onChangeText={handleNameChange}
+          onFocus={onFocus}
+          onBlur={() => onBlur?.(draftName)}
+          onSubmitEditing={() => onSubmitEditing?.(draftName)}
+          blurOnSubmit={false}
+          returnKeyType="next"
+          autoFocus
+          testID={`shopping-item-edit-input-${item.id}`}
+        />
+      ) : (
+        <Pressable
+          className="flex-1"
+          disabled={!editable || isDisabled}
+          onPress={onFocus}
+          testID={`shopping-item-name-${item.id}`}
+        >
+          <Text
+            className={`text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
+          >
+            {item.name || (editable ? t('shoppingList.enterItemName') : '')}
+          </Text>
+        </Pressable>
+      )}
+
       {onRemove ? (
         <Pressable
           accessibilityRole="button"
