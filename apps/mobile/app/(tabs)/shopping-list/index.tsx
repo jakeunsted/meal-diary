@@ -10,6 +10,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { CheckedItemsSection } from '@/components/shopping-list/CheckedItemsSection';
 import { ShoppingListItemRow } from '@/components/shopping-list/ShoppingListItem';
 import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSkeleton';
 import { Box } from '@/components/ui/box';
@@ -23,6 +24,7 @@ import {
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
 import { useCurrentUser } from '@/lib/queries/profile';
+import type { ShoppingListItem } from '@/types/shoppingList';
 
 export default function ShoppingListScreen() {
   const { t } = useTranslation();
@@ -36,6 +38,7 @@ export default function ShoppingListScreen() {
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
   const showListLoading = shoppingList.isFetching && hasListData;
+  const listItems = shoppingList.shoppingList?.items ?? [];
 
   const itemDepthMap = useMemo(() => {
     if (!shoppingList.shoppingList?.items) {
@@ -43,6 +46,9 @@ export default function ShoppingListScreen() {
     }
     return buildShoppingListDepthMap(shoppingList.shoppingList.items);
   }, [shoppingList.shoppingList?.items]);
+
+  const getItemDepth = (item: ShoppingListItem) =>
+    getShoppingListItemDepth(item, itemDepthMap);
 
   const handleRefresh = () => {
     void userQuery.refetch();
@@ -62,6 +68,18 @@ export default function ShoppingListScreen() {
 
   const handleRemoveItem = (itemId: number | string) => {
     void editor.handleRemoveItem(familyGroupId, itemId);
+  };
+
+  const handleCheckedChange = (itemId: number | string, checked: boolean) => {
+    void editor.handleSetItemChecked(familyGroupId, listItems, itemId, checked);
+  };
+
+  const handleUncheckAll = () => {
+    void editor.handleUncheckAll(familyGroupId, listItems);
+  };
+
+  const handleDeleteAllChecked = () => {
+    void editor.handleDeleteAllChecked(familyGroupId, listItems);
   };
 
   return (
@@ -116,9 +134,11 @@ export default function ShoppingListScreen() {
                     <ShoppingListItemRow
                       key={String(item.id)}
                       item={item}
-                      depth={getShoppingListItemDepth(item, itemDepthMap)}
+                      depth={getItemDepth(item)}
+                      onCheckedChange={handleCheckedChange}
                       onRemove={handleRemoveItem}
                       isRemoving={editor.removingItemId === item.id}
+                      isUpdating={editor.isUpdatingItems}
                     />
                   ))}
                 </Box>
@@ -154,6 +174,18 @@ export default function ShoppingListScreen() {
                   testID="shopping-list-new-item-input"
                 />
               </Box>
+
+              <CheckedItemsSection
+                items={shoppingList.checkedItems}
+                getItemDepth={getItemDepth}
+                isUpdating={editor.isUpdatingItems}
+                isDeleting={editor.isDeletingChecked}
+                onCheckedChange={handleCheckedChange}
+                onRemove={handleRemoveItem}
+                onUncheckAll={handleUncheckAll}
+                onDeleteAll={handleDeleteAllChecked}
+                removingItemId={editor.removingItemId}
+              />
             </Box>
 
             {showListLoading ? (

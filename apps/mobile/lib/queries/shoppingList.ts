@@ -38,6 +38,61 @@ export async function deleteShoppingListItem(
   });
 }
 
+export interface BulkShoppingListItemUpdate {
+  id: number;
+  name?: string;
+  checked?: boolean;
+}
+
+export async function bulkUpdateShoppingListItems(
+  familyGroupId: number,
+  items: BulkShoppingListItemUpdate[]
+): Promise<ShoppingListItem[]> {
+  return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/bulk-update`, {
+    method: 'PUT',
+    body: { items },
+  });
+}
+
+export async function bulkDeleteShoppingListItems(
+  familyGroupId: number,
+  ids: number[]
+): Promise<void> {
+  await apiFetch<void>(`/shopping-list/${familyGroupId}/items/bulk-delete`, {
+    method: 'POST',
+    body: { ids },
+  });
+}
+
+function applyLocalItemUpdates(
+  items: ShoppingListItem[],
+  updates: { id: number | string; name?: string; checked?: boolean }[]
+): ShoppingListItem[] {
+  const updatesById = new Map(updates.map((update) => [update.id, update]));
+
+  return items.map((item) => {
+    const update = updatesById.get(item.id);
+    if (!update) {
+      return item;
+    }
+
+    return {
+      ...item,
+      ...(update.name !== undefined ? { name: update.name } : {}),
+      ...(update.checked !== undefined ? { checked: update.checked } : {}),
+    };
+  });
+}
+
+function mergeServerItems(
+  items: ShoppingListItem[],
+  serverItems: ShoppingListItem[]
+): ShoppingListItem[] {
+  const serverItemsById = new Map(serverItems.map((item) => [item.id, item]));
+
+  return items.map((item) => serverItemsById.get(item.id) ?? item);
+}
+
 function updateShoppingListItems(
   shoppingList: ShoppingList | undefined,
   updater: (items: ShoppingListItem[]) => ShoppingListItem[]
@@ -161,6 +216,94 @@ export function useDeleteShoppingListItem() {
         }
         return next;
       });
+    },
+  });
+}
+
+export function useBulkUpdateShoppingListItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      items,
+    }: {
+      familyGroupId: number;
+      items: BulkShoppingListItemUpdate[];
+    }) => bulkUpdateShoppingListItems(familyGroupId, items),
+    onMutate: async ({ familyGroupId, items }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+      const localUpdates = items.map((item) => ({ ...item }));
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) =>
+        updateShoppingListItems(shoppingList, (listItems) =>
+          applyLocalItemUpdates(listItems, localUpdates)
+        )
+      );
+
+      return { previous };
+    },
+    onError: (_error, { familyGroupId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
+      }
+    },
+    onSuccess: (serverItems, { familyGroupId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
+        const next = updateShoppingListItems(shoppingList, (items) =>
+          mergeServerItems(items, serverItems)
+        );
+        if (next) {
+          void saveShoppingListCache(familyGroupId, next);
+        }
+        return next;
+      });
+    },
+  });
+}
+
+export function useBulkDeleteShoppingListItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      ids,
+    }: {
+      familyGroupId: number;
+      ids: number[];
+    }) => bulkDeleteShoppingListItems(familyGroupId, ids),
+    onMutate: async ({ familyGroupId, ids }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+      const idSet = new Set(ids);
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) =>
+        updateShoppingListItems(shoppingList, (items) =>
+          items.filter((item) => typeof item.id !== 'number' || !idSet.has(item.id))
+        )
+      );
+
+      return { previous };
+    },
+    onError: (_error, { familyGroupId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
+      }
+    },
+    onSuccess: (_, { familyGroupId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      const shoppingList = queryClient.getQueryData<ShoppingList>(queryKey);
+      if (shoppingList) {
+        void saveShoppingListCache(familyGroupId, shoppingList);
+      }
     },
   });
 }
