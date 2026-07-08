@@ -1,7 +1,14 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  TextInput,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { ShoppingListItemRow } from '@/components/shopping-list/ShoppingListItem';
 import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSkeleton';
@@ -14,13 +21,17 @@ import {
   getShoppingListItemDepth,
 } from '@/lib/shopping-list/shoppingListDrop';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
+import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
 import { useCurrentUser } from '@/lib/queries/profile';
 
 export default function ShoppingListScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const userQuery = useCurrentUser();
-  const shoppingList = useShoppingList(userQuery.data?.family_group_id);
+  const familyGroupId = userQuery.data?.family_group_id;
+  const shoppingList = useShoppingList(familyGroupId);
+  const editor = useShoppingListEditor();
+  const newItemInputRef = useRef<TextInput>(null);
 
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
@@ -42,11 +53,23 @@ export default function ShoppingListScreen() {
     void shoppingList.refresh();
   };
 
+  const handleAddNewItem = async () => {
+    const added = await editor.handleAddNewItem(familyGroupId);
+    if (added) {
+      newItemInputRef.current?.focus();
+    }
+  };
+
+  const handleRemoveItem = (itemId: number | string) => {
+    void editor.handleRemoveItem(familyGroupId, itemId);
+  };
+
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
         contentContainerClassName="pb-8"
         contentContainerStyle={{ paddingTop: insets.top + 24 }}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={shoppingList.isFetching && !shoppingList.loading}
@@ -76,6 +99,12 @@ export default function ShoppingListScreen() {
           </Box>
         ) : null}
 
+        {editor.actionError ? (
+          <Box className="mx-4 mb-4 rounded-xl bg-red-500/15 px-4 py-3" testID="shopping-list-action-error">
+            <Text className="text-red-400 text-sm">{t('shoppingList.actionFailed')}</Text>
+          </Box>
+        ) : null}
+
         {showSkeleton ? (
           <ShoppingListSkeleton />
         ) : (
@@ -88,14 +117,43 @@ export default function ShoppingListScreen() {
                       key={String(item.id)}
                       item={item}
                       depth={getShoppingListItemDepth(item, itemDepthMap)}
+                      onRemove={handleRemoveItem}
+                      isRemoving={editor.removingItemId === item.id}
                     />
                   ))}
                 </Box>
-              ) : (
-                <Box className="items-center rounded-2xl bg-surface px-4 py-8">
-                  <Text className="text-violet text-center">{t('shoppingList.enterNewItem')}</Text>
-                </Box>
-              )}
+              ) : null}
+
+              <Box className="mt-4 flex-row items-center gap-2">
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={t('shoppingList.addItem')}
+                  className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
+                  disabled={editor.isAdding}
+                  onPress={handleAddNewItem}
+                  testID="shopping-list-new-item-button"
+                >
+                  {editor.isAdding ? (
+                    <ActivityIndicator size="small" color="#6366F1" />
+                  ) : (
+                    <FontAwesome name="plus" size={12} color="#6366F1" />
+                  )}
+                </Pressable>
+                <TextInput
+                  ref={newItemInputRef}
+                  className="flex-1 px-2 py-2 text-base text-ice"
+                  placeholder={t('shoppingList.enterNewItem')}
+                  placeholderTextColor="rgba(241, 245, 249, 0.4)"
+                  value={editor.newItemName}
+                  onChangeText={(value) => {
+                    editor.clearActionError();
+                    editor.setNewItemName(value);
+                  }}
+                  onSubmitEditing={handleAddNewItem}
+                  returnKeyType="done"
+                  testID="shopping-list-new-item-input"
+                />
+              </Box>
             </Box>
 
             {showListLoading ? (

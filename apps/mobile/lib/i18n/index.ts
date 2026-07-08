@@ -69,6 +69,7 @@ const resources = {
         itemsDeleted: 'Items deleted',
         itemsUnchecked: 'Items unchecked',
         undo: 'Undo',
+        actionFailed: 'Failed to update shopping list',
       },
       paywall: {
         close: 'Close',
