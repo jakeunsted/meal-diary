@@ -48,6 +48,46 @@ export function rebuildItemHierarchyFromFlatOrder(
   });
 }
 
+export function applyActiveFlatOrderToAllItems(
+  allItems: ShoppingListItem[],
+  flatActiveItems: ShoppingListItem[]
+): ShoppingListItem[] {
+  const changesById = new Map(
+    rebuildItemHierarchyFromFlatOrder(flatActiveItems).map((change) => [change.id, change])
+  );
+
+  return allItems.map((item) => {
+    const change = changesById.get(item.id);
+    if (!change) {
+      return item;
+    }
+
+    return {
+      ...item,
+      parent_item_id: change.parent_item_id,
+      position: change.position,
+    };
+  });
+}
+
+export function getActiveFlatShoppingListItems(items: ShoppingListItem[]): ShoppingListItem[] {
+  return flattenShoppingListItems(items.filter((item) => !item.checked));
+}
+
+export function toPersistableReorderPayload(
+  changes: ShoppingListItemReorderChange[]
+): { id: number; parent_item_id: number | null; position: number }[] {
+  return changes
+    .filter((change): change is ShoppingListItemReorderChange & { id: number } =>
+      typeof change.id === 'number'
+    )
+    .map(({ id, parent_item_id, position }) => ({
+      id,
+      parent_item_id,
+      position,
+    }));
+}
+
 export function isShoppingListDescendant(
   items: ShoppingListItem[],
   ancestorId: number,
@@ -68,6 +108,73 @@ export function isShoppingListDescendant(
 /** Shopping lists support one level of nesting: root items and their direct children. */
 export function canBeShoppingListParent(item: ShoppingListItem): boolean {
   return item.parent_item_id === null && typeof item.id === 'number';
+}
+
+/**
+ * After parent_item_id changes, direct children of items that became nested
+ * are reparented to the same parent to preserve one-level hierarchy.
+ */
+export function enforceOneLevelShoppingListNesting(
+  before: ShoppingListItem[],
+  after: ShoppingListItem[]
+): ShoppingListItem[] {
+  const promotions = new Map<number | string, number | null>();
+
+  for (const next of after) {
+    const prev = before.find((item) => item.id === next.id);
+    if (!prev) {
+      continue;
+    }
+
+    const prevParent = prev.parent_item_id ?? null;
+    const nextParent = next.parent_item_id ?? null;
+
+    if (nextParent === null || prevParent === nextParent) {
+      continue;
+    }
+
+    for (const candidate of after) {
+      if (candidate.parent_item_id === next.id) {
+        promotions.set(candidate.id, nextParent);
+      }
+    }
+  }
+
+  if (promotions.size === 0) {
+    return after;
+  }
+
+  return after.map((item) => {
+    const promotedParent = promotions.get(item.id);
+    if (promotedParent !== undefined) {
+      return { ...item, parent_item_id: promotedParent };
+    }
+    return item;
+  });
+}
+
+export function indentShoppingListActiveItem(
+  activeItems: ShoppingListItem[],
+  itemId: number | string
+): ShoppingListItem[] | null {
+  const index = activeItems.findIndex((item) => item.id === itemId);
+  if (index <= 0) {
+    return null;
+  }
+
+  const previous = activeItems[index - 1];
+  const target = activeItems[index];
+  const newParentId = resolveShoppingListIndentParent(previous);
+
+  if (target.parent_item_id === newParentId) {
+    return null;
+  }
+
+  const withIndent = activeItems.map((item) =>
+    item.id === itemId ? { ...item, parent_item_id: newParentId } : item
+  );
+
+  return enforceOneLevelShoppingListNesting(activeItems, withIndent);
 }
 
 /**

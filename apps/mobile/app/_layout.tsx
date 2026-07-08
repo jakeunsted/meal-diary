@@ -5,6 +5,7 @@ import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { Platform } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -71,14 +72,16 @@ export default function RootLayout() {
     <GluestackUIProvider mode="dark">
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
-            <Stack.Screen name="index" />
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="(auth)" />
-            <Stack.Screen name="privacy" />
-            <Stack.Screen name="terms" />
-            <Stack.Screen name="support" />
-          </Stack>
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
+              <Stack.Screen name="index" />
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" />
+              <Stack.Screen name="privacy" />
+              <Stack.Screen name="terms" />
+              <Stack.Screen name="support" />
+            </Stack>
+          </GestureHandlerRootView>
         </SafeAreaProvider>
       </QueryClientProvider>
     </GluestackUIProvider>

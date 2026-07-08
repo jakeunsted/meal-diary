@@ -1,13 +1,21 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, TextInput } from 'react-native';
+import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 
-import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
 import type { ShoppingListItem } from '@/types/shoppingList';
 
 const DEPTH_INDENT_PX = 24;
+const SWIPE_THRESHOLD = 40;
+const SWIPE_MAX_OFFSET = 56;
 
 interface ShoppingListItemRowProps {
   item: ShoppingListItem;
@@ -21,6 +29,8 @@ interface ShoppingListItemRowProps {
   onBlur?: (name: string) => void;
   onSubmitEditing?: (name: string) => void;
   onCheckedChange?: (itemId: number | string, checked: boolean) => void;
+  onIndent?: (itemId: number | string) => void;
+  onOutdent?: (itemId: number | string) => void;
   onRemove?: (itemId: number | string) => void;
   isRemoving?: boolean;
   isUpdating?: boolean;
@@ -38,6 +48,8 @@ export function ShoppingListItemRow({
   onBlur,
   onSubmitEditing,
   onCheckedChange,
+  onIndent,
+  onOutdent,
   onRemove,
   isRemoving = false,
   isUpdating = false,
@@ -47,6 +59,15 @@ export function ShoppingListItemRow({
   const isDisabled = isRemoving || isUpdating;
   const showInput = editable && isFocused;
   const previousItemIdRef = useRef(item.id);
+  const translateX = useSharedValue(0);
+  const swipeEnabled = !showInput && !isDisabled && (!!onIndent || !!onOutdent);
+
+  const onIndentRef = useRef(onIndent);
+  const onOutdentRef = useRef(onOutdent);
+  const onFocusRef = useRef(onFocus);
+  onIndentRef.current = onIndent;
+  onOutdentRef.current = onOutdent;
+  onFocusRef.current = onFocus;
 
   useEffect(() => {
     if (previousItemIdRef.current !== item.id) {
@@ -60,15 +81,93 @@ export function ShoppingListItemRow({
     }
   }, [isFocused, item.id, item.name]);
 
+  const triggerIndent = useCallback(() => {
+    onIndentRef.current?.(item.id);
+  }, [item.id]);
+
+  const triggerOutdent = useCallback(() => {
+    onOutdentRef.current?.(item.id);
+  }, [item.id]);
+
+  const triggerFocus = useCallback(() => {
+    onFocusRef.current?.();
+  }, []);
+
+  const panGesture = useMemo(
+    () =>
+      Gesture.Pan()
+        .enabled(swipeEnabled)
+        .activeOffsetX([-12, 12])
+        .failOffsetY([-12, 12])
+        .onUpdate((event) => {
+          const clamped = Math.max(
+            -SWIPE_MAX_OFFSET,
+            Math.min(SWIPE_MAX_OFFSET, event.translationX)
+          );
+          translateX.value = clamped;
+        })
+        .onEnd((event) => {
+          if (event.translationX >= SWIPE_THRESHOLD) {
+            runOnJS(triggerIndent)();
+          } else if (event.translationX <= -SWIPE_THRESHOLD) {
+            runOnJS(triggerOutdent)();
+          }
+
+          translateX.value = withSpring(0, { damping: 20, stiffness: 220 });
+        })
+        .onFinalize(() => {
+          translateX.value = withSpring(0, { damping: 20, stiffness: 220 });
+        }),
+    [swipeEnabled, translateX, triggerIndent, triggerOutdent]
+  );
+
+  const tapGesture = useMemo(
+    () =>
+      Gesture.Tap()
+        .enabled(editable && !showInput && !isDisabled)
+        .onEnd(() => {
+          runOnJS(triggerFocus)();
+        }),
+    [editable, isDisabled, showInput, triggerFocus]
+  );
+
+  const rowGesture = useMemo(
+    () => (swipeEnabled ? Gesture.Exclusive(panGesture, tapGesture) : tapGesture),
+    [panGesture, swipeEnabled, tapGesture]
+  );
+
+  const animatedRowStyle = useAnimatedStyle(() => {
+    const offset = translateX.value;
+    const backgroundColor =
+      offset > 16
+        ? 'rgba(99, 102, 241, 0.18)'
+        : offset < -16
+          ? 'rgba(99, 102, 241, 0.1)'
+          : 'transparent';
+
+    return {
+      transform: [{ translateX: offset }],
+      backgroundColor,
+    };
+  });
+
   const handleNameChange = (name: string) => {
     setDraftName(name);
     onNameChange?.(name);
   };
 
-  return (
-    <Box
-      className="flex-row items-center gap-2 px-2 py-2"
-      style={{ marginLeft: depth * DEPTH_INDENT_PX }}
+  const nameContent = (
+    <Text
+      className={`text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
+    >
+      {item.name || (editable ? t('shoppingList.enterItemName') : '')}
+    </Text>
+  );
+
+  const rowContent = (
+    <Animated.View
+      className="flex-row items-center gap-2 rounded-lg px-2 py-2"
+      style={[{ marginLeft: depth * DEPTH_INDENT_PX }, animatedRowStyle]}
       testID={`shopping-item-row-${item.id}`}
     >
       {!hideCheckbox ? (
@@ -102,19 +201,14 @@ export function ShoppingListItemRow({
           autoFocus
           testID={`shopping-item-edit-input-${item.id}`}
         />
+      ) : editable ? (
+        <View className="flex-1" testID={`shopping-item-name-${item.id}`}>
+          {nameContent}
+        </View>
       ) : (
-        <Pressable
-          className="flex-1"
-          disabled={!editable || isDisabled}
-          onPress={onFocus}
-          testID={`shopping-item-name-${item.id}`}
-        >
-          <Text
-            className={`text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
-          >
-            {item.name || (editable ? t('shoppingList.enterItemName') : '')}
-          </Text>
-        </Pressable>
+        <View className="flex-1" testID={`shopping-item-name-${item.id}`}>
+          {nameContent}
+        </View>
       )}
 
       {onRemove ? (
@@ -133,6 +227,16 @@ export function ShoppingListItemRow({
           )}
         </Pressable>
       ) : null}
-    </Box>
+    </Animated.View>
+  );
+
+  if (showInput) {
+    return rowContent;
+  }
+
+  return (
+    <GestureDetector gesture={rowGesture}>
+      <View>{rowContent}</View>
+    </GestureDetector>
   );
 }

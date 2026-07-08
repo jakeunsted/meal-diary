@@ -75,6 +75,22 @@ export async function bulkDeleteShoppingListItems(
   });
 }
 
+export interface ShoppingListReorderItem {
+  id: number;
+  parent_item_id: number | null;
+  position: number;
+}
+
+export async function reorderShoppingListItems(
+  familyGroupId: number,
+  items: ShoppingListReorderItem[]
+): Promise<ShoppingListItem[]> {
+  return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/reorder`, {
+    method: 'PUT',
+    body: { items },
+  });
+}
+
 function applyLocalItemUpdates(
   items: ShoppingListItem[],
   updates: { id: number | string; name?: string; checked?: boolean }[]
@@ -372,6 +388,53 @@ export function useBulkDeleteShoppingListItems() {
       if (shoppingList) {
         void saveShoppingListCache(familyGroupId, shoppingList);
       }
+    },
+  });
+}
+
+export function useReorderShoppingListItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      items,
+    }: {
+      familyGroupId: number;
+      items: ShoppingListReorderItem[];
+      nextItems: ShoppingListItem[];
+    }) => reorderShoppingListItems(familyGroupId, items),
+    onMutate: async ({ familyGroupId, nextItems }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+
+      if (nextItems) {
+        queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) =>
+          shoppingList ? { ...shoppingList, items: nextItems } : shoppingList
+        );
+      }
+
+      return { previous };
+    },
+    onError: (_error, { familyGroupId }, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
+      }
+    },
+    onSuccess: (serverItems, { familyGroupId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
+        const next = updateShoppingListItems(shoppingList, (items) =>
+          mergeServerItems(items, serverItems)
+        );
+        if (next) {
+          void saveShoppingListCache(familyGroupId, next);
+        }
+        return next;
+      });
     },
   });
 }

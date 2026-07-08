@@ -13,7 +13,7 @@ import {
   getShoppingListFamilyIds,
   isShoppingListDescendant,
   rebuildItemHierarchyFromFlatOrder,
-  resolveShoppingListIndentParent,
+  indentShoppingListActiveItem,
 } from '~/utils/shoppingListTree';
 
 // Temporary ID prefix for offline items
@@ -918,28 +918,10 @@ export const useShoppingListStore = defineStore('shoppingList', {
       }
 
       const activeItems = this.getActiveFlatItems();
-      const index = activeItems.findIndex(item => item.id === itemId);
-
-      if (index <= 0) {
+      const updatedItems = indentShoppingListActiveItem(activeItems, itemId);
+      if (!updatedItems) {
         return;
       }
-
-      const previous = activeItems[index - 1];
-      if (!previous) {
-        return;
-      }
-
-      const newParentId = resolveShoppingListIndentParent(previous);
-      const target = activeItems[index];
-      if (target.parent_item_id === newParentId) {
-        return;
-      }
-
-      const updatedItems = activeItems.map((item) => (
-        item.id === itemId
-          ? { ...item, parent_item_id: newParentId }
-          : item
-      ));
 
       this.applyActiveFlatOrder(updatedItems);
       await this.syncPendingChanges();

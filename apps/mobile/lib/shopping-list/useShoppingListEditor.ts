@@ -2,10 +2,15 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
 import {
+  applyActiveFlatOrderToAllItems,
+  getActiveFlatShoppingListItems,
   getShoppingListCheckedUpdateIds,
   getShoppingListFamilyIds,
+  indentShoppingListActiveItem,
   insertShoppingListItemAfter,
   isTempShoppingListItemId,
+  rebuildItemHierarchyFromFlatOrder,
+  toPersistableReorderPayload,
 } from '@/lib/shopping-list/shoppingListTree';
 import {
   resolveShoppingListErrorMessage,
@@ -15,6 +20,7 @@ import {
   useBulkDeleteShoppingListItems,
   useBulkUpdateShoppingListItems,
   useDeleteShoppingListItem,
+  useReorderShoppingListItems,
   useUpdateShoppingListItem,
 } from '@/lib/queries/shoppingList';
 import type { ShoppingList, ShoppingListItem } from '@/types/shoppingList';
@@ -48,6 +54,7 @@ export function useShoppingListEditor() {
   const deleteItemMutation = useDeleteShoppingListItem();
   const bulkUpdateMutation = useBulkUpdateShoppingListItems();
   const bulkDeleteMutation = useBulkDeleteShoppingListItems();
+  const reorderMutation = useReorderShoppingListItems();
   const skipBlurCommitItemIdRef = useRef<number | string | null>(null);
   const committingItemIdsRef = useRef(new Set<string>());
 
@@ -205,6 +212,91 @@ export function useShoppingListEditor() {
       return result.tempItem.id;
     },
     [patchShoppingList]
+  );
+
+  const applyActiveFlatOrder = useCallback(
+    async (familyGroupId: number | undefined, flatActiveItems: ShoppingListItem[]) => {
+      if (!familyGroupId) {
+        return;
+      }
+
+      const shoppingList = getLatestShoppingList(familyGroupId);
+      if (!shoppingList) {
+        return;
+      }
+
+      const nextItems = applyActiveFlatOrderToAllItems(shoppingList.items, flatActiveItems);
+      const persistable = toPersistableReorderPayload(
+        rebuildItemHierarchyFromFlatOrder(flatActiveItems)
+      );
+
+      setActionError(null);
+
+      try {
+        if (persistable.length > 0) {
+          await reorderMutation.mutateAsync({
+            familyGroupId,
+            items: persistable,
+            nextItems,
+          });
+          return;
+        }
+
+        patchShoppingList(familyGroupId, (current) => ({
+          ...current,
+          items: nextItems,
+        }));
+      } catch (error) {
+        setActionError(resolveShoppingListErrorMessage(error));
+      }
+    },
+    [getLatestShoppingList, patchShoppingList, reorderMutation]
+  );
+
+  const handleIndentItem = useCallback(
+    async (familyGroupId: number | undefined, items: ShoppingListItem[], itemId: number | string) => {
+      if (!familyGroupId) {
+        return;
+      }
+
+      const activeItems = getActiveFlatShoppingListItems(items);
+      const updatedItems = indentShoppingListActiveItem(activeItems, itemId);
+      if (!updatedItems) {
+        return;
+      }
+
+      await applyActiveFlatOrder(familyGroupId, updatedItems);
+    },
+    [applyActiveFlatOrder]
+  );
+
+  const handleOutdentItem = useCallback(
+    async (familyGroupId: number | undefined, items: ShoppingListItem[], itemId: number | string) => {
+      if (!familyGroupId) {
+        return;
+      }
+
+      const shoppingList = getLatestShoppingList(familyGroupId);
+      if (!shoppingList) {
+        return;
+      }
+
+      const activeItems = getActiveFlatShoppingListItems(items);
+      const target = activeItems.find((item) => item.id === itemId);
+      if (!target || target.parent_item_id === null) {
+        return;
+      }
+
+      const parent = shoppingList.items.find((item) => item.id === target.parent_item_id);
+      const updatedItems = activeItems.map((item) =>
+        item.id === itemId
+          ? { ...item, parent_item_id: parent?.parent_item_id ?? null }
+          : item
+      );
+
+      await applyActiveFlatOrder(familyGroupId, updatedItems);
+    },
+    [applyActiveFlatOrder, getLatestShoppingList]
   );
 
   const handleItemBlur = useCallback(
@@ -435,6 +527,7 @@ export function useShoppingListEditor() {
     isAdding: addItemMutation.isPending,
     isUpdatingItems: bulkUpdateMutation.isPending || updateItemMutation.isPending,
     isPersistingItem: addItemMutation.isPending || updateItemMutation.isPending,
+    isReordering: reorderMutation.isPending,
     isDeletingChecked: bulkDeleteMutation.isPending,
     removingItemId: deleteItemMutation.isPending
       ? (deleteItemMutation.variables?.itemId ?? null)
@@ -442,6 +535,8 @@ export function useShoppingListEditor() {
     handleItemNameChange,
     handleItemBlur,
     handleItemSubmitEditing,
+    handleIndentItem,
+    handleOutdentItem,
     handleAddNewItem,
     handleRemoveItem,
     handleSetItemChecked,

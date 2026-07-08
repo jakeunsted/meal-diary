@@ -6,9 +6,9 @@ import {
   Platform,
   Pressable,
   RefreshControl,
-  ScrollView,
   TextInput,
 } from 'react-native';
+import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -120,9 +120,15 @@ export default function ShoppingListScreen() {
         void editor.handleItemSubmitEditing(familyGroupId, item.id, name, userId);
       }}
       onCheckedChange={handleCheckedChange}
+      onIndent={(itemId) => {
+        void editor.handleIndentItem(familyGroupId, listItems, itemId);
+      }}
+      onOutdent={(itemId) => {
+        void editor.handleOutdentItem(familyGroupId, listItems, itemId);
+      }}
       onRemove={handleRemoveItem}
       isRemoving={editor.removingItemId === item.id}
-      isUpdating={editor.isUpdatingItems || editor.isPersistingItem}
+      isUpdating={editor.isUpdatingItems || editor.isPersistingItem || editor.isReordering}
     />
   );
 
@@ -221,7 +227,7 @@ export default function ShoppingListScreen() {
                 <CheckedItemsSection
                   items={shoppingList.checkedItems}
                   getItemDepth={getItemDepth}
-                  isUpdating={editor.isUpdatingItems}
+                  isUpdating={editor.isUpdatingItems || editor.isReordering}
                   isDeleting={editor.isDeletingChecked}
                   onCheckedChange={handleCheckedChange}
                   onRemove={handleRemoveItem}

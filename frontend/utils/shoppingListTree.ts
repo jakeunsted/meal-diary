@@ -77,6 +77,73 @@ export function canBeShoppingListParent(item: ShoppingListItem): boolean {
 }
 
 /**
+ * After parent_item_id changes, direct children of items that became nested
+ * are reparented to the same parent to preserve one-level hierarchy.
+ */
+export function enforceOneLevelShoppingListNesting(
+  before: ShoppingListItem[],
+  after: ShoppingListItem[]
+): ShoppingListItem[] {
+  const promotions = new Map<number | string, number | null>();
+
+  for (const next of after) {
+    const prev = before.find((item) => item.id === next.id);
+    if (!prev) {
+      continue;
+    }
+
+    const prevParent = prev.parent_item_id ?? null;
+    const nextParent = next.parent_item_id ?? null;
+
+    if (nextParent === null || prevParent === nextParent) {
+      continue;
+    }
+
+    for (const candidate of after) {
+      if (candidate.parent_item_id === next.id) {
+        promotions.set(candidate.id, nextParent);
+      }
+    }
+  }
+
+  if (promotions.size === 0) {
+    return after;
+  }
+
+  return after.map((item) => {
+    const promotedParent = promotions.get(item.id);
+    if (promotedParent !== undefined) {
+      return { ...item, parent_item_id: promotedParent };
+    }
+    return item;
+  });
+}
+
+export function indentShoppingListActiveItem(
+  activeItems: ShoppingListItem[],
+  itemId: number | string
+): ShoppingListItem[] | null {
+  const index = activeItems.findIndex((item) => item.id === itemId);
+  if (index <= 0) {
+    return null;
+  }
+
+  const previous = activeItems[index - 1];
+  const target = activeItems[index];
+  const newParentId = resolveShoppingListIndentParent(previous);
+
+  if (target.parent_item_id === newParentId) {
+    return null;
+  }
+
+  const withIndent = activeItems.map((item) =>
+    item.id === itemId ? { ...item, parent_item_id: newParentId } : item
+  );
+
+  return enforceOneLevelShoppingListNesting(activeItems, withIndent);
+}
+
+/**
  * Resolve the parent when indenting: become a child of the previous root item,
  * or join the previous child item's grouping.
  */
