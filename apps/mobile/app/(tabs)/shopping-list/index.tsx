@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -8,12 +8,14 @@ import {
   RefreshControl,
   TextInput,
 } from 'react-native';
-import { ScrollView } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { ShoppingListActiveList } from '@/components/shopping-list/ShoppingListActiveList';
 import { CheckedItemsSection } from '@/components/shopping-list/CheckedItemsSection';
+import type { ShoppingListDragRenderProps } from '@/components/shopping-list/shoppingListDndTypes';
 import { ShoppingListItemRow } from '@/components/shopping-list/ShoppingListItem';
+import { ShoppingListScrollContainer } from '@/components/shopping-list/ShoppingListScrollContainer';
 import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSkeleton';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -38,6 +40,7 @@ export default function ShoppingListScreen() {
   const editor = useShoppingListEditor();
   const newItemInputRef = useRef<TextInput>(null);
   const itemInputRefs = useRef(new Map<string, TextInput>());
+  const [isDragging, setIsDragging] = useState(false);
 
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
@@ -104,10 +107,16 @@ export default function ShoppingListScreen() {
     void editor.handleDeleteAllChecked(familyGroupId, listItems);
   };
 
-  const renderEditableItem = (item: ShoppingListItem) => (
+  const isItemBusy =
+    editor.isUpdatingItems || editor.isPersistingItem || editor.isReordering;
+
+  const renderEditableItem = (
+    item: ShoppingListItem,
+    dragProps?: ShoppingListDragRenderProps
+  ) => (
     <ShoppingListItemRow
       item={item}
-      depth={getItemDepth(item)}
+      depth={dragProps?.depth ?? getItemDepth(item)}
       editable
       isFocused={editor.focusedItemId === item.id}
       inputRef={(ref) => setItemInputRef(item.id, ref)}
@@ -128,7 +137,10 @@ export default function ShoppingListScreen() {
       }}
       onRemove={handleRemoveItem}
       isRemoving={editor.removingItemId === item.id}
-      isUpdating={editor.isUpdatingItems || editor.isPersistingItem || editor.isReordering}
+      isUpdating={isItemBusy}
+      drag={dragProps?.drag}
+      isActive={dragProps?.isActive}
+      onDragPointerMove={dragProps?.onDragPointerMove}
     />
   );
 
@@ -138,16 +150,19 @@ export default function ShoppingListScreen() {
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
+        <ShoppingListScrollContainer
           contentContainerClassName="pb-8"
           contentContainerStyle={{ paddingTop: insets.top + 24 }}
           keyboardShouldPersistTaps="handled"
+          scrollEnabled={!isDragging}
           refreshControl={
-            <RefreshControl
-              refreshing={shoppingList.isFetching && !shoppingList.loading}
-              onRefresh={handleRefresh}
-              tintColor="#6366F1"
-            />
+            isDragging ? undefined : (
+              <RefreshControl
+                refreshing={shoppingList.isFetching && !shoppingList.loading}
+                onRefresh={handleRefresh}
+                tintColor="#6366F1"
+              />
+            )
           }
         >
           <Heading size="2xl" className="text-ice mb-4 text-center" testID="shopping-list-title">
@@ -185,13 +200,16 @@ export default function ShoppingListScreen() {
           ) : (
             <Box className="relative mx-4">
               <Box className={showListLoading ? 'opacity-50' : ''}>
-                {shoppingList.activeItems.length > 0 ? (
-                  <Box className="overflow-hidden rounded-2xl bg-surface px-2 py-2">
-                    {shoppingList.activeItems.map((item) => (
-                      <Fragment key={String(item.id)}>{renderEditableItem(item)}</Fragment>
-                    ))}
-                  </Box>
-                ) : null}
+                <ShoppingListActiveList
+                  activeItems={shoppingList.activeItems}
+                  allItems={listItems}
+                  disabled={!!editor.focusedItemId || isItemBusy}
+                  onDraggingChange={setIsDragging}
+                  onDragEnd={(params) => {
+                    void editor.handleDragReorder(familyGroupId, listItems, params);
+                  }}
+                  renderItem={(item, dragProps) => renderEditableItem(item, dragProps)}
+                />
 
                 <Box className="mt-4 flex-row items-center gap-2">
                   <Pressable
@@ -227,14 +245,14 @@ export default function ShoppingListScreen() {
                 <CheckedItemsSection
                   items={shoppingList.checkedItems}
                   getItemDepth={getItemDepth}
-                  isUpdating={editor.isUpdatingItems || editor.isReordering}
+                  isUpdating={isItemBusy}
                   isDeleting={editor.isDeletingChecked}
                   onCheckedChange={handleCheckedChange}
                   onRemove={handleRemoveItem}
                   onUncheckAll={handleUncheckAll}
                   onDeleteAll={handleDeleteAllChecked}
                   removingItemId={editor.removingItemId}
-                  renderItem={renderEditableItem}
+                  renderItem={(item) => renderEditableItem(item)}
                 />
               </Box>
 
@@ -248,7 +266,7 @@ export default function ShoppingListScreen() {
               ) : null}
             </Box>
           )}
-        </ScrollView>
+        </ShoppingListScrollContainer>
       </KeyboardAvoidingView>
     </Box>
   );

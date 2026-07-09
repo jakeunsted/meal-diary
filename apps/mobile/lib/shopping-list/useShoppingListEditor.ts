@@ -12,6 +12,7 @@ import {
   rebuildItemHierarchyFromFlatOrder,
   toPersistableReorderPayload,
 } from '@/lib/shopping-list/shoppingListTree';
+import { applyShoppingListDropHierarchy } from '@/lib/shopping-list/shoppingListDrop';
 import {
   resolveShoppingListErrorMessage,
   setShoppingListQueryData,
@@ -299,6 +300,34 @@ export function useShoppingListEditor() {
     [applyActiveFlatOrder, getLatestShoppingList]
   );
 
+  const handleDragReorder = useCallback(
+    async (
+      familyGroupId: number | undefined,
+      allItems: ShoppingListItem[],
+      params: {
+        reorderedItems: ShoppingListItem[];
+        draggedIds: Set<number | string>;
+        hoveredItem: ShoppingListItem | null;
+        nestAsChild: boolean;
+      }
+    ) => {
+      if (!familyGroupId) {
+        return;
+      }
+
+      const updatedItems = applyShoppingListDropHierarchy(
+        params.reorderedItems,
+        params.draggedIds,
+        params.hoveredItem,
+        params.nestAsChild,
+        allItems
+      );
+
+      await applyActiveFlatOrder(familyGroupId, updatedItems);
+    },
+    [applyActiveFlatOrder]
+  );
+
   const handleItemBlur = useCallback(
     async (
       familyGroupId: number | undefined,
@@ -537,6 +566,7 @@ export function useShoppingListEditor() {
     handleItemSubmitEditing,
     handleIndentItem,
     handleOutdentItem,
+    handleDragReorder,
     handleAddNewItem,
     handleRemoveItem,
     handleSetItemChecked,

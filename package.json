@@ -13,6 +13,7 @@
     "dev:mobile:proxy": "npm run dev:proxy --workspace=meal-diary-mobile",
     "dev:mobile:proxy:https": "npm run dev:proxy:https --workspace=meal-diary-mobile",
     "dev:mobile:android": "npm run dev:android --workspace=meal-diary-mobile",
+    "dev:mobile:tunnel": "npm run dev:tunnel --workspace=meal-diary-mobile",
     "build": "turbo run build",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e --filter=./frontend",

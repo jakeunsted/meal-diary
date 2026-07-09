@@ -34,6 +34,9 @@ interface ShoppingListItemRowProps {
   onRemove?: (itemId: number | string) => void;
   isRemoving?: boolean;
   isUpdating?: boolean;
+  drag?: () => void;
+  isActive?: boolean;
+  onDragPointerMove?: (pageX: number) => void;
 }
 
 export function ShoppingListItemRow({
@@ -53,6 +56,9 @@ export function ShoppingListItemRow({
   onRemove,
   isRemoving = false,
   isUpdating = false,
+  drag,
+  isActive = false,
+  onDragPointerMove,
 }: ShoppingListItemRowProps) {
   const { t } = useTranslation();
   const [draftName, setDraftName] = useState(item.name);
@@ -60,7 +66,8 @@ export function ShoppingListItemRow({
   const showInput = editable && isFocused;
   const previousItemIdRef = useRef(item.id);
   const translateX = useSharedValue(0);
-  const swipeEnabled = !showInput && !isDisabled && (!!onIndent || !!onOutdent);
+  const swipeEnabled =
+    !showInput && !isDisabled && !isActive && (!!onIndent || !!onOutdent);
 
   const onIndentRef = useRef(onIndent);
   const onOutdentRef = useRef(onOutdent);
@@ -170,6 +177,25 @@ export function ShoppingListItemRow({
       style={[{ marginLeft: depth * DEPTH_INDENT_PX }, animatedRowStyle]}
       testID={`shopping-item-row-${item.id}`}
     >
+      {drag ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('shoppingList.reorderItem')}
+          className="h-8 w-7 items-center justify-center"
+          delayLongPress={120}
+          onLongPress={drag}
+          onPressIn={(event) => onDragPointerMove?.(event.nativeEvent.pageX)}
+          onTouchMove={(event) => onDragPointerMove?.(event.nativeEvent.pageX)}
+          testID={`shopping-item-drag-handle-${item.id}`}
+        >
+          <FontAwesome
+            name="bars"
+            size={12}
+            color={isActive ? '#6366F1' : 'rgba(241, 245, 249, 0.45)'}
+          />
+        </Pressable>
+      ) : null}
+
       {!hideCheckbox ? (
         <Pressable
           accessibilityRole="checkbox"

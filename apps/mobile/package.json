@@ -50,6 +50,7 @@
     "react-native": "0.86.0",
     "react-native-css": "^3.0.7",
     "react-native-css-interop": "^0.1.22",
+    "react-native-draggable-flatlist": "^4.0.3",
     "react-native-gesture-handler": "~2.32.0",
     "react-native-reanimated": "4.5.0",
     "react-native-safe-area-context": "~5.7.0",
@@ -73,10 +74,11 @@
     "dev": "BROWSER=none expo start --port 3002",
     "dev:proxy": "EXPO_PACKAGER_PROXY_URL=http://dev-app.mealdiary.co.uk BROWSER=none expo start --port 3002",
     "dev:proxy:https": "EXPO_PACKAGER_PROXY_URL=https://dev-app.mealdiary.co.uk BROWSER=none expo start --port 3002",
-    "dev:android": "BROWSER=none expo start --port 3002 --android",
+    "dev:android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
+    "dev:tunnel": "BROWSER=none expo start --port 3002 --tunnel",
     "build": "tsc --noEmit",
     "start": "BROWSER=none expo start --port 3002",
-    "android": "BROWSER=none expo start --port 3002 --android",
+    "android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
     "ios": "BROWSER=none expo start --port 3002 --ios"
   },
   "private": true

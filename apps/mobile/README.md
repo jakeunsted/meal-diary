@@ -29,6 +29,14 @@ npm run dev --workspace=meal-diary-mobile
 
 Press **`a`** in the Expo CLI to open on the Android emulator, or scan the QR code with **Expo Go** on a physical device. Expo web is also supported for development (`w` in the CLI) at [http://localhost:3002](http://localhost:3002).
 
+**Android emulator:** use `npm run dev:mobile:android`. That advertises `exp://10.0.2.2:3002` (the emulator’s host loopback). Do not use `--localhost` on macOS — Metro can bind IPv6-only (`[::1]`), which breaks Expo Go with `Failed to download remote update`.
+
+**Physical device:** phone and Mac must be on the same Wi‑Fi (client isolation off). If the QR code fails, use a tunnel:
+
+```bash
+npm run dev:mobile:tunnel
+```
+
 ### Custom dev domain (nginx)
 
 To serve Expo web via a local reverse proxy (e.g. `dev-app.mealdiary.co.uk` → `127.0.0.1:3002`):
