@@ -16,6 +16,7 @@ import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { useAuthResume } from '@/lib/auth/useAuthResume';
+import { useFamilyRealtime } from '@/lib/realtime/useFamilyRealtime';
 
 if (Platform.OS !== 'web') {
   require('react-native-gesture-handler');
@@ -42,6 +43,7 @@ export default function RootLayout() {
   });
 
   useAuthResume();
+  useFamilyRealtime();
 
   useEffect(() => {
     if (error) throw error;

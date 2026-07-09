@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import DailyMeal from '../db/models/DailyMeal.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
+import { emitFamilyEvent } from './sse.service.ts';
 
 dotenv.config();
 
@@ -24,6 +25,14 @@ interface DailyMealPayload {
   breakfast_recipe_id: number | null;
   lunch_recipe_id: number | null;
   dinner_recipe_id: number | null;
+  week_start_date?: string;
+}
+
+function toPlainItem(item: ShoppingListItem): Record<string, unknown> {
+  if (typeof item.toJSON === 'function') {
+    return item.toJSON() as unknown as Record<string, unknown>;
+  }
+  return item as unknown as Record<string, unknown>;
 }
 
 /**
@@ -31,11 +40,13 @@ interface DailyMealPayload {
  * @param {number} familyGroupId - The ID of the family group
  * @param {string} eventType - The type of the event
  * @param {DailyMeal} dailyMeal - The daily meal model instance
+ * @param {string} [weekStartDate] - ISO week start date for clients that cache by week
  */
 export const sendDailyMealWebhook = async (
   familyGroupId: number,
   eventType: string,
-  dailyMeal: DailyMeal
+  dailyMeal: DailyMeal,
+  weekStartDate?: string
 ) => {
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/daily-meal`;
@@ -48,7 +59,11 @@ export const sendDailyMealWebhook = async (
       breakfast_recipe_id: dailyMeal.dataValues.breakfast_recipe_id ?? null,
       lunch_recipe_id: dailyMeal.dataValues.lunch_recipe_id ?? null,
       dinner_recipe_id: dailyMeal.dataValues.dinner_recipe_id ?? null,
+      ...(weekStartDate ? { week_start_date: weekStartDate } : {}),
     };
+
+    const eventData = { dailyMeal: payload };
+    emitFamilyEvent(familyGroupId, eventType, eventData);
 
     const response = await fetch(webHookUrl, {
       method: 'POST',
@@ -85,6 +100,13 @@ export const sendShoppingListItemWebhook = async (
 ) => {
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/shopping-list/item`;
+    const plainItem = toPlainItem(item);
+    const eventData = {
+      item: plainItem,
+      actorUserId: actorUserId ?? null,
+    };
+
+    emitFamilyEvent(familyGroupId, eventType, eventData);
 
     const response = await fetch(webHookUrl, {
       method: 'POST',
@@ -92,7 +114,7 @@ export const sendShoppingListItemWebhook = async (
       body: JSON.stringify({
         eventType,
         familyGroupId,
-        item,
+        item: plainItem,
         actorUserId: actorUserId ?? null,
         timestamp: new Date().toISOString()
       })

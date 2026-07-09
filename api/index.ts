@@ -9,6 +9,7 @@ import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
 import recipeRoutes from './routes/recipes.routes.ts';
 import billingRoutes from './routes/billing.routes.ts';
+import sseRoutes from './routes/sse.routes.ts';
 import * as billingController from './controllers/billing/billing.controller.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
@@ -75,6 +76,7 @@ app.use('/shopping-list', shoppingListRoutes);
 app.use('/auth', authRoutes);
 app.use('/recipes', recipeRoutes);
 app.use('/billing', billingRoutes);
+app.use('/sse', sseRoutes);
 
 // health check
 app.get('/health', (req: Request, res: Response) => {
