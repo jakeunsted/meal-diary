@@ -9,6 +9,12 @@ import { runWithTokenRefreshLock } from '@/lib/auth/tokenRefreshLock';
 import { getAccessToken, getRefreshToken } from '@/lib/auth/tokenStorage';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { mealDiaryKeys } from '@/lib/queries/mealDiary';
+import { shoppingListKeys } from '@/lib/queries/shoppingList';
+
+function invalidateResumableQueries(): void {
+  void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
+  void queryClient.invalidateQueries({ queryKey: shoppingListKeys.all });
+}
 
 async function handleAppResume(): Promise<void> {
   const status = useAuthStore.getState().status;
@@ -18,7 +24,7 @@ async function handleAppResume(): Promise<void> {
   const refreshToken = await getRefreshToken();
   if (!accessToken || !refreshToken) return;
   if (!isTokenExpired(accessToken, 0)) {
-    void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
+    invalidateResumableQueries();
     return;
   }
 
@@ -30,7 +36,7 @@ async function handleAppResume(): Promise<void> {
         user: response.user,
         entitlements: response.entitlements ?? null,
       });
-      void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
+      invalidateResumableQueries();
     });
   } catch (error) {
     if (isSessionExpiredError(error)) {

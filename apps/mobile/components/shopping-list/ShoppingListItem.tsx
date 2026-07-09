@@ -171,7 +171,29 @@ export function ShoppingListItemRow({
     </Text>
   );
 
-  const rowContent = (
+  const nameArea = showInput ? (
+    <TextInput
+      ref={inputRef}
+      className={`flex-1 px-2 py-1 text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
+      placeholder={t('shoppingList.enterItemName')}
+      placeholderTextColor="rgba(241, 245, 249, 0.4)"
+      value={draftName}
+      onChangeText={handleNameChange}
+      onFocus={onFocus}
+      onBlur={() => onBlur?.(draftName)}
+      onSubmitEditing={() => onSubmitEditing?.(draftName)}
+      blurOnSubmit={false}
+      returnKeyType="next"
+      autoFocus
+      testID={`shopping-item-edit-input-${item.id}`}
+    />
+  ) : (
+    <View className="justify-center py-1" testID={`shopping-item-name-${item.id}`}>
+      {nameContent}
+    </View>
+  );
+
+  return (
     <Animated.View
       className="flex-row items-center gap-2 rounded-lg px-2 py-2"
       style={[{ marginLeft: depth * DEPTH_INDENT_PX }, animatedRowStyle]}
@@ -200,41 +222,27 @@ export function ShoppingListItemRow({
         <Pressable
           accessibilityRole="checkbox"
           accessibilityState={{ checked: item.checked }}
-          className={`h-5 w-5 items-center justify-center rounded border ${
-            item.checked ? 'border-primary bg-primary' : 'border-white/20'
-          }`}
+          className="h-9 w-9 items-center justify-center"
           disabled={isDisabled || !onCheckedChange}
           onPress={() => onCheckedChange?.(item.id, !item.checked)}
           testID={`shopping-item-checkbox-${item.id}`}
         >
-          {item.checked ? <FontAwesome name="check" size={10} color="#F1F5F9" /> : null}
+          <View
+            className={`h-5 w-5 items-center justify-center rounded border ${
+              item.checked ? 'border-primary bg-primary' : 'border-white/20'
+            }`}
+          >
+            {item.checked ? <FontAwesome name="check" size={10} color="#F1F5F9" /> : null}
+          </View>
         </Pressable>
       ) : null}
 
       {showInput ? (
-        <TextInput
-          ref={inputRef}
-          className={`flex-1 px-2 py-1 text-base text-ice ${item.checked ? 'line-through opacity-50' : ''}`}
-          placeholder={t('shoppingList.enterItemName')}
-          placeholderTextColor="rgba(241, 245, 249, 0.4)"
-          value={draftName}
-          onChangeText={handleNameChange}
-          onFocus={onFocus}
-          onBlur={() => onBlur?.(draftName)}
-          onSubmitEditing={() => onSubmitEditing?.(draftName)}
-          blurOnSubmit={false}
-          returnKeyType="next"
-          autoFocus
-          testID={`shopping-item-edit-input-${item.id}`}
-        />
-      ) : editable ? (
-        <View className="flex-1" testID={`shopping-item-name-${item.id}`}>
-          {nameContent}
-        </View>
+        nameArea
       ) : (
-        <View className="flex-1" testID={`shopping-item-name-${item.id}`}>
-          {nameContent}
-        </View>
+        <GestureDetector gesture={rowGesture}>
+          <View className="min-w-0 flex-1">{nameArea}</View>
+        </GestureDetector>
       )}
 
       {onRemove ? (
@@ -254,15 +262,5 @@ export function ShoppingListItemRow({
         </Pressable>
       ) : null}
     </Animated.View>
-  );
-
-  if (showInput) {
-    return rowContent;
-  }
-
-  return (
-    <GestureDetector gesture={rowGesture}>
-      <View>{rowContent}</View>
-    </GestureDetector>
   );
 }

@@ -17,6 +17,7 @@ import type { ShoppingListDragRenderProps } from '@/components/shopping-list/sho
 import { ShoppingListItemRow } from '@/components/shopping-list/ShoppingListItem';
 import { ShoppingListScrollContainer } from '@/components/shopping-list/ShoppingListScrollContainer';
 import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSkeleton';
+import { ShoppingListViewSettingsMenu } from '@/components/shopping-list/ShoppingListViewSettingsMenu';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -27,6 +28,7 @@ import {
 } from '@/lib/shopping-list/shoppingListDrop';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
+import { useShoppingListViewSettings } from '@/lib/shopping-list/shoppingListViewSettings';
 import { useCurrentUser } from '@/lib/queries/profile';
 import type { ShoppingListItem } from '@/types/shoppingList';
 
@@ -38,6 +40,7 @@ export default function ShoppingListScreen() {
   const userId = userQuery.data?.id ?? 0;
   const shoppingList = useShoppingList(familyGroupId);
   const editor = useShoppingListEditor();
+  const viewSettings = useShoppingListViewSettings();
   const newItemInputRef = useRef<TextInput>(null);
   const itemInputRefs = useRef(new Map<string, TextInput>());
   const [isDragging, setIsDragging] = useState(false);
@@ -117,6 +120,7 @@ export default function ShoppingListScreen() {
     <ShoppingListItemRow
       item={item}
       depth={dragProps?.depth ?? getItemDepth(item)}
+      hideCheckbox={viewSettings.hideCheckboxes}
       editable
       isFocused={editor.focusedItemId === item.id}
       inputRef={(ref) => setItemInputRef(item.id, ref)}
@@ -165,9 +169,17 @@ export default function ShoppingListScreen() {
             )
           }
         >
-          <Heading size="2xl" className="text-ice mb-4 text-center" testID="shopping-list-title">
-            {t('shoppingList.title')}
-          </Heading>
+          <Box className="relative mx-4 mb-4 items-center justify-center">
+            <Heading size="2xl" className="text-ice text-center" testID="shopping-list-title">
+              {t('shoppingList.title')}
+            </Heading>
+            <ShoppingListViewSettingsMenu
+              hideCheckedItems={viewSettings.hideCheckedItems}
+              hideCheckboxes={viewSettings.hideCheckboxes}
+              onHideCheckedItemsChange={viewSettings.setHideCheckedItems}
+              onHideCheckboxesChange={viewSettings.setHideCheckboxes}
+            />
+          </Box>
 
           {shoppingList.lastFetchError && !shoppingList.loading ? (
             <Box
@@ -242,18 +254,21 @@ export default function ShoppingListScreen() {
                   />
                 </Box>
 
-                <CheckedItemsSection
-                  items={shoppingList.checkedItems}
-                  getItemDepth={getItemDepth}
-                  isUpdating={isItemBusy}
-                  isDeleting={editor.isDeletingChecked}
-                  onCheckedChange={handleCheckedChange}
-                  onRemove={handleRemoveItem}
-                  onUncheckAll={handleUncheckAll}
-                  onDeleteAll={handleDeleteAllChecked}
-                  removingItemId={editor.removingItemId}
-                  renderItem={(item) => renderEditableItem(item)}
-                />
+                {!viewSettings.hideCheckedItems ? (
+                  <CheckedItemsSection
+                    items={shoppingList.checkedItems}
+                    getItemDepth={getItemDepth}
+                    hideCheckboxes={viewSettings.hideCheckboxes}
+                    isUpdating={isItemBusy}
+                    isDeleting={editor.isDeletingChecked}
+                    onCheckedChange={handleCheckedChange}
+                    onRemove={handleRemoveItem}
+                    onUncheckAll={handleUncheckAll}
+                    onDeleteAll={handleDeleteAllChecked}
+                    removingItemId={editor.removingItemId}
+                    renderItem={(item) => renderEditableItem(item)}
+                  />
+                ) : null}
               </Box>
 
               {showListLoading ? (
