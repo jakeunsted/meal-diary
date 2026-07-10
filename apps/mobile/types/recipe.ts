@@ -17,3 +17,19 @@ export interface Recipe {
   created_at?: string;
   updated_at?: string;
 }
+
+export interface CreateRecipePayload {
+  name: string;
+  description?: string;
+  instructions?: string;
+  portions?: number;
+  ingredients?: RecipeIngredient[];
+}
+
+export interface UpdateRecipePayload {
+  name?: string;
+  description?: string;
+  instructions?: string;
+  portions?: number;
+  ingredients?: RecipeIngredient[];
+}
