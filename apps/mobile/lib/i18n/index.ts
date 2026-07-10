@@ -75,6 +75,7 @@ const resources = {
         usageLabel: '{{count}} of {{max}} recipes',
         usageUnlimited: '{{count}} recipes',
         limitReached: "You've reached your recipe limit.",
+        loadFailed: 'Failed to load recipes',
         upgradeLink: 'View plans to upgrade',
         askOwnerToUpgrade: 'Ask {{name}} to upgrade for more recipes.',
         askOwnerToUpgradeGeneric: 'Ask your family owner to upgrade for more recipes.',

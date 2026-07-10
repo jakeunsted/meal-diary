@@ -1,6 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useRouter, type Href } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -72,6 +72,17 @@ export default function RecipesScreen() {
     void entitlementsQuery.refetch();
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!familyGroupId) {
+        return;
+      }
+
+      void entitlementsQuery.refetch();
+      void recipesQuery.refetch();
+    }, [familyGroupId, entitlementsQuery.refetch, recipesQuery.refetch])
+  );
+
   return (
     <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
       <ScrollView
@@ -97,6 +108,15 @@ export default function RecipesScreen() {
           >
             {recipeEntitlements.recipeUsageLabel}
           </Text>
+        ) : null}
+
+        {recipesQuery.isError && !hasRecipeData ? (
+          <Box className="mb-4 rounded-lg bg-red-500/15 px-4 py-3" testID="recipes-load-error">
+            <Text className="text-sm text-red-400">{t('recipesPage.loadFailed')}</Text>
+            <Button className="mt-3 self-start bg-primary" onPress={handleRefresh}>
+              <ButtonText>{t('diary.retry')}</ButtonText>
+            </Button>
+          </Box>
         ) : null}
 
         {!recipeEntitlements.canCreateRecipe ? (

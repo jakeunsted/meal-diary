@@ -29,6 +29,21 @@ export async function addShoppingListItem(
   });
 }
 
+export interface BulkShoppingListItemPayload {
+  name: string;
+  parent_item_id?: number | null;
+}
+
+export async function bulkAddShoppingListItems(
+  familyGroupId: number,
+  items: BulkShoppingListItemPayload[]
+): Promise<ShoppingListItem[]> {
+  return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/bulk`, {
+    method: 'POST',
+    body: { items },
+  });
+}
+
 export async function deleteShoppingListItem(
   familyGroupId: number,
   itemId: number
@@ -239,6 +254,31 @@ export function useAddShoppingListItem() {
           }
           return [...items, newItem];
         });
+        if (next) {
+          void saveShoppingListCache(familyGroupId, next);
+        }
+        return next;
+      });
+    },
+  });
+}
+
+export function useBulkAddShoppingListItems() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      items,
+    }: {
+      familyGroupId: number;
+      items: BulkShoppingListItemPayload[];
+    }) => bulkAddShoppingListItems(familyGroupId, items),
+    onSuccess: (createdItems, { familyGroupId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+
+      queryClient.setQueryData<ShoppingList>(queryKey, (shoppingList) => {
+        const next = updateShoppingListItems(shoppingList, (items) => [...items, ...createdItems]);
         if (next) {
           void saveShoppingListCache(familyGroupId, next);
         }

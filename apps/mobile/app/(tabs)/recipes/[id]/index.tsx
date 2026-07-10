@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
+  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -16,8 +17,14 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { useCurrentUser } from '@/lib/queries/profile';
+import { env } from '@/constants/env';
+import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
+import { usePaywallStore } from '@/lib/entitlements/paywallStore';
+import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
+import { buildShoppingListItemsFromRecipe } from '@/lib/recipe/buildShoppingListItemsFromRecipe';
+import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 import { useDeleteRecipe, useRecipe } from '@/lib/queries/recipes';
+import { useBulkAddShoppingListItems } from '@/lib/queries/shoppingList';
 import type { RecipeIngredient } from '@/types/recipe';
 
 function formatIngredientLine(ingredient: RecipeIngredient): string {
@@ -39,9 +46,15 @@ export default function RecipeDetailScreen() {
   const parsedRecipeId = Number.isFinite(recipeId) ? recipeId : undefined;
   const userQuery = useCurrentUser();
   const familyGroupId = userQuery.data?.family_group_id;
+  const entitlementsQuery = useEntitlements(familyGroupId);
+  const recipeEntitlements = useRecipeEntitlements(entitlementsQuery.data);
   const recipeQuery = useRecipe(parsedRecipeId);
   const deleteRecipeMutation = useDeleteRecipe();
+  const bulkAddShoppingListItemsMutation = useBulkAddShoppingListItems();
+  const openPaywall = usePaywallStore((state) => state.openPaywall);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [addToShoppingListMessage, setAddToShoppingListMessage] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const recipe = recipeQuery.data;
   const isLoading = recipeQuery.isLoading && !recipe;
@@ -52,6 +65,37 @@ export default function RecipeDetailScreen() {
       return;
     }
     router.push(`/(tabs)/recipes/${parsedRecipeId}/edit` as Href);
+  };
+
+  const handleOpenPlans = () => {
+    void Linking.openURL(`${env.webUrl}/plans`);
+  };
+
+  const handleAddToShoppingList = async () => {
+    if (!recipe?.ingredients?.length || !familyGroupId) {
+      return;
+    }
+
+    if (!recipeEntitlements.canAddToShoppingList) {
+      openPaywall('recipe_to_shopping_list');
+      return;
+    }
+
+    setAddToShoppingListMessage(null);
+
+    try {
+      const items = buildShoppingListItemsFromRecipe(recipe.ingredients);
+      await bulkAddShoppingListItemsMutation.mutateAsync({ familyGroupId, items });
+      setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
+    } catch (error) {
+      const entitlementFeature = getEntitlementFeatureFromError(error);
+      if (entitlementFeature) {
+        openPaywall(entitlementFeature);
+        return;
+      }
+
+      setAddToShoppingListMessage(t('recipeDetail.addToShoppingListFailed'));
+    }
   };
 
   const handleDelete = async () => {
@@ -68,6 +112,7 @@ export default function RecipeDetailScreen() {
       router.replace('/(tabs)/recipes' as Href);
     } catch {
       setIsDeleteModalVisible(false);
+      setDeleteError(t('recipeForm.deleteFailed'));
     }
   };
 
@@ -79,7 +124,10 @@ export default function RecipeDetailScreen() {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={() => void recipeQuery.refetch()}
+            onRefresh={() => {
+              void recipeQuery.refetch();
+              void entitlementsQuery.refetch();
+            }}
             tintColor="#6366F1"
           />
         }
@@ -99,7 +147,9 @@ export default function RecipeDetailScreen() {
           </Box>
         ) : !recipe ? (
           <Box className="items-center py-8">
-            <Text className="text-ice/70">{t('recipeDetail.notFound')}</Text>
+            <Text className="text-ice/70">
+              {recipeQuery.isError ? t('recipeDetail.loadFailed') : t('recipeDetail.notFound')}
+            </Text>
             {recipeQuery.isError ? (
               <Button className="mt-4 bg-primary" onPress={() => void recipeQuery.refetch()}>
                 <ButtonText>{t('diary.retry')}</ButtonText>
@@ -108,6 +158,11 @@ export default function RecipeDetailScreen() {
           </Box>
         ) : (
           <>
+            {deleteError ? (
+              <Box className="mb-4 rounded-lg bg-red-500/15 px-4 py-3" testID="recipe-delete-error">
+                <Text className="text-sm text-red-400">{deleteError}</Text>
+              </Box>
+            ) : null}
             <View className="mb-4 flex-row items-start justify-between gap-3">
               <Heading className="min-w-0 flex-1 text-2xl text-ice" size="xl">
                 {recipe.name}
@@ -166,6 +221,48 @@ export default function RecipeDetailScreen() {
                     ))}
                   </View>
                 </Box>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 border-primary"
+                  onPress={() => void handleAddToShoppingList()}
+                  disabled={bulkAddShoppingListItemsMutation.isPending}
+                  testID="recipe-add-to-shopping-list-button"
+                >
+                  {bulkAddShoppingListItemsMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#6366F1" />
+                  ) : (
+                    <FontAwesome name="list" size={12} color="#6366F1" />
+                  )}
+                  <ButtonText className="ml-2 text-primary">
+                    {t('recipeDetail.addToShoppingList')}
+                  </ButtonText>
+                </Button>
+                {!recipeEntitlements.canAddToShoppingList ? (
+                  <Text
+                    className="mt-2 text-sm text-ice/60"
+                    testID="recipe-shopping-list-premium-hint"
+                  >
+                    {t('recipeDetail.shoppingListPremium')}
+                    {recipeEntitlements.billing?.isOwner ? (
+                      <Text className="text-primary" onPress={handleOpenPlans}>
+                        {' '}
+                        {t('recipeDetail.shoppingListUpgrade')}
+                      </Text>
+                    ) : null}
+                  </Text>
+                ) : null}
+                {addToShoppingListMessage ? (
+                  <Text
+                    className={`mt-2 text-sm ${
+                      addToShoppingListMessage === t('recipeDetail.addedToShoppingList')
+                        ? 'text-green-400'
+                        : 'text-red-400'
+                    }`}
+                  >
+                    {addToShoppingListMessage}
+                  </Text>
+                ) : null}
               </Box>
             ) : null}
 
