@@ -2,6 +2,7 @@ import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, type Href } from 'expo-router';
 
 import { DayFoodPlanCard } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
@@ -23,6 +24,7 @@ import type { MealType } from '@/types/mealDiary';
 
 export default function DiaryScreen() {
   const { t, i18n } = useTranslation();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const userQuery = useCurrentUser();
   const entitlementsQuery = useEntitlements(userQuery.data?.family_group_id);
@@ -109,6 +111,10 @@ export default function DiaryScreen() {
     openPaywall('weeks_ahead');
   };
 
+  const handleRecipePress = (recipeId: number) => {
+    router.push(`/(tabs)/recipes/${recipeId}` as Href);
+  };
+
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
@@ -178,6 +184,7 @@ export default function DiaryScreen() {
                     isPastDay={isDayInPast(diary.resolvedWeekKey, dayMeal.day_of_week)}
                     readOnly={isWeekReadOnly}
                     onSetMeal={(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)}
+                    onRecipePress={handleRecipePress}
                   />
                 ))}
               </Box>

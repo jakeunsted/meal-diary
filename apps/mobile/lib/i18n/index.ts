@@ -161,6 +161,7 @@ const resources = {
         close: 'Close',
         cancel: 'Cancel',
         back: 'Back',
+        delete: 'Delete',
       },
       legal: {
         privacyPolicy: 'Privacy Policy',

@@ -1,7 +1,8 @@
 import type { EntitlementFeature } from '@meal-diary/shared';
 import { useTranslation } from 'react-i18next';
-import { Linking, Modal, Pressable } from 'react-native';
+import { Linking } from 'react-native';
 
+import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -71,15 +72,8 @@ export function PaywallModal() {
   );
 
   return (
-    <Modal
-      visible
-      transparent
-      animationType="fade"
-      onRequestClose={handleClose}
-      testID="paywall-modal"
-    >
-      <Pressable className="flex-1 items-center justify-center bg-black/60 px-6" onPress={handleClose}>
-        <Pressable className="w-full rounded-2xl bg-surface p-6" onPress={() => {}}>
+    <DialogModal visible onClose={handleClose} testID="paywall-modal">
+      <DialogPanel>
           <Heading size="lg" className="text-ice mb-3">
             {copy.title}
           </Heading>
@@ -99,8 +93,7 @@ export function PaywallModal() {
               </Button>
             )}
           </Box>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      </DialogPanel>
+    </DialogModal>
   );
 }

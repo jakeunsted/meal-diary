@@ -22,6 +22,7 @@ interface DayFoodPlanCardProps {
   isPastDay?: boolean;
   readOnly?: boolean;
   onSetMeal?: (mealType: MealType) => void;
+  onRecipePress?: (recipeId: number) => void;
 }
 
 interface MealRowProps {
@@ -30,9 +31,10 @@ interface MealRowProps {
   readOnly: boolean;
   testIdPrefix: string;
   onSetMeal?: () => void;
+  onRecipePress?: (recipeId: number) => void;
 }
 
-function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal }: MealRowProps) {
+function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal, onRecipePress }: MealRowProps) {
   const { t } = useTranslation();
 
   return (
@@ -41,12 +43,16 @@ function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal }: MealRowProp
       {meal?.name ? (
         <Box className="max-w-[60%] flex-row items-center gap-1">
           {meal.recipeId ? (
-            <Box
-              className="rounded-full bg-primary px-3 py-1"
+            <Pressable
+              onPress={onRecipePress ? () => onRecipePress(meal.recipeId!) : undefined}
+              disabled={!onRecipePress}
               testID={`${testIdPrefix}-recipe-badge`}
+              accessibilityRole="button"
             >
-              <Text className="text-ice text-sm">{meal.name}</Text>
-            </Box>
+              <Box className="rounded-full bg-primary px-3 py-1">
+                <Text className="text-ice text-sm">{meal.name}</Text>
+              </Box>
+            </Pressable>
           ) : (
             <Pressable
               onPress={readOnly ? undefined : onSetMeal}
@@ -90,6 +96,7 @@ export function DayFoodPlanCard({
   isPastDay = false,
   readOnly = false,
   onSetMeal,
+  onRecipePress,
 }: DayFoodPlanCardProps) {
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(!isPastDay);
@@ -129,6 +136,7 @@ export function DayFoodPlanCard({
             readOnly={readOnly}
             testIdPrefix="breakfast"
             onSetMeal={onSetMeal ? () => onSetMeal('breakfast') : undefined}
+            onRecipePress={onRecipePress}
           />
           <MealRow
             label={t('diary.lunch')}
@@ -136,6 +144,7 @@ export function DayFoodPlanCard({
             readOnly={readOnly}
             testIdPrefix="lunch"
             onSetMeal={onSetMeal ? () => onSetMeal('lunch') : undefined}
+            onRecipePress={onRecipePress}
           />
           <MealRow
             label={t('diary.dinner')}
@@ -143,6 +152,7 @@ export function DayFoodPlanCard({
             readOnly={readOnly}
             testIdPrefix="dinner"
             onSetMeal={onSetMeal ? () => onSetMeal('dinner') : undefined}
+            onRecipePress={onRecipePress}
           />
         </Box>
       ) : null}

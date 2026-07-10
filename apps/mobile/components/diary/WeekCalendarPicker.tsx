@@ -1,8 +1,9 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView } from 'react-native';
+import { Pressable, ScrollView } from 'react-native';
 
+import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -138,17 +139,12 @@ export function WeekCalendarPicker({
         </Pressable>
       </Box>
 
-      <Modal
+      <DialogModal
         visible={weekPickerVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setWeekPickerVisible(false)}
+        onClose={() => setWeekPickerVisible(false)}
+        placement="bottom"
       >
-        <Pressable
-          className="flex-1 justify-end bg-black/60"
-          onPress={() => setWeekPickerVisible(false)}
-        >
-          <Pressable className="bg-surface max-h-[70%] rounded-t-2xl p-4" onPress={() => {}}>
+        <DialogPanel className="w-full max-h-[70%] rounded-t-2xl bg-surface p-4">
             <Text className="text-ice mb-3 text-center text-base font-semibold">
               {t('diary.weekSelection')}
             </Text>
@@ -173,9 +169,8 @@ export function WeekCalendarPicker({
             <Button variant="outline" onPress={() => setWeekPickerVisible(false)} className="mt-2">
               <ButtonText>{t('common.close')}</ButtonText>
             </Button>
-          </Pressable>
-        </Pressable>
-      </Modal>
+        </DialogPanel>
+      </DialogModal>
     </Box>
   );
 }

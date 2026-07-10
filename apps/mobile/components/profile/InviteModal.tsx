@@ -2,8 +2,9 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import * as Clipboard from 'expo-clipboard';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, TextInput } from 'react-native';
+import { Pressable, TextInput } from 'react-native';
 
+import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -29,9 +30,8 @@ export function InviteModal({ visible, familyGroupCode, onClose }: InviteModalPr
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <Pressable className="flex-1 items-center justify-center bg-black/60 px-6" onPress={onClose}>
-        <Pressable className="w-full rounded-2xl bg-surface p-6" onPress={() => {}}>
+    <DialogModal visible={visible} onClose={onClose}>
+      <DialogPanel>
           <Heading size="lg" className="text-ice mb-3">
             {t('profile.inviteTitle')}
           </Heading>
@@ -68,8 +68,7 @@ export function InviteModal({ visible, familyGroupCode, onClose }: InviteModalPr
           <Button variant="outline" onPress={onClose}>
             <ButtonText>{t('common.close')}</ButtonText>
           </Button>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      </DialogPanel>
+    </DialogModal>
   );
 }

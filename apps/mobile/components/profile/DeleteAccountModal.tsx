@@ -1,8 +1,9 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, ScrollView, TextInput } from 'react-native';
+import { ScrollView, TextInput } from 'react-native';
 
+import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -73,9 +74,8 @@ export function DeleteAccountModal({ visible, user, onClose }: DeleteAccountModa
   };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
-      <Pressable className="flex-1 items-center justify-center bg-black/60 px-6" onPress={handleClose}>
-        <Pressable className="max-h-[85%] w-full rounded-2xl bg-surface p-6" onPress={() => {}}>
+    <DialogModal visible={visible} onClose={handleClose}>
+      <DialogPanel className="max-h-[85%] w-full rounded-2xl bg-surface p-6">
           <ScrollView keyboardShouldPersistTaps="handled">
             <Heading size="lg" className="text-red-400 mb-3">
               {t('profile.account.deleteAccount')}
@@ -127,8 +127,7 @@ export function DeleteAccountModal({ visible, user, onClose }: DeleteAccountModa
               </Button>
             </Box>
           </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+      </DialogPanel>
+    </DialogModal>
   );
 }
