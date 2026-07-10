@@ -95,9 +95,10 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 3. Add **Authorized redirect URIs** on the **Web application** OAuth client (same ID as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`). Register the exact origin — not the API callback URL:
    - `https://dev-app.mealdiary.co.uk`
    - `http://localhost:3002`
+   - `com.mealdiary.app:/oauthredirect` (Android/iOS release/dev builds — required for `expo-auth-session`)
    
-   The app uses `window.location.origin` on web (e.g. `https://dev-app.mealdiary.co.uk`, not `/login`). Override with `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` if needed. Check the browser console for `[Google Auth] redirectUri:` when debugging.
-4. For native dev builds, the redirect uses the `mealdiary` scheme from `app.json` (`mealdiary://`).
+   The app uses `window.location.origin` on web (e.g. `https://dev-app.mealdiary.co.uk`, not `/login`). Override with `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` if needed. Check the Metro console for `[Google Auth] redirectUri:` when debugging.
+4. For native builds, `expo-auth-session` uses `com.mealdiary.app:/oauthredirect` (not `mealdiary://`). Do not set `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` on Android unless you know the exact URI registered in Google Cloud Console.
 
 Flow: Google ID token → `POST /auth/google/verify-token` on the Express API (same as the Capacitor frontend native path).
 

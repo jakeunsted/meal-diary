@@ -120,11 +120,11 @@ export default function LoginScreen() {
             }}
           />
 
-          <Box className="mt-6 flex-row justify-center gap-1">
-            <Text className="text-ice/60">{t('login.noAccount')}</Text>
+          <Box className="mt-6 flex-row flex-wrap justify-center gap-1">
+            <Text className="text-sm text-ice/60">{t('login.noAccount')}</Text>
             <Link href="/(auth)/registration/step-1" asChild>
               <Pressable>
-                <Text className="text-primary">{t('login.register')}</Text>
+                <Text className="text-sm text-primary">{t('login.register')}</Text>
               </Pressable>
             </Link>
           </Box>

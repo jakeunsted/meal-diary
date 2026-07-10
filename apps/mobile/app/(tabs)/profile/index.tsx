@@ -67,8 +67,8 @@ export default function ProfileScreen() {
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
-        contentContainerClassName="px-4 pb-8"
-        contentContainerStyle={{ paddingTop: insets.top + 24 }}
+        contentContainerClassName="pb-8"
+        contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 16 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}

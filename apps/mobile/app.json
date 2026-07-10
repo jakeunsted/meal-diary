@@ -18,6 +18,18 @@
     },
     "android": {
       "package": "com.mealdiary.app",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": [
+            {
+              "scheme": "com.mealdiary.app",
+              "path": "/oauthredirect"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#1A1F2E",
         "foregroundImage": "./assets/images/android-icon-foreground.png",

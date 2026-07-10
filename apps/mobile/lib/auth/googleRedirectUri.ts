@@ -1,4 +1,4 @@
-import { makeRedirectUri } from 'expo-auth-session';
+import * as Application from 'expo-application';
 import { Platform } from 'react-native';
 
 import { env } from '@/constants/env';
@@ -24,5 +24,6 @@ export function getGoogleRedirectUri(): string {
     return window.location.origin;
   }
 
-  return makeRedirectUri({ scheme: 'mealdiary' });
+  // Match expo-auth-session Google provider default for standalone native builds.
+  return `${Application.applicationId}:/oauthredirect`;
 }
