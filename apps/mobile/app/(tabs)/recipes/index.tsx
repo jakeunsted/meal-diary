@@ -143,15 +143,12 @@ export default function RecipesScreen() {
         ) : null}
 
         <View className="mb-4 flex-row items-center gap-2">
-          <View className="relative min-w-0 flex-1">
-            <FontAwesome
-              name="search"
-              size={14}
-              color="rgba(241, 245, 249, 0.5)"
-              style={{ position: 'absolute', left: 12, top: 14, zIndex: 1 }}
-            />
+          <View className="min-w-0 flex-1 flex-row items-center rounded-lg border border-white/10 bg-surface">
+            <View className="pl-3">
+              <FontAwesome name="search" size={14} color="rgba(241, 245, 249, 0.5)" />
+            </View>
             <TextInput
-              className="rounded-lg border border-white/10 bg-surface px-10 py-3 text-base text-ice"
+              className="min-w-0 flex-1 py-3 pr-3 pl-2 text-base text-ice"
               placeholder={t('recipeForm.searchPlaceholder')}
               placeholderTextColor="rgba(241, 245, 249, 0.4)"
               value={searchQuery}
