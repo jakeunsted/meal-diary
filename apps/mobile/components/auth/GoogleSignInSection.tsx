@@ -1,4 +1,4 @@
-import { Linking, Pressable } from 'react-native';
+import { Linking } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { GoogleIcon } from '@/components/auth/GoogleIcon';
@@ -72,23 +72,15 @@ function GoogleSignInSectionContent({
       ) : null}
 
       {showLegal ? (
-        <Text className="text-ice/60 text-center text-xs">
+        <Text className="text-center text-sm leading-5 text-ice/60">
           {t('login.googleLegalPrefix')}{' '}
-          <Pressable
-            className="items-center justify-start"
-            onPress={handleOpenTerms}
-            accessibilityRole="link"
-          >
-            <Text className="text-primary underline">{t('registration.termsOfService')}</Text>
-          </Pressable>{' '}
+          <Text className="text-primary underline" onPress={handleOpenTerms}>
+            {t('registration.termsOfService')}
+          </Text>{' '}
           {t('registration.and')}{' '}
-          <Pressable
-            className="items-center justify-start"
-            onPress={handleOpenPrivacy}
-            accessibilityRole="link"
-          >
-            <Text className="text-primary underline">{t('registration.privacyPolicy')}</Text>
-          </Pressable>
+          <Text className="text-primary underline" onPress={handleOpenPrivacy}>
+            {t('registration.privacyPolicy')}
+          </Text>
         </Text>
       ) : null}
     </Box>

@@ -30,8 +30,8 @@ export function LegalPageShell({ title, children }: LegalPageShellProps) {
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
-        contentContainerClassName="max-w-2xl px-4 pb-8"
-        contentContainerStyle={{ paddingTop: insets.top + 24 }}
+        contentContainerClassName="pb-8"
+        contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 16 }}
       >
         <Box className="mb-2 flex-row items-center justify-between">
           <Heading size="xl" className="text-ice flex-1">

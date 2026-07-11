@@ -1,12 +1,21 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ActivityIndicator, Pressable, ScrollView, TextInput } from 'react-native';
+import {
+  ActivityIndicator,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  TextInput,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
+import { colors } from '@/constants/theme';
 import { useFamilyRecipes } from '@/lib/queries/recipes';
 
 interface SetMealModalProps {
@@ -37,7 +46,9 @@ export function SetMealModal({
   onClose,
 }: SetMealModalProps) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
   const [recipePickerVisible, setRecipePickerVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const recipesQuery = useFamilyRecipes(familyGroupId, { enabled: visible });
 
   const recipes = recipesQuery.data ?? [];
@@ -46,6 +57,29 @@ export function SetMealModal({
   const hasExistingMeal = !!(mealName && mealName.trim()) || !!recipeId;
   const canSave =
     !!(mealName && mealName.trim()) || !!recipeId || hasExistingMeal;
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!visible) {
+      setKeyboardHeight(0);
+    }
+  }, [visible]);
 
   const handleClose = () => {
     if (isLoading) {
@@ -64,52 +98,56 @@ export function SetMealModal({
     ? mealName
     : `— ${t('diary.orTypeMealName')} —`;
 
+  const keyboardOffset = Math.max(0, keyboardHeight - insets.bottom);
+
   return (
     <>
       <DialogModal
         visible={visible}
         onClose={handleClose}
         testID="set-meal-modal"
+        keyboardInset={keyboardOffset}
       >
         <DialogPanel>
-          <ScrollView keyboardShouldPersistTaps="handled">
-            <Heading size="lg" className="text-ice mb-4">
-              {t('diary.setMealTitle')}
-            </Heading>
+          <Heading size="lg" className="text-ice mb-4">
+            {t('diary.setMealTitle')}
+          </Heading>
 
-            {hasRecipes ? (
-              <Box className="mb-4">
-                <Text className="text-ice/70 mb-2 text-sm">{t('diary.selectRecipe')}</Text>
-                <Pressable
-                  onPress={() => setRecipePickerVisible(true)}
-                  className="border-ice/20 bg-base rounded-lg border px-4 py-3"
-                  testID="set-meal-recipe-select"
-                >
-                  <Text className="text-ice text-sm">{recipeSelectLabel}</Text>
-                </Pressable>
-              </Box>
-            ) : recipesQuery.isLoading ? (
-              <Box className="mb-4 items-center py-2">
-                <ActivityIndicator size="small" color="#6366F1" />
-              </Box>
-            ) : null}
-
-            {hasRecipes && !recipeId ? (
-              <Text className="text-ice/50 mb-3 text-center text-xs">
-                {t('diary.orTypeMealName')}
-              </Text>
-            ) : null}
-
-            {recipeId && mealName && !hasRecipes ? (
-              <Box
-                className="bg-primary/20 mb-4 self-start rounded-full px-3 py-1"
-                testID="set-meal-selected-recipe"
+          {hasRecipes ? (
+            <Box className="mb-4">
+              <Text className="text-ice/70 mb-2 text-sm">{t('diary.selectRecipe')}</Text>
+              <Pressable
+                onPress={() => setRecipePickerVisible(true)}
+                className="border-ice/20 bg-base rounded-lg border px-4 py-3"
+                testID="set-meal-recipe-select"
               >
-                <Text className="text-primary text-sm">{mealName}</Text>
-              </Box>
-            ) : !recipeId ? (
+                <Text className="text-ice text-sm">{recipeSelectLabel}</Text>
+              </Pressable>
+            </Box>
+          ) : recipesQuery.isLoading ? (
+            <Box className="mb-4 items-center py-2">
+              <ActivityIndicator size="small" color="#6366F1" />
+            </Box>
+          ) : null}
+
+          {recipeId && mealName ? (
+            <Box
+              className="bg-primary/20 mb-4 self-start rounded-full px-3 py-1"
+              testID="set-meal-selected-recipe"
+            >
+              <Text className="text-primary text-sm">{mealName}</Text>
+            </Box>
+          ) : !recipeId ? (
+            <Box className="mb-4">
+              <Text className="text-ice/70 mb-2 text-sm">{t('diary.mealName')}</Text>
               <TextInput
-                className="text-ice mb-4 rounded-lg bg-base px-4 py-3"
+                style={{
+                  borderRadius: 8,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  backgroundColor: colors.base,
+                  color: colors.ice,
+                }}
                 placeholder={t('diary.mealName')}
                 placeholderTextColor="rgba(241, 245, 249, 0.4)"
                 value={mealName}
@@ -118,39 +156,39 @@ export function SetMealModal({
                 editable={!isLoading}
                 testID="set-meal-name-input"
               />
-            ) : null}
-
-            {error ? (
-              <Box className="mb-4 rounded-lg bg-red-500/15 px-4 py-3">
-                <Text className="text-red-400 text-sm">{error}</Text>
-              </Box>
-            ) : null}
-
-            <Box className="items-center gap-2">
-              {hasExistingMeal ? (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  disabled={isLoading}
-                  onPress={onClear}
-                  testID="set-meal-clear-button"
-                >
-                  <ButtonText>{t('diary.clearMeal')}</ButtonText>
-                </Button>
-              ) : null}
-
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isLoading || !canSave}
-                onPress={onSave}
-                testID="set-meal-save-button"
-              >
-                {isLoading ? <ButtonSpinner color="#6366F1" /> : null}
-                <ButtonText>{t('diary.save')}</ButtonText>
-              </Button>
             </Box>
-          </ScrollView>
+          ) : null}
+
+          {error ? (
+            <Box className="mb-4 rounded-lg bg-red-500/15 px-4 py-3">
+              <Text className="text-red-400 text-sm">{error}</Text>
+            </Box>
+          ) : null}
+
+          <Box className="items-center gap-2">
+            {hasExistingMeal ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={isLoading}
+                onPress={onClear}
+                testID="set-meal-clear-button"
+              >
+                <ButtonText>{t('diary.clearMeal')}</ButtonText>
+              </Button>
+            ) : null}
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isLoading || !canSave}
+              onPress={onSave}
+              testID="set-meal-save-button"
+            >
+              {isLoading ? <ButtonSpinner color="#6366F1" /> : null}
+              <ButtonText>{t('diary.save')}</ButtonText>
+            </Button>
+          </Box>
         </DialogPanel>
       </DialogModal>
 
@@ -163,7 +201,7 @@ export function SetMealModal({
           <Text className="text-ice mb-3 text-center text-base font-semibold">
             {t('diary.selectRecipe')}
           </Text>
-          <ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled">
             <Pressable
               onPress={() => handleSelectRecipe(null, '')}
               className={`mb-2 rounded-lg px-4 py-3 ${!recipeId ? 'bg-primary/20' : 'bg-base'}`}

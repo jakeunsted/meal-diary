@@ -11,7 +11,7 @@ interface ProfileCardProps {
 
 export function ProfileCard({ title, children, className }: ProfileCardProps) {
   return (
-    <Box className={`overflow-hidden rounded-2xl bg-surface ${className ?? ''}`}>
+    <Box className={`mx-4 overflow-hidden rounded-2xl bg-surface ${className ?? ''}`}>
       <Box className="border-b border-white/10 px-5 py-4">
         <Heading size="lg" className="text-ice">
           {title}
