@@ -9,9 +9,11 @@ import shoppingListRoutes from './routes/shoppingList.routes.ts';
 import authRoutes from './routes/auth.routes.ts';
 import recipeRoutes from './routes/recipes.routes.ts';
 import billingRoutes from './routes/billing.routes.ts';
+import sseRoutes from './routes/sse.routes.ts';
 import * as billingController from './controllers/billing/billing.controller.ts';
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
+import { devCorsMiddleware } from './middleware/cors.middleware.ts';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 import { initializeOtelLogs, shutdownOtelLogs } from './utils/otelLogs.ts';
@@ -36,6 +38,11 @@ initializeOtelLogs();
 // Trust proxy for Railway (needed for rate limiting and correct IP addresses)
 // Railway uses 1 proxy, so we trust only the first proxy
 app.set('trust proxy', 1);
+
+if (process.env.NODE_ENV === 'development') {
+  app.use(devCorsMiddleware);
+}
+
 app.post('/billing/webhook', express.raw({ type: 'application/json' }), billingController.stripeWebhook);
 app.post('/billing/revenuecat-webhook', express.json(), billingController.revenueCatWebhook);
 app.use(express.json());
@@ -69,6 +76,7 @@ app.use('/shopping-list', shoppingListRoutes);
 app.use('/auth', authRoutes);
 app.use('/recipes', recipeRoutes);
 app.use('/billing', billingRoutes);
+app.use('/sse', sseRoutes);
 
 // health check
 app.get('/health', (req: Request, res: Response) => {

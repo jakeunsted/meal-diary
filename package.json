@@ -9,11 +9,18 @@
   ],
   "scripts": {
     "dev": "turbo run dev --filter=meal-diary-api --filter=nuxt-app",
+    "dev:mobile": "npm run dev --workspace=meal-diary-mobile",
+    "dev:mobile:proxy": "npm run dev:proxy --workspace=meal-diary-mobile",
+    "dev:mobile:proxy:https": "npm run dev:proxy:https --workspace=meal-diary-mobile",
+    "dev:mobile:android": "npm run dev:android --workspace=meal-diary-mobile",
+    "dev:mobile:tunnel": "npm run dev:tunnel --workspace=meal-diary-mobile",
     "build": "turbo run build",
     "test": "turbo run test",
-    "test:e2e": "turbo run test:e2e --filter=./frontend"
+    "test:e2e": "turbo run test:e2e --filter=./frontend",
+    "postinstall": "patch-package"
   },
   "devDependencies": {
+    "patch-package": "^8.0.1",
     "turbo": "^2.5.4"
   },
   "engines": {

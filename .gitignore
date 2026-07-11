@@ -9,6 +9,10 @@ api/dist
 .nuxt
 .output
 .turbo
+apps/mobile/.expo
+apps/mobile/dist
+apps/mobile/android
+apps/mobile/ios
 
 # IDE / editor (keep .cursor/rules/ tracked)
 .cursor/settings.json

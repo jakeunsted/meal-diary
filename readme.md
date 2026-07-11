@@ -21,6 +21,7 @@ npm install
 
 - **API** — copy `api/.env.example` to `api/.env`. DB can be the local Postgres from `docker-compose.yml`. Set `WEBHOOK_BASE_URL` to the Nuxt server address with path `/api/webhook`.
 - **Frontend** — copy `frontend/.env.example` to `frontend/.env`. Set `BASE_URL` to the API URL (e.g. `http://localhost:3001`).
+- **Mobile** — copy `apps/mobile/.env.example` to `apps/mobile/.env`. Set `EXPO_PUBLIC_API_URL` to the API URL (`http://10.0.2.2:3001` for Android emulator).
 
 ### Run locally (host)
 
@@ -31,7 +32,10 @@ npm run dev --workspace=meal-diary-api
 # Frontend (port 3000)
 npm run dev --workspace=nuxt-app
 
-# Or both via Turborepo
+# Mobile (Expo)
+npm run dev:mobile
+
+# Or API + frontend via Turborepo
 npm run dev
 ```
 
@@ -59,7 +63,7 @@ npm run test:e2e
 meal-diary/
   api/                  # Express API
   frontend/             # Nuxt app
-  apps/                 # Future deployable services
+  apps/mobile/          # Expo React Native app (iOS + Android)
   packages/shared/      # Shared types and constants
 ```
 

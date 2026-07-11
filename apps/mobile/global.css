@@ -1,0 +1,143 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/preflight.css" layer(base);
+@import "tailwindcss/utilities.css";
+@import "nativewind/theme";
+
+/* Meal Diary dark theme — base, surface, primary, violet, accent, ice */
+@layer theme {
+  :root {
+    --base: 26 31 46;
+    --surface: 30 36 53;
+    --violet: 129 140 248;
+    --ice: 241 245 249;
+
+    --background: 26 31 46;
+    --foreground: 241 245 249;
+    --card: 30 36 53;
+    --primary: 99 102 241;
+    --primary-foreground: 241 245 249;
+    --secondary: 30 36 53;
+    --secondary-foreground: 241 245 249;
+    --accent: 46 204 166;
+    --accent-foreground: 26 31 46;
+    --muted: 30 36 53;
+    --muted-foreground: 129 140 248;
+    --destructive: 239 68 68;
+    --warning: 251 191 36;
+    --warning-content: 26 31 46;
+    --border: 38 45 68;
+    --input: 38 45 68;
+    --ring: 99 102 241;
+    --popover: 30 36 53;
+    --popover-foreground: 241 245 249;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --base: 26 31 46;
+      --surface: 30 36 53;
+      --violet: 129 140 248;
+      --ice: 241 245 249;
+
+      --background: 26 31 46;
+      --foreground: 241 245 249;
+      --card: 30 36 53;
+      --primary: 99 102 241;
+      --primary-foreground: 241 245 249;
+      --secondary: 30 36 53;
+      --secondary-foreground: 241 245 249;
+      --accent: 46 204 166;
+      --accent-foreground: 26 31 46;
+      --muted: 30 36 53;
+      --muted-foreground: 129 140 248;
+      --destructive: 239 68 68;
+      --border: 38 45 68;
+      --input: 38 45 68;
+      --ring: 99 102 241;
+      --popover: 30 36 53;
+      --popover-foreground: 241 245 249;
+    }
+  }
+
+  :root.dark {
+    --base: 26 31 46;
+    --surface: 30 36 53;
+    --violet: 129 140 248;
+    --ice: 241 245 249;
+
+    --background: 26 31 46;
+    --foreground: 241 245 249;
+    --card: 30 36 53;
+    --primary: 99 102 241;
+    --primary-foreground: 241 245 249;
+    --secondary: 30 36 53;
+    --secondary-foreground: 241 245 249;
+    --accent: 46 204 166;
+    --accent-foreground: 26 31 46;
+    --muted: 30 36 53;
+    --muted-foreground: 129 140 248;
+    --destructive: 239 68 68;
+    --warning: 251 191 36;
+    --warning-content: 26 31 46;
+    --border: 38 45 68;
+    --input: 38 45 68;
+    --ring: 99 102 241;
+    --popover: 30 36 53;
+    --popover-foreground: 241 245 249;
+  }
+
+  :root.light {
+    --base: 26 31 46;
+    --surface: 30 36 53;
+    --violet: 129 140 248;
+    --ice: 241 245 249;
+
+    --background: 26 31 46;
+    --foreground: 241 245 249;
+    --card: 30 36 53;
+    --primary: 99 102 241;
+    --primary-foreground: 241 245 249;
+    --secondary: 30 36 53;
+    --secondary-foreground: 241 245 249;
+    --accent: 46 204 166;
+    --accent-foreground: 26 31 46;
+    --muted: 30 36 53;
+    --muted-foreground: 129 140 248;
+    --destructive: 239 68 68;
+    --warning: 251 191 36;
+    --warning-content: 26 31 46;
+    --border: 38 45 68;
+    --input: 38 45 68;
+    --ring: 99 102 241;
+    --popover: 30 36 53;
+    --popover-foreground: 241 245 249;
+  }
+}
+
+@theme inline {
+  --color-base: rgb(var(--base));
+  --color-surface: rgb(var(--surface));
+  --color-violet: rgb(var(--violet));
+  --color-ice: rgb(var(--ice));
+  --color-primary: rgb(var(--primary));
+  --color-primary-foreground: rgb(var(--primary-foreground));
+  --color-card: rgb(var(--card));
+  --color-secondary: rgb(var(--secondary));
+  --color-secondary-foreground: rgb(var(--secondary-foreground));
+  --color-background: rgb(var(--background));
+  --color-popover: rgb(var(--popover));
+  --color-popover-foreground: rgb(var(--popover-foreground));
+  --color-muted: rgb(var(--muted));
+  --color-muted-foreground: rgb(var(--muted-foreground));
+  --color-destructive: rgb(var(--destructive));
+  --color-warning: rgb(var(--warning));
+  --color-warning-content: rgb(var(--warning-content));
+  --color-foreground: rgb(var(--foreground));
+  --color-border: rgb(var(--border));
+  --color-input: rgb(var(--input));
+  --color-ring: rgb(var(--ring));
+  --color-accent: rgb(var(--accent));
+  --color-accent-foreground: rgb(var(--accent-foreground));
+
+  --font-sans: "Inter_400Regular", sans-serif;
+}

@@ -2,6 +2,7 @@ import type { IDragEvent } from '@vue-dnd-kit/core';
 import type { ShoppingListItem } from '~/types/ShoppingList';
 import {
   canBeShoppingListParent,
+  enforceOneLevelShoppingListNesting,
   isShoppingListDescendant,
   normalizeShoppingListParentId,
 } from '~/utils/shoppingListTree';
@@ -33,7 +34,7 @@ export function applyShoppingListDropHierarchy(
   nestAsChild: boolean,
   allItems: ShoppingListItem[]
 ): ShoppingListItem[] {
-  return flatActiveItems.map((item) => {
+  const withHierarchy = flatActiveItems.map((item) => {
     if (!draggedIds.has(item.id) || !hoveredItem || item.id === hoveredItem.id) {
       return item;
     }
@@ -54,6 +55,8 @@ export function applyShoppingListDropHierarchy(
       parent_item_id: normalizeShoppingListParentId(hoveredItem.parent_item_id ?? null, allItems),
     };
   });
+
+  return enforceOneLevelShoppingListNesting(flatActiveItems, withHierarchy);
 }
 
 export function buildShoppingListDepthMap(items: ShoppingListItem[]): Record<number, number> {
