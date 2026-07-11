@@ -16,12 +16,13 @@ export function useGoogleAuth() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const redirectUri = getGoogleRedirectUri();
+  const redirectUri =
+    Platform.OS === 'web' || env.googleRedirectUri ? getGoogleRedirectUri() : undefined;
 
   const [, , promptAsync] = Google.useIdTokenAuthRequest({
     webClientId: env.googleWebClientId || undefined,
     androidClientId: env.googleAndroidClientId || env.googleWebClientId || undefined,
-    redirectUri,
+    ...(redirectUri ? { redirectUri } : {}),
   });
 
   const signInWithGoogle = useCallback(async (): Promise<User> => {
@@ -32,8 +33,8 @@ export function useGoogleAuth() {
     setIsLoading(true);
     setError(null);
 
-    if (__DEV__ && Platform.OS === 'web') {
-      console.log('[Google Auth] redirectUri:', redirectUri);
+    if (__DEV__) {
+      console.log('[Google Auth] redirectUri:', redirectUri ?? 'native default (package:/oauthredirect)');
     }
 
     try {

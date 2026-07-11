@@ -1,9 +1,26 @@
 import type { ReactNode } from 'react';
-import { Modal, Platform, Pressable, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+
+import { colors } from '@/constants/theme';
 
 /** Opacity via style — Tailwind bg-black/* is unreliable inside RN Modal. */
 export const dialogBackdropStyle: StyleProp<ViewStyle> = {
-  backgroundColor: 'rgba(0, 0, 0, 0.15)',
+  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+};
+
+export const dialogPanelStyle: ViewStyle = {
+  width: '100%',
+  borderRadius: 16,
+  padding: 24,
+  backgroundColor: colors.surface,
 };
 
 export const dialogPanelShadowStyle: StyleProp<ViewStyle> = Platform.select({
@@ -27,11 +44,13 @@ interface DialogModalProps {
   children: ReactNode;
   testID?: string;
   placement?: DialogModalPlacement;
+  /** Lifts content above the software keyboard (e.g. from Keyboard event height). */
+  keyboardInset?: number;
 }
 
 const placementClassNames: Record<DialogModalPlacement, string> = {
   center: 'items-center justify-center px-6',
-  bottom: 'justify-end',
+  bottom: 'justify-end px-6',
   topEnd: 'items-end justify-start px-4 pt-24',
 };
 
@@ -41,7 +60,14 @@ export function DialogModal({
   children,
   testID,
   placement = 'center',
+  keyboardInset = 0,
 }: DialogModalProps) {
+  const isKeyboardVisible = keyboardInset > 0;
+  const placementClassName =
+    isKeyboardVisible && placement === 'center'
+      ? 'items-center justify-end px-6'
+      : placementClassNames[placement];
+
   return (
     <Modal
       visible={visible}
@@ -50,13 +76,24 @@ export function DialogModal({
       onRequestClose={onClose}
       testID={testID}
     >
-      <Pressable
-        className={`flex-1 ${placementClassNames[placement]}`}
-        style={dialogBackdropStyle}
-        onPress={onClose}
-      >
-        {children}
-      </Pressable>
+      <View className="flex-1">
+        <Pressable
+          style={[StyleSheet.absoluteFill, dialogBackdropStyle]}
+          onPress={onClose}
+          accessibilityRole="button"
+        />
+        <View
+          className={`flex-1 ${placementClassName}`}
+          pointerEvents="box-none"
+          style={
+            isKeyboardVisible
+              ? { paddingBottom: keyboardInset + 16 }
+              : undefined
+          }
+        >
+          {children}
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -69,16 +106,12 @@ interface DialogPanelProps {
 
 export function DialogPanel({
   children,
-  className = 'w-full rounded-2xl bg-surface p-6',
+  className,
   style,
 }: DialogPanelProps) {
   return (
-    <Pressable
-      className={className}
-      style={[dialogPanelShadowStyle, style]}
-      onPress={() => {}}
-    >
+    <View className={className} style={[dialogPanelStyle, dialogPanelShadowStyle, style]}>
       {children}
-    </Pressable>
+    </View>
   );
 }

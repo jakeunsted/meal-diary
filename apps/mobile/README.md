@@ -78,6 +78,7 @@ For Google Sign-In on web, add a `listen 443 ssl` server block with your mkcert 
 | Browser (localhost) | `http://localhost:3001` |
 | Browser (`https://dev-app.mealdiary.co.uk`) | `http://localhost:3001` (or your dev API host) |
 | Production | `https://api.mealdiary.co.uk` |
+| Production web app | `https://app.mealdiary.co.uk` (`EXPO_PUBLIC_WEB_URL`) |
 
 ### Google Sign-In (optional)
 
