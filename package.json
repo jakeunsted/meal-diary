@@ -4,11 +4,12 @@
   "workspaces": [
     "api",
     "frontend",
+    "landing-page",
     "apps/*",
     "packages/*"
   ],
   "scripts": {
-    "dev": "turbo run dev --filter=meal-diary-api --filter=nuxt-app",
+    "dev": "turbo run dev --filter=meal-diary-api --filter=nuxt-app --filter=landing-page",
     "dev:mobile": "npm run dev --workspace=meal-diary-mobile",
     "dev:mobile:proxy": "npm run dev:proxy --workspace=meal-diary-mobile",
     "dev:mobile:proxy:https": "npm run dev:proxy:https --workspace=meal-diary-mobile",

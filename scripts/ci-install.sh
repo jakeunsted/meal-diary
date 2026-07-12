@@ -22,3 +22,4 @@ npm install \
 npm rebuild bcrypt --build-from-source --workspace=meal-diary-api
 
 sh scripts/install-frontend-native-deps.sh
+sh scripts/install-landing-page-native-deps.sh

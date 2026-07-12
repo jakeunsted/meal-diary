@@ -10,6 +10,12 @@
       },
       "cwd": "apps/mobile",
       "port": 3002
+    },
+    {
+      "name": "landing-page",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=landing-page"],
+      "port": 3003
     }
   ]
 }

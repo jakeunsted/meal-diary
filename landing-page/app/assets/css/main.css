@@ -1,0 +1,17 @@
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: mealdiary --default;
+}
+@plugin "daisyui/theme" {
+  name: "mealdiary";
+  --color-base-100: #0f1323;
+  --color-base-200: #1a1f2e;
+  --color-base-300: #1e2435;
+  --color-primary: #6366f1;
+  --color-primary-content: #ffffff;
+  --color-success: #2ecca6;
+  --color-success-content: #0f2e26;
+  --color-base-content: #cbd5e1;
+  --color-neutral: #94a3b8;
+  --color-neutral-content: #64748b;
+}

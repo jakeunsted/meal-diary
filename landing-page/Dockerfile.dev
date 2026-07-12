@@ -1,0 +1,15 @@
+FROM node:26.3.0-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY landing-page/package.json landing-page/
+COPY scripts/docker-install-landing-page.sh scripts/
+COPY scripts/install-landing-page-native-deps.sh scripts/
+COPY scripts/linux-platform.sh scripts/
+
+RUN sh scripts/docker-install-landing-page.sh
+
+EXPOSE 3003
+
+CMD ["npm", "run", "dev", "--workspace=landing-page"]

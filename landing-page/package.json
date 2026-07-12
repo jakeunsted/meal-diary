@@ -1,0 +1,27 @@
+{
+  "name": "landing-page",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=26.3.0"
+  },
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev --host 0.0.0.0",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "start": "node .output/server/index.mjs"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.3.0",
+    "nuxt": "4.2.2",
+    "tailwindcss": "^4.3.0",
+    "vue": "latest",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "daisyui": "^5.5.19",
+    "oxc-parser": "^0.89.0"
+  }
+}
