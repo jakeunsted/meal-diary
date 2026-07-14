@@ -87,19 +87,20 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 | Variable | Purpose |
 |----------|---------|
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web client ID (audience verified by API) |
-| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client for `com.mealdiary.app` (recommended for dev builds) |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client for `uk.co.mealdiary.app` (recommended for dev builds) |
 
 **Google Cloud Console setup:**
 
 1. Create or reuse the Web OAuth client (same as backend `GOOGLE_CLIENT_ID`).
-2. Create an Android OAuth client for package `com.mealdiary.app` with your debug/release SHA-1 fingerprints.
+2. Create an Android OAuth client for package `uk.co.mealdiary.app` with your debug/release SHA-1 fingerprints.
 3. Add **Authorized redirect URIs** on the **Web application** OAuth client (same ID as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`). Register the exact origin — not the API callback URL:
    - `https://dev-app.mealdiary.co.uk`
    - `http://localhost:3002`
-   - `com.mealdiary.app:/oauthredirect` (Android/iOS release/dev builds — required for `expo-auth-session`)
+   - `uk.co.mealdiary.app:/oauthredirect` (Android release/dev builds — required for `expo-auth-session`)
+   - `com.mealdiary.app:/oauthredirect` (iOS, still on `com.mealdiary.app`)
    
    The app uses `window.location.origin` on web (e.g. `https://dev-app.mealdiary.co.uk`, not `/login`). Override with `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` if needed. Check the Metro console for `[Google Auth] redirectUri:` when debugging.
-4. For native builds, `expo-auth-session` uses `com.mealdiary.app:/oauthredirect` (not `mealdiary://`). Do not set `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` on Android unless you know the exact URI registered in Google Cloud Console.
+4. For Android native builds, `expo-auth-session` uses `uk.co.mealdiary.app:/oauthredirect` (not `mealdiary://`). Do not set `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` on Android unless you know the exact URI registered in Google Cloud Console.
 
 Flow: Google ID token → `POST /auth/google/verify-token` on the Express API (same as the Capacitor frontend native path).
 
