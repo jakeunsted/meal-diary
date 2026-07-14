@@ -8,32 +8,32 @@
         </button>
       </div>
 
-      <p class="mb-6 leading-relaxed">{{ $t('supportPage.intro') }}</p>
+      <p class="mb-6 leading-relaxed">{{ supportPage.intro }}</p>
 
       <div class="card bg-base-200 mb-8">
         <div class="card-body">
           <h2 class="card-title text-lg">{{ $t('Contact us') }}</h2>
-          <p>{{ $t('supportPage.contactBody') }}</p>
+          <p>{{ supportPage.contactBody }}</p>
           <a
             class="link link-primary text-lg"
-            href="mailto:support@mealdiary.co.uk"
+            :href="`mailto:${SUPPORT_EMAIL}`"
             data-testid="support-email"
           >
-            support@mealdiary.co.uk
+            {{ SUPPORT_EMAIL }}
           </a>
         </div>
       </div>
 
-      <h2 class="text-lg font-semibold mb-4">{{ $t('supportPage.faqTitle') }}</h2>
+      <h2 class="text-lg font-semibold mb-4">{{ supportPage.faqTitle }}</h2>
       <div
-        v-for="(faq, i) in faqs"
+        v-for="(faq, i) in supportPage.faqs"
         :key="i"
         class="collapse collapse-arrow bg-base-200 mb-2"
       >
         <input type="radio" name="support-faq" />
-        <div class="collapse-title font-medium">{{ rt(faq.q) }}</div>
+        <div class="collapse-title font-medium">{{ faq.q }}</div>
         <div class="collapse-content">
-          <p class="leading-relaxed">{{ rt(faq.a) }}</p>
+          <p class="leading-relaxed">{{ faq.a }}</p>
         </div>
       </div>
 
@@ -47,10 +47,8 @@ definePageMeta({
   layout: false
 });
 
+import { SUPPORT_EMAIL, supportPage } from '@meal-diary/shared';
 import LegalLinks from '~/components/LegalLinks.vue';
-
-const { tm, rt } = useI18n();
-const faqs = computed(() => tm('supportPage.faqs'));
 
 const goBack = () => {
   if (window.history.length > 1) {

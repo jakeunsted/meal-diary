@@ -8,26 +8,26 @@
         </button>
       </div>
       <p class="text-sm opacity-70 mb-6">
-        {{ $t('Last updated') }}: {{ $t('privacyPage.lastUpdated') }}
+        {{ $t('Last updated') }}: {{ privacyPage.lastUpdated }}
       </p>
 
-      <p class="mb-6 leading-relaxed">{{ $t('privacyPage.intro') }}</p>
+      <p class="mb-6 leading-relaxed">{{ privacyPage.intro }}</p>
 
-      <section v-for="(section, i) in sections" :key="i" class="mb-6">
-        <h2 class="text-lg font-semibold mb-2">{{ rt(section.title) }}</h2>
+      <section v-for="(section, i) in privacyPage.sections" :key="i" class="mb-6">
+        <h2 class="text-lg font-semibold mb-2">{{ section.title }}</h2>
         <p
           v-for="(paragraph, j) in section.body"
           :key="j"
           class="mb-2 leading-relaxed"
         >
-          {{ rt(paragraph) }}
+          {{ paragraph }}
         </p>
       </section>
 
       <section class="mb-6">
-        <h2 class="text-lg font-semibold mb-2">{{ $t('privacyPage.complaintsTitle') }}</h2>
+        <h2 class="text-lg font-semibold mb-2">{{ privacyPage.complaintsTitle }}</h2>
         <p class="mb-2 leading-relaxed">
-          {{ $t('privacyPage.complaintsBody') }}
+          {{ privacyPage.complaintsBody }}
           <a class="link link-primary" href="https://ico.org.uk/make-a-complaint/" target="_blank" rel="noopener">
             ico.org.uk/make-a-complaint
           </a>
@@ -36,7 +36,7 @@
 
       <section class="mb-6">
         <h2 class="text-lg font-semibold mb-2">{{ $t('Contact us') }}</h2>
-        <a class="link link-primary" href="mailto:support@mealdiary.co.uk">support@mealdiary.co.uk</a>
+        <a class="link link-primary" :href="`mailto:${SUPPORT_EMAIL}`">{{ SUPPORT_EMAIL }}</a>
       </section>
 
       <LegalLinks class="mt-8" />
@@ -49,10 +49,8 @@ definePageMeta({
   layout: false
 });
 
+import { SUPPORT_EMAIL, privacyPage } from '@meal-diary/shared';
 import LegalLinks from '~/components/LegalLinks.vue';
-
-const { tm, rt } = useI18n();
-const sections = computed(() => tm('privacyPage.sections'));
 
 const goBack = () => {
   if (window.history.length > 1) {

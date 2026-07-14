@@ -7,8 +7,7 @@ import { LegalSectionList } from '@/components/legal/LegalSectionList';
 import { Box } from '@/components/ui/box';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { privacyPage } from '@/lib/i18n/legalContent';
-
+import { privacyPage } from '@meal-diary/shared';
 const ICO_COMPLAINT_URL = 'https://ico.org.uk/make-a-complaint/';
 
 export default function PrivacyScreen() {
