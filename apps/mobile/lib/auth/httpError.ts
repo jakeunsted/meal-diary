@@ -12,7 +12,10 @@ export function isNetworkError(error: unknown): boolean {
   return (
     message.includes('network request failed') ||
     message.includes('failed to fetch') ||
-    message.includes('network error')
+    message.includes('network error') ||
+    message.includes('network connection was lost') ||
+    message.includes('the internet connection appears to be offline') ||
+    message.includes('load failed')
   );
 }
 

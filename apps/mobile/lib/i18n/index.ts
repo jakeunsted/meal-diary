@@ -70,6 +70,9 @@ const resources = {
         itemsUnchecked: 'Items unchecked',
         undo: 'Undo',
         actionFailed: 'Failed to update shopping list',
+        syncPending: 'Waiting for connection to sync changes…',
+        syncing: 'Syncing shopping list…',
+        syncFailed: 'Could not sync some shopping list changes',
       },
       recipesPage: {
         usageLabel: '{{count}} of {{max}} recipes',

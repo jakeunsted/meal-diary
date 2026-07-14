@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { apiFetch } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { clearMealDiaryCache } from '@/lib/diary/mealDiaryStorage';
+import { clearPendingQueue } from '@/lib/shopping-list/shoppingListPendingQueue';
 import { clearShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
 import { isSessionExpiredError } from '@/lib/auth/httpError';
 import { isTokenExpired } from '@/lib/auth/jwt';
@@ -169,6 +170,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   clearSession: async () => {
     await clearMealDiaryCache();
     await clearShoppingListCache();
+    await clearPendingQueue();
     await clearAuthState();
     queryClient.clear();
     set({ status: 'signedOut', user: null, entitlements: null });

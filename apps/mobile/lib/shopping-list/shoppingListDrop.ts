@@ -234,7 +234,7 @@ export function applyShoppingListDropHierarchy(
 
 export function buildShoppingListDepthMap(items: ShoppingListItem[]): Record<number, number> {
   const depthMap: Record<number, number> = {};
-  const byId = new Map<number, { id: number; parent_item_id: number | null }>();
+  const byId = new Map<number, { id: number; parent_item_id: number | string | null }>();
 
   for (const item of items) {
     if (typeof item.id === 'number') {
@@ -254,6 +254,10 @@ export function buildShoppingListDepthMap(items: ShoppingListItem[]): Record<num
     if (!entry || entry.parent_item_id === null) {
       depthMap[id] = 0;
       return 0;
+    }
+    if (typeof entry.parent_item_id !== 'number') {
+      depthMap[id] = 1;
+      return 1;
     }
     const parentDepth = computeDepth(entry.parent_item_id, visited);
     const depth = parentDepth + 1;

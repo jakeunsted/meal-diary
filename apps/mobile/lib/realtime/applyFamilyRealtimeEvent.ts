@@ -4,6 +4,7 @@ import { normalizeMealDiaryWeekKey } from '@/lib/diary/mealDiaryWeekKey';
 import { saveWeeklyMealsCache } from '@/lib/diary/mealDiaryStorage';
 import { mealDiaryKeys } from '@/lib/queries/mealDiary';
 import { setShoppingListQueryData } from '@/lib/queries/shoppingList';
+import { hasPendingOps } from '@/lib/shopping-list/shoppingListPendingQueue';
 import type { DailyMeal } from '@/types/mealDiary';
 import type { ShoppingListItem } from '@/types/shoppingList';
 
@@ -34,6 +35,11 @@ function applyShoppingListEvent(
   data: ShoppingListEventData,
   currentUserId: number | undefined
 ): void {
+  // Avoid clobbering optimistic offline edits; flush + GET reconciles later.
+  if (hasPendingOps(familyGroupId)) {
+    return;
+  }
+
   if (eventType === 'add-item' || eventType === 'delete-item') {
     const actorId = data.actorUserId ?? data.item?.created_by;
     if (isOwnActor(actorId, currentUserId)) {

@@ -13,6 +13,9 @@ import {
   toPersistableReorderPayload,
 } from '@/lib/shopping-list/shoppingListTree';
 import { applyShoppingListDropHierarchy } from '@/lib/shopping-list/shoppingListDrop';
+import { isNetworkError } from '@/lib/auth/httpError';
+import { isShoppingListOfflineQueuedError } from '@/lib/shopping-list/shoppingListOfflineError';
+import { discardPendingOpsForItem } from '@/lib/shopping-list/shoppingListPendingQueue';
 import {
   resolveShoppingListErrorMessage,
   setShoppingListQueryData,
@@ -29,20 +32,22 @@ import type { ShoppingList, ShoppingListItem } from '@/types/shoppingList';
 function toPersistableUpdates(
   updates: { id: number | string; name?: string; checked?: boolean }[]
 ) {
-  return updates
-    .filter((update): update is { id: number; name?: string; checked?: boolean } =>
-      typeof update.id === 'number'
-    )
-    .map((update) => {
-      const payload: { id: number; name?: string; checked?: boolean } = { id: update.id };
-      if (update.name !== undefined) {
-        payload.name = update.name;
-      }
-      if (update.checked !== undefined) {
-        payload.checked = update.checked;
-      }
-      return payload;
-    });
+  return updates.map((update) => {
+    const payload: { id: number | string; name?: string; checked?: boolean } = {
+      id: update.id,
+    };
+    if (update.name !== undefined) {
+      payload.name = update.name;
+    }
+    if (update.checked !== undefined) {
+      payload.checked = update.checked;
+    }
+    return payload;
+  });
+}
+
+function isIgnorableShoppingListMutationError(error: unknown): boolean {
+  return isShoppingListOfflineQueuedError(error) || isNetworkError(error);
 }
 
 export function useShoppingListEditor() {
@@ -154,6 +159,9 @@ export function useShoppingListEditor() {
             });
             return newItem.id;
           } catch (error) {
+            if (isIgnorableShoppingListMutationError(error)) {
+              return itemId;
+            }
             setActionError(resolveShoppingListErrorMessage(error));
             return null;
           }
@@ -172,11 +180,14 @@ export function useShoppingListEditor() {
         try {
           const updatedItem = await updateItemMutation.mutateAsync({
             familyGroupId,
-            itemId: itemId as number,
+            itemId,
             updates: { name: trimmedName },
           });
           return updatedItem.id;
         } catch (error) {
+          if (isIgnorableShoppingListMutationError(error)) {
+            return itemId;
+          }
           setActionError(resolveShoppingListErrorMessage(error));
           return null;
         }
@@ -248,6 +259,9 @@ export function useShoppingListEditor() {
           items: nextItems,
         }));
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          return;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
@@ -404,6 +418,10 @@ export function useShoppingListEditor() {
         setNewItemName('');
         return true;
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          setNewItemName('');
+          return true;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
         return false;
       }
@@ -419,10 +437,7 @@ export function useShoppingListEditor() {
 
       if (isTempShoppingListItemId(itemId)) {
         removeLocalItem(familyGroupId, itemId);
-        return;
-      }
-
-      if (typeof itemId !== 'number') {
+        void discardPendingOpsForItem(familyGroupId, itemId);
         return;
       }
 
@@ -431,6 +446,9 @@ export function useShoppingListEditor() {
       try {
         await deleteItemMutation.mutateAsync({ familyGroupId, itemId });
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          return;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
@@ -477,6 +495,9 @@ export function useShoppingListEditor() {
       try {
         await bulkUpdateMutation.mutateAsync({ familyGroupId, items: persistable });
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          return;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
@@ -509,6 +530,9 @@ export function useShoppingListEditor() {
       try {
         await bulkUpdateMutation.mutateAsync({ familyGroupId, items: persistable });
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          return;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
@@ -530,7 +554,7 @@ export function useShoppingListEditor() {
         }
       }
 
-      const persistableIds = [...ids].filter((id): id is number => typeof id === 'number');
+      const persistableIds = [...ids];
       if (!persistableIds.length) {
         return;
       }
@@ -540,6 +564,9 @@ export function useShoppingListEditor() {
       try {
         await bulkDeleteMutation.mutateAsync({ familyGroupId, ids: persistableIds });
       } catch (error) {
+        if (isIgnorableShoppingListMutationError(error)) {
+          return;
+        }
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
