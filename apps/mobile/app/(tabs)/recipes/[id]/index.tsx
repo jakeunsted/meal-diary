@@ -18,6 +18,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
+import { isNetworkError } from '@/lib/auth/httpError';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
@@ -25,6 +26,7 @@ import { buildShoppingListItemsFromRecipe } from '@/lib/recipe/buildShoppingList
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 import { useDeleteRecipe, useRecipe } from '@/lib/queries/recipes';
 import { useBulkAddShoppingListItems } from '@/lib/queries/shoppingList';
+import { isShoppingListOfflineQueuedError } from '@/lib/shopping-list/shoppingListOfflineError';
 import type { RecipeIngredient } from '@/types/recipe';
 
 function formatIngredientLine(ingredient: RecipeIngredient): string {
@@ -88,6 +90,11 @@ export default function RecipeDetailScreen() {
       await bulkAddShoppingListItemsMutation.mutateAsync({ familyGroupId, items });
       setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
     } catch (error) {
+      if (isShoppingListOfflineQueuedError(error) || isNetworkError(error)) {
+        setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
+        return;
+      }
+
       const entitlementFeature = getEntitlementFeatureFromError(error);
       if (entitlementFeature) {
         openPaywall(entitlementFeature);

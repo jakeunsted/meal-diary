@@ -1,7 +1,7 @@
 import type { ShoppingListItem, ShoppingListItemReorderChange } from '@/types/shoppingList';
 
 export function flattenShoppingListItems(items: ShoppingListItem[]): ShoppingListItem[] {
-  const siblingsByParent = new Map<number | null, ShoppingListItem[]>();
+  const siblingsByParent = new Map<number | string | null, ShoppingListItem[]>();
 
   for (const item of items) {
     const parentId = item.parent_item_id ?? null;
@@ -16,13 +16,11 @@ export function flattenShoppingListItems(items: ShoppingListItem[]): ShoppingLis
 
   const flattened: ShoppingListItem[] = [];
 
-  const walk = (parentId: number | null) => {
+  const walk = (parentId: number | string | null) => {
     const siblings = siblingsByParent.get(parentId) ?? [];
     for (const item of siblings) {
       flattened.push(item);
-      if (typeof item.id === 'number') {
-        walk(item.id);
-      }
+      walk(item.id);
     }
   };
 
@@ -33,7 +31,7 @@ export function flattenShoppingListItems(items: ShoppingListItem[]): ShoppingLis
 export function rebuildItemHierarchyFromFlatOrder(
   flatOrder: ShoppingListItem[]
 ): ShoppingListItemReorderChange[] {
-  const positionsByParent = new Map<number | null, number>();
+  const positionsByParent = new Map<number | string | null, number>();
 
   return flatOrder.map((item) => {
     const parentId = item.parent_item_id ?? null;
@@ -76,16 +74,12 @@ export function getActiveFlatShoppingListItems(items: ShoppingListItem[]): Shopp
 
 export function toPersistableReorderPayload(
   changes: ShoppingListItemReorderChange[]
-): { id: number; parent_item_id: number | null; position: number }[] {
-  return changes
-    .filter((change): change is ShoppingListItemReorderChange & { id: number } =>
-      typeof change.id === 'number'
-    )
-    .map(({ id, parent_item_id, position }) => ({
-      id,
-      parent_item_id,
-      position,
-    }));
+): ShoppingListItemReorderChange[] {
+  return changes.map(({ id, parent_item_id, position }) => ({
+    id,
+    parent_item_id,
+    position,
+  }));
 }
 
 export function isShoppingListDescendant(
@@ -118,7 +112,7 @@ export function enforceOneLevelShoppingListNesting(
   before: ShoppingListItem[],
   after: ShoppingListItem[]
 ): ShoppingListItem[] {
-  const promotions = new Map<number | string, number | null>();
+  const promotions = new Map<number | string, number | string | null>();
 
   for (const next of after) {
     const prev = before.find((item) => item.id === next.id);
@@ -181,18 +175,20 @@ export function indentShoppingListActiveItem(
  * Resolve the parent when indenting: become a child of the previous root item,
  * or join the previous child item's grouping.
  */
-export function resolveShoppingListIndentParent(previous: ShoppingListItem): number | null {
+export function resolveShoppingListIndentParent(
+  previous: ShoppingListItem
+): number | string | null {
   if (previous.parent_item_id === null) {
-    return typeof previous.id === 'number' ? previous.id : null;
+    return previous.id;
   }
 
   return previous.parent_item_id;
 }
 
 export function normalizeShoppingListParentId(
-  parentId: number | null,
+  parentId: number | string | null,
   allItems: ShoppingListItem[]
-): number | null {
+): number | string | null {
   if (parentId === null) {
     return null;
   }

@@ -16,6 +16,7 @@ import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { useAuthResume } from '@/lib/auth/useAuthResume';
+import { useShoppingListSync } from '@/lib/shopping-list/useShoppingListSync';
 import { useFamilyRealtime } from '@/lib/realtime/useFamilyRealtime';
 
 if (Platform.OS !== 'web') {
@@ -44,6 +45,8 @@ export default function RootLayout() {
 
   useAuthResume();
   useFamilyRealtime();
+  const familyGroupId = useAuthStore((state) => state.user?.family_group_id);
+  useShoppingListSync(familyGroupId ?? undefined);
 
   useEffect(() => {
     if (error) throw error;

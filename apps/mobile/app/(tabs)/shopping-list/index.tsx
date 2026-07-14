@@ -28,6 +28,7 @@ import {
 } from '@/lib/shopping-list/shoppingListDrop';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
+import { useShoppingListSyncStatus } from '@/lib/shopping-list/useShoppingListSyncStatus';
 import { useShoppingListViewSettings } from '@/lib/shopping-list/shoppingListViewSettings';
 import { useCurrentUser } from '@/lib/queries/profile';
 import type { ShoppingListItem } from '@/types/shoppingList';
@@ -40,6 +41,7 @@ export default function ShoppingListScreen() {
   const userId = userQuery.data?.id ?? 0;
   const shoppingList = useShoppingList(familyGroupId);
   const editor = useShoppingListEditor();
+  const syncStatus = useShoppingListSyncStatus(familyGroupId);
   const viewSettings = useShoppingListViewSettings();
   const newItemInputRef = useRef<TextInput>(null);
   const itemInputRefs = useRef(new Map<string, TextInput>());
@@ -195,6 +197,21 @@ export default function ShoppingListScreen() {
               >
                 <ButtonText>{t('shoppingList.retry')}</ButtonText>
               </Button>
+            </Box>
+          ) : null}
+
+          {syncStatus.pendingCount > 0 || syncStatus.isFlushing || syncStatus.syncError ? (
+            <Box
+              className="mx-4 mb-4 rounded-xl bg-ice/10 px-4 py-3"
+              testID="shopping-list-sync-banner"
+            >
+              <Text className="text-ice/80 text-sm">
+                {syncStatus.syncError
+                  ? t('shoppingList.syncFailed')
+                  : syncStatus.isFlushing || syncStatus.isOnline
+                    ? t('shoppingList.syncing')
+                    : t('shoppingList.syncPending')}
+              </Text>
             </Box>
           ) : null}
 

@@ -69,7 +69,8 @@
     "@types/react": "~19.2.2",
     "babel-plugin-module-resolver": "^5.0.3",
     "tailwindcss": "^4.3.2",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "vitest": "^4.1.8"
   },
   "scripts": {
     "dev": "BROWSER=none expo start --port 3002",
@@ -78,6 +79,7 @@
     "dev:android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
     "dev:tunnel": "BROWSER=none expo start --port 3002 --tunnel",
     "build": "tsc --noEmit",
+    "test": "vitest run",
     "start": "BROWSER=none expo start --port 3002",
     "android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
     "ios": "BROWSER=none expo start --port 3002 --ios"
