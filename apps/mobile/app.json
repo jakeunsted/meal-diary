@@ -48,7 +48,13 @@
           "backgroundColor": "#1A1F2E"
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.801654137636-ofu9en7n1iqrt3m3unq1kb9qluakurme"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

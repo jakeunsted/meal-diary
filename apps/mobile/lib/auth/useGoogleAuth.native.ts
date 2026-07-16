@@ -1,28 +1,36 @@
-import * as Google from 'expo-auth-session/providers/google';
-import * as WebBrowser from 'expo-web-browser';
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  isSuccessResponse,
+  statusCodes,
+} from '@react-native-google-signin/google-signin';
 import { useCallback, useState } from 'react';
 
 import { env } from '@/constants/env';
 import { ApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { completeGoogleSignIn } from '@/lib/auth/completeGoogleSignIn';
-import { getGoogleRedirectUri } from '@/lib/auth/googleRedirectUri';
 import type { User } from '@/types/api';
 
-WebBrowser.maybeCompleteAuthSession();
+let isConfigured = false;
 
-/** Web-only Google Sign-In via expo-auth-session. Native uses useGoogleAuth.native.ts. */
+function ensureGoogleSignInConfigured() {
+  if (isConfigured || !env.googleWebClientId) {
+    return;
+  }
+
+  // webClientId is required so the native SDK returns an idToken the API can verify.
+  GoogleSignin.configure({
+    webClientId: env.googleWebClientId,
+    offlineAccess: false,
+  });
+  isConfigured = true;
+}
+
 export function useGoogleAuth() {
   const setAuth = useAuthStore((state) => state.setAuth);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const redirectUri = getGoogleRedirectUri();
-  const webClientId = env.googleWebClientId || undefined;
-
-  const [, , promptAsync] = Google.useIdTokenAuthRequest({
-    webClientId,
-    ...(redirectUri ? { redirectUri } : {}),
-  });
 
   const signInWithGoogle = useCallback(async (): Promise<User> => {
     if (!env.isGoogleConfigured) {
@@ -32,28 +40,26 @@ export function useGoogleAuth() {
     setIsLoading(true);
     setError(null);
 
-    if (__DEV__) {
-      console.log('[Google Auth] redirectUri:', redirectUri);
-    }
-
     try {
-      const result = await promptAsync();
+      ensureGoogleSignInConfigured();
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-      if (result.type === 'cancel' || result.type === 'dismiss') {
+      const response = await GoogleSignin.signIn();
+      if (!isSuccessResponse(response)) {
         throw new Error('Google sign-in was cancelled');
       }
 
-      if (result.type !== 'success') {
-        throw new Error('Google sign-in failed');
-      }
-
-      const idToken = result.params.id_token;
+      const idToken = response.data.idToken;
       if (!idToken) {
         throw new Error('No ID token received from Google');
       }
 
       return await completeGoogleSignIn(idToken, setAuth);
     } catch (err) {
+      if (isErrorWithCode(err) && err.code === statusCodes.SIGN_IN_CANCELLED) {
+        throw new Error('Google sign-in was cancelled');
+      }
+
       const message =
         err instanceof ApiError
           ? err.message
@@ -68,7 +74,7 @@ export function useGoogleAuth() {
     } finally {
       setIsLoading(false);
     }
-  }, [promptAsync, redirectUri, setAuth]);
+  }, [setAuth]);
 
   return {
     signInWithGoogle,

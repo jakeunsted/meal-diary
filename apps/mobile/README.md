@@ -88,23 +88,42 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 
 | Variable | Purpose |
 |----------|---------|
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web client ID (audience verified by API) |
-| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client for `uk.co.mealdiary.app` (recommended for dev builds) |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web client ID (required — used as `webClientId` for native ID tokens + API audience check) |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client for `uk.co.mealdiary.app` (Console setup; native SDK picks it via package + SHA-1) |
+
+**Android uses the native Google Sign-In SDK** (`@react-native-google-signin/google-signin`), not browser/`expo-auth-session` redirects. Web still uses `expo-auth-session`.
 
 **Google Cloud Console setup:**
 
-1. Create or reuse the Web OAuth client (same as backend `GOOGLE_CLIENT_ID`).
-2. Create an Android OAuth client for package `uk.co.mealdiary.app` with your debug/release SHA-1 fingerprints.
-3. Add **Authorized redirect URIs** on the **Web application** OAuth client (same ID as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`). Register the exact origin — not the API callback URL:
+1. Create or reuse the Web OAuth client (same as backend `GOOGLE_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`).
+2. Create an Android OAuth client for package `uk.co.mealdiary.app` and add **both** SHA-1 fingerprints (debug + release):
+
+   ```bash
+   # Debug (android/app/debug.keystore)
+   keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android
+
+   # Release (path from android/keystore.properties → storeFile)
+   keytool -list -v -keystore ./meal-diary-release.keystore -alias meal-diary
+   ```
+
+   Current fingerprints for this repo:
+   - Debug SHA-1: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+   - Release SHA-1: `E7:AF:4A:A9:D9:5B:79:A8:9C:EC:AF:32:9F:06:CE:C4:8C:18:DB:39`
+3. For **web** only, add Authorized redirect URIs on the Web client:
    - `https://dev-app.mealdiary.co.uk`
    - `http://localhost:3002`
-   - `uk.co.mealdiary.app:/oauthredirect` (Android release/dev builds — required for `expo-auth-session`)
-   - `com.mealdiary.app:/oauthredirect` (iOS, still on `com.mealdiary.app`)
-   
-   The app uses `window.location.origin` on web (e.g. `https://dev-app.mealdiary.co.uk`, not `/login`). Override with `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` if needed. Check the Metro console for `[Google Auth] redirectUri:` when debugging.
-4. For Android native builds, `expo-auth-session` uses `uk.co.mealdiary.app:/oauthredirect` (not `mealdiary://`). Do not set `EXPO_PUBLIC_GOOGLE_REDIRECT_URI` on Android unless you know the exact URI registered in Google Cloud Console.
 
-Flow: Google ID token → `POST /auth/google/verify-token` on the Express API (same as the Capacitor frontend native path).
+   Native Android does **not** use `uk.co.mealdiary.app:/oauthredirect` anymore.
+
+Flow: Google ID token → `POST /auth/google/verify-token` on the Express API.
+
+After changing Google native config, re-run prebuild so the config plugin is applied:
+
+```bash
+cd apps/mobile
+npx expo prebuild --platform android
+cd android && ./gradlew assembleRelease
+```
 
 ## Native builds (Android-first)
 

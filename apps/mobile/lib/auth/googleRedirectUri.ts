@@ -14,7 +14,8 @@ export function isGoogleWebSignInAvailable(): boolean {
 
 /** Redirect URI sent to Google — must match an authorized URI on the Web OAuth client exactly. */
 export function getGoogleRedirectUri(): string {
-  if (env.googleRedirectUri) {
+  // Web-only override. Never use a https:// origin on native or Google returns mismatch.
+  if (Platform.OS === 'web' && env.googleRedirectUri) {
     return env.googleRedirectUri;
   }
 
