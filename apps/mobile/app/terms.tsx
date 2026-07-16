@@ -6,8 +6,7 @@ import { LegalSectionList } from '@/components/legal/LegalSectionList';
 import { Box } from '@/components/ui/box';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { termsPage } from '@/lib/i18n/legalContent';
-
+import { termsPage } from '@meal-diary/shared';
 export default function TermsScreen() {
   const { t } = useTranslation();
 

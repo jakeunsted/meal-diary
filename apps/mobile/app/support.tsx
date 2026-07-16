@@ -6,8 +6,7 @@ import { LegalPageShell } from '@/components/legal/LegalPageShell';
 import { Box } from '@/components/ui/box';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { supportPage } from '@/lib/i18n/legalContent';
-
+import { supportPage } from '@meal-diary/shared';
 export default function SupportScreen() {
   const { t } = useTranslation();
 

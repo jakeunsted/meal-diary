@@ -2,8 +2,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { getLocales } from 'expo-localization';
 
-import { privacyPage, supportPage, termsPage } from '@/lib/i18n/legalContent';
-
+import { privacyPage, supportPage, termsPage } from '@meal-diary/shared';
 const resources = {
   en: {
     translation: {
