@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Request, Response } from 'express';
 
-vi.mock('../../services/recipeImport.service.ts', () => ({
+vi.mock('../../services/recipe-import/import.service.ts', () => ({
   importRecipeFromUrl: vi.fn(),
 }));
 
@@ -17,12 +17,13 @@ vi.mock('../../services/entitlements.service.ts', async () => {
 });
 
 import * as EntitlementsService from '../../services/entitlements.service.ts';
-import * as recipeImportService from '../../services/recipeImport.service.ts';
+import * as recipeImportService from '../../services/recipe-import/import.service.ts';
 import { importRecipeFromUrl } from '../recipe/recipe.controller.ts';
 import {
   InvalidRecipeImportUrlError,
   RecipeImportParseError,
-} from '../../services/recipeImportParser.service.ts';
+  UnsupportedRecipeImportSiteError,
+} from '../../services/recipe-import/errors.ts';
 
 const mockRequest = (body: Record<string, unknown>, familyGroupId = 10, userId = 5) =>
   ({
@@ -157,6 +158,26 @@ describe('recipe.controller importRecipeFromUrl', () => {
     expect(res.status).toHaveBeenCalledWith(422);
     expect(res.json).toHaveBeenCalledWith({
       message: 'Recipe schema not found on page',
+    });
+  });
+
+  it('returns 422 when a site-specific import is unsupported', async () => {
+    vi.mocked(EntitlementsService.assertCanCreateRecipe).mockResolvedValue({} as never);
+    vi.mocked(recipeImportService.importRecipeFromUrl).mockRejectedValue(
+      new UnsupportedRecipeImportSiteError()
+    );
+
+    const req = mockRequest({
+      family_group_id: 10,
+      url: 'https://www.gousto.co.uk/cookbook/recipes/broken',
+    });
+    const res = mockResponse();
+
+    await importRecipeFromUrl(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(422);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "This site isn't supported",
     });
   });
 
