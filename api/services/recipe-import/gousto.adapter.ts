@@ -45,7 +45,8 @@ export const isGoustoRecipeUrl = (url: URL): boolean => {
 };
 
 export const extractGoustoRecipeSlug = (url: URL): string | null => {
-  const match = url.pathname.match(/\/cookbook\/recipes\/([^/?#]+)/i);
+  // /cookbook/recipes/{slug} and /cookbook/{category}/{slug} (e.g. chicken-recipes)
+  const match = url.pathname.match(/\/cookbook\/(?:[^/]+\/)+([^/?#]+)\/?$/i);
   return match?.[1] ? decodeURIComponent(match[1]) : null;
 };
 

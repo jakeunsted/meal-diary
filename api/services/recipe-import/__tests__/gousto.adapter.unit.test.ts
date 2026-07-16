@@ -22,6 +22,12 @@ describe('recipe-import/gousto.adapter', () => {
         new URL('https://www.gousto.co.uk/cookbook/recipes/truffle-cacio-e-pepe-sauce-with-spinach-ricotta-ravioli')
       )
     ).toBe('truffle-cacio-e-pepe-sauce-with-spinach-ricotta-ravioli');
+
+    expect(
+      extractGoustoRecipeSlug(
+        new URL('https://www.gousto.co.uk/cookbook/chicken-recipes/sicilian-chicken-red-pepper-linguine')
+      )
+    ).toBe('sicilian-chicken-red-pepper-linguine');
   });
 
   it('parses quantity and unit from Gousto ingredient labels', () => {
@@ -140,5 +146,41 @@ describe('recipe-import/gousto.adapter', () => {
     );
     expect(draft.name).toBe('Imported Gousto recipe');
     expect(draft.ingredients).toEqual([{ name: 'Ravioli', quantity: 250, unit: 'g' }]);
+  });
+
+  it('routes category Gousto urls through the Gousto adapter', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        data: [{
+          attributes: {
+            name: 'Sicilian Chicken Red Pepper Linguine',
+            description: 'From Gousto API',
+            basics: [],
+            steps: [{ number: 1, instruction: '<p>Cook</p>' }],
+          },
+          relationships: {
+            ingredients: {
+              data: [{
+                id: '1',
+                type: 'ingredient',
+                labels: { for2: 'Chicken (320g)' },
+              }],
+            },
+          },
+        }],
+      }),
+    });
+
+    const draft = await parseRecipeFromUrl(
+      'https://www.gousto.co.uk/cookbook/chicken-recipes/sicilian-chicken-red-pepper-linguine',
+      fetchImpl as unknown as typeof fetch
+    );
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://production-api.gousto.co.uk/cookbook/v1/recipes/sicilian-chicken-red-pepper-linguine',
+      expect.any(Object)
+    );
+    expect(draft.name).toBe('Sicilian Chicken Red Pepper Linguine');
   });
 });
