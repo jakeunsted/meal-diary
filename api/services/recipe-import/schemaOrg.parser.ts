@@ -1,30 +1,5 @@
-export interface ParsedRecipeIngredient {
-  name: string;
-  quantity?: number | null;
-  unit?: string | null;
-}
-
-export interface ParsedRecipeDraft {
-  name: string;
-  description?: string;
-  instructions?: string;
-  portions?: number;
-  ingredients: ParsedRecipeIngredient[];
-}
-
-export class InvalidRecipeImportUrlError extends Error {
-  constructor(message = 'Invalid recipe URL') {
-    super(message);
-    this.name = 'InvalidRecipeImportUrlError';
-  }
-}
-
-export class RecipeImportParseError extends Error {
-  constructor(message = 'Failed to parse recipe from URL') {
-    super(message);
-    this.name = 'RecipeImportParseError';
-  }
-}
+import { RecipeImportParseError } from './errors.ts';
+import type { ParsedRecipeDraft, ParsedRecipeIngredient } from './types.ts';
 
 const commonUnits = new Set([
   'tsp',
@@ -121,7 +96,7 @@ const parseQuantityToken = (value: string): number | null => {
   return parsedParts.reduce<number>((sum, part) => sum + (part ?? 0), 0);
 };
 
-const parseIngredientText = (value: string): ParsedRecipeIngredient => {
+export const parseIngredientText = (value: string): ParsedRecipeIngredient => {
   const trimmed = sanitizeWhitespace(value);
   const parts = trimmed.split(' ');
   const quantityParts: string[] = [];
@@ -219,20 +194,6 @@ const isRecipeNode = (node: Record<string, unknown>): boolean => {
   return false;
 };
 
-export const normalizeRecipeImportUrl = (value: string): string => {
-  try {
-    const url = new URL(value.trim());
-
-    if (!['http:', 'https:'].includes(url.protocol)) {
-      throw new InvalidRecipeImportUrlError();
-    }
-
-    return url.toString();
-  } catch {
-    throw new InvalidRecipeImportUrlError();
-  }
-};
-
 export const parseRecipeFromHtml = (html: string): ParsedRecipeDraft => {
   const recipeNode = extractJsonLdNodes(html)
     .flatMap(flattenJsonLdNodes)
@@ -270,12 +231,11 @@ export const parseRecipeFromHtml = (html: string): ParsedRecipeDraft => {
   };
 };
 
-export const parseRecipeFromUrl = async (
-  value: string,
+export const fetchAndParseSchemaOrgRecipe = async (
+  url: string,
   fetchImpl: typeof fetch = fetch
 ): Promise<ParsedRecipeDraft> => {
-  const normalizedUrl = normalizeRecipeImportUrl(value);
-  const response = await fetchImpl(normalizedUrl, {
+  const response = await fetchImpl(url, {
     headers: {
       'User-Agent': 'MealDiaryRecipeImporter/1.0',
       'Accept': 'text/html,application/xhtml+xml',

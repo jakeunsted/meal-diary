@@ -1,18 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../recipe.service.ts', () => ({
+vi.mock('../../recipe.service.ts', () => ({
   createRecipe: vi.fn(),
 }));
 
-vi.mock('../recipeImportParser.service.ts', () => ({
+vi.mock('../parseRecipeFromUrl.ts', () => ({
   parseRecipeFromUrl: vi.fn(),
 }));
 
-import { createRecipe } from '../recipe.service.ts';
-import { parseRecipeFromUrl } from '../recipeImportParser.service.ts';
-import { importRecipeFromUrl } from '../recipeImport.service.ts';
+import { createRecipe } from '../../recipe.service.ts';
+import { parseRecipeFromUrl } from '../parseRecipeFromUrl.ts';
+import { importRecipeFromUrl } from '../import.service.ts';
 
-describe('recipeImport.service', () => {
+describe('recipe-import/import.service', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

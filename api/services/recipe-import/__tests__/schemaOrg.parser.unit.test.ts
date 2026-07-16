@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  InvalidRecipeImportUrlError,
-  parseRecipeFromHtml,
-  parseRecipeFromUrl,
-  RecipeImportParseError,
-} from '../recipeImportParser.service.ts';
+import { InvalidRecipeImportUrlError, RecipeImportParseError } from '../errors.ts';
+import { parseRecipeFromHtml } from '../schemaOrg.parser.ts';
+import { normalizeRecipeImportUrl, parseRecipeFromUrl } from '../parseRecipeFromUrl.ts';
 
-describe('recipeImportParser.service', () => {
+describe('recipe-import/schemaOrg.parser', () => {
   it('maps recipe schema into the internal draft shape', () => {
     const html = `
       <html>
@@ -67,12 +64,16 @@ describe('recipeImportParser.service', () => {
     });
   });
 
-  it('rejects malformed urls', async () => {
-    await expect(parseRecipeFromUrl('not-a-url')).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
+  it('rejects malformed urls', () => {
+    expect(() => normalizeRecipeImportUrl('not-a-url')).toThrow(InvalidRecipeImportUrlError);
   });
 
   it('rejects pages without recipe schema', () => {
     expect(() => parseRecipeFromHtml('<html><body>No schema here</body></html>'))
       .toThrow(RecipeImportParseError);
+  });
+
+  it('rejects malformed urls through parseRecipeFromUrl', async () => {
+    await expect(parseRecipeFromUrl('not-a-url')).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
   });
 });

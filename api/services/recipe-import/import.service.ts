@@ -1,8 +1,6 @@
-import { createRecipe } from './recipe.service.ts';
-import {
-  parseRecipeFromUrl,
-  type ParsedRecipeDraft,
-} from './recipeImportParser.service.ts';
+import { createRecipe } from '../recipe.service.ts';
+import { parseRecipeFromUrl } from './parseRecipeFromUrl.ts';
+import type { ParsedRecipeDraft } from './types.ts';
 
 interface ImportRecipeFromUrlInput {
   family_group_id: number;

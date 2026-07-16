@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express';
 import { User } from '../../db/models/associations.ts';
 import * as recipeService from '../../services/recipe.service.ts';
-import * as recipeImportService from '../../services/recipeImport.service.ts';
+import * as recipeImportService from '../../services/recipe-import/import.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import {
   InvalidRecipeImportUrlError,
   RecipeImportParseError,
-} from '../../services/recipeImportParser.service.ts';
+} from '../../services/recipe-import/errors.ts';
 
 /**
  * Get all recipes for a family group
