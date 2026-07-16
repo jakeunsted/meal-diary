@@ -122,6 +122,27 @@ const resources = {
         updateFailed: 'Failed to update recipe',
         deleteFailed: 'Failed to delete recipe',
       },
+      recipeImport: {
+        chooseMethodTitle: 'How would you like to add this recipe?',
+        chooseMethodDescription: 'Create it by hand or import it from a recipe website.',
+        manualOptionTitle: 'Create manually',
+        manualOptionDescription: 'Start with an empty recipe form.',
+        importOptionTitle: 'Import from URL',
+        importOptionDescription: "Paste a recipe link and we'll pull in what we can.",
+        changeMethod: 'Change method',
+        title: 'Import recipe from URL',
+        description: "Paste a link to a recipe page and we'll create a recipe for your family.",
+        urlLabel: 'Recipe URL',
+        urlPlaceholder: 'https://example.com/your-recipe',
+        submit: 'Import Recipe',
+        loadingTitle: 'Importing recipe...',
+        genericError: 'Failed to import recipe',
+        progress: {
+          validating: 'Validating the link...',
+          fetching: 'Fetching the recipe page...',
+          creating: 'Creating your recipe...',
+        },
+      },
       paywall: {
         close: 'Close',
         family_members: {

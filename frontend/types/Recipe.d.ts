@@ -25,3 +25,7 @@ export interface RecipeState {
   loading: boolean;
   searchQuery: string;
 }
+
+export interface ImportRecipeFromUrlPayload {
+  url: string;
+}

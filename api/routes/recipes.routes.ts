@@ -191,6 +191,14 @@ router.post('/', authenticateToken, async (req, res, next) => {
   }
 });
 
+router.post('/import-from-url', authenticateToken, async (req, res, next) => {
+  try {
+    await recipeController.importRecipeFromUrl(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 /**
  * @openapi
  * /recipes/{id}:

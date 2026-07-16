@@ -2,14 +2,14 @@ import { Recipe, RecipeIngredient, DailyMeal } from '../db/models/associations.t
 import { Op } from 'sequelize';
 import sequelize from '../db/models/index.ts';
 
-interface IngredientInput {
+export interface IngredientInput {
   id?: number;
   name: string;
   quantity?: number;
   unit?: string;
 }
 
-interface CreateRecipeInput {
+export interface CreateRecipeInput {
   family_group_id: number;
   created_by: number;
   name: string;

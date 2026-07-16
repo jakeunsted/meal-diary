@@ -18,6 +18,7 @@ describe('Recipes', () => {
   it('creates, edits and deletes a recipe', () => {
     cy.get('[data-testid="recipes-new-button"]').click();
     cy.location('pathname').should('eq', '/recipes/create');
+    cy.get('[data-testid="recipe-create-method-manual"]').click();
 
     cy.get('[data-testid="recipe-form-name-input"]').type('Cypress Chilli');
     cy.get('[data-testid="recipe-form-description-input"]').type('A simple chilli.');

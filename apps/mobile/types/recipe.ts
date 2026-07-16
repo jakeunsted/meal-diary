@@ -26,6 +26,10 @@ export interface CreateRecipePayload {
   ingredients?: RecipeIngredient[];
 }
 
+export interface ImportRecipeFromUrlPayload {
+  url: string;
+}
+
 export interface UpdateRecipePayload {
   name?: string;
   description?: string;

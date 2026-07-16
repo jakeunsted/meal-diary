@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api/client';
 import type {
   CreateRecipePayload,
+  ImportRecipeFromUrlPayload,
   Recipe,
   UpdateRecipePayload,
 } from '@/types/recipe';
@@ -40,6 +41,19 @@ export async function createRecipe(
     body: {
       family_group_id: familyGroupId,
       ...payload,
+    },
+  });
+}
+
+export async function importRecipeFromUrl(
+  familyGroupId: number,
+  payload: ImportRecipeFromUrlPayload
+): Promise<Recipe> {
+  return apiFetch<Recipe>('/recipes/import-from-url', {
+    method: 'POST',
+    body: {
+      family_group_id: familyGroupId,
+      url: payload.url,
     },
   });
 }
@@ -105,6 +119,24 @@ export function useCreateRecipe() {
       familyGroupId: number;
       payload: CreateRecipePayload;
     }) => createRecipe(familyGroupId, payload),
+    onSuccess: (recipe, { familyGroupId }) => {
+      queryClient.setQueryData(recipeKeys.detail(recipe.id), recipe);
+      invalidateRecipeQueries(queryClient, familyGroupId);
+    },
+  });
+}
+
+export function useImportRecipeFromUrl() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      familyGroupId,
+      payload,
+    }: {
+      familyGroupId: number;
+      payload: ImportRecipeFromUrlPayload;
+    }) => importRecipeFromUrl(familyGroupId, payload),
     onSuccess: (recipe, { familyGroupId }) => {
       queryClient.setQueryData(recipeKeys.detail(recipe.id), recipe);
       invalidateRecipeQueries(queryClient, familyGroupId);
