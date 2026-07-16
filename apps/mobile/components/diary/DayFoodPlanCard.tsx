@@ -38,37 +38,35 @@ function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal, onRecipePress
   const { t } = useTranslation();
 
   return (
-    <Box className="mb-3 flex-row items-center justify-between" testID={`${testIdPrefix}-row`}>
-      <Text className="text-ice font-medium">{label}</Text>
+    <Box className="mb-3 flex-row items-center gap-3" testID={`${testIdPrefix}-row`}>
+      <Text className="shrink-0 text-ice font-medium">{label}</Text>
       {meal?.name ? (
-        <Box className="max-w-[60%] flex-row items-center gap-1">
-          {meal.recipeId ? (
-            <Pressable
-              onPress={onRecipePress ? () => onRecipePress(meal.recipeId!) : undefined}
-              disabled={!onRecipePress}
-              testID={`${testIdPrefix}-recipe-badge`}
-              accessibilityRole="button"
-            >
-              <Box className="rounded-full bg-primary px-3 py-1">
-                <Text className="text-ice text-sm">{meal.name}</Text>
-              </Box>
-            </Pressable>
-          ) : (
-            <Pressable
-              onPress={readOnly ? undefined : onSetMeal}
-              disabled={readOnly}
-              testID={`${testIdPrefix}-custom-badge`}
-              accessibilityRole="button"
-            >
-              <Box className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-1">
-                <Text className="text-ice text-sm">{meal.name}</Text>
-                {!readOnly ? (
-                  <FontAwesome name="pencil" size={12} color="rgba(241, 245, 249, 0.7)" />
-                ) : null}
-              </Box>
-            </Pressable>
-          )}
-          {meal.recipeId && !readOnly ? (
+        <Box className="min-w-0 flex-1 flex-row items-center justify-end gap-1.5">
+          <Pressable
+            className="min-w-0 shrink"
+            onPress={
+              meal.recipeId
+                ? onRecipePress
+                  ? () => onRecipePress(meal.recipeId!)
+                  : undefined
+                : readOnly
+                  ? undefined
+                  : onSetMeal
+            }
+            disabled={meal.recipeId ? !onRecipePress : readOnly}
+            testID={
+              meal.recipeId ? `${testIdPrefix}-recipe-badge` : `${testIdPrefix}-custom-badge`
+            }
+            accessibilityRole="button"
+            accessibilityLabel={meal.name}
+          >
+            <Box className="max-w-full rounded-full bg-primary px-3 py-1">
+              <Text className="text-ice text-sm" numberOfLines={1}>
+                {meal.name}
+              </Text>
+            </Box>
+          </Pressable>
+          {!readOnly ? (
             <Pressable
               onPress={onSetMeal}
               testID={`edit-${testIdPrefix}-button`}
@@ -79,9 +77,11 @@ function MealRow({ label, meal, readOnly, testIdPrefix, onSetMeal, onRecipePress
           ) : null}
         </Box>
       ) : !readOnly ? (
-        <Button size="sm" variant="outline" onPress={onSetMeal} testID={`set-meal-${testIdPrefix}-button`}>
-          <ButtonText>{t('diary.setMeal')}</ButtonText>
-        </Button>
+        <Box className="flex-1 flex-row justify-end">
+          <Button size="sm" variant="outline" onPress={onSetMeal} testID={`set-meal-${testIdPrefix}-button`}>
+            <ButtonText>{t('diary.setMeal')}</ButtonText>
+          </Button>
+        </Box>
       ) : null}
     </Box>
   );
