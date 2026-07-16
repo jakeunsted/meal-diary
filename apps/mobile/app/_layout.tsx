@@ -34,23 +34,14 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
-export default function RootLayout() {
+function RootLayoutNav() {
   const router = useRouter();
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
-  const [loaded, error] = useFonts({
-    Inter_400Regular,
-    Inter_600SemiBold,
-    ...FontAwesome.font,
-  });
+  const familyGroupId = useAuthStore((state) => state.user?.family_group_id);
 
   useAuthResume();
   useFamilyRealtime();
-  const familyGroupId = useAuthStore((state) => state.user?.family_group_id);
   useShoppingListSync(familyGroupId ?? undefined);
-
-  useEffect(() => {
-    if (error) throw error;
-  }, [error]);
 
   useEffect(() => {
     void initializeAuth();
@@ -62,6 +53,29 @@ export default function RootLayout() {
     });
     return () => setSessionExpiredHandler(null);
   }, [router]);
+
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="privacy" />
+      <Stack.Screen name="terms" />
+      <Stack.Screen name="support" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const [loaded, error] = useFonts({
+    Inter_400Regular,
+    Inter_600SemiBold,
+    ...FontAwesome.font,
+  });
+
+  useEffect(() => {
+    if (error) throw error;
+  }, [error]);
 
   useEffect(() => {
     if (loaded) {
@@ -78,14 +92,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SafeAreaProvider>
           <GestureHandlerRootView style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.base } }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="privacy" />
-              <Stack.Screen name="terms" />
-              <Stack.Screen name="support" />
-            </Stack>
+            <RootLayoutNav />
           </GestureHandlerRootView>
         </SafeAreaProvider>
       </QueryClientProvider>

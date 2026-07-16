@@ -31,6 +31,8 @@ Press **`a`** in the Expo CLI to open on the Android emulator, or scan the QR co
 
 **Android emulator:** use `npm run dev:mobile:android`. That advertises `exp://10.0.2.2:3002` (the emulator’s host loopback). Do not use `--localhost` on macOS — Metro can bind IPv6-only (`[::1]`), which breaks Expo Go with `Failed to download remote update`.
 
+**`Failed to download remote update` on emulator/device:** the dev server is probably advertising `dev-app.mealdiary.co.uk` (from `EXPO_PACKAGER_PROXY_URL` / `dev:mobile:proxy:https` or a Cursor/IDE launch config). That hostname only resolves on your Mac (`/etc/hosts` → `127.0.0.1`); emulators and phones cannot reach it. Stop Metro and restart with `npm run dev:mobile:android` (emulator) or `npm run dev:mobile` (physical device). Use `dev:mobile:proxy:https` only for browser/web dev.
+
 **Physical device:** phone and Mac must be on the same Wi‑Fi (client isolation off). If the QR code fails, use a tunnel:
 
 ```bash
