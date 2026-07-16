@@ -8,6 +8,9 @@ const webUrl = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://app.mealdiary.co.uk';
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 const googleRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI ?? '';
+const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
+const posthogHost =
+  process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://prxhg.mealdiary.co.uk';
 
 export const env = {
   apiUrl,
@@ -15,5 +18,7 @@ export const env = {
   googleWebClientId,
   googleAndroidClientId,
   googleRedirectUri,
+  posthogKey,
+  posthogHost,
   isGoogleConfigured: googleWebClientId.length > 0,
 } as const;
