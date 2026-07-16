@@ -120,8 +120,11 @@ export function SetMealModal({
                 onPress={() => setRecipePickerVisible(true)}
                 className="border-ice/20 bg-base rounded-lg border px-4 py-3"
                 testID="set-meal-recipe-select"
+                accessibilityLabel={recipeSelectLabel}
               >
-                <Text className="text-ice text-sm">{recipeSelectLabel}</Text>
+                <Text className="text-ice text-sm" numberOfLines={1}>
+                  {recipeSelectLabel}
+                </Text>
               </Pressable>
             </Box>
           ) : recipesQuery.isLoading ? (
@@ -132,7 +135,7 @@ export function SetMealModal({
 
           {recipeId && mealName ? (
             <Box
-              className="bg-primary/20 mb-4 self-start rounded-full px-3 py-1"
+              className="bg-primary/20 mb-4 max-w-full self-start rounded-2xl px-4 py-2"
               testID="set-meal-selected-recipe"
             >
               <Text className="text-primary text-sm">{mealName}</Text>
@@ -220,7 +223,10 @@ export function SetMealModal({
                   className={`mb-2 rounded-lg px-4 py-3 ${isSelected ? 'bg-primary/20' : 'bg-base'}`}
                   testID={`set-meal-recipe-option-${recipe.id}`}
                 >
-                  <Text className={`text-sm ${isSelected ? 'text-primary' : 'text-ice'}`}>
+                  <Text
+                    className={`text-sm ${isSelected ? 'text-primary' : 'text-ice'}`}
+                    numberOfLines={2}
+                  >
                     {recipe.name}
                   </Text>
                 </Pressable>
