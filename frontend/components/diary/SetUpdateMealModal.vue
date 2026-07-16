@@ -11,8 +11,9 @@
         <span class="label-text text-sm">{{ $t('Select Recipe') }}</span>
       </label>
       <select
-        class="select select-bordered w-full"
+        class="select select-bordered w-full truncate"
         data-testid="set-meal-recipe-select"
+        :title="selectedRecipeName || undefined"
         :value="selectedRecipeId || ''"
         @change="handleRecipeSelect($event.target.value)"
       >
@@ -21,6 +22,7 @@
           v-for="recipe in recipes"
           :key="recipe.id"
           :value="recipe.id"
+          :title="recipe.name"
         >
           {{ recipe.name }}
         </option>
@@ -47,8 +49,12 @@
     />
 
     <!-- Show selected recipe info -->
-    <div v-if="selectedRecipeId && selectedRecipeName" class="mb-4">
-      <div class="badge badge-primary badge-lg" data-testid="set-meal-selected-recipe">
+    <div v-if="selectedRecipeId && selectedRecipeName" class="mb-4 max-w-full">
+      <div
+        class="inline-block max-w-full break-words rounded-2xl bg-primary px-4 py-2 text-sm font-medium text-primary-content"
+        data-testid="set-meal-selected-recipe"
+        :title="selectedRecipeName"
+      >
         {{ selectedRecipeName }}
       </div>
     </div>
