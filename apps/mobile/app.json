@@ -17,13 +17,13 @@
       "bundleIdentifier": "com.mealdiary.app"
     },
     "android": {
-      "package": "com.mealdiary.app",
+      "package": "uk.co.mealdiary.app",
       "intentFilters": [
         {
           "action": "VIEW",
           "data": [
             {
-              "scheme": "com.mealdiary.app",
+              "scheme": "uk.co.mealdiary.app",
               "path": "/oauthredirect"
             }
           ],
