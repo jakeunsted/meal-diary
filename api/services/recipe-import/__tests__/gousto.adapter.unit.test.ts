@@ -4,6 +4,7 @@ import {
   extractGoustoRecipeSlug,
   isGoustoRecipeUrl,
   mapGoustoApiResponse,
+  parseGoustoIngredientLabel,
   parseGoustoRecipeFromUrl,
 } from '../gousto.adapter.ts';
 import { UnsupportedRecipeImportSiteError } from '../errors.ts';
@@ -21,6 +22,27 @@ describe('recipe-import/gousto.adapter', () => {
         new URL('https://www.gousto.co.uk/cookbook/recipes/truffle-cacio-e-pepe-sauce-with-spinach-ricotta-ravioli')
       )
     ).toBe('truffle-cacio-e-pepe-sauce-with-spinach-ricotta-ravioli');
+  });
+
+  it('parses quantity and unit from Gousto ingredient labels', () => {
+    expect(parseGoustoIngredientLabel('Cornish clotted cream (40g)')).toEqual({
+      name: 'Cornish clotted cream',
+      quantity: 40,
+      unit: 'g',
+    });
+    expect(parseGoustoIngredientLabel('Cracked black pepper (2.5g)')).toEqual({
+      name: 'Cracked black pepper',
+      quantity: 2.5,
+      unit: 'g',
+    });
+    expect(parseGoustoIngredientLabel('Grated Italian hard cheese (30g) x2')).toEqual({
+      name: 'Grated Italian hard cheese',
+      quantity: 60,
+      unit: 'g',
+    });
+    expect(parseGoustoIngredientLabel('Pepper')).toEqual({
+      name: 'Pepper',
+    });
   });
 
   it('maps Gousto API payloads into the internal draft shape', () => {
@@ -58,7 +80,7 @@ describe('recipe-import/gousto.adapter', () => {
       instructions: '1. Boil the water\n\n2. Cook the ravioli',
       portions: 2,
       ingredients: [
-        { name: 'Spinach & ricotta ravioli (250g)' },
+        { name: 'Spinach & ricotta ravioli', quantity: 250, unit: 'g' },
         { name: 'Salt' },
         { name: 'Pepper' },
       ],
@@ -117,6 +139,6 @@ describe('recipe-import/gousto.adapter', () => {
       })
     );
     expect(draft.name).toBe('Imported Gousto recipe');
-    expect(draft.ingredients).toEqual([{ name: 'Ravioli (250g)' }]);
+    expect(draft.ingredients).toEqual([{ name: 'Ravioli', quantity: 250, unit: 'g' }]);
   });
 });

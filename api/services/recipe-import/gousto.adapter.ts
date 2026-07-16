@@ -59,6 +59,32 @@ const stripHtml = (value: string): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
+// e.g. "Cornish clotted cream (40g)", "Cracked black pepper (2.5g) x2"
+const goustoQuantityLabelPattern = /^(.+?)\s*\((\d+(?:\.\d+)?)\s*([a-zA-Z]+)\)(?:\s*x(\d+))?$/i;
+
+export const parseGoustoIngredientLabel = (label: string): ParsedRecipeIngredient => {
+  const trimmed = label.trim();
+  const match = trimmed.match(goustoQuantityLabelPattern);
+
+  if (!match) {
+    return { name: trimmed };
+  }
+
+  const [, name, quantityText, unit, packCountText] = match;
+  const packSize = Number.parseFloat(quantityText);
+  const packCount = packCountText ? Number.parseInt(packCountText, 10) : 1;
+
+  if (!Number.isFinite(packSize) || !Number.isFinite(packCount) || packCount < 1) {
+    return { name: trimmed };
+  }
+
+  return {
+    name: name.trim(),
+    quantity: packSize * packCount,
+    unit: unit.toLowerCase(),
+  };
+};
+
 const mapGoustoIngredients = (
   refs: GoustoIngredientRef[],
   basics: GoustoBasic[],
@@ -67,7 +93,7 @@ const mapGoustoIngredients = (
   const boxed = refs
     .map((ref) => ref.labels?.[portionKey]?.trim())
     .filter((label): label is string => !!label)
-    .map((label) => ({ name: label }));
+    .map(parseGoustoIngredientLabel);
 
   const pantry = basics
     .map((basic) => basic.name?.trim())
