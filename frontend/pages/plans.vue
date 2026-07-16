@@ -77,15 +77,15 @@ const capturePlansReturnPath = () => {
     return;
   }
 
-  if (document.referrer.includes('stripe.com')) {
-    return;
-  }
-
   let returnPath = isLoggedIn.value ? '/profile' : '/login';
 
   if (document.referrer) {
     try {
       const referrerUrl = new URL(document.referrer);
+      const host = referrerUrl.hostname;
+      if (host === 'stripe.com' || host.endsWith('.stripe.com')) {
+        return;
+      }
       if (
         referrerUrl.origin === window.location.origin &&
         referrerUrl.pathname !== '/plans'

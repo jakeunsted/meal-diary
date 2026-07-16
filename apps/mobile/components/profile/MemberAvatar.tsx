@@ -15,7 +15,15 @@ function isRemoteUrl(avatarUrl: string): boolean {
 }
 
 function isSvgAvatarUrl(avatarUrl: string): boolean {
-  return avatarUrl.includes('avataaars.io') || /\.svg(\?|$)/i.test(avatarUrl);
+  try {
+    const { hostname } = new URL(avatarUrl);
+    if (hostname === 'avataaars.io' || hostname.endsWith('.avataaars.io')) {
+      return true;
+    }
+  } catch {
+    // non-URL strings fall through to extension check
+  }
+  return /\.svg(\?|$)/i.test(avatarUrl);
 }
 
 export function MemberAvatar({ avatarUrl, size = 64 }: MemberAvatarProps) {
