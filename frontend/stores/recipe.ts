@@ -1,7 +1,12 @@
 import { defineStore } from 'pinia';
 import { useUserStore } from './user';
 import { useApi } from '~/composables/useApi';
-import type { Recipe, RecipeIngredient, RecipeState } from '~/types/Recipe';
+import type {
+  ImportRecipeFromUrlPayload,
+  Recipe,
+  RecipeIngredient,
+  RecipeState,
+} from '~/types/Recipe';
 
 export const useRecipeStore = defineStore('recipe', {
   state: (): RecipeState => ({
@@ -81,6 +86,31 @@ export const useRecipeStore = defineStore('recipe', {
         return response;
       } catch (error) {
         console.error('Error creating recipe:', error);
+        throw error;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async importRecipeFromUrl({ url }: ImportRecipeFromUrlPayload) {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      try {
+        this.loading = true;
+        const { api } = useApi();
+        const response = await api<Recipe>('/api/recipes/import-from-url', {
+          method: 'POST',
+          body: {
+            family_group_id: userStore.user.family_group_id,
+            url,
+          },
+        });
+        this.recipes.push(response);
+        this.currentRecipe = response;
+        return response;
+      } catch (error) {
+        console.error('Error importing recipe:', error);
         throw error;
       } finally {
         this.loading = false;

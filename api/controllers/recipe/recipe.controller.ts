@@ -1,8 +1,13 @@
 import type { Request, Response } from 'express';
 import { User } from '../../db/models/associations.ts';
 import * as recipeService from '../../services/recipe.service.ts';
+import * as recipeImportService from '../../services/recipeImport.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
+import {
+  InvalidRecipeImportUrlError,
+  RecipeImportParseError,
+} from '../../services/recipeImportParser.service.ts';
 
 /**
  * Get all recipes for a family group
@@ -98,6 +103,55 @@ export const createRecipe = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating recipe:', error);
     return res.status(500).json({ message: 'Failed to create recipe' });
+  }
+};
+
+/**
+ * Import a recipe from a URL
+ */
+export const importRecipeFromUrl = async (req: Request, res: Response) => {
+  try {
+    const { family_group_id, url } = req.body;
+    const user = req.user as User;
+
+    if (!family_group_id || !url) {
+      return res.status(400).json({ message: 'Family group ID and URL are required' });
+    }
+
+    if (user.dataValues.family_group_id !== parseInt(family_group_id, 10)) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    try {
+      await EntitlementsService.assertCanCreateRecipe(
+        parseInt(family_group_id, 10),
+        user.dataValues.id
+      );
+    } catch (error) {
+      if (handleEntitlementError(error, res)) {
+        return;
+      }
+      throw error;
+    }
+
+    const recipe = await recipeImportService.importRecipeFromUrl({
+      family_group_id: parseInt(family_group_id, 10),
+      created_by: user.dataValues.id,
+      url,
+    });
+
+    return res.status(201).json(recipe);
+  } catch (error) {
+    if (error instanceof InvalidRecipeImportUrlError) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    if (error instanceof RecipeImportParseError) {
+      return res.status(422).json({ message: error.message });
+    }
+
+    console.error('Error importing recipe from URL:', error);
+    return res.status(500).json({ message: 'Failed to import recipe from URL' });
   }
 };
 
