@@ -32,8 +32,8 @@ Docker requires these workarounds in the Cloud Agent environment:
 ### Environment files
 
 - `api/.env` — copy from `api/.env.example`. Dev DB defaults: name=`meal-diary-dev`, user=`postgres`, password=`postgres`, port=`5432`. Use `DEV_DB_HOST=localhost` when the API runs on the host; use `DEV_DB_HOST=postgres` when the API runs via `docker compose`. Set `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` to any string. Set `NODE_ENV=development`. If you change Postgres credentials, run `docker compose down -v` once so the volume is recreated.
-- `frontend/.env` — copy from `frontend/.env.example`. Set `BASE_URL=http://localhost:3001` (public API URL for browser/OAuth redirects). For `docker compose`, set `API_INTERNAL_URL=http://api:3001` for Nuxt server routes; leave it empty when running the frontend on the host (falls back to `BASE_URL`).
-- `apps/mobile/.env` — copy from `apps/mobile/.env.example`. Set `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001` for Android emulator; use your machine LAN IP for a physical device.
+- `apps/mobile/.env` — copy from `apps/mobile/.env.example`. Set `EXPO_PUBLIC_API_URL=http://10.0.2.2:3001` for Android emulator; use your machine LAN IP for a physical device. Optional PostHog: `EXPO_PUBLIC_POSTHOG_KEY` + `EXPO_PUBLIC_POSTHOG_HOST`.
+- `frontend/.env` — copy from `frontend/.env.example`. Set `BASE_URL=http://localhost:3001` (public API URL for browser/OAuth redirects). For `docker compose`, set `API_INTERNAL_URL=http://api:3001` for Nuxt server routes; leave it empty when running the frontend on the host (falls back to `BASE_URL`). Optional: `POSTHOG_PUBLIC_KEY` for client feature flags (falls back to the baked-in production key).
 
 ### Testing
 
@@ -51,7 +51,7 @@ Docker requires these workarounds in the Cloud Agent environment:
 
 - The API uses `tsx` for TypeScript execution in dev/start scripts.
 - Google OAuth is optional; the app functions without `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
-- PostHog analytics is optional; warnings about missing `POSTHOG_KEY` are harmless.
+- PostHog analytics is optional; warnings about missing `POSTHOG_KEY` are harmless. Feature flag keys live in `packages/shared` (`FEATURE_FLAGS`); create matching flags in the PostHog UI. Nuxt loads PostHog for flags even without analytics consent / on localhost (capture stays opted out). Mobile: set `EXPO_PUBLIC_POSTHOG_KEY` (see `apps/mobile/.env.example`); capture is opted out in `__DEV__`. Mobile has no analytics consent UI yet.
 - After login, new users are redirected to `/registration/step-2` to create or join a family group before accessing the diary.
 - Some API tests have pre-existing failures related to `FamilyGroup.random_identifier` validation and `RefreshToken` unique constraint; these are not environment issues.
 - New deployable services should be added under `apps/` and will be picked up automatically by npm workspaces and Turborepo.
