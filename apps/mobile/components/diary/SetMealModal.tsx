@@ -1,14 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   TextInput,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
@@ -46,9 +43,7 @@ export function SetMealModal({
   onClose,
 }: SetMealModalProps) {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
   const [recipePickerVisible, setRecipePickerVisible] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const recipesQuery = useFamilyRecipes(familyGroupId, { enabled: visible });
 
   const recipes = recipesQuery.data ?? [];
@@ -57,29 +52,6 @@ export function SetMealModal({
   const hasExistingMeal = !!(mealName && mealName.trim()) || !!recipeId;
   const canSave =
     !!(mealName && mealName.trim()) || !!recipeId || hasExistingMeal;
-
-  useEffect(() => {
-    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
-
-    const showSub = Keyboard.addListener(showEvent, (event) => {
-      setKeyboardHeight(event.endCoordinates.height);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => {
-      setKeyboardHeight(0);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!visible) {
-      setKeyboardHeight(0);
-    }
-  }, [visible]);
 
   const handleClose = () => {
     if (isLoading) {
@@ -98,15 +70,12 @@ export function SetMealModal({
     ? mealName
     : `— ${t('diary.orTypeMealName')} —`;
 
-  const keyboardOffset = Math.max(0, keyboardHeight - insets.bottom);
-
   return (
     <>
       <DialogModal
         visible={visible}
         onClose={handleClose}
         testID="set-meal-modal"
-        keyboardInset={keyboardOffset}
       >
         <DialogPanel>
           <Heading size="lg" className="text-ice mb-4">

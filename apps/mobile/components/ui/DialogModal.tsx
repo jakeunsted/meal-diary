@@ -44,8 +44,6 @@ interface DialogModalProps {
   children: ReactNode;
   testID?: string;
   placement?: DialogModalPlacement;
-  /** Lifts content above the software keyboard (e.g. from Keyboard event height). */
-  keyboardInset?: number;
 }
 
 const placementClassNames: Record<DialogModalPlacement, string> = {
@@ -60,14 +58,7 @@ export function DialogModal({
   children,
   testID,
   placement = 'center',
-  keyboardInset = 0,
 }: DialogModalProps) {
-  const isKeyboardVisible = keyboardInset > 0;
-  const placementClassName =
-    isKeyboardVisible && placement === 'center'
-      ? 'items-center justify-end px-6'
-      : placementClassNames[placement];
-
   return (
     <Modal
       visible={visible}
@@ -83,13 +74,8 @@ export function DialogModal({
           accessibilityRole="button"
         />
         <View
-          className={`flex-1 ${placementClassName}`}
+          className={`flex-1 ${placementClassNames[placement]}`}
           pointerEvents="box-none"
-          style={
-            isKeyboardVisible
-              ? { paddingBottom: keyboardInset + 16 }
-              : undefined
-          }
         >
           {children}
         </View>
