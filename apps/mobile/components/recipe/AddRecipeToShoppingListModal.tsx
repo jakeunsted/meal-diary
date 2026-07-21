@@ -71,9 +71,9 @@ export function AddRecipeToShoppingListModal({
   };
 
   return (
-    <DialogModal visible={visible} onClose={handleClose} placement="bottom">
-      <DialogPanel className="w-full max-h-[70%] rounded-t-2xl bg-surface p-4">
-        <Text className="mb-3 text-center text-base font-semibold text-ice">
+    <DialogModal visible={visible} onClose={handleClose}>
+      <DialogPanel className="max-h-[80%]">
+        <Text className="mb-3 text-base font-semibold text-ice">
           {t('recipeDetail.addToShoppingListModalTitle')}
         </Text>
 
