@@ -211,6 +211,8 @@ const resources = {
         googleFailed: 'Google sign-in failed. Please try again.',
         googleRequiresSecureOrigin:
           'Google Sign-In on web requires HTTPS or localhost. Use https://dev-app.mealdiary.co.uk or http://localhost:3002.',
+        googleRequiresDevBuild:
+          'Google Sign-In is not available in Expo Go. From apps/mobile run: npx expo run:android',
         networkError: 'Unable to reach the server. Please try again.',
         noAccount: "Don't have an account?",
         register: 'Register',

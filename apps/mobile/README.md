@@ -158,6 +158,9 @@ Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env
 
 ## Gotchas
 
+- **`npm run dev:android` opens Expo Go**, which does not include `@react-native-google-signin/google-signin`.
+  Email login works; Google Sign-In needs a native build (`cd apps/mobile && npx expo run:android`). The login
+  screen shows a warning instead of crashing when Expo Go is used.
 - **`lightningcss` is pinned to `1.30.1`** in this workspace's `package.json`. Versions 1.30.2+ have a
   [visitor deserialization regression](https://github.com/parcel-bundler/lightningcss/issues/1081) that breaks
   react-native-css / NativeWind bundling (`failed to deserialize; expected an object-like struct named Specifier`).

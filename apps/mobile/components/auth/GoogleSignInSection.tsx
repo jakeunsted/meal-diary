@@ -1,4 +1,4 @@
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { GoogleIcon } from '@/components/auth/GoogleIcon';
@@ -7,6 +7,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
 import { isGoogleWebSignInAvailable } from '@/lib/auth/googleRedirectUri';
+import { isNativeGoogleSignInAvailable } from '@/lib/auth/isNativeGoogleSignInAvailable';
 import { useGoogleAuth } from '@/lib/auth/useGoogleAuth';
 
 interface GoogleSignInSectionProps {
@@ -92,6 +93,16 @@ export function GoogleSignInSection(props: GoogleSignInSectionProps) {
 
   if (!env.isGoogleConfigured) {
     return null;
+  }
+
+  if (Platform.OS !== 'web' && !isNativeGoogleSignInAvailable()) {
+    return (
+      <Box className="rounded-lg border border-warning/40 bg-warning/15 px-4 py-3">
+        <Text className="text-ice text-center text-sm">
+          {t('login.googleRequiresDevBuild')}
+        </Text>
+      </Box>
+    );
   }
 
   if (!isGoogleWebSignInAvailable()) {
