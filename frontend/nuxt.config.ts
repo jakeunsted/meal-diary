@@ -31,8 +31,10 @@ export default defineNuxtConfig({
       baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,
       googleClientId: process.env.GOOGLE_CLIENT_ID || '',
-      posthogPublicKey: 'phc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN',
-      posthogHost: 'https://prxhg.mealdiary.co.uk',
+      posthogPublicKey:
+        process.env.POSTHOG_PUBLIC_KEY ||
+        'phc_pPO4l7ghvIVDevpRKbW1WOOWQuhvTt4vpn8uV1DFuSN',
+      posthogHost: process.env.POSTHOG_HOST || 'https://prxhg.mealdiary.co.uk',
       posthogDefaults: '2025-11-30',
       // GA4 is dormant unless this is set; analytics still gated on consent
       gaMeasurementId: process.env.GA_MEASUREMENT_ID || ''

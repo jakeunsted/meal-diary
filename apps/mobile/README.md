@@ -141,6 +141,20 @@ EAS Build profiles are in [`eas.json`](./eas.json). iOS builds require an Apple 
 - NativeWind v5 + Gluestack UI v5
 - TanStack Query, Zustand, i18next
 - `@meal-diary/shared` workspace package
+- PostHog (`posthog-react-native`) for analytics + feature flags
+
+### Feature flags
+
+Flag keys are shared in `@meal-diary/shared` (`FEATURE_FLAGS`). Add a key there first, then create the matching flag in the PostHog UI.
+
+```ts
+import { FEATURE_FLAGS } from '@meal-diary/shared';
+import { useFeatureFlag } from '@/lib/feature-flags/useFeatureFlag';
+
+const enabled = useFeatureFlag(FEATURE_FLAGS.featureFlagsEnabled);
+```
+
+Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env`. Leave the key empty to disable PostHog. In `__DEV__`, analytics capture is opted out while flags still evaluate. Mobile has no analytics consent UI yet (Nuxt gates capture via Silktide separately).
 
 ## Gotchas
 

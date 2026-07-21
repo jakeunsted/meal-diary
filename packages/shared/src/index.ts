@@ -4,6 +4,9 @@ export type {
   SubscriptionStatus,
 } from './entitlements.ts';
 
+export { FEATURE_FLAGS } from './featureFlags.ts';
+export type { FeatureFlagKey } from './featureFlags.ts';
+
 export { toLogAttributes } from './logAttributes.ts';
 
 export type {

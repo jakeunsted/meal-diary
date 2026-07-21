@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { identifyUser, resetAnalytics } from '@/lib/analytics/posthog';
 import { apiFetch } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { clearMealDiaryCache } from '@/lib/diary/mealDiaryStorage';
@@ -52,6 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       user: authData.user,
       entitlements: authData.entitlements ?? null,
     });
+    identifyUser(authData.user);
   },
 
   login: async (email, password) => {
@@ -100,6 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                   user: response.user,
                   entitlements: response.entitlements ?? null,
                 });
+                identifyUser(response.user);
               });
               return;
             } catch (error) {
@@ -130,6 +133,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           user: stored.user,
           entitlements: stored.entitlements ?? null,
         });
+        identifyUser(stored.user);
 
         if (isTokenExpired(stored.accessToken, 0)) {
           try {
@@ -140,6 +144,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
                 user: response.user,
                 entitlements: response.entitlements ?? null,
               });
+              identifyUser(response.user);
             });
           } catch (error) {
             if (isSessionExpiredError(error)) {
@@ -173,6 +178,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await clearPendingQueue();
     await clearAuthState();
     queryClient.clear();
+    resetAnalytics();
     set({ status: 'signedOut', user: null, entitlements: null });
   },
 }));

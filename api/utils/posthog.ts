@@ -1,4 +1,5 @@
 import { PostHog } from 'posthog-node';
+import type { FeatureFlagKey } from '@meal-diary/shared';
 import type { Request } from 'express';
 import { HttpError } from './httpError.ts';
 
@@ -238,6 +239,53 @@ export const getDistinctId = (req: Request): string => {
   // Fall back to IP address
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
   return ip;
+};
+
+/**
+ * Evaluate a boolean PostHog feature flag for a distinct ID.
+ * Fail-closed: false when PostHog is unavailable or the flag is missing.
+ */
+export const isFeatureEnabled = async (
+  distinctId: string,
+  flag: FeatureFlagKey
+): Promise<boolean> => {
+  const posthog = getPostHog();
+  if (!posthog || !distinctId) {
+    return false;
+  }
+
+  try {
+    const enabled = await posthog.isFeatureEnabled(flag, distinctId);
+    return enabled === true;
+  } catch (err) {
+    console.error(`PostHog: Error evaluating flag "${flag}":`, err);
+    return false;
+  }
+};
+
+/**
+ * Get a PostHog feature flag value (boolean or multivariate string).
+ * Fail-closed: undefined when PostHog is unavailable.
+ */
+export const getFeatureFlag = async (
+  distinctId: string,
+  flag: FeatureFlagKey
+): Promise<boolean | string | undefined> => {
+  const posthog = getPostHog();
+  if (!posthog || !distinctId) {
+    return undefined;
+  }
+
+  try {
+    const value = await posthog.getFeatureFlag(flag, distinctId);
+    if (value === null || value === undefined) {
+      return undefined;
+    }
+    return value as boolean | string;
+  } catch (err) {
+    console.error(`PostHog: Error reading flag "${flag}":`, err);
+    return undefined;
+  }
 };
 
 /**

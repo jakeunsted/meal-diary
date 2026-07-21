@@ -3,7 +3,8 @@ import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import { PostHogProvider } from 'posthog-react-native';
+import { useEffect, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -12,6 +13,7 @@ import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { colors } from '@/constants/theme';
 import '@/global.css';
 import '@/lib/i18n';
+import { posthogClient } from '@/lib/analytics/posthog';
 import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -66,6 +68,24 @@ function RootLayoutNav() {
   );
 }
 
+function OptionalPostHogProvider({ children }: { children: ReactNode }) {
+  if (!posthogClient) {
+    return children;
+  }
+
+  return (
+    <PostHogProvider
+      client={posthogClient}
+      autocapture={{
+        captureTouches: false,
+        captureScreens: true,
+      }}
+    >
+      {children}
+    </PostHogProvider>
+  );
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     Inter_400Regular,
@@ -89,13 +109,15 @@ export default function RootLayout() {
 
   return (
     <GluestackUIProvider mode="dark">
-      <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <RootLayoutNav />
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
-      </QueryClientProvider>
+      <OptionalPostHogProvider>
+        <QueryClientProvider client={queryClient}>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <RootLayoutNav />
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </QueryClientProvider>
+      </OptionalPostHogProvider>
     </GluestackUIProvider>
   );
 }
