@@ -51,7 +51,7 @@
           class="btn btn-outline btn-primary btn-sm mt-3"
           data-testid="recipe-add-to-shopping-list-button"
           :disabled="!canAddToShoppingList"
-          @click="handleAddToShoppingList"
+          @click="handleOpenAddToShoppingListModal"
         >
           <fa icon="list" class="mr-1" />
           {{ $t('Add to Shopping List') }}
@@ -75,6 +75,14 @@
       </div>
     </div>
 
+    <!-- Add to shopping list modal -->
+    <RecipeAddToShoppingListModal
+      ref="addToShoppingListModalRef"
+      :ingredients="recipe?.ingredients ?? []"
+      :is-submitting="isAddingToShoppingList"
+      @confirm="handleConfirmAddToShoppingList"
+    />
+
     <!-- Delete confirmation modal -->
     <dialog id="delete_recipe_modal" class="modal">
       <div class="modal-box">
@@ -94,7 +102,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   middleware: 'auth'
 });
@@ -104,6 +112,8 @@ import { useUserStore } from '~/stores/user';
 import { useApi } from '~/composables/useApi';
 import { useToast } from '~/composables/useToast';
 import { extractEntitlementError } from '~/utils/httpError';
+import { buildShoppingListItemsFromRecipe } from '~/utils/buildShoppingListItemsFromRecipe';
+import type { RecipeIngredient } from '~/types/Recipe';
 
 const route = useRoute();
 const router = useRouter();
@@ -113,9 +123,27 @@ const { showError } = useToast();
 const { track } = useAnalytics();
 const { hasFeature, billing, refreshEntitlements } = useEntitlements();
 const { openPaywall } = usePaywall();
+const { t } = useI18n();
+
+const addToShoppingListModalRef = ref<{ showModal: () => void; closeModal: () => void } | null>(null);
+const isAddingToShoppingList = ref(false);
 
 const recipe = computed(() => recipeStore.currentRecipe);
 const canAddToShoppingList = hasFeature('recipe_to_shopping_list');
+
+const getIngredientKey = (ingredient: RecipeIngredient, index: number): string => {
+  return ingredient.id != null ? String(ingredient.id) : `index-${index}`;
+};
+
+const filterIngredientsBySelectedKeys = (
+  ingredients: RecipeIngredient[],
+  selectedKeys: string[]
+): RecipeIngredient[] => {
+  const selectedKeySet = new Set(selectedKeys);
+  return ingredients.filter((ingredient, index) =>
+    selectedKeySet.has(getIngredientKey(ingredient, index))
+  );
+};
 
 const handleEdit = () => {
   router.push(`/recipes/${route.params.id}/edit`);
@@ -138,7 +166,7 @@ const handleDelete = async () => {
   }
 };
 
-const handleAddToShoppingList = async () => {
+const handleOpenAddToShoppingListModal = () => {
   if (!canAddToShoppingList.value) {
     openPaywall('recipe_to_shopping_list');
     return;
@@ -146,22 +174,21 @@ const handleAddToShoppingList = async () => {
 
   if (!recipe.value?.ingredients?.length || !userStore.user?.family_group_id) return;
 
+  addToShoppingListModalRef.value?.showModal();
+};
+
+const handleConfirmAddToShoppingList = async (selectedKeys: string[]) => {
+  if (!recipe.value?.ingredients?.length || !userStore.user?.family_group_id) return;
+
+  const selectedIngredients = filterIngredientsBySelectedKeys(recipe.value.ingredients, selectedKeys);
+  if (!selectedIngredients.length) return;
+
+  isAddingToShoppingList.value = true;
+
   try {
     const { api } = useApi();
     const familyGroupId = userStore.user.family_group_id;
-
-    const items = recipe.value.ingredients.map((ingredient) => {
-      const itemName = ingredient.quantity && ingredient.unit
-        ? `${ingredient.name} (${ingredient.quantity} ${ingredient.unit})`
-        : ingredient.quantity
-          ? `${ingredient.name} (${ingredient.quantity})`
-          : ingredient.name;
-
-      return {
-        name: itemName,
-        parent_item_id: null
-      };
-    });
+    const items = buildShoppingListItemsFromRecipe(selectedIngredients);
 
     await api(`/api/shopping-list/${familyGroupId}/items/bulk`, {
       method: 'POST',
@@ -172,6 +199,7 @@ const handleAddToShoppingList = async () => {
     });
 
     track('recipe_added_to_shopping_list', { item_count: items.length });
+    addToShoppingListModalRef.value?.closeModal();
     const { showSuccess } = useToast();
     showSuccess('Ingredients added to shopping list!');
   } catch (error) {
@@ -182,7 +210,9 @@ const handleAddToShoppingList = async () => {
     }
 
     console.error('Error adding ingredients to shopping list:', error);
-    showError('Failed to add ingredients to shopping list');
+    showError(t('recipeDetail.addToShoppingListFailed'));
+  } finally {
+    isAddingToShoppingList.value = false;
   }
 };
 

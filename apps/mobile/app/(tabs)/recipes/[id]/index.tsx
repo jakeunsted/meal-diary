@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AddRecipeToShoppingListModal } from '@/components/recipe/AddRecipeToShoppingListModal';
 import { DeleteRecipeModal } from '@/components/recipe/DeleteRecipeModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -22,21 +23,25 @@ import { isNetworkError } from '@/lib/auth/httpError';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
-import { buildShoppingListItemsFromRecipe } from '@/lib/recipe/buildShoppingListItemsFromRecipe';
+import { buildShoppingListItemsFromRecipe, formatIngredientDisplayLine } from '@/lib/recipe/buildShoppingListItemsFromRecipe';
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 import { useDeleteRecipe, useRecipe } from '@/lib/queries/recipes';
 import { useBulkAddShoppingListItems } from '@/lib/queries/shoppingList';
 import { isShoppingListOfflineQueuedError } from '@/lib/shopping-list/shoppingListOfflineError';
 import type { RecipeIngredient } from '@/types/recipe';
 
-function formatIngredientLine(ingredient: RecipeIngredient): string {
-  if (ingredient.quantity && ingredient.unit) {
-    return `${ingredient.name} — ${ingredient.quantity} ${ingredient.unit}`;
-  }
-  if (ingredient.quantity) {
-    return `${ingredient.name} — ${ingredient.quantity}`;
-  }
-  return ingredient.name;
+function getIngredientKey(ingredient: RecipeIngredient, index: number): string {
+  return ingredient.id != null ? String(ingredient.id) : `index-${index}`;
+}
+
+function filterIngredientsBySelectedKeys(
+  ingredients: RecipeIngredient[],
+  selectedKeys: string[]
+): RecipeIngredient[] {
+  const selectedKeySet = new Set(selectedKeys);
+  return ingredients.filter((ingredient, index) =>
+    selectedKeySet.has(getIngredientKey(ingredient, index))
+  );
 }
 
 export default function RecipeDetailScreen() {
@@ -55,6 +60,7 @@ export default function RecipeDetailScreen() {
   const bulkAddShoppingListItemsMutation = useBulkAddShoppingListItems();
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isAddToShoppingListModalVisible, setIsAddToShoppingListModalVisible] = useState(false);
   const [addToShoppingListMessage, setAddToShoppingListMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -73,7 +79,7 @@ export default function RecipeDetailScreen() {
     void Linking.openURL(`${env.webUrl}/plans`);
   };
 
-  const handleAddToShoppingList = async () => {
+  const handleOpenAddToShoppingListModal = () => {
     if (!recipe?.ingredients?.length || !familyGroupId) {
       return;
     }
@@ -84,13 +90,29 @@ export default function RecipeDetailScreen() {
     }
 
     setAddToShoppingListMessage(null);
+    setIsAddToShoppingListModalVisible(true);
+  };
+
+  const handleConfirmAddToShoppingList = async (selectedKeys: string[]) => {
+    if (!recipe?.ingredients?.length || !familyGroupId) {
+      return;
+    }
+
+    const selectedIngredients = filterIngredientsBySelectedKeys(recipe.ingredients, selectedKeys);
+    if (!selectedIngredients.length) {
+      return;
+    }
+
+    setAddToShoppingListMessage(null);
 
     try {
-      const items = buildShoppingListItemsFromRecipe(recipe.ingredients);
+      const items = buildShoppingListItemsFromRecipe(selectedIngredients);
       await bulkAddShoppingListItemsMutation.mutateAsync({ familyGroupId, items });
+      setIsAddToShoppingListModalVisible(false);
       setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
     } catch (error) {
       if (isShoppingListOfflineQueuedError(error) || isNetworkError(error)) {
+        setIsAddToShoppingListModalVisible(false);
         setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
         return;
       }
@@ -222,7 +244,7 @@ export default function RecipeDetailScreen() {
                       >
                         <View className="mt-2 h-2 w-2 rounded-full bg-primary" />
                         <Text className="flex-1 text-ice">
-                          {formatIngredientLine(ingredient)}
+                          {formatIngredientDisplayLine(ingredient)}
                         </Text>
                       </View>
                     ))}
@@ -232,7 +254,7 @@ export default function RecipeDetailScreen() {
                   size="sm"
                   variant="outline"
                   className="mt-3 border-primary"
-                  onPress={() => void handleAddToShoppingList()}
+                  onPress={handleOpenAddToShoppingListModal}
                   disabled={bulkAddShoppingListItemsMutation.isPending}
                   testID="recipe-add-to-shopping-list-button"
                 >
@@ -286,6 +308,14 @@ export default function RecipeDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <AddRecipeToShoppingListModal
+        visible={isAddToShoppingListModalVisible}
+        ingredients={recipe?.ingredients ?? []}
+        isSubmitting={bulkAddShoppingListItemsMutation.isPending}
+        onClose={() => setIsAddToShoppingListModalVisible(false)}
+        onConfirm={(selectedKeys) => void handleConfirmAddToShoppingList(selectedKeys)}
+      />
 
       <DeleteRecipeModal
         visible={isDeleteModalVisible}

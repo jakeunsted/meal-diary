@@ -87,6 +87,8 @@ const resources = {
           'Add recipe ingredients to your shopping list with Family Plus.',
         shoppingListUpgrade: 'View plans',
         addToShoppingList: 'Add to Shopping List',
+        addToShoppingListModalTitle: 'Add ingredients to shopping list',
+        addToList: 'Add to list',
         addedToShoppingList: 'Ingredients added to shopping list!',
         addToShoppingListFailed: 'Failed to add ingredients to shopping list',
         deleteConfirm:
