@@ -1,18 +1,14 @@
 import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-} from 'react-native';
+import { Pressable, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
+import { colors } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { hasFamilyGroup } from '@/lib/auth/helpers';
@@ -97,15 +93,18 @@ export default function RegistrationStep2Screen() {
     `flex-1 rounded-lg px-4 py-3 ${activeTab === tab ? 'bg-primary' : 'bg-surface'}`;
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-base"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: colors.base }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 48,
+      }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
     >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
-        keyboardShouldPersistTaps="handled"
-      >
-        <Heading size="2xl" className="text-ice mb-6 text-center">
+      <Heading size="2xl" className="text-ice mb-6 text-center">
           {t('registrationStep2.title')}
         </Heading>
 
@@ -197,7 +196,6 @@ export default function RegistrationStep2Screen() {
             </Text>
           ) : null}
         </Box>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }

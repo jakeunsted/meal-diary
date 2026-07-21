@@ -1,14 +1,8 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  KeyboardAvoidingView,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-} from 'react-native';
+import { Linking, Pressable, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -16,6 +10,7 @@ import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
+import { colors } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
 import { applyPendingFamilyInvite } from '@/lib/auth/applyPendingFamilyInvite';
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -139,15 +134,18 @@ export default function RegistrationStep1Screen() {
   const inputClassName = 'rounded-lg bg-surface px-4 py-3 text-ice';
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-base"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <KeyboardAwareScrollView
+      style={{ flex: 1, backgroundColor: colors.base }}
+      contentContainerStyle={{
+        flexGrow: 1,
+        justifyContent: 'center',
+        paddingHorizontal: 24,
+        paddingVertical: 48,
+      }}
+      keyboardShouldPersistTaps="handled"
+      bottomOffset={24}
     >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
-        keyboardShouldPersistTaps="handled"
-      >
-        <Heading size="2xl" className="text-ice mb-6 text-center">
+      <Heading size="2xl" className="text-ice mb-6 text-center">
           {t('registration.title')}
         </Heading>
 
@@ -310,7 +308,6 @@ export default function RegistrationStep1Screen() {
             </Link>
           </Box>
         </Box>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardAwareScrollView>
   );
 }
