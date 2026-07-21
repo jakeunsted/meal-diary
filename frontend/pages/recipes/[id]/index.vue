@@ -1,10 +1,29 @@
 <template>
-  <div class="max-w-4xl mx-auto px-4">
-    <div class="flex items-center gap-2 my-4">
-      <button class="btn btn-ghost btn-sm" @click="router.push('/recipes')">
+  <div class="max-w-4xl mx-auto px-4 w-full overflow-x-hidden">
+    <div class="flex items-center justify-between gap-2 my-4">
+      <button class="btn btn-ghost btn-sm shrink-0" @click="router.push('/recipes')">
         <fa icon="chevron-left" />
-        {{ $t('Back') }}
+        <span class="hidden sm:inline">{{ $t('Back') }}</span>
       </button>
+      <div v-if="recipe" class="flex gap-2 shrink-0">
+        <button
+          class="btn btn-outline btn-sm"
+          data-testid="recipe-edit-button"
+          :aria-label="$t('Edit Recipe')"
+          @click="handleEdit"
+        >
+          <fa icon="pencil" class="sm:mr-1" />
+          <span class="hidden sm:inline">{{ $t('Edit Recipe') }}</span>
+        </button>
+        <button
+          class="btn btn-error btn-outline btn-sm"
+          data-testid="recipe-delete-button"
+          :aria-label="$t('Delete Recipe')"
+          @click="handleShowDeleteConfirm"
+        >
+          <fa icon="trash" />
+        </button>
+      </div>
     </div>
 
     <div v-if="recipeStore.loading && !recipe" class="flex justify-center py-8">
@@ -12,20 +31,9 @@
     </div>
 
     <div v-else-if="recipe" class="pb-8">
-      <div class="flex justify-between items-start mb-4">
-        <h1 class="text-2xl font-bold">{{ recipe.name }}</h1>
-        <div class="flex gap-2">
-          <button class="btn btn-outline btn-sm" data-testid="recipe-edit-button" @click="handleEdit">
-            <fa icon="pencil" class="mr-1" />
-            {{ $t('Edit Recipe') }}
-          </button>
-          <button class="btn btn-error btn-outline btn-sm" data-testid="recipe-delete-button" @click="handleShowDeleteConfirm">
-            <fa icon="trash" />
-          </button>
-        </div>
-      </div>
+      <h1 class="text-2xl font-bold mb-4 break-words">{{ recipe.name }}</h1>
 
-      <p v-if="recipe.description" class="text-base-content/70 mb-4">{{ recipe.description }}</p>
+      <p v-if="recipe.description" class="text-base-content/70 mb-4 break-words">{{ recipe.description }}</p>
 
       <div v-if="recipe.portions" class="badge badge-primary mb-4">
         {{ recipe.portions }} {{ $t('portions') }}
@@ -37,21 +45,30 @@
         <div class="card bg-base-200">
           <div class="card-body p-4">
             <ul class="space-y-2">
-              <li v-for="ingredient in recipe.ingredients" :key="ingredient.id" class="flex items-center gap-2">
-                <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0"></span>
-                <span>{{ ingredient.name }}</span>
-                <span v-if="ingredient.quantity || ingredient.unit" class="text-base-content/50 text-sm">
-                  — {{ ingredient.quantity }}{{ ingredient.unit ? ` ${ingredient.unit}` : '' }}
+              <li
+                v-for="ingredient in recipe.ingredients"
+                :key="ingredient.id"
+                class="flex items-start gap-2 min-w-0"
+              >
+                <span class="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-2"></span>
+                <span class="min-w-0 break-words">
+                  <span>{{ ingredient.name }}</span>
+                  <span
+                    v-if="ingredient.quantity || ingredient.unit"
+                    class="text-base-content/50 text-sm"
+                  >
+                    — {{ ingredient.quantity }}{{ ingredient.unit ? ` ${ingredient.unit}` : '' }}
+                  </span>
                 </span>
               </li>
             </ul>
           </div>
         </div>
         <button
-          class="btn btn-outline btn-primary btn-sm mt-3"
+          class="btn btn-outline btn-primary btn-sm mt-3 w-full sm:w-auto"
           data-testid="recipe-add-to-shopping-list-button"
           :disabled="!canAddToShoppingList"
-          @click="handleAddToShoppingList"
+          @click="handleOpenAddToShoppingListModal"
         >
           <fa icon="list" class="mr-1" />
           {{ $t('Add to Shopping List') }}
@@ -69,11 +86,19 @@
         <h2 class="text-lg font-semibold mb-3">{{ $t('Instructions') }}</h2>
         <div class="card bg-base-200">
           <div class="card-body p-4">
-            <p class="whitespace-pre-wrap">{{ recipe.instructions }}</p>
+            <p class="whitespace-pre-wrap break-words">{{ recipe.instructions }}</p>
           </div>
         </div>
       </div>
     </div>
+
+    <!-- Add to shopping list modal -->
+    <RecipeAddToShoppingListModal
+      ref="addToShoppingListModalRef"
+      :ingredients="recipe?.ingredients ?? []"
+      :is-submitting="isAddingToShoppingList"
+      @confirm="handleConfirmAddToShoppingList"
+    />
 
     <!-- Delete confirmation modal -->
     <dialog id="delete_recipe_modal" class="modal">
@@ -94,7 +119,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   middleware: 'auth'
 });
@@ -104,6 +129,8 @@ import { useUserStore } from '~/stores/user';
 import { useApi } from '~/composables/useApi';
 import { useToast } from '~/composables/useToast';
 import { extractEntitlementError } from '~/utils/httpError';
+import { buildShoppingListItemsFromRecipe } from '~/utils/buildShoppingListItemsFromRecipe';
+import type { RecipeIngredient } from '~/types/Recipe';
 
 const route = useRoute();
 const router = useRouter();
@@ -113,9 +140,27 @@ const { showError } = useToast();
 const { track } = useAnalytics();
 const { hasFeature, billing, refreshEntitlements } = useEntitlements();
 const { openPaywall } = usePaywall();
+const { t } = useI18n();
+
+const addToShoppingListModalRef = ref<{ showModal: () => void; closeModal: () => void } | null>(null);
+const isAddingToShoppingList = ref(false);
 
 const recipe = computed(() => recipeStore.currentRecipe);
 const canAddToShoppingList = hasFeature('recipe_to_shopping_list');
+
+const getIngredientKey = (ingredient: RecipeIngredient, index: number): string => {
+  return ingredient.id != null ? String(ingredient.id) : `index-${index}`;
+};
+
+const filterIngredientsBySelectedKeys = (
+  ingredients: RecipeIngredient[],
+  selectedKeys: string[]
+): RecipeIngredient[] => {
+  const selectedKeySet = new Set(selectedKeys);
+  return ingredients.filter((ingredient, index) =>
+    selectedKeySet.has(getIngredientKey(ingredient, index))
+  );
+};
 
 const handleEdit = () => {
   router.push(`/recipes/${route.params.id}/edit`);
@@ -138,7 +183,7 @@ const handleDelete = async () => {
   }
 };
 
-const handleAddToShoppingList = async () => {
+const handleOpenAddToShoppingListModal = () => {
   if (!canAddToShoppingList.value) {
     openPaywall('recipe_to_shopping_list');
     return;
@@ -146,22 +191,21 @@ const handleAddToShoppingList = async () => {
 
   if (!recipe.value?.ingredients?.length || !userStore.user?.family_group_id) return;
 
+  addToShoppingListModalRef.value?.showModal();
+};
+
+const handleConfirmAddToShoppingList = async (selectedKeys: string[]) => {
+  if (!recipe.value?.ingredients?.length || !userStore.user?.family_group_id) return;
+
+  const selectedIngredients = filterIngredientsBySelectedKeys(recipe.value.ingredients, selectedKeys);
+  if (!selectedIngredients.length) return;
+
+  isAddingToShoppingList.value = true;
+
   try {
     const { api } = useApi();
     const familyGroupId = userStore.user.family_group_id;
-
-    const items = recipe.value.ingredients.map((ingredient) => {
-      const itemName = ingredient.quantity && ingredient.unit
-        ? `${ingredient.name} (${ingredient.quantity} ${ingredient.unit})`
-        : ingredient.quantity
-          ? `${ingredient.name} (${ingredient.quantity})`
-          : ingredient.name;
-
-      return {
-        name: itemName,
-        parent_item_id: null
-      };
-    });
+    const items = buildShoppingListItemsFromRecipe(selectedIngredients);
 
     await api(`/api/shopping-list/${familyGroupId}/items/bulk`, {
       method: 'POST',
@@ -172,6 +216,7 @@ const handleAddToShoppingList = async () => {
     });
 
     track('recipe_added_to_shopping_list', { item_count: items.length });
+    addToShoppingListModalRef.value?.closeModal();
     const { showSuccess } = useToast();
     showSuccess('Ingredients added to shopping list!');
   } catch (error) {
@@ -182,7 +227,9 @@ const handleAddToShoppingList = async () => {
     }
 
     console.error('Error adding ingredients to shopping list:', error);
-    showError('Failed to add ingredients to shopping list');
+    showError(t('recipeDetail.addToShoppingListFailed'));
+  } finally {
+    isAddingToShoppingList.value = false;
   }
 };
 

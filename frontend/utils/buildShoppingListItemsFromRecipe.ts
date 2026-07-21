@@ -1,4 +1,4 @@
-import type { RecipeIngredient } from '@/types/recipe';
+import type { RecipeIngredient } from '~/types/Recipe';
 
 export interface ShoppingListBulkItemPayload {
   name: string;
@@ -14,18 +14,6 @@ function formatIngredientShoppingListName(ingredient: RecipeIngredient): string 
   }
   return ingredient.name;
 }
-
-export function formatIngredientDisplayLine(ingredient: RecipeIngredient): string {
-  if (ingredient.quantity && ingredient.unit) {
-    return `${ingredient.name} — ${ingredient.quantity} ${ingredient.unit}`;
-  }
-  if (ingredient.quantity) {
-    return `${ingredient.name} — ${ingredient.quantity}`;
-  }
-  return ingredient.name;
-}
-
-export { formatIngredientShoppingListName };
 
 export function buildShoppingListItemsFromRecipe(
   ingredients: RecipeIngredient[]

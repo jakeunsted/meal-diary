@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AddRecipeToShoppingListModal } from '@/components/recipe/AddRecipeToShoppingListModal';
 import { DeleteRecipeModal } from '@/components/recipe/DeleteRecipeModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -22,21 +23,25 @@ import { isNetworkError } from '@/lib/auth/httpError';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
-import { buildShoppingListItemsFromRecipe } from '@/lib/recipe/buildShoppingListItemsFromRecipe';
+import { buildShoppingListItemsFromRecipe, formatIngredientDisplayLine } from '@/lib/recipe/buildShoppingListItemsFromRecipe';
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 import { useDeleteRecipe, useRecipe } from '@/lib/queries/recipes';
 import { useBulkAddShoppingListItems } from '@/lib/queries/shoppingList';
 import { isShoppingListOfflineQueuedError } from '@/lib/shopping-list/shoppingListOfflineError';
 import type { RecipeIngredient } from '@/types/recipe';
 
-function formatIngredientLine(ingredient: RecipeIngredient): string {
-  if (ingredient.quantity && ingredient.unit) {
-    return `${ingredient.name} — ${ingredient.quantity} ${ingredient.unit}`;
-  }
-  if (ingredient.quantity) {
-    return `${ingredient.name} — ${ingredient.quantity}`;
-  }
-  return ingredient.name;
+function getIngredientKey(ingredient: RecipeIngredient, index: number): string {
+  return ingredient.id != null ? String(ingredient.id) : `index-${index}`;
+}
+
+function filterIngredientsBySelectedKeys(
+  ingredients: RecipeIngredient[],
+  selectedKeys: string[]
+): RecipeIngredient[] {
+  const selectedKeySet = new Set(selectedKeys);
+  return ingredients.filter((ingredient, index) =>
+    selectedKeySet.has(getIngredientKey(ingredient, index))
+  );
 }
 
 export default function RecipeDetailScreen() {
@@ -55,6 +60,7 @@ export default function RecipeDetailScreen() {
   const bulkAddShoppingListItemsMutation = useBulkAddShoppingListItems();
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isAddToShoppingListModalVisible, setIsAddToShoppingListModalVisible] = useState(false);
   const [addToShoppingListMessage, setAddToShoppingListMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -73,7 +79,7 @@ export default function RecipeDetailScreen() {
     void Linking.openURL(`${env.webUrl}/plans`);
   };
 
-  const handleAddToShoppingList = async () => {
+  const handleOpenAddToShoppingListModal = () => {
     if (!recipe?.ingredients?.length || !familyGroupId) {
       return;
     }
@@ -84,13 +90,29 @@ export default function RecipeDetailScreen() {
     }
 
     setAddToShoppingListMessage(null);
+    setIsAddToShoppingListModalVisible(true);
+  };
+
+  const handleConfirmAddToShoppingList = async (selectedKeys: string[]) => {
+    if (!recipe?.ingredients?.length || !familyGroupId) {
+      return;
+    }
+
+    const selectedIngredients = filterIngredientsBySelectedKeys(recipe.ingredients, selectedKeys);
+    if (!selectedIngredients.length) {
+      return;
+    }
+
+    setAddToShoppingListMessage(null);
 
     try {
-      const items = buildShoppingListItemsFromRecipe(recipe.ingredients);
+      const items = buildShoppingListItemsFromRecipe(selectedIngredients);
       await bulkAddShoppingListItemsMutation.mutateAsync({ familyGroupId, items });
+      setIsAddToShoppingListModalVisible(false);
       setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
     } catch (error) {
       if (isShoppingListOfflineQueuedError(error) || isNetworkError(error)) {
+        setIsAddToShoppingListModalVisible(false);
         setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
         return;
       }
@@ -139,14 +161,40 @@ export default function RecipeDetailScreen() {
           />
         }
       >
-        <Pressable
-          accessibilityRole="button"
-          className="mb-4 flex-row items-center gap-2 py-2"
-          onPress={() => router.back()}
-        >
-          <FontAwesome name="chevron-left" size={14} color="#F1F5F9" />
-          <Text className="text-ice">{t('common.back')}</Text>
-        </Pressable>
+        <View className="mb-4 flex-row items-center justify-between gap-2">
+          <Pressable
+            accessibilityRole="button"
+            className="flex-row items-center gap-2 py-2"
+            onPress={() => router.back()}
+          >
+            <FontAwesome name="chevron-left" size={14} color="#F1F5F9" />
+            <Text className="text-ice">{t('common.back')}</Text>
+          </Pressable>
+
+          {recipe ? (
+            <View className="flex-row gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={handleEdit}
+                testID="recipe-edit-button"
+                accessibilityLabel={t('recipeForm.editRecipe')}
+              >
+                <FontAwesome name="pencil" size={12} color="#F1F5F9" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-400"
+                onPress={() => setIsDeleteModalVisible(true)}
+                testID="recipe-delete-button"
+                accessibilityLabel={t('recipeForm.deleteRecipe')}
+              >
+                <FontAwesome name="trash" size={12} color="#F87171" />
+              </Button>
+            </View>
+          ) : null}
+        </View>
 
         {isLoading ? (
           <Box className="items-center py-8">
@@ -170,31 +218,9 @@ export default function RecipeDetailScreen() {
                 <Text className="text-sm text-red-400">{deleteError}</Text>
               </Box>
             ) : null}
-            <View className="mb-4 flex-row items-start justify-between gap-3">
-              <Heading className="min-w-0 flex-1 text-2xl text-ice" size="xl">
-                {recipe.name}
-              </Heading>
-              <View className="flex-row gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onPress={handleEdit}
-                  testID="recipe-edit-button"
-                >
-                  <FontAwesome name="pencil" size={12} color="#F1F5F9" />
-                  <ButtonText className="ml-2 text-ice">{t('recipeForm.editRecipe')}</ButtonText>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-red-400"
-                  onPress={() => setIsDeleteModalVisible(true)}
-                  testID="recipe-delete-button"
-                >
-                  <FontAwesome name="trash" size={12} color="#F87171" />
-                </Button>
-              </View>
-            </View>
+            <Heading className="mb-4 text-2xl text-ice" size="xl">
+              {recipe.name}
+            </Heading>
 
             {recipe.description ? (
               <Text className="mb-4 text-ice/70">{recipe.description}</Text>
@@ -222,7 +248,7 @@ export default function RecipeDetailScreen() {
                       >
                         <View className="mt-2 h-2 w-2 rounded-full bg-primary" />
                         <Text className="flex-1 text-ice">
-                          {formatIngredientLine(ingredient)}
+                          {formatIngredientDisplayLine(ingredient)}
                         </Text>
                       </View>
                     ))}
@@ -231,8 +257,8 @@ export default function RecipeDetailScreen() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="mt-3 border-primary"
-                  onPress={() => void handleAddToShoppingList()}
+                  className="mt-3 w-full border-primary"
+                  onPress={handleOpenAddToShoppingListModal}
                   disabled={bulkAddShoppingListItemsMutation.isPending}
                   testID="recipe-add-to-shopping-list-button"
                 >
@@ -286,6 +312,14 @@ export default function RecipeDetailScreen() {
           </>
         )}
       </ScrollView>
+
+      <AddRecipeToShoppingListModal
+        visible={isAddToShoppingListModalVisible}
+        ingredients={recipe?.ingredients ?? []}
+        isSubmitting={bulkAddShoppingListItemsMutation.isPending}
+        onClose={() => setIsAddToShoppingListModalVisible(false)}
+        onConfirm={(selectedKeys) => void handleConfirmAddToShoppingList(selectedKeys)}
+      />
 
       <DeleteRecipeModal
         visible={isDeleteModalVisible}

@@ -318,6 +318,9 @@
   },
   "recipeDetail": {
     "shoppingListPremium": "Add recipe ingredients to your shopping list with Family Plus.",
-    "shoppingListUpgrade": "View plans"
+    "shoppingListUpgrade": "View plans",
+    "addToShoppingListModalTitle": "Add ingredients to shopping list",
+    "addToList": "Add to list",
+    "addToShoppingListFailed": "Failed to add ingredients to shopping list"
   }
 }
