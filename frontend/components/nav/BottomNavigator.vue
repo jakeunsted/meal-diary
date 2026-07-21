@@ -1,5 +1,5 @@
 <template>
-  <div class="dock dock-md">
+  <div class="dock dock-md !fixed !inset-x-0 !bottom-0 !z-50 bg-base-100 border-t border-base-300">
     <button data-testid="nav-diary" :class="{ 'dock-active': isActive('/diary') }" @click="navigateTo('/diary')">
       <fa icon="house"></fa>
       <span class="dock-label">Home</span>
@@ -29,7 +29,7 @@ const route = useRoute();
 const router = useRouter();
 
 function isActive(path) {
-  return route.path === path;
+  return route.path === path || route.path.startsWith(`${path}/`);
 }
 
 function navigateTo(path) {

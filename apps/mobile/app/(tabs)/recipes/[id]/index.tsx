@@ -161,14 +161,40 @@ export default function RecipeDetailScreen() {
           />
         }
       >
-        <Pressable
-          accessibilityRole="button"
-          className="mb-4 flex-row items-center gap-2 py-2"
-          onPress={() => router.back()}
-        >
-          <FontAwesome name="chevron-left" size={14} color="#F1F5F9" />
-          <Text className="text-ice">{t('common.back')}</Text>
-        </Pressable>
+        <View className="mb-4 flex-row items-center justify-between gap-2">
+          <Pressable
+            accessibilityRole="button"
+            className="flex-row items-center gap-2 py-2"
+            onPress={() => router.back()}
+          >
+            <FontAwesome name="chevron-left" size={14} color="#F1F5F9" />
+            <Text className="text-ice">{t('common.back')}</Text>
+          </Pressable>
+
+          {recipe ? (
+            <View className="flex-row gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onPress={handleEdit}
+                testID="recipe-edit-button"
+                accessibilityLabel={t('recipeForm.editRecipe')}
+              >
+                <FontAwesome name="pencil" size={12} color="#F1F5F9" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-red-400"
+                onPress={() => setIsDeleteModalVisible(true)}
+                testID="recipe-delete-button"
+                accessibilityLabel={t('recipeForm.deleteRecipe')}
+              >
+                <FontAwesome name="trash" size={12} color="#F87171" />
+              </Button>
+            </View>
+          ) : null}
+        </View>
 
         {isLoading ? (
           <Box className="items-center py-8">
@@ -192,31 +218,9 @@ export default function RecipeDetailScreen() {
                 <Text className="text-sm text-red-400">{deleteError}</Text>
               </Box>
             ) : null}
-            <View className="mb-4 flex-row items-start justify-between gap-3">
-              <Heading className="min-w-0 flex-1 text-2xl text-ice" size="xl">
-                {recipe.name}
-              </Heading>
-              <View className="flex-row gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onPress={handleEdit}
-                  testID="recipe-edit-button"
-                >
-                  <FontAwesome name="pencil" size={12} color="#F1F5F9" />
-                  <ButtonText className="ml-2 text-ice">{t('recipeForm.editRecipe')}</ButtonText>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="border-red-400"
-                  onPress={() => setIsDeleteModalVisible(true)}
-                  testID="recipe-delete-button"
-                >
-                  <FontAwesome name="trash" size={12} color="#F87171" />
-                </Button>
-              </View>
-            </View>
+            <Heading className="mb-4 text-2xl text-ice" size="xl">
+              {recipe.name}
+            </Heading>
 
             {recipe.description ? (
               <Text className="mb-4 text-ice/70">{recipe.description}</Text>
@@ -253,7 +257,7 @@ export default function RecipeDetailScreen() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="mt-3 border-primary"
+                  className="mt-3 w-full border-primary"
                   onPress={handleOpenAddToShoppingListModal}
                   disabled={bulkAddShoppingListItemsMutation.isPending}
                   testID="recipe-add-to-shopping-list-button"

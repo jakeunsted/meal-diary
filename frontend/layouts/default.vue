@@ -1,11 +1,13 @@
 <template>
-  <div class="pb-20">
-    <ClientOnly>
-      <UpgradeBanner v-if="showSubscriptionChrome" />
-      <TrialExpiredModal v-if="showSubscriptionChrome" />
-      <PaywallModal />
-    </ClientOnly>
-    <slot />
+  <div class="overflow-x-hidden">
+    <div class="pb-20 min-w-0">
+      <ClientOnly>
+        <UpgradeBanner v-if="showSubscriptionChrome" />
+        <TrialExpiredModal v-if="showSubscriptionChrome" />
+        <PaywallModal />
+      </ClientOnly>
+      <slot />
+    </div>
     <BottomNavigator />
   </div>
 </template>
