@@ -1,39 +1,36 @@
 import type { ReactNode } from 'react';
 
-import { ShoppingListDndList } from '@/components/shopping-list/ShoppingListDndList';
-import type { ShoppingListDragRenderProps } from '@/components/shopping-list/shoppingListDndTypes';
+import {
+  ShoppingListSortableList,
+  type ShoppingListDragHandleProps,
+} from '@/components/shopping-list/ShoppingListSortableList';
 import type { ShoppingListItem } from '@/types/shoppingList';
 
 interface ShoppingListActiveListProps {
-  activeItems: ShoppingListItem[];
-  allItems: ShoppingListItem[];
+  items: ShoppingListItem[];
   disabled?: boolean;
   onDraggingChange?: (isDragging: boolean) => void;
-  onDragEnd: (params: {
-    reorderedItems: ShoppingListItem[];
-    draggedIds: Set<number | string>;
-    hoveredItem: ShoppingListItem | null;
-    nestAsChild: boolean;
-  }) => void;
-  renderItem: (item: ShoppingListItem, dragProps?: ShoppingListDragRenderProps) => ReactNode;
+  onReorder: (orderedIds: Array<number | string>) => void;
+  renderItem: (
+    item: ShoppingListItem,
+    dragHandleProps: ShoppingListDragHandleProps
+  ) => ReactNode;
 }
 
 export function ShoppingListActiveList({
-  activeItems,
-  allItems,
+  items,
   disabled,
   onDraggingChange,
-  onDragEnd,
+  onReorder,
   renderItem,
 }: ShoppingListActiveListProps) {
   return (
-    <ShoppingListDndList
-      activeItems={activeItems}
-      allItems={allItems}
+    <ShoppingListSortableList
+      items={items}
       disabled={disabled}
       onDraggingChange={onDraggingChange}
-      onDragEnd={onDragEnd}
-      renderItem={(item, dragProps) => renderItem(item, dragProps)}
+      onReorder={onReorder}
+      renderItem={renderItem}
     />
   );
 }

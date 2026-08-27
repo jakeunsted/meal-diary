@@ -122,7 +122,7 @@ export const useSSE = () => {
           if (index !== -1) {
             shoppingListStore.shoppingList.items[index] = {
               ...shoppingListStore.shoppingList.items[index],
-              parent_item_id: data.item.parent_item_id ?? null,
+              category: data.item.category,
               position: data.item.position
             };
             shoppingListStore.saveToLocalStorage();

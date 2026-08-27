@@ -4,6 +4,7 @@ describe('Shopping list core', () => {
   });
 
   it('shows seeded active items', () => {
+    // Fruit & Veg before Bakery in category order
     cy.getActiveShoppingListItemNames().should('deep.equal', ['Tomatoes', 'Bread']);
   });
 

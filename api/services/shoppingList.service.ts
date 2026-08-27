@@ -1,31 +1,39 @@
 import { Transaction } from 'sequelize';
+import {
+  categorizeShoppingItemName,
+  isShoppingCategory,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import sequelize from '../db/models/index.ts';
 import ShoppingList from '../db/models/ShoppingList.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 import { sendShoppingListItemWebhook } from './webhook.service.ts';
 
-const assertValidShoppingListParent = async (
-  shoppingListId: number,
-  parentItemId: number | null,
-  transaction: Transaction
-): Promise<void> => {
-  if (parentItemId === null) {
-    return;
+const resolveItemCategory = (
+  name: string,
+  category?: ShoppingCategory | string | null
+): ShoppingCategory => {
+  if (isShoppingCategory(category)) {
+    return category;
   }
+  return categorizeShoppingItemName(name);
+};
 
-  const parent = await ShoppingListItem.findOne({
+const nextPositionInCategory = async (
+  shoppingListId: number,
+  category: ShoppingCategory,
+  transaction: Transaction
+): Promise<number> => {
+  const maxPosition = await ShoppingListItem.max('position', {
     where: {
-      id: parentItemId,
       shopping_list_id: shoppingListId,
-      parent_item_id: null,
+      category,
       deleted: false,
     },
     transaction,
   });
 
-  if (!parent) {
-    throw new Error('Invalid parent item: shopping list items can only be nested one level deep');
-  }
+  return typeof maxPosition === 'number' ? maxPosition + 1 : 0;
 };
 
 /**
@@ -79,7 +87,7 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
           'checked',
           'deleted',
           'created_by',
-          'parent_item_id',
+          'category',
           'position',
           'created_at',
           'updated_at'
@@ -87,7 +95,7 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
       },
     ],
     order: [
-      [{ model: ShoppingListItem, as: 'items' }, 'parent_item_id', 'ASC'],
+      [{ model: ShoppingListItem, as: 'items' }, 'category', 'ASC'],
       [{ model: ShoppingListItem, as: 'items' }, 'position', 'ASC'],
     ],
   });
@@ -100,6 +108,7 @@ export const getEntireShoppingList = async (familyGroupId: number): Promise<Shop
  * @param {number} familyGroupId - Family group ID
  * @param {string} name - Item name
  * @param {number} createdBy - User ID who created the item
+ * @param {ShoppingCategory} [category] - Optional explicit category; auto-categorized when omitted
  * @returns {Promise<ShoppingListItem>} Created shopping list item
  * @throws {Error} If shopping list not found
  */
@@ -107,7 +116,7 @@ export const addItem = async (
   familyGroupId: number,
   name: string,
   createdBy: number,
-  parentItemId?: number | null
+  category?: ShoppingCategory | string | null
 ): Promise<ShoppingListItem> => {
   return await sequelize.transaction(async (t: Transaction) => {
     const shoppingList = await ShoppingList.findOne({
@@ -119,32 +128,21 @@ export const addItem = async (
       throw new Error('Shopping list not found');
     }
 
-    const resolvedParentId = parentItemId ?? null;
-    await assertValidShoppingListParent(Number(shoppingList.get('id')), resolvedParentId, t);
-
-    const maxPosition = await ShoppingListItem.max('position', {
-      where: {
-        shopping_list_id: Number(shoppingList.get('id')),
-        parent_item_id: resolvedParentId,
-        deleted: false,
-      },
-      transaction: t,
-    });
-
-    const nextPosition = typeof maxPosition === 'number' ? maxPosition + 1 : 0;
+    const resolvedCategory = resolveItemCategory(name, category);
+    const shoppingListId = Number(shoppingList.get('id'));
+    const nextPosition = await nextPositionInCategory(shoppingListId, resolvedCategory, t);
 
     const item = await ShoppingListItem.create(
       {
-        shopping_list_id: Number(shoppingList.get('id')),
+        shopping_list_id: shoppingListId,
         name,
         created_by: createdBy,
-        parent_item_id: resolvedParentId,
+        category: resolvedCategory,
         position: nextPosition,
       },
       { transaction: t }
     );
 
-    // Send webhook for item addition
     await sendShoppingListItemWebhook(
       familyGroupId,
       'add-item',
@@ -158,15 +156,15 @@ export const addItem = async (
 
 /**
  * Add multiple items to a shopping list in a single operation.
- * All items are appended to the end of their respective sibling groups.
+ * All items are appended to the end of their respective categories.
  * @param {number} familyGroupId - Family group ID
- * @param {{ name: string; parent_item_id?: number | null }[]} items - Items to add
+ * @param {{ name: string; category?: ShoppingCategory | string | null }[]} items - Items to add
  * @param {number} createdBy - User ID who created the items
  * @returns {Promise<ShoppingListItem[]>} Created shopping list items
  */
 export const bulkAddItems = async (
   familyGroupId: number,
-  items: { name: string; parent_item_id?: number | null }[],
+  items: { name: string; category?: ShoppingCategory | string | null }[],
   createdBy: number
 ): Promise<ShoppingListItem[]> => {
   if (!items.length) {
@@ -183,29 +181,19 @@ export const bulkAddItems = async (
       throw new Error('Shopping list not found');
     }
 
+    const shoppingListId = Number(shoppingList.get('id'));
     const createdItems: ShoppingListItem[] = [];
 
     for (const payload of items) {
-      const resolvedParentId = payload.parent_item_id ?? null;
-      await assertValidShoppingListParent(Number(shoppingList.get('id')), resolvedParentId, t);
-
-      const maxPosition = await ShoppingListItem.max('position', {
-        where: {
-          shopping_list_id: Number(shoppingList.get('id')),
-          parent_item_id: resolvedParentId,
-          deleted: false,
-        },
-        transaction: t,
-      });
-
-      const nextPosition = typeof maxPosition === 'number' ? maxPosition + 1 : 0;
+      const resolvedCategory = resolveItemCategory(payload.name, payload.category);
+      const nextPosition = await nextPositionInCategory(shoppingListId, resolvedCategory, t);
 
       const item = await ShoppingListItem.create(
         {
-          shopping_list_id: Number(shoppingList.get('id')),
+          shopping_list_id: shoppingListId,
           name: payload.name,
           created_by: createdBy,
-          parent_item_id: resolvedParentId,
+          category: resolvedCategory,
           position: nextPosition,
         },
         { transaction: t }
@@ -228,9 +216,10 @@ export const bulkAddItems = async (
 /**
  * Update an item in a shopping list. Either field may be omitted to support
  * partial updates (e.g. rename without toggling checked, or vice versa).
+ * When category changes, the item is appended to the end of the target category.
  * @param {number} familyGroupId - Family group ID
  * @param {number} itemId - Shopping list item ID
- * @param {{ name?: string; checked?: boolean }} updates - Fields to update
+ * @param {{ name?: string; checked?: boolean; category?: ShoppingCategory | string }} updates - Fields to update
  * @param {number} [actorUserId] - The id of the user performing the update
  * @returns {Promise<ShoppingListItem>} Updated shopping list item
  * @throws {Error} If item not found or validation fails
@@ -238,13 +227,13 @@ export const bulkAddItems = async (
 export const updateItem = async (
   familyGroupId: number,
   itemId: number,
-  updates: { name?: string; checked?: boolean },
+  updates: { name?: string; checked?: boolean; category?: ShoppingCategory | string },
   actorUserId?: number
 ): Promise<ShoppingListItem> => {
-  const { name, checked } = updates;
+  const { name, checked, category } = updates;
 
-  if (name === undefined && checked === undefined) {
-    throw new Error('At least one of name or checked must be provided');
+  if (name === undefined && checked === undefined && category === undefined) {
+    throw new Error('At least one of name, checked or category must be provided');
   }
 
   if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
@@ -253,6 +242,10 @@ export const updateItem = async (
 
   if (checked !== undefined && typeof checked !== 'boolean') {
     throw new Error('Checked status must be a boolean');
+  }
+
+  if (category !== undefined && !isShoppingCategory(category)) {
+    throw new Error('Category must be a valid shopping category');
   }
 
   return await sequelize.transaction(async (t: Transaction) => {
@@ -272,20 +265,45 @@ export const updateItem = async (
     }
 
     const previousChecked = item.get('checked');
-    const changes: { name?: string; checked?: boolean } = {};
+    const previousCategory = String(item.get('category'));
+    const changes: { name?: string; checked?: boolean; category?: string; position?: number } = {};
+
     if (name !== undefined) {
       changes.name = name;
     }
     if (checked !== undefined) {
       changes.checked = checked;
     }
+    if (
+      category !== undefined &&
+      isShoppingCategory(category) &&
+      category !== previousCategory
+    ) {
+      changes.category = category;
+      changes.position = await nextPositionInCategory(
+        Number(item.get('shopping_list_id')),
+        category,
+        t
+      );
+    }
+
     await item.update(changes, { transaction: t });
 
-    // Send webhook for item check/uncheck
     if (checked !== undefined && checked !== previousChecked) {
       await sendShoppingListItemWebhook(
         familyGroupId,
         checked ? 'check-item' : 'uncheck-item',
+        item,
+        actorUserId
+      );
+    } else if (
+      category !== undefined &&
+      isShoppingCategory(category) &&
+      category !== previousCategory
+    ) {
+      await sendShoppingListItemWebhook(
+        familyGroupId,
+        'move-item',
         item,
         actorUserId
       );
@@ -297,17 +315,24 @@ export const updateItem = async (
 
 /**
  * Update multiple items in a shopping list in a single transaction. Each update
- * may set name, checked and/or deleted, supporting partial updates per item.
+ * may set name, checked, deleted and/or category, supporting partial updates per item.
  * The `deleted` flag enables un-deleting items (used by Undo).
+ * When category changes, the item is appended to the end of the target category.
  * @param {number} familyGroupId - Family group ID
- * @param {{ id: number; name?: string; checked?: boolean; deleted?: boolean }[]} updates - Items to update
+ * @param {{ id: number; name?: string; checked?: boolean; deleted?: boolean; category?: ShoppingCategory | string }[]} updates - Items to update
  * @param {number} [actorUserId] - The id of the user performing the update
  * @returns {Promise<ShoppingListItem[]>} Updated shopping list items
  * @throws {Error} If any item is not found or validation fails
  */
 export const bulkUpdateItems = async (
   familyGroupId: number,
-  updates: { id: number; name?: string; checked?: boolean; deleted?: boolean }[],
+  updates: {
+    id: number;
+    name?: string;
+    checked?: boolean;
+    deleted?: boolean;
+    category?: ShoppingCategory | string;
+  }[],
   actorUserId?: number
 ): Promise<ShoppingListItem[]> => {
   if (!updates.length) {
@@ -318,8 +343,13 @@ export const bulkUpdateItems = async (
     if (!update.id || isNaN(Number(update.id))) {
       throw new Error('Each update must include a valid id');
     }
-    if (update.name === undefined && update.checked === undefined && update.deleted === undefined) {
-      throw new Error('At least one of name, checked or deleted must be provided');
+    if (
+      update.name === undefined &&
+      update.checked === undefined &&
+      update.deleted === undefined &&
+      update.category === undefined
+    ) {
+      throw new Error('At least one of name, checked, deleted or category must be provided');
     }
     if (update.name !== undefined && (typeof update.name !== 'string' || !update.name.trim())) {
       throw new Error('Name must be a non-empty string');
@@ -329,6 +359,9 @@ export const bulkUpdateItems = async (
     }
     if (update.deleted !== undefined && typeof update.deleted !== 'boolean') {
       throw new Error('Deleted status must be a boolean');
+    }
+    if (update.category !== undefined && !isShoppingCategory(update.category)) {
+      throw new Error('Category must be a valid shopping category');
     }
   }
 
@@ -352,7 +385,15 @@ export const bulkUpdateItems = async (
       }
 
       const previousChecked = item.get('checked');
-      const changes: { name?: string; checked?: boolean; deleted?: boolean } = {};
+      const previousCategory = String(item.get('category'));
+      const changes: {
+        name?: string;
+        checked?: boolean;
+        deleted?: boolean;
+        category?: string;
+        position?: number;
+      } = {};
+
       if (update.name !== undefined) {
         changes.name = update.name;
       }
@@ -362,13 +403,32 @@ export const bulkUpdateItems = async (
       if (update.deleted !== undefined) {
         changes.deleted = update.deleted;
       }
+      if (
+        update.category !== undefined &&
+        isShoppingCategory(update.category) &&
+        update.category !== previousCategory
+      ) {
+        changes.category = update.category;
+        changes.position = await nextPositionInCategory(
+          Number(item.get('shopping_list_id')),
+          update.category,
+          t
+        );
+      }
+
       await item.update(changes, { transaction: t });
 
-      // Send webhook for item check/uncheck
       if (update.checked !== undefined && update.checked !== previousChecked) {
         await sendShoppingListItemWebhook(
           familyGroupId,
           update.checked ? 'check-item' : 'uncheck-item',
+          item,
+          actorUserId
+        );
+      } else if (update.category !== undefined && update.category !== previousCategory) {
+        await sendShoppingListItemWebhook(
+          familyGroupId,
+          'move-item',
           item,
           actorUserId
         );
@@ -382,20 +442,29 @@ export const bulkUpdateItems = async (
 };
 
 /**
- * Reorder items in a shopping list by updating their parent_item_id and position.
+ * Reorder items in a shopping list by updating their category and position.
  * @param {number} familyGroupId - Family group ID
- * @param {{ id: number; parent_item_id: number | null; position: number }[]} changes - Items to reorder
+ * @param {{ id: number; category: ShoppingCategory | string; position: number }[]} changes - Items to reorder
  * @param {number} [actorUserId] - The id of the user performing the reorder
  * @returns {Promise<ShoppingListItem[]>} Updated shopping list items
- * @throws {Error} If any item is not found or does not belong to the family group
+ * @throws {Error} If any item is not found or category is invalid
  */
 export const reorderItems = async (
   familyGroupId: number,
-  changes: { id: number; parent_item_id: number | null; position: number }[],
+  changes: { id: number; category: ShoppingCategory | string; position: number }[],
   actorUserId?: number
 ): Promise<ShoppingListItem[]> => {
   if (!changes.length) {
     return [];
+  }
+
+  for (const change of changes) {
+    if (!isShoppingCategory(change.category)) {
+      throw new Error('Category must be a valid shopping category');
+    }
+    if (typeof change.position !== 'number' || Number.isNaN(change.position)) {
+      throw new Error('Position must be a number');
+    }
   }
 
   return await sequelize.transaction(async (t: Transaction) => {
@@ -417,12 +486,9 @@ export const reorderItems = async (
         throw new Error('Item not found');
       }
 
-      const resolvedParentId = change.parent_item_id ?? null;
-      await assertValidShoppingListParent(Number(item.get('shopping_list_id')), resolvedParentId, t);
-
       await item.update(
         {
-          parent_item_id: resolvedParentId,
+          category: change.category,
           position: change.position,
         },
         { transaction: t }
@@ -469,7 +535,6 @@ export const deleteItem = async (familyGroupId: number, itemId: number, actorUse
 
     await item.update({ deleted: true }, { transaction: t });
 
-    // Send webhook for item deletion
     await sendShoppingListItemWebhook(
       familyGroupId,
       'delete-item',
@@ -519,7 +584,6 @@ export const bulkDeleteItems = async (
 
       await item.update({ deleted: true }, { transaction: t });
 
-      // Send webhook for item deletion
       await sendShoppingListItemWebhook(
         familyGroupId,
         'delete-item',

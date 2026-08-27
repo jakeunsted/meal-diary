@@ -157,7 +157,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
       name: 'Tomatoes',
       checked: false,
       deleted: false,
-      parent_item_id: null,
+      category: 'fruit_veg',
       position: 0,
       created_by: 1,
       created_at: getIsoDate(),
@@ -169,8 +169,8 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
       name: 'Bread',
       checked: false,
       deleted: false,
-      parent_item_id: null,
-      position: 1,
+      category: 'bakery',
+      position: 0,
       created_by: 1,
       created_at: getIsoDate(),
       updated_at: getIsoDate(),
@@ -348,8 +348,9 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   }).as('apiGetShoppingList');
 
   cy.intercept('POST', /\/api\/shopping-list\/\d+\/items$/, (req) => {
+    const category = req.body?.category || 'other';
     const siblingPositions = state.shoppingList.items
-      .filter((item: Record<string, any>) => item.parent_item_id === (req.body?.parent_item_id ?? null))
+      .filter((item: Record<string, any>) => item.category === category)
       .map((item: Record<string, any>) => item.position || 0);
     const nextPosition = siblingPositions.length > 0 ? Math.max(...siblingPositions) + 1 : 0;
     const newItem = {
@@ -358,7 +359,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       name: req.body?.name || 'New Item',
       checked: false,
       deleted: false,
-      parent_item_id: req.body?.parent_item_id ?? null,
+      category,
       position: nextPosition,
       created_by: state.activeUser.id,
       created_at: getIsoDate(),
@@ -371,8 +372,9 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   cy.intercept('POST', /\/api\/shopping-list\/\d+\/items\/bulk$/, (req) => {
     const bulkItems = Array.isArray(req.body?.items) ? req.body.items : [];
     const createdItems = bulkItems.map((entry: Record<string, any>) => {
+      const category = entry.category || 'other';
       const siblingPositions = state.shoppingList.items
-        .filter((item: Record<string, any>) => item.parent_item_id === (entry.parent_item_id ?? null))
+        .filter((item: Record<string, any>) => item.category === category)
         .map((item: Record<string, any>) => item.position || 0);
       const nextPosition = siblingPositions.length > 0 ? Math.max(...siblingPositions) + 1 : 0;
       return {
@@ -381,7 +383,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
         name: entry.name || 'New Item',
         checked: false,
         deleted: false,
-        parent_item_id: entry.parent_item_id ?? null,
+        category,
         position: nextPosition,
         created_by: state.activeUser.id,
         created_at: getIsoDate(),
@@ -427,7 +429,9 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     reorderItems.forEach((change: Record<string, any>) => {
       const existingItem = state.shoppingList.items.find((entry: Record<string, any>) => entry.id === change.id);
       if (existingItem) {
-        existingItem.parent_item_id = change.parent_item_id ?? null;
+        if (change.category !== undefined) {
+          existingItem.category = change.category;
+        }
         existingItem.position = change.position ?? existingItem.position;
       }
     });
@@ -449,6 +453,9 @@ export const installMockApi = (options: MockApiOptions = {}) => {
         }
         if (update.deleted !== undefined) {
           item.deleted = update.deleted;
+        }
+        if (update.category !== undefined) {
+          item.category = update.category;
         }
         item.updated_at = getIsoDate();
         updatedItems.push(item);

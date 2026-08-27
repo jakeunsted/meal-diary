@@ -1,8 +1,10 @@
+import { categorizeShoppingItemName, type ShoppingCategory } from '@meal-diary/shared';
+
 import type { RecipeIngredient } from '@/types/recipe';
 
 export interface ShoppingListBulkItemPayload {
   name: string;
-  parent_item_id: null;
+  category: ShoppingCategory;
 }
 
 function formatIngredientShoppingListName(ingredient: RecipeIngredient): string {
@@ -30,8 +32,11 @@ export { formatIngredientShoppingListName };
 export function buildShoppingListItemsFromRecipe(
   ingredients: RecipeIngredient[]
 ): ShoppingListBulkItemPayload[] {
-  return ingredients.map((ingredient) => ({
-    name: formatIngredientShoppingListName(ingredient),
-    parent_item_id: null,
-  }));
+  return ingredients.map((ingredient) => {
+    const name = formatIngredientShoppingListName(ingredient);
+    return {
+      name,
+      category: categorizeShoppingItemName(name),
+    };
+  });
 }

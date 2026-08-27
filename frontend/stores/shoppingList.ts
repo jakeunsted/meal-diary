@@ -1,5 +1,12 @@
 import { defineStore } from 'pinia';
 import { Preferences } from '@capacitor/preferences';
+import {
+  categorizeShoppingItemName,
+  DEFAULT_SHOPPING_CATEGORY,
+  isShoppingCategory,
+  moveShoppingListItemToCategory,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import type {
   ShoppingList,
   ShoppingListItem,
@@ -9,11 +16,8 @@ import { useApi } from '~/composables/useApi';
 import { useConnection } from '~/composables/useConnection';
 import {
   flattenShoppingListItems,
-  getShoppingListCheckedUpdateIds,
-  getShoppingListFamilyIds,
-  isShoppingListDescendant,
-  rebuildItemHierarchyFromFlatOrder,
-  indentShoppingListActiveItem,
+  insertShoppingListItemAfter,
+  rebuildItemOrderFromFlatItems,
 } from '~/utils/shoppingListTree';
 
 // Temporary ID prefix for offline items
@@ -34,6 +38,13 @@ function unwrapShoppingResponse<T>(response: unknown): T {
     return (response as { data: T }).data;
   }
   return response as T;
+}
+
+function resolveCategory(category?: string | null): ShoppingCategory {
+  if (isShoppingCategory(category)) {
+    return category;
+  }
+  return DEFAULT_SHOPPING_CATEGORY;
 }
 
 let saveToLocalStorageTimer: ReturnType<typeof setTimeout> | null = null;
@@ -205,15 +216,17 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Add a new item to the shopping list (offline-first)
      * @param item - The item data to add
      */
-    async addItem(item: { name: string; parentItemId?: number | null }) {
+    async addItem(item: { name: string; category?: string }) {
       const userStore = useUserStore();
       const tempId = this.generateTempId();
       const createdById = userStore.user?.id || 0;
-      const resolvedParentId = item.parentItemId ?? null;
+      const resolvedCategory = item.category
+        ? resolveCategory(item.category)
+        : categorizeShoppingItemName(item.name);
 
       const existingItems = this.shoppingList?.items || [];
       const siblingPositions = existingItems
-        .filter(existing => existing.parent_item_id === resolvedParentId)
+        .filter(existing => existing.category === resolvedCategory)
         .map(existing => existing.position);
       const nextPosition = siblingPositions.length ? Math.max(...siblingPositions) + 1 : 0;
 
@@ -224,7 +237,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         name: item.name,
         checked: false,
         deleted: false,
-        parent_item_id: resolvedParentId,
+        category: resolvedCategory,
         position: nextPosition,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -250,7 +263,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
           method: 'POST',
           body: {
             name: item.name,
-            parent_item_id: resolvedParentId
+            category: resolvedCategory
           },
         });
 
@@ -339,12 +352,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Apply a batch of item updates (name/checked) optimistically, persisting
+     * Apply a batch of item updates (name/checked/category) optimistically, persisting
      * non-temporary items via a single bulk-update request. Temp items are kept
      * fresh locally; persistable updates are queued for offline retry.
      */
     async applyBulkItemUpdates(
-      updates: { id: number | string; name?: string; checked?: boolean }[]
+      updates: { id: number | string; name?: string; checked?: boolean; category?: string }[]
     ) {
       if (!this.shoppingList || !updates.length) {
         return;
@@ -364,6 +377,9 @@ export const useShoppingListStore = defineStore('shoppingList', {
         }
         if (update.checked !== undefined) {
           merged.checked = update.checked;
+        }
+        if (update.category !== undefined) {
+          merged.category = update.category;
         }
         this.shoppingList.items[index] = merged;
 
@@ -403,12 +419,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
           method: 'PUT',
           body: {
             items: persistable.map((u) => {
-              const payload: { id: number; name?: string; checked?: boolean } = { id: u.id as number };
+              const payload: { id: number; name?: string; checked?: boolean; category?: string } = { id: u.id as number };
               if (u.name !== undefined) {
                 payload.name = u.name;
               }
               if (u.checked !== undefined) {
                 payload.checked = u.checked;
+              }
+              if (u.category !== undefined) {
+                payload.category = u.category;
               }
               return payload;
             }),
@@ -570,27 +589,16 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const idsToUpdate = [...new Set(getShoppingListCheckedUpdateIds(item, this.shoppingList.items, checked))];
+      const update: { id: number | string; name?: string; checked: boolean } = { id: itemId, checked };
+      if (name !== undefined) {
+        update.name = name;
+      }
 
-      const updates = idsToUpdate
-        .map((id) => {
-          const target = this.shoppingList?.items.find((entry) => entry.id === id);
-          if (!target) {
-            return null;
-          }
-          const update: { id: number | string; name?: string; checked: boolean } = { id, checked };
-          if (id === itemId && name !== undefined) {
-            update.name = name;
-          }
-          return update;
-        })
-        .filter((u): u is { id: number | string; name?: string; checked: boolean } => u !== null);
-
-      await this.applyBulkItemUpdates(updates);
+      await this.applyBulkItemUpdates([update]);
     },
 
     /**
-     * Uncheck every checked item (and their families). Returns a snapshot of the
+     * Uncheck every checked item. Returns a snapshot of the
      * affected items (with their prior checked state) so callers can offer Undo.
      */
     async uncheckAllCheckedItems(): Promise<ShoppingListItem[]> {
@@ -598,18 +606,8 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return [];
       }
 
-      const checkedItems = this.shoppingList.items.filter((item) => item.checked);
-      const ids = new Set<number | string>();
-
-      for (const item of checkedItems) {
-        for (const familyId of getShoppingListFamilyIds(item, this.shoppingList.items)) {
-          ids.add(familyId);
-        }
-      }
-
-      const snapshot = [...ids]
-        .map((id) => this.shoppingList?.items.find((entry) => entry.id === id))
-        .filter((item): item is ShoppingListItem => item !== undefined)
+      const snapshot = this.shoppingList.items
+        .filter((item) => item.checked)
         .map((item) => ({ ...item }));
 
       const updates = snapshot.map((item) => ({ id: item.id, checked: false }));
@@ -619,7 +617,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Delete every checked item (and their families). Returns a snapshot of the
+     * Delete every checked item. Returns a snapshot of the
      * removed items so callers can offer Undo.
      */
     async deleteAllCheckedItems(): Promise<ShoppingListItem[]> {
@@ -627,20 +625,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return [];
       }
 
-      const checkedItems = this.shoppingList.items.filter((item) => item.checked);
-      const ids = new Set<number | string>();
-
-      for (const item of checkedItems) {
-        for (const familyId of getShoppingListFamilyIds(item, this.shoppingList.items)) {
-          ids.add(familyId);
-        }
-      }
-
       const snapshot = this.shoppingList.items
-        .filter((item) => ids.has(item.id))
+        .filter((item) => item.checked)
         .map((item) => ({ ...item }));
 
-      await this.applyBulkDelete([...ids]);
+      await this.applyBulkDelete(snapshot.map((item) => item.id));
       return snapshot;
     },
 
@@ -660,14 +649,14 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const resolvedParentId = existing.parent_item_id ?? null;
+      const resolvedCategory = resolveCategory(existing.category);
 
       try {
         const response = await api(`/api/shopping-list/${userStore.user.family_group_id}/items`, {
           method: 'POST',
           body: {
             name,
-            parent_item_id: resolvedParentId
+            category: resolvedCategory
           },
         });
 
@@ -751,7 +740,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
             method: 'POST',
             body: {
               name: item.name,
-              parent_item_id: item.parent_item_id ?? null
+              category: resolveCategory(item.category)
             },
           });
           const newItem = unwrapShoppingResponse<ShoppingListItem>(response);
@@ -779,10 +768,11 @@ export const useShoppingListStore = defineStore('shoppingList', {
       // Sync updates
       for (const item of [...this.pendingChanges.update]) {
         try {
-          // Only send name and checked fields to the API
+          // Only send name, checked and category fields to the API
           const apiUpdates = {
             name: item.name,
-            checked: item.checked
+            checked: item.checked,
+            category: resolveCategory(item.category)
           };
 
           await api(`/api/shopping-list/${userStore.user?.family_group_id}/items/${item.id}`, {
@@ -821,12 +811,12 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       // Sync reorders
       if (this.pendingChanges.reorder.length) {
-        const uniqueById = new Map<number, { id: number; parent_item_id: number | null; position: number }>();
+        const uniqueById = new Map<number, { id: number; category: string; position: number }>();
         for (const change of this.pendingChanges.reorder) {
           if (typeof change.id === 'number') {
             uniqueById.set(change.id, {
               id: change.id,
-              parent_item_id: change.parent_item_id,
+              category: resolveCategory(change.category),
               position: change.position
             });
           }
@@ -852,7 +842,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      * Record a local reorder operation for an item.
      * This updates local state immediately and queues the change for sync.
      */
-    recordReorder(change: { id: number | string; parent_item_id: number | null; position: number }) {
+    recordReorder(change: { id: number | string; category: string; position: number }) {
       if (!this.shoppingList) {
         return;
       }
@@ -864,7 +854,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
 
       this.shoppingList.items[index] = {
         ...this.shoppingList.items[index],
-        parent_item_id: change.parent_item_id,
+        category: change.category,
         position: change.position
       };
 
@@ -873,13 +863,13 @@ export const useShoppingListStore = defineStore('shoppingList', {
         if (existingIndex !== -1) {
           this.pendingChanges.reorder[existingIndex] = {
             id: change.id,
-            parent_item_id: change.parent_item_id,
+            category: change.category,
             position: change.position,
           };
         } else {
           this.pendingChanges.reorder.push({
             id: change.id,
-            parent_item_id: change.parent_item_id,
+            category: change.category,
             position: change.position,
           });
         }
@@ -891,7 +881,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const changes = rebuildItemHierarchyFromFlatOrder(flatActiveItems);
+      const changes = rebuildItemOrderFromFlatItems(flatActiveItems);
       for (const change of changes) {
         this.recordReorder(change);
       }
@@ -910,50 +900,33 @@ export const useShoppingListStore = defineStore('shoppingList', {
     },
 
     /**
-     * Indent an item, making it a child of the previous item in the ordered list.
+     * Move an item to another category (optimistic), syncing via update.
      */
-    async indentItem(itemId: number | string) {
-      if (!this.shoppingList) {
+    async moveItemToCategory(itemId: number | string, category: string) {
+      if (!this.shoppingList || !isShoppingCategory(category)) {
         return;
       }
 
-      const activeItems = this.getActiveFlatItems();
-      const updatedItems = indentShoppingListActiveItem(activeItems, itemId);
-      if (!updatedItems) {
+      const existing = this.shoppingList.items.find((item) => item.id === itemId);
+      if (!existing || existing.category === category) {
         return;
       }
 
-      this.applyActiveFlatOrder(updatedItems);
-      await this.syncPendingChanges();
+      this.shoppingList.items = moveShoppingListItemToCategory(
+        this.shoppingList.items.map((item) => ({
+          ...item,
+          category: resolveCategory(item.category),
+        })),
+        itemId,
+        category
+      ) as ShoppingListItem[];
+
+      this.scheduleSaveToLocalStorage();
+      await this.updateItem(itemId, { category });
     },
 
     /**
-     * Outdent an item, moving it up one level in the hierarchy.
-     */
-    async outdentItem(itemId: number | string) {
-      if (!this.shoppingList) {
-        return;
-      }
-
-      const activeItems = this.getActiveFlatItems();
-      const target = activeItems.find(item => item.id === itemId);
-      if (!target || target.parent_item_id === null) {
-        return;
-      }
-
-      const parent = this.shoppingList.items.find(item => item.id === target.parent_item_id);
-      const updatedItems = activeItems.map((item) => (
-        item.id === itemId
-          ? { ...item, parent_item_id: parent?.parent_item_id ?? null }
-          : item
-      ));
-
-      this.applyActiveFlatOrder(updatedItems);
-      await this.syncPendingChanges();
-    },
-
-    /**
-     * Insert a new temporary item directly after an existing item, preserving its parent.
+     * Insert a new temporary item directly after an existing item, inheriting its category.
      * This only updates local state; the item is persisted when its name is later set.
      */
     async insertItemAfter(existingItemId: number | string, name: string) {
@@ -961,16 +934,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
         return;
       }
 
-      const existingIndex = this.shoppingList.items.findIndex(item => item.id === existingItemId);
-      if (existingIndex === -1) {
-        await this.addItem({ name, parentItemId: null });
+      const existing = this.shoppingList.items.find(item => item.id === existingItemId);
+      if (!existing) {
+        await this.addItem({ name });
         return;
       }
 
-      const existing = this.shoppingList.items[existingIndex];
       const tempId = this.generateTempId();
       const createdById = useUserStore().user?.id || 0;
-      const parentId = existing.parent_item_id ?? null;
+      const category = resolveCategory(existing.category);
 
       const tempItem: ShoppingListItem = {
         id: tempId,
@@ -978,24 +950,22 @@ export const useShoppingListStore = defineStore('shoppingList', {
         name,
         checked: false,
         deleted: false,
-        parent_item_id: parentId,
+        category,
         position: existing.position,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         created_by: createdById
       };
 
-      this.shoppingList.items.splice(existingIndex + 1, 0, tempItem);
+      this.shoppingList.items = insertShoppingListItemAfter(
+        this.shoppingList.items,
+        existingItemId,
+        tempItem
+      );
 
-      const siblings = this.shoppingList.items
-        .filter(item => item.parent_item_id === parentId)
-        .sort((a, b) => a.position - b.position);
-
-      siblings.forEach((item, index) => {
-        item.position = index;
-      });
-
-      this.pendingChanges.add.push(tempItem);
+      this.pendingChanges.add.push(
+        this.shoppingList.items.find((item) => String(item.id) === tempId) || tempItem
+      );
       this.scheduleSaveToLocalStorage();
     }
   }

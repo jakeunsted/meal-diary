@@ -1,25 +1,21 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  SHOPPING_CATEGORIES,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, TextInput, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import Animated, {
-  runOnJS,
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import { runOnJS } from 'react-native-reanimated';
 
+import type { ShoppingListDragHandleProps } from '@/components/shopping-list/ShoppingListSortableList';
+import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Text } from '@/components/ui/text';
 import type { ShoppingListItem } from '@/types/shoppingList';
 
-const DEPTH_INDENT_PX = 24;
-const SWIPE_THRESHOLD = 40;
-const SWIPE_MAX_OFFSET = 56;
-
 interface ShoppingListItemRowProps {
   item: ShoppingListItem;
-  depth?: number;
   hideCheckbox?: boolean;
   isFocused?: boolean;
   editable?: boolean;
@@ -29,19 +25,32 @@ interface ShoppingListItemRowProps {
   onBlur?: (name: string) => void;
   onSubmitEditing?: (name: string) => void;
   onCheckedChange?: (itemId: number | string, checked: boolean) => void;
-  onIndent?: (itemId: number | string) => void;
-  onOutdent?: (itemId: number | string) => void;
+  onMoveCategory?: (itemId: number | string, category: ShoppingCategory) => void;
   onRemove?: (itemId: number | string) => void;
   isRemoving?: boolean;
   isUpdating?: boolean;
-  drag?: () => void;
-  isActive?: boolean;
-  onDragPointerMove?: (pageX: number) => void;
+  dragHandleProps?: ShoppingListDragHandleProps;
+}
+
+function categoryLabelKey(category: ShoppingCategory): string {
+  switch (category) {
+    case 'meat':
+      return 'shoppingList.meat';
+    case 'fruit_veg':
+      return 'shoppingList.fruitVeg';
+    case 'bakery':
+      return 'shoppingList.bakery';
+    case 'canned':
+      return 'shoppingList.canned';
+    case 'other':
+      return 'shoppingList.other';
+    default:
+      return 'shoppingList.other';
+  }
 }
 
 export function ShoppingListItemRow({
   item,
-  depth = 0,
   hideCheckbox = false,
   isFocused = false,
   editable = false,
@@ -51,29 +60,19 @@ export function ShoppingListItemRow({
   onBlur,
   onSubmitEditing,
   onCheckedChange,
-  onIndent,
-  onOutdent,
+  onMoveCategory,
   onRemove,
   isRemoving = false,
   isUpdating = false,
-  drag,
-  isActive = false,
-  onDragPointerMove,
+  dragHandleProps,
 }: ShoppingListItemRowProps) {
   const { t } = useTranslation();
   const [draftName, setDraftName] = useState(item.name);
+  const [moveSheetVisible, setMoveSheetVisible] = useState(false);
   const isDisabled = isRemoving || isUpdating;
   const showInput = editable && isFocused;
   const previousItemIdRef = useRef(item.id);
-  const translateX = useSharedValue(0);
-  const swipeEnabled =
-    !showInput && !isDisabled && !isActive && (!!onIndent || !!onOutdent);
-
-  const onIndentRef = useRef(onIndent);
-  const onOutdentRef = useRef(onOutdent);
   const onFocusRef = useRef(onFocus);
-  onIndentRef.current = onIndent;
-  onOutdentRef.current = onOutdent;
   onFocusRef.current = onFocus;
 
   useEffect(() => {
@@ -88,45 +87,9 @@ export function ShoppingListItemRow({
     }
   }, [isFocused, item.id, item.name]);
 
-  const triggerIndent = useCallback(() => {
-    onIndentRef.current?.(item.id);
-  }, [item.id]);
-
-  const triggerOutdent = useCallback(() => {
-    onOutdentRef.current?.(item.id);
-  }, [item.id]);
-
   const triggerFocus = useCallback(() => {
     onFocusRef.current?.();
   }, []);
-
-  const panGesture = useMemo(
-    () =>
-      Gesture.Pan()
-        .enabled(swipeEnabled)
-        .activeOffsetX([-12, 12])
-        .failOffsetY([-12, 12])
-        .onUpdate((event) => {
-          const clamped = Math.max(
-            -SWIPE_MAX_OFFSET,
-            Math.min(SWIPE_MAX_OFFSET, event.translationX)
-          );
-          translateX.value = clamped;
-        })
-        .onEnd((event) => {
-          if (event.translationX >= SWIPE_THRESHOLD) {
-            runOnJS(triggerIndent)();
-          } else if (event.translationX <= -SWIPE_THRESHOLD) {
-            runOnJS(triggerOutdent)();
-          }
-
-          translateX.value = withSpring(0, { damping: 20, stiffness: 220 });
-        })
-        .onFinalize(() => {
-          translateX.value = withSpring(0, { damping: 20, stiffness: 220 });
-        }),
-    [swipeEnabled, translateX, triggerIndent, triggerOutdent]
-  );
 
   const tapGesture = useMemo(
     () =>
@@ -138,29 +101,28 @@ export function ShoppingListItemRow({
     [editable, isDisabled, showInput, triggerFocus]
   );
 
-  const rowGesture = useMemo(
-    () => (swipeEnabled ? Gesture.Exclusive(panGesture, tapGesture) : tapGesture),
-    [panGesture, swipeEnabled, tapGesture]
-  );
-
-  const animatedRowStyle = useAnimatedStyle(() => {
-    const offset = translateX.value;
-    const backgroundColor =
-      offset > 16
-        ? 'rgba(99, 102, 241, 0.18)'
-        : offset < -16
-          ? 'rgba(99, 102, 241, 0.1)'
-          : 'transparent';
-
-    return {
-      transform: [{ translateX: offset }],
-      backgroundColor,
-    };
-  });
-
   const handleNameChange = (name: string) => {
     setDraftName(name);
     onNameChange?.(name);
+  };
+
+  const handleOpenMoveSheet = () => {
+    if (isDisabled || !onMoveCategory) {
+      return;
+    }
+    setMoveSheetVisible(true);
+  };
+
+  const handleCloseMoveSheet = () => {
+    setMoveSheetVisible(false);
+  };
+
+  const handleSelectCategory = (category: ShoppingCategory) => {
+    setMoveSheetVisible(false);
+    if (category === item.category) {
+      return;
+    }
+    onMoveCategory?.(item.id, category);
   };
 
   const nameContent = (
@@ -194,28 +156,26 @@ export function ShoppingListItemRow({
   );
 
   return (
-    <Animated.View
+    <View
       className="flex-row items-center gap-2 rounded-lg px-2 py-2"
-      style={[{ marginLeft: depth * DEPTH_INDENT_PX }, animatedRowStyle]}
       testID={`shopping-item-row-${item.id}`}
     >
-      {drag ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('shoppingList.reorderItem')}
-          className="h-8 w-7 items-center justify-center"
-          delayLongPress={120}
-          onLongPress={drag}
-          onPressIn={(event) => onDragPointerMove?.(event.nativeEvent.pageX)}
-          onTouchMove={(event) => onDragPointerMove?.(event.nativeEvent.pageX)}
-          testID={`shopping-item-drag-handle-${item.id}`}
-        >
-          <FontAwesome
-            name="bars"
-            size={12}
-            color={isActive ? '#6366F1' : 'rgba(241, 245, 249, 0.45)'}
-          />
-        </Pressable>
+      {dragHandleProps ? (
+        <GestureDetector gesture={dragHandleProps.gesture}>
+          <View
+            accessibilityRole="button"
+            accessibilityLabel={t('shoppingList.reorderItem')}
+            className="h-8 w-7 items-center justify-center"
+            collapsable={false}
+            testID={`shopping-item-drag-handle-${item.id}`}
+          >
+            <FontAwesome
+              name="bars"
+              size={12}
+              color={dragHandleProps.isActive ? '#6366F1' : 'rgba(241, 245, 249, 0.45)'}
+            />
+          </View>
+        </GestureDetector>
       ) : null}
 
       {!hideCheckbox ? (
@@ -240,15 +200,28 @@ export function ShoppingListItemRow({
       {showInput ? (
         nameArea
       ) : (
-        <GestureDetector gesture={rowGesture}>
+        <GestureDetector gesture={tapGesture}>
           <View className="min-w-0 flex-1">{nameArea}</View>
         </GestureDetector>
       )}
 
+      {onMoveCategory && !item.checked ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('shoppingList.moveToCategory')}
+          className="h-8 w-8 items-center justify-center rounded-lg"
+          disabled={isDisabled}
+          onPress={handleOpenMoveSheet}
+          testID={`shopping-item-move-${item.id}`}
+        >
+          <FontAwesome name="folder-o" size={14} color="rgba(241, 245, 249, 0.7)" />
+        </Pressable>
+      ) : null}
+
       {onRemove ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Remove item"
+          accessibilityLabel={t('shoppingList.removeItem')}
           className="h-8 w-8 items-center justify-center rounded-lg"
           disabled={isDisabled}
           onPress={() => onRemove(item.id)}
@@ -261,6 +234,35 @@ export function ShoppingListItemRow({
           )}
         </Pressable>
       ) : null}
-    </Animated.View>
+
+      <DialogModal
+        visible={moveSheetVisible}
+        onClose={handleCloseMoveSheet}
+        placement="bottom"
+        testID={`shopping-item-move-sheet-${item.id}`}
+      >
+        <DialogPanel className="mb-6 w-full">
+          <Text className="mb-3 text-base font-semibold text-ice">
+            {t('shoppingList.moveToCategory')}
+          </Text>
+          {SHOPPING_CATEGORIES.map((category) => {
+            const isCurrent = category === item.category;
+            return (
+              <Pressable
+                key={category}
+                accessibilityRole="button"
+                className={`mb-1 rounded-xl px-3 py-3 ${isCurrent ? 'bg-primary/20' : 'bg-ice/5'}`}
+                onPress={() => handleSelectCategory(category)}
+                testID={`shopping-item-move-${item.id}-${category}`}
+              >
+                <Text className={`text-base ${isCurrent ? 'text-primary font-semibold' : 'text-ice'}`}>
+                  {t(categoryLabelKey(category))}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </DialogPanel>
+      </DialogModal>
+    </View>
   );
 }

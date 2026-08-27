@@ -1,3 +1,5 @@
+import type { ShoppingCategory } from '@meal-diary/shared';
+
 export interface ShoppingListItem {
   id: number | string;
   shopping_list_id: number;
@@ -5,7 +7,7 @@ export interface ShoppingListItem {
   checked: boolean;
   deleted: boolean;
   created_by: number;
-  parent_item_id: number | string | null;
+  category: ShoppingCategory;
   position: number;
   created_at: string;
   updated_at: string;
@@ -21,7 +23,7 @@ export interface ShoppingList {
 
 export interface ShoppingListItemReorderChange {
   id: number | string;
-  parent_item_id: number | string | null;
+  category: ShoppingCategory;
   position: number;
 }
 
@@ -31,7 +33,7 @@ export interface ShoppingListPendingAddOp {
   familyGroupId: number;
   tempId: string;
   name: string;
-  parentItemId: number | string | null;
+  category?: ShoppingCategory;
 }
 
 export interface ShoppingListPendingUpdateOp {
@@ -39,7 +41,7 @@ export interface ShoppingListPendingUpdateOp {
   type: 'update';
   familyGroupId: number;
   itemId: number | string;
-  updates: { name?: string; checked?: boolean };
+  updates: { name?: string; checked?: boolean; category?: ShoppingCategory };
 }
 
 export interface ShoppingListPendingDeleteOp {
@@ -53,7 +55,12 @@ export interface ShoppingListPendingBulkUpdateOp {
   opId: string;
   type: 'bulkUpdate';
   familyGroupId: number;
-  items: Array<{ id: number | string; name?: string; checked?: boolean }>;
+  items: Array<{
+    id: number | string;
+    name?: string;
+    checked?: boolean;
+    category?: ShoppingCategory;
+  }>;
 }
 
 export interface ShoppingListPendingBulkDeleteOp {
@@ -74,7 +81,7 @@ export interface ShoppingListPendingBulkAddOp {
   opId: string;
   type: 'bulkAdd';
   familyGroupId: number;
-  items: Array<{ name: string; parent_item_id?: number | null }>;
+  items: Array<{ name: string; category?: ShoppingCategory }>;
 }
 
 export type ShoppingListPendingOp =

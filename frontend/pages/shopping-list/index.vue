@@ -47,19 +47,60 @@
 
     <ShoppingListSkeleton v-if="!hasData" />
     <div v-else>
-      <DnDProvider>
-        <template #preview>
-          <DragPreview />
+      <ShoppingListCategoryTabs v-model="activeTab" :counts="tabCounts" />
+
+      <div data-testid="shopping-list-active-items">
+      <template v-if="activeTab === 'all'">
+        <div
+          v-for="category in categories"
+          :key="category"
+          class="mb-4"
+        >
+          <template v-if="activeItemsByCategory[category].length">
+            <h2
+              class="text-sm font-semibold uppercase tracking-wide opacity-70 px-2 mb-1"
+              :data-testid="`shopping-list-section-${category}`"
+            >
+              {{ categoryLabel(category) }}
+            </h2>
+            <ShoppingListSortableList
+              :items="activeItemsByCategory[category]"
+              @reorder="(ids) => handleReorder(category, ids)"
+            >
+              <template #default="{ item }">
+                <ShoppingListItem
+                  v-if="item"
+                  :item="item"
+                  :hide-checkbox="hideCheckboxes"
+                  @update="handleItemUpdate"
+                  @remove="handleRemoveItem"
+                  @insertBelow="handleInsertBelow"
+                  @moveCategory="handleMoveCategory"
+                />
+              </template>
+            </ShoppingListSortableList>
+          </template>
+        </div>
+      </template>
+
+      <ShoppingListSortableList
+        v-else
+        :items="activeItemsForTab"
+        @reorder="(ids) => handleReorder(activeTab, ids)"
+      >
+        <template #default="{ item }">
+          <ShoppingListItem
+            v-if="item"
+            :item="item"
+            :hide-checkbox="hideCheckboxes"
+            @update="handleItemUpdate"
+            @remove="handleRemoveItem"
+            @insertBelow="handleInsertBelow"
+            @moveCategory="handleMoveCategory"
+          />
         </template>
-        <ShoppingListDndZone
-          :active-items="activeItems"
-          :item-depth-map="itemDepthMap"
-          @update="handleItemUpdate"
-          @remove="handleRemoveItem"
-          @indent="handleIndent"
-          @outdent="handleOutdent"
-          @insertBelow="handleInsertBelow"
-        />
+      </ShoppingListSortableList>
+      </div>
 
       <div class="pt-4 flex items-center gap-2 my-2">
         <button
@@ -82,66 +123,60 @@
         />
       </div>
 
-        <div v-if="hasCheckedItems && !hideCheckedItems" class="mt-4 bg-base-200 rounded-box">
-          <div class="flex items-center justify-between gap-2 px-4 py-2">
+      <div v-if="hasCheckedItems && !hideCheckedItems" class="mt-4 bg-base-200 rounded-box">
+        <div class="flex items-center justify-between gap-2 px-4 py-2">
+          <button
+            type="button"
+            class="flex items-center gap-2 text-sm font-medium min-w-0 text-left"
+            data-testid="shopping-list-checked-items-toggle"
+            @click="checkedItemsExpanded = !checkedItemsExpanded"
+          >
+            <fa
+              icon="chevron-down"
+              class="transition-transform duration-200 shrink-0"
+              :class="{ '-rotate-90': !checkedItemsExpanded }"
+            />
+            <span data-testid="shopping-list-checked-items-title">
+              {{ $t('Checked items') }} ({{ checkedItems.length }})
+            </span>
+          </button>
+          <div class="flex items-center gap-1 shrink-0">
             <button
+              class="btn btn-ghost btn-xs"
               type="button"
-              class="flex items-center gap-2 text-sm font-medium min-w-0 text-left"
-              data-testid="shopping-list-checked-items-toggle"
-              @click="checkedItemsExpanded = !checkedItemsExpanded"
+              data-testid="shopping-list-uncheck-all"
+              @click="handleUncheckAll"
             >
-              <fa
-                icon="chevron-down"
-                class="transition-transform duration-200 shrink-0"
-                :class="{ '-rotate-90': !checkedItemsExpanded }"
-              />
-              <span data-testid="shopping-list-checked-items-title">
-                {{ $t('Checked items') }} ({{ checkedItems.length }})
-              </span>
+              {{ $t('Uncheck all') }}
             </button>
-            <div class="flex items-center gap-1 shrink-0">
-              <button
-                class="btn btn-ghost btn-xs"
-                type="button"
-                data-testid="shopping-list-uncheck-all"
-                @click="handleUncheckAll"
-              >
-                {{ $t('Uncheck all') }}
-              </button>
-              <button
-                class="btn btn-ghost btn-xs text-error"
-                type="button"
-                data-testid="shopping-list-delete-all-checked"
-                @click="handleDeleteAllChecked"
-              >
-                {{ $t('Delete all') }}
-              </button>
-            </div>
-          </div>
-          <div v-show="checkedItemsExpanded" class="px-2 pb-2">
-            <div
-              v-for="item in checkedItems"
-              :key="item.id"
-              class="my-1"
+            <button
+              class="btn btn-ghost btn-xs text-error"
+              type="button"
+              data-testid="shopping-list-delete-all-checked"
+              @click="handleDeleteAllChecked"
             >
-              <div
-                class="flex items-center gap-2"
-                :style="{ marginLeft: `${(itemDepthMap[item.id] || 0) * 1.5}rem` }"
-              >
-                <ShoppingListItem
-                  class="flex-1"
-                  :item="item"
-                  @update="handleItemUpdate"
-                  @remove="handleRemoveItem"
-                  @indent="handleIndent"
-                  @outdent="handleOutdent"
-                  @insertBelow="handleInsertBelow"
-                />
-              </div>
-            </div>
+              {{ $t('Delete all') }}
+            </button>
           </div>
         </div>
-      </DnDProvider>
+        <div v-show="checkedItemsExpanded" class="px-2 pb-2">
+          <div
+            v-for="item in checkedItems"
+            :key="item.id"
+            class="my-1"
+          >
+            <ShoppingListItem
+              class="flex-1"
+              :item="item"
+              :hide-checkbox="hideCheckboxes"
+              @update="handleItemUpdate"
+              @remove="handleRemoveItem"
+              @insertBelow="handleInsertBelow"
+              @moveCategory="handleMoveCategory"
+            />
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -152,15 +187,24 @@ definePageMeta({
 });
 
 import { Preferences } from '@capacitor/preferences';
-import { DnDProvider, DragPreview } from '@vue-dnd-kit/core';
+import {
+  SHOPPING_CATEGORIES,
+  categorizeShoppingItemName,
+  groupShoppingListItemsByCategory,
+  isShoppingCategory,
+  type ShoppingCategory,
+  type ShoppingListTab,
+} from '@meal-diary/shared';
 import ShoppingListSkeleton from '~/components/shopping-list/ShoppingListSkeleton.vue';
 import ShoppingListItem from '~/components/shopping-list/ShoppingListItem.vue';
-import ShoppingListDndZone from '~/components/shopping-list/ShoppingListDndZone.vue';
+import ShoppingListCategoryTabs from '~/components/shopping-list/ShoppingListCategoryTabs.vue';
+import ShoppingListSortableList from '~/components/shopping-list/ShoppingListSortableList.vue';
 import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 import { flattenShoppingListItems } from '~/utils/shoppingListTree';
+import type { ShoppingListItem as ShoppingListItemType } from '~/types/ShoppingList';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const shoppingListStore = useShoppingListStore();
@@ -177,6 +221,8 @@ const hasData = computed(() => {
 const newItemName = ref('');
 const newItemInput = ref<HTMLInputElement | null>(null);
 const checkedItemsExpanded = ref(false);
+const activeTab = ref<ShoppingListTab>('all');
+const categories = SHOPPING_CATEGORIES;
 
 const VIEW_SETTINGS_KEY = 'shoppingListViewSettings';
 const hideCheckedItems = ref(false);
@@ -238,63 +284,81 @@ const activeItems = computed(() => {
 });
 
 const checkedItems = computed(() => {
-  return orderedItems.value.filter(item => item.checked);
+  return orderedItems.value.filter(item => {
+    if (!item.checked) {
+      return false;
+    }
+    if (activeTab.value === 'all') {
+      return true;
+    }
+    return item.category === activeTab.value;
+  });
 });
 
 const hasCheckedItems = computed(() => checkedItems.value.length > 0);
 
-const itemDepthMap = computed<Record<number, number>>(() => {
-  const depthMap: Record<number, number> = {};
-  const items = shoppingListStore.shoppingList?.items || [];
-  const byId = new Map<number, { id: number; parent_item_id: number | null }>();
-
-  for (const item of items) {
-    if (typeof item.id === 'number') {
-      byId.set(item.id, { id: item.id, parent_item_id: item.parent_item_id });
-    }
-  }
-
-  const computeDepth = (id: number, visited: Set<number>): number => {
-    if (depthMap[id] !== undefined) {
-      return depthMap[id];
-    }
-    if (visited.has(id)) {
-      return 0;
-    }
-    visited.add(id);
-    const entry = byId.get(id);
-    if (!entry || entry.parent_item_id === null) {
-      depthMap[id] = 0;
-      return 0;
-    }
-    const parentDepth = computeDepth(entry.parent_item_id, visited);
-    const depth = parentDepth + 1;
-    depthMap[id] = depth;
-    return depth;
-  };
-
-  for (const entry of byId.values()) {
-    computeDepth(entry.id, new Set<number>());
-  }
-
-  return depthMap;
+const activeItemsByCategory = computed(() => {
+  return groupShoppingListItemsByCategory(
+    activeItems.value.map((item) => ({
+      ...item,
+      category: (isShoppingCategory(item.category) ? item.category : 'other') as ShoppingCategory,
+    }))
+  ) as Record<ShoppingCategory, ShoppingListItemType[]>;
 });
 
-// Add function to handle input focus
+const activeItemsForTab = computed(() => {
+  if (activeTab.value === 'all' || !isShoppingCategory(activeTab.value)) {
+    return activeItems.value;
+  }
+  return activeItemsByCategory.value[activeTab.value] ?? [];
+});
+
+const tabCounts = computed(() => {
+  const counts = {
+    all: activeItems.value.length,
+    meat: 0,
+    fruit_veg: 0,
+    bakery: 0,
+    canned: 0,
+    other: 0,
+  } as Record<ShoppingListTab, number>;
+
+  for (const item of activeItems.value) {
+    const category = isShoppingCategory(item.category) ? item.category : 'other';
+    counts[category] += 1;
+  }
+
+  return counts;
+});
+
+const categoryLabel = (category: ShoppingCategory): string => {
+  switch (category) {
+    case 'meat':
+      return t('Meat');
+    case 'fruit_veg':
+      return t('Fruit & Veg');
+    case 'bakery':
+      return t('Bakery');
+    case 'canned':
+      return t('Canned');
+    case 'other':
+      return t('Other');
+    default:
+      return category;
+  }
+};
+
 const handleInputFocus = async (event: FocusEvent) => {
-  // Use the improved mobile input scroll functionality
   const { scrollToInput } = useMobileInputScroll();
   const target = event.target as HTMLElement | null;
   if (target) {
     scrollToInput(target);
   }
 
-  // For Capacitor Android, also ensure the input is visible
   if (import.meta.client) {
     try {
       const { Capacitor } = await import('@capacitor/core');
       if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
-        // Additional scroll to ensure input is visible
         setTimeout(() => {
           if (target) {
             target.scrollIntoView({
@@ -316,13 +380,17 @@ const handleAddNewItem = async () => {
     return;
   }
   try {
+    const category =
+      activeTab.value === 'all'
+        ? categorizeShoppingItemName(newItemName.value)
+        : activeTab.value;
+
     await shoppingListStore.addItem({
       name: newItemName.value,
-      parentItemId: null
+      category,
     });
     track('shopping_list_item_added');
     newItemName.value = '';
-    // Refocus the input so multiple items can be entered in sequence (Keep behavior)
     await nextTick();
     newItemInput.value?.focus();
   } catch (error) {
@@ -346,6 +414,29 @@ const handleItemUpdate = async (event: { id: number | string; name: string; chec
   await shoppingListStore.updateItem(event.id, {
     name: event.name,
   });
+};
+
+const handleMoveCategory = async (event: { id: number | string; category: string }) => {
+  await shoppingListStore.moveItemToCategory(event.id, event.category);
+};
+
+const handleReorder = async (
+  category: ShoppingListTab,
+  orderedIds: Array<number | string>
+) => {
+  if (!isShoppingCategory(category)) {
+    return;
+  }
+
+  const categoryItems = activeItemsByCategory.value[category] ?? [];
+  const byId = new Map(categoryItems.map((item) => [item.id, item]));
+  const reordered = orderedIds
+    .map((id) => byId.get(id))
+    .filter((item): item is ShoppingListItemType => !!item)
+    .map((item, index) => ({ ...item, position: index, category }));
+
+  shoppingListStore.applyActiveFlatOrder(reordered);
+  await shoppingListStore.syncPendingChanges();
 };
 
 const handleUncheckAll = async () => {
@@ -391,14 +482,6 @@ const handleRemoveItem = async (itemId: number | string) => {
   }
 };
 
-const handleIndent = async (itemId: number | string) => {
-  await shoppingListStore.indentItem(itemId);
-};
-
-const handleOutdent = async (itemId: number | string) => {
-  await shoppingListStore.outdentItem(itemId);
-};
-
 const handleInsertBelow = async (itemId: number | string) => {
   await shoppingListStore.insertItemAfter(itemId, '');
 };
@@ -407,13 +490,10 @@ onMounted(async () => {
   await nextTick();
   track('shopping_list_viewed');
 
-  // Load persisted view settings (hide checked items / hide checkboxes)
   await loadViewSettings();
 
-  // Start loading data after skeleton is visible
   const loadData = async () => {
     try {
-      // Start all requests in parallel
       await Promise.all([
         shoppingListStore.fetchShoppingList().catch(handleError),
         userStore.fetchUser().catch(handleError)
@@ -425,10 +505,8 @@ onMounted(async () => {
     }
   };
 
-  // Start loading data
   loadData();
 
-  // Add viewport resize listener for keyboard handling
   if (import.meta.client) {
     try {
       const { Capacitor } = await import('@capacitor/core');
@@ -439,9 +517,7 @@ onMounted(async () => {
           const currentHeight = window.innerHeight;
           const heightDifference = initialViewportHeight - currentHeight;
 
-          // If viewport height decreased significantly, keyboard likely opened
           if (heightDifference > 150) {
-            // Find focused input and scroll to it
             const focusedElement = document.activeElement;
             if (focusedElement && focusedElement.tagName === 'INPUT') {
               setTimeout(() => {
@@ -459,7 +535,6 @@ onMounted(async () => {
 
         window.addEventListener('resize', handleViewportResize);
 
-        // Cleanup on unmount
         onUnmounted(() => {
           window.removeEventListener('resize', handleViewportResize);
         });
@@ -491,19 +566,12 @@ onMounted(async () => {
   transition: all 0.2s ease;
 }
 
-/* Ensure inputs are properly positioned when keyboard opens */
 .input:focus {
   position: relative;
   z-index: 10;
 }
 
-:deep(.dnd-kit-preview) {
-  opacity: 0.7;
-}
-
-/* When "Hide checkboxes" is enabled, hide the item checkboxes across the list */
 .hide-checkboxes .checkbox {
   display: none;
 }
 </style>
-

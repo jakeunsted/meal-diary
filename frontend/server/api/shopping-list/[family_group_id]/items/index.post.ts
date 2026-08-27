@@ -3,7 +3,7 @@ import { authenticatedFetch } from '~/server/utils/auth';
 export default defineEventHandler(async (event) => {
   try {
     const familyGroupId = getRouterParam(event, 'family_group_id');
-    const { name, parent_item_id } = await readBody(event);
+    const { name, category } = await readBody(event);
 
     if (!name) {
       throw createError({
@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
     }
     const result = await authenticatedFetch(event, `/shopping-list/${familyGroupId}/items`, {
       method: 'POST',
-      body: JSON.stringify({ name, parent_item_id }),
+      body: JSON.stringify({ name, category }),
     });
     return result.data;
   } catch (error: any) {

@@ -94,7 +94,7 @@ function applyShoppingListEvent(
     } else if (eventType === 'move-item') {
       nextItems[index] = {
         ...nextItems[index],
-        parent_item_id: item.parent_item_id ?? null,
+        category: item.category ?? nextItems[index].category,
         position: item.position,
       };
     } else {

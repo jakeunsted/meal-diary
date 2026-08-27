@@ -82,6 +82,7 @@ export default defineNuxtConfig({
         'pencil',
         'grip',
         'grip-vertical',
+        'folder',
         'ellipsis-vertical',
         'copy',
         'pen',

@@ -23,7 +23,7 @@ router.use('/:family_group_id', requireFamilyMember);
  *         family_group_id:
  *           type: integer
  *           description: The id of the family group the shopping list belongs to
- *         created_at:  
+ *         created_at:
  *           type: string
  *           format: date-time
  *           description: The date and time the shopping list was created
@@ -31,102 +31,19 @@ router.use('/:family_group_id', requireFamilyMember);
  *           type: string
  *           format: date-time
  *           description: The date and time the shopping list was last updated
- *         categories:
- *           type: array
- *           description: The categories in the shopping list
- *           items:
- *             $ref: '#/components/schemas/ShoppingListCategoryWithItems'
- * 
- *     ShoppingListCategoryWithItems:
- *       type: object
- *       required:
- *         - id
- *         - shopping_list_id
- *         - item_categories_id
- *       properties:
- *         id:
- *           type: integer
- *           description: The auto-generated id of the shopping list category
- *         shopping_list_id:
- *           type: integer
- *           description: The id of the shopping list
- *         item_categories_id:
- *           type: integer
- *           description: The id of the item category
- *         created_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was created
- *         updated_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was last updated
- *         itemCategory:
- *           $ref: '#/components/schemas/ItemCategory'
  *         items:
  *           type: array
- *           description: The items in this category
+ *           description: The items in the shopping list
  *           items:
  *             $ref: '#/components/schemas/ShoppingListItem'
- * 
- *     ItemCategory:
- *       type: object
- *       required:
- *         - name
- *       properties:
- *         id:
- *           type: integer
- *           description: The auto-generated id of the item category
- *         name:
- *           type: string
- *           description: The name of the category
- *         icon:
- *           type: string
- *           description: The icon identifier for the category
- *         created_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was created
- *         updated_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was last updated
- *     
- *     ShoppingListCategory:
- *       type: object
- *       required:
- *         - shopping_list_id
- *         - item_categories_id
- *         - created_by
- *       properties:
- *         id:
- *           type: integer
- *           description: The auto-generated id of the shopping list category
- *         shopping_list_id:
- *           type: integer
- *           description: The id of the shopping list
- *         item_categories_id:
- *           type: integer
- *           description: The id of the item category
- *         created_by:
- *           type: integer
- *           description: The id of the user who created the category
- *         created_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was created
- *         updated_at:
- *           type: string
- *           format: date-time
- *           description: The date and time the category was last updated
- * 
+ *
  *     ShoppingListItem:
  *       type: object
  *       required:
  *         - shopping_list_id
- *         - shopping_list_categories
  *         - name
  *         - created_by
+ *         - category
  *       properties:
  *         id:
  *           type: integer
@@ -134,16 +51,13 @@ router.use('/:family_group_id', requireFamilyMember);
  *         shopping_list_id:
  *           type: integer
  *           description: The id of the shopping list
- *         shopping_list_categories:
- *           type: integer
- *           description: The id of the shopping list category
- *         parent_item_id:
- *           type: integer
- *           nullable: true
- *           description: The parent item id for hierarchical lists (null for root items)
+ *         category:
+ *           type: string
+ *           enum: [meat, fruit_veg, bakery, canned, other]
+ *           description: Fixed system category for the item
  *         position:
  *           type: integer
- *           description: The position of the item within its parent group
+ *           description: The position of the item within its category
  *         name:
  *           type: string
  *           description: The name of the item
@@ -273,10 +187,10 @@ router.get('/:family_group_id', async (req, res, next) => {
  *               name:
  *                 type: string
  *                 description: The name of the new item
- *               parent_item_id:
- *                 type: integer
- *                 nullable: true
- *                 description: The parent item id for hierarchical lists (optional)
+ *               category:
+ *                 type: string
+ *                 enum: [meat, fruit_veg, bakery, canned, other]
+ *                 description: Optional category; auto-categorized from name when omitted
  *     responses:
  *       200:
  *         description: The newly created item
@@ -335,10 +249,10 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *                     name:
  *                       type: string
  *                       description: The name of the new item
- *                     parent_item_id:
- *                       type: integer
- *                       nullable: true
- *                       description: The parent item id for hierarchical lists (optional)
+ *                     category:
+ *                       type: string
+ *                       enum: [meat, fruit_veg, bakery, canned, other]
+ *                       description: Optional category; auto-categorized from name when omitted
  *     responses:
  *       200:
  *         description: The newly created items
@@ -362,7 +276,7 @@ router.post('/:family_group_id/items/bulk', requireEntitlement('recipe_to_shoppi
  * /shopping-list/{family_group_id}/items/reorder:
  *   put:
  *     summary: Reorder shopping list items
- *     description: Updates parent and position for one or more shopping list items
+ *     description: Updates category and position for one or more shopping list items
  *     tags:
  *       - Shopping List
  *     parameters:
@@ -385,18 +299,19 @@ router.post('/:family_group_id/items/bulk', requireEntitlement('recipe_to_shoppi
  *                   type: object
  *                   required:
  *                     - id
+ *                     - category
  *                     - position
  *                   properties:
  *                     id:
  *                       type: integer
  *                       description: The id of the item to move
- *                     parent_item_id:
- *                       type: integer
- *                       nullable: true
- *                       description: The new parent item id (null for root)
+ *                     category:
+ *                       type: string
+ *                       enum: [meat, fruit_veg, bakery, canned, other]
+ *                       description: The category for the item
  *                     position:
  *                       type: integer
- *                       description: The new position within the parent group
+ *                       description: The new position within the category
  *     responses:
  *       200:
  *         description: The updated items
@@ -543,7 +458,7 @@ router.post('/:family_group_id/items/bulk-delete', async (req, res, next) => {
  *         description: The id of the item to update
  *     requestBody:
  *       required: true
- *       description: At least one of name or checked must be provided (partial updates supported)
+ *       description: At least one of name, checked or category must be provided (partial updates supported)
  *       content:
  *         application/json:
  *           schema:
@@ -556,6 +471,10 @@ router.post('/:family_group_id/items/bulk-delete', async (req, res, next) => {
  *               checked:
  *                 type: boolean
  *                 description: Whether the item is checked
+ *               category:
+ *                 type: string
+ *                 enum: [meat, fruit_veg, bakery, canned, other]
+ *                 description: Move the item to this category
  *     responses:
  *       200:
  *         description: The updated item

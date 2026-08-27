@@ -5,7 +5,10 @@ import {
   ShoppingListOfflineQueuedError,
   shouldRollbackShoppingListOptimistic,
 } from '@/lib/shopping-list/shoppingListOfflineError';
-import { remapTempIdsInOps } from '@/lib/shopping-list/shoppingListPendingQueue';
+import {
+  remapTempIdsInOps,
+  sanitizePendingOpsForCategories,
+} from '@/lib/shopping-list/shoppingListPendingQueue';
 import type { ShoppingListPendingOp } from '@/types/shoppingList';
 
 describe('remapTempIdsInOps', () => {
@@ -29,8 +32,8 @@ describe('remapTempIdsInOps', () => {
         type: 'reorder',
         familyGroupId: 1,
         items: [
-          { id: 'temp_abc', parent_item_id: null, position: 0 },
-          { id: 9, parent_item_id: 'temp_abc', position: 1 },
+          { id: 'temp_abc', category: 'meat', position: 0 },
+          { id: 9, category: 'meat', position: 1 },
         ],
       },
       {
@@ -39,7 +42,7 @@ describe('remapTempIdsInOps', () => {
         familyGroupId: 1,
         tempId: 'temp_child',
         name: 'Eggs',
-        parentItemId: 'temp_abc',
+        category: 'other',
       },
     ];
 
@@ -50,15 +53,61 @@ describe('remapTempIdsInOps', () => {
     expect(remapped[2]).toMatchObject({
       type: 'reorder',
       items: [
-        { id: 42, parent_item_id: null, position: 0 },
-        { id: 9, parent_item_id: 42, position: 1 },
+        { id: 42, category: 'meat', position: 0 },
+        { id: 9, category: 'meat', position: 1 },
       ],
     });
     expect(remapped[3]).toMatchObject({
       type: 'add',
       tempId: 'temp_child',
-      parentItemId: 42,
+      category: 'other',
     });
+  });
+});
+
+describe('sanitizePendingOpsForCategories', () => {
+  it('drops legacy reorder ops that still use parent_item_id', () => {
+    const ops = [
+      {
+        opId: '1',
+        type: 'reorder',
+        familyGroupId: 1,
+        items: [{ id: 1, parent_item_id: null, position: 0 }],
+      },
+      {
+        opId: '2',
+        type: 'reorder',
+        familyGroupId: 1,
+        items: [{ id: 2, category: 'bakery', position: 0 }],
+      },
+    ] as ShoppingListPendingOp[];
+
+    const sanitized = sanitizePendingOpsForCategories(ops);
+
+    expect(sanitized).toHaveLength(1);
+    expect(sanitized[0]).toMatchObject({ opId: '2', type: 'reorder' });
+  });
+
+  it('adds category to legacy add ops from the item name', () => {
+    const ops = [
+      {
+        opId: '1',
+        type: 'add',
+        familyGroupId: 1,
+        tempId: 'temp_1',
+        name: 'chicken breast',
+        parentItemId: null,
+      },
+    ] as unknown as ShoppingListPendingOp[];
+
+    const sanitized = sanitizePendingOpsForCategories(ops);
+
+    expect(sanitized[0]).toMatchObject({
+      type: 'add',
+      name: 'chicken breast',
+      category: 'meat',
+    });
+    expect(sanitized[0]).not.toHaveProperty('parentItemId');
   });
 });
 

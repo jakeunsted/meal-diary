@@ -1,10 +1,15 @@
+import {
+  groupShoppingListItemsByCategory,
+  sortShoppingListItemsForDisplay,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import { useCallback, useMemo } from 'react';
 
-import { flattenShoppingListItems } from '@/lib/shopping-list/shoppingListTree';
 import {
   resolveShoppingListErrorMessage,
   useShoppingListQuery,
 } from '@/lib/queries/shoppingList';
+import { resolveShoppingListItemCategory } from '@/lib/shopping-list/shoppingListTree';
 import type { ShoppingList, ShoppingListItem } from '@/types/shoppingList';
 
 export interface UseShoppingListResult {
@@ -12,10 +17,18 @@ export interface UseShoppingListResult {
   orderedItems: ShoppingListItem[];
   activeItems: ShoppingListItem[];
   checkedItems: ShoppingListItem[];
+  itemsByCategory: Record<ShoppingCategory, ShoppingListItem[]>;
   loading: boolean;
   isFetching: boolean;
   lastFetchError: string | null;
   refresh: () => Promise<unknown>;
+}
+
+function withResolvedCategories(items: ShoppingListItem[]): ShoppingListItem[] {
+  return items.map((item) => ({
+    ...item,
+    category: resolveShoppingListItemCategory(item.category),
+  }));
 }
 
 export function useShoppingList(familyGroupId: number | undefined): UseShoppingListResult {
@@ -27,7 +40,7 @@ export function useShoppingList(familyGroupId: number | undefined): UseShoppingL
     if (!shoppingList?.items) {
       return [];
     }
-    return flattenShoppingListItems(shoppingList.items);
+    return sortShoppingListItemsForDisplay(withResolvedCategories(shoppingList.items));
   }, [shoppingList?.items]);
 
   const activeItems = useMemo(
@@ -40,6 +53,11 @@ export function useShoppingList(familyGroupId: number | undefined): UseShoppingL
     [orderedItems]
   );
 
+  const itemsByCategory = useMemo(
+    () => groupShoppingListItemsByCategory(withResolvedCategories(activeItems)),
+    [activeItems]
+  );
+
   const refresh = useCallback(() => {
     return shoppingListQuery.refetch();
   }, [shoppingListQuery]);
@@ -49,6 +67,7 @@ export function useShoppingList(familyGroupId: number | undefined): UseShoppingL
     orderedItems,
     activeItems,
     checkedItems,
+    itemsByCategory,
     loading: shoppingListQuery.isLoading,
     isFetching: shoppingListQuery.isFetching,
     lastFetchError: shoppingListQuery.error

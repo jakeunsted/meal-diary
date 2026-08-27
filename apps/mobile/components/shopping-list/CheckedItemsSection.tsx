@@ -10,7 +10,6 @@ import type { ShoppingListItem } from '@/types/shoppingList';
 
 interface CheckedItemsSectionProps {
   items: ShoppingListItem[];
-  getItemDepth: (item: ShoppingListItem) => number;
   hideCheckboxes?: boolean;
   isUpdating?: boolean;
   isDeleting?: boolean;
@@ -27,7 +26,6 @@ export function CheckedItemsSection({
   hideCheckboxes = false,
   isUpdating = false,
   isDeleting = false,
-  getItemDepth,
   onCheckedChange,
   onRemove,
   onUncheckAll,
@@ -93,7 +91,6 @@ export function CheckedItemsSection({
               <ShoppingListItemRow
                 key={String(item.id)}
                 item={item}
-                depth={getItemDepth(item)}
                 hideCheckbox={hideCheckboxes}
                 onCheckedChange={onCheckedChange}
                 onRemove={onRemove}

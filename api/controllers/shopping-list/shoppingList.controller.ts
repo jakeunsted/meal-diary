@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { isShoppingCategory } from '@meal-diary/shared';
 import { User } from '../../db/models/associations.ts';
 import { trackEvent } from '../../utils/posthog.ts';
 import * as ShoppingListService from '../../services/shoppingList.service.ts';
@@ -68,19 +69,26 @@ export const getEntireShoppingList = async (req: Request, res: Response) => {
 export const addItem = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { name, parent_item_id } = req.body;
+    const { name, category } = req.body;
+
+    if (typeof name !== 'string' || !name.trim()) {
+      return res.status(400).json({ message: 'Name must be a non-empty string' });
+    }
+
+    if (category !== undefined && category !== null && !isShoppingCategory(category)) {
+      return res.status(400).json({ message: 'Category must be a valid shopping category' });
+    }
 
     const user = req.user as User;
 
     try {
       const item = await ShoppingListService.addItem(
         Number(family_group_id),
-        name,
+        name.trim(),
         Number(user.dataValues.id),
-        parent_item_id !== undefined ? Number(parent_item_id) || null : undefined
+        category
       );
 
-      // Track shopping list item added
       await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_added', {
         family_group_id: Number(family_group_id),
         item_id: item.get('id'),
@@ -111,7 +119,9 @@ export const addItem = async (req: Request, res: Response) => {
 export const bulkAddItems = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { items } = req.body as { items?: { name: string; parent_item_id?: number | null }[] };
+    const { items } = req.body as {
+      items?: { name: string; category?: string | null }[];
+    };
 
     if (!family_group_id || isNaN(Number(family_group_id))) {
       return res.status(400).json({ message: 'Valid family group ID is required' });
@@ -119,6 +129,15 @@ export const bulkAddItems = async (req: Request, res: Response) => {
 
     if (!Array.isArray(items) || !items.length) {
       return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    for (const item of items) {
+      if (typeof item.name !== 'string' || !item.name.trim()) {
+        return res.status(400).json({ message: 'Each item must have a non-empty name' });
+      }
+      if (item.category !== undefined && item.category !== null && !isShoppingCategory(item.category)) {
+        return res.status(400).json({ message: 'Category must be a valid shopping category' });
+      }
     }
 
     const user = req.user as User;
@@ -130,7 +149,6 @@ export const bulkAddItems = async (req: Request, res: Response) => {
         Number(user.dataValues.id)
       );
 
-      // Track shopping list items added from bulk operation
       await trackEvent(user.dataValues.id.toString(), 'shopping_list_items_bulk_added', {
         family_group_id: Number(family_group_id),
         item_count: createdItems.length,
@@ -153,7 +171,7 @@ export const bulkAddItems = async (req: Request, res: Response) => {
 };
 
 /**
- * Reorders items in a shopping list by updating their parent and position.
+ * Reorders items in a shopping list by updating their category and position.
  * @param {Request} req - Express request object containing reorder payload
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the updated items
@@ -161,7 +179,9 @@ export const bulkAddItems = async (req: Request, res: Response) => {
 export const reorderItems = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { items } = req.body as { items?: { id: number; parent_item_id: number | null; position: number }[] };
+    const { items } = req.body as {
+      items?: { id: number; category: string; position: number }[];
+    };
 
     if (!family_group_id || isNaN(Number(family_group_id))) {
       return res.status(400).json({ message: 'Valid family group ID is required' });
@@ -169,6 +189,12 @@ export const reorderItems = async (req: Request, res: Response) => {
 
     if (!Array.isArray(items) || !items.length) {
       return res.status(400).json({ message: 'Items array is required' });
+    }
+
+    for (const item of items) {
+      if (!isShoppingCategory(item.category)) {
+        return res.status(400).json({ message: 'Category must be a valid shopping category' });
+      }
     }
 
     try {
@@ -185,6 +211,10 @@ export const reorderItems = async (req: Request, res: Response) => {
 
       if (errorMessage.includes('not found')) {
         return res.status(404).json({ message: errorMessage });
+      }
+
+      if (errorMessage.includes('must be') || errorMessage.includes('Category')) {
+        return res.status(400).json({ message: errorMessage });
       }
 
       throw serviceError;
@@ -204,7 +234,15 @@ export const reorderItems = async (req: Request, res: Response) => {
 export const bulkUpdateItems = async (req: Request, res: Response) => {
   try {
     const { family_group_id } = req.params;
-    const { items } = req.body as { items?: { id: number; name?: string; checked?: boolean; deleted?: boolean }[] };
+    const { items } = req.body as {
+      items?: {
+        id: number;
+        name?: string;
+        checked?: boolean;
+        deleted?: boolean;
+        category?: string;
+      }[];
+    };
 
     if (!family_group_id || isNaN(Number(family_group_id))) {
       return res.status(400).json({ message: 'Valid family group ID is required' });
@@ -241,7 +279,8 @@ export const bulkUpdateItems = async (req: Request, res: Response) => {
       if (
         errorMessage.includes('must be') ||
         errorMessage.includes('At least one') ||
-        errorMessage.includes('valid id')
+        errorMessage.includes('valid id') ||
+        errorMessage.includes('Category')
       ) {
         return res.status(400).json({ message: errorMessage });
       }
@@ -306,7 +345,7 @@ export const bulkDeleteItems = async (req: Request, res: Response) => {
 };
 
 /**
- * Updates an existing item in a shopping list category
+ * Updates an existing item in a shopping list
  * @param {Request} req - Express request object containing updated item details
  * @param {Response} res - Express response object
  * @returns {Promise<void>} - Returns the updated item
@@ -314,9 +353,8 @@ export const bulkDeleteItems = async (req: Request, res: Response) => {
 export const updateItem = async (req: Request, res: Response) => {
   try {
     const { family_group_id, item_id } = req.params;
-    const { name, checked } = req.body;
+    const { name, checked, category } = req.body;
 
-    // Validate required parameters
     if (!item_id || isNaN(Number(item_id))) {
       return res.status(400).json({ message: 'Valid item ID is required' });
     }
@@ -325,9 +363,12 @@ export const updateItem = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Valid family group ID is required' });
     }
 
-    // Allow partial updates: at least one updatable field must be present
-    if (name === undefined && checked === undefined) {
-      return res.status(400).json({ message: 'At least one of name or checked is required' });
+    if (name === undefined && checked === undefined && category === undefined) {
+      return res.status(400).json({ message: 'At least one of name, checked or category is required' });
+    }
+
+    if (category !== undefined && !isShoppingCategory(category)) {
+      return res.status(400).json({ message: 'Category must be a valid shopping category' });
     }
 
     try {
@@ -335,11 +376,10 @@ export const updateItem = async (req: Request, res: Response) => {
       const item = await ShoppingListService.updateItem(
         Number(family_group_id),
         Number(item_id),
-        { name, checked },
+        { name, checked, category },
         actorUserId
       );
 
-      // Track shopping list item updated
       const user = req.user as User;
       if (user) {
         await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_updated', {
@@ -356,7 +396,7 @@ export const updateItem = async (req: Request, res: Response) => {
         return res.status(404).json({ message: errorMessage });
       }
 
-      if (errorMessage.includes('must be')) {
+      if (errorMessage.includes('must be') || errorMessage.includes('Category') || errorMessage.includes('At least one')) {
         return res.status(400).json({ message: errorMessage });
       }
 
@@ -386,7 +426,6 @@ export const deleteItem = async (req: Request, res: Response) => {
         actorUserId
       );
 
-      // Track shopping list item deleted
       const user = req.user as User;
       if (user) {
         await trackEvent(user.dataValues.id.toString(), 'shopping_list_item_deleted', {

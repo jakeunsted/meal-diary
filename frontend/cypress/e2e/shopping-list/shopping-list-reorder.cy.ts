@@ -1,43 +1,25 @@
-describe('Shopping list reordering', () => {
+describe('Shopping list reorder', () => {
   beforeEach(() => {
     cy.visitShoppingList();
   });
 
-  it('nests and unnests an item when dragging', () => {
-    cy.addShoppingListItem('Potatoes');
+  it('reorders items within a category via mouse drag', () => {
+    cy.selectShoppingListTab('all');
+    cy.addShoppingListItem('Carrots');
+    cy.addShoppingListItem('Onions');
 
-    cy.dragShoppingListItem('Potatoes', 'Bread', { nest: true });
-    cy.wait('@apiReorderShoppingItems').then((interception) => {
-      const potatoesChange = interception.request.body.items.find((item: { id: number }) => item.id === 2000);
-      expect(potatoesChange.parent_item_id).to.eq(1002);
+    cy.selectShoppingListTab('fruit_veg');
+    cy.getActiveShoppingListItemNames().should('deep.equal', ['Tomatoes', 'Carrots', 'Onions']);
+
+    cy.dragShoppingListItem('Tomatoes', 'Onions', { below: true });
+    cy.wait('@apiReorderShoppingItems').its('request.body.items').should((items) => {
+      expect(items).to.be.an('array');
+      const fruitVeg = items.filter((item: { category: string }) => item.category === 'fruit_veg');
+      expect(fruitVeg.map((item: { id: number }) => item.id)).to.have.length(3);
+      fruitVeg.forEach((item: { category: string; position: number }) => {
+        expect(item.category).to.eq('fruit_veg');
+        expect(item.position).to.be.a('number');
+      });
     });
-
-    cy.get('[data-testid="shopping-list-item-row-2000"]')
-      .should('have.attr', 'style')
-      .and('include', 'margin-left: 1.5rem');
-
-    cy.dragShoppingListItem('Potatoes', 'Tomatoes', { below: true });
-    cy.wait('@apiReorderShoppingItems').then((interception) => {
-      const potatoesChange = interception.request.body.items.find((item: { id: number }) => item.id === 2000);
-      expect(potatoesChange.parent_item_id).to.eq(null);
-    });
-
-    cy.get('[data-testid="shopping-list-item-row-2000"]')
-      .should('have.attr', 'style')
-      .and('include', 'margin-left: 0rem');
-  });
-
-  it('keeps sibling order when nesting an item under a parent', () => {
-    cy.addShoppingListItem('Potatoes');
-
-    cy.getActiveShoppingListItemNames().should('deep.equal', ['Tomatoes', 'Bread', 'Potatoes']);
-
-    cy.dragShoppingListItem('Potatoes', 'Bread', { nest: true });
-    cy.wait('@apiReorderShoppingItems');
-
-    cy.getActiveShoppingListItemNames().should('deep.equal', ['Tomatoes', 'Bread', 'Potatoes']);
-    cy.get('[data-testid="shopping-list-item-row-2000"]')
-      .should('have.attr', 'style')
-      .and('include', 'margin-left: 1.5rem');
   });
 });

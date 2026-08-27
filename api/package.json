@@ -14,6 +14,7 @@
     "build": "tsc --noEmit",
     "start": "tsx index.ts",
     "reset-shopping-lists": "tsx scripts/resetShoppingLists.ts",
+    "backfill-shopping-categories": "tsx scripts/backfillShoppingListCategories.ts",
     "seed": "tsx scripts/seed.ts",
     "set-complimentary": "tsx scripts/setComplimentaryPremium.ts"
   },

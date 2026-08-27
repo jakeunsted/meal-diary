@@ -1,21 +1,22 @@
+import {
+  applyCategoryFlatOrder,
+  buildShoppingListReorderPayload,
+  categorizeShoppingItemName,
+  moveShoppingListItemToCategory,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
-import {
-  applyActiveFlatOrderToAllItems,
-  getActiveFlatShoppingListItems,
-  getShoppingListCheckedUpdateIds,
-  getShoppingListFamilyIds,
-  indentShoppingListActiveItem,
-  insertShoppingListItemAfter,
-  isTempShoppingListItemId,
-  rebuildItemHierarchyFromFlatOrder,
-  toPersistableReorderPayload,
-} from '@/lib/shopping-list/shoppingListTree';
-import { applyShoppingListDropHierarchy } from '@/lib/shopping-list/shoppingListDrop';
 import { isNetworkError } from '@/lib/auth/httpError';
 import { isShoppingListOfflineQueuedError } from '@/lib/shopping-list/shoppingListOfflineError';
 import { discardPendingOpsForItem } from '@/lib/shopping-list/shoppingListPendingQueue';
+import {
+  insertShoppingListItemAfter,
+  isTempShoppingListItemId,
+  resolveShoppingListItemCategory,
+  toPersistableReorderPayload,
+} from '@/lib/shopping-list/shoppingListTree';
 import {
   resolveShoppingListErrorMessage,
   setShoppingListQueryData,
@@ -30,10 +31,20 @@ import {
 import type { ShoppingList, ShoppingListItem } from '@/types/shoppingList';
 
 function toPersistableUpdates(
-  updates: { id: number | string; name?: string; checked?: boolean }[]
+  updates: {
+    id: number | string;
+    name?: string;
+    checked?: boolean;
+    category?: ShoppingCategory;
+  }[]
 ) {
   return updates.map((update) => {
-    const payload: { id: number | string; name?: string; checked?: boolean } = {
+    const payload: {
+      id: number | string;
+      name?: string;
+      checked?: boolean;
+      category?: ShoppingCategory;
+    } = {
       id: update.id,
     };
     if (update.name !== undefined) {
@@ -42,12 +53,22 @@ function toPersistableUpdates(
     if (update.checked !== undefined) {
       payload.checked = update.checked;
     }
+    if (update.category !== undefined) {
+      payload.category = resolveShoppingListItemCategory(update.category);
+    }
     return payload;
   });
 }
 
 function isIgnorableShoppingListMutationError(error: unknown): boolean {
   return isShoppingListOfflineQueuedError(error) || isNetworkError(error);
+}
+
+function asCategorizedItems(items: ShoppingListItem[]) {
+  return items.map((item) => ({
+    ...item,
+    category: resolveShoppingListItemCategory(item.category),
+  }));
 }
 
 export function useShoppingListEditor() {
@@ -154,7 +175,7 @@ export function useShoppingListEditor() {
             const newItem = await addItemMutation.mutateAsync({
               familyGroupId,
               name: trimmedName,
-              parentItemId: item.parent_item_id,
+              category: resolveShoppingListItemCategory(item.category),
               replaceTempId: itemId,
             });
             return newItem.id;
@@ -226,20 +247,10 @@ export function useShoppingListEditor() {
     [patchShoppingList]
   );
 
-  const applyActiveFlatOrder = useCallback(
-    async (familyGroupId: number | undefined, flatActiveItems: ShoppingListItem[]) => {
-      if (!familyGroupId) {
-        return;
-      }
-
-      const shoppingList = getLatestShoppingList(familyGroupId);
-      if (!shoppingList) {
-        return;
-      }
-
-      const nextItems = applyActiveFlatOrderToAllItems(shoppingList.items, flatActiveItems);
+  const persistReorder = useCallback(
+    async (familyGroupId: number, nextItems: ShoppingListItem[]) => {
       const persistable = toPersistableReorderPayload(
-        rebuildItemHierarchyFromFlatOrder(flatActiveItems)
+        buildShoppingListReorderPayload(asCategorizedItems(nextItems))
       );
 
       setActionError(null);
@@ -265,28 +276,15 @@ export function useShoppingListEditor() {
         setActionError(resolveShoppingListErrorMessage(error));
       }
     },
-    [getLatestShoppingList, patchShoppingList, reorderMutation]
+    [patchShoppingList, reorderMutation]
   );
 
-  const handleIndentItem = useCallback(
-    async (familyGroupId: number | undefined, items: ShoppingListItem[], itemId: number | string) => {
-      if (!familyGroupId) {
-        return;
-      }
-
-      const activeItems = getActiveFlatShoppingListItems(items);
-      const updatedItems = indentShoppingListActiveItem(activeItems, itemId);
-      if (!updatedItems) {
-        return;
-      }
-
-      await applyActiveFlatOrder(familyGroupId, updatedItems);
-    },
-    [applyActiveFlatOrder]
-  );
-
-  const handleOutdentItem = useCallback(
-    async (familyGroupId: number | undefined, items: ShoppingListItem[], itemId: number | string) => {
+  const handleMoveToCategory = useCallback(
+    async (
+      familyGroupId: number | undefined,
+      itemId: number | string,
+      category: ShoppingCategory
+    ) => {
       if (!familyGroupId) {
         return;
       }
@@ -296,50 +294,41 @@ export function useShoppingListEditor() {
         return;
       }
 
-      const activeItems = getActiveFlatShoppingListItems(items);
-      const target = activeItems.find((item) => item.id === itemId);
-      if (!target || target.parent_item_id === null) {
-        return;
-      }
-
-      const parent = shoppingList.items.find((item) => item.id === target.parent_item_id);
-      const updatedItems = activeItems.map((item) =>
-        item.id === itemId
-          ? { ...item, parent_item_id: parent?.parent_item_id ?? null }
-          : item
+      const nextItems = moveShoppingListItemToCategory(
+        asCategorizedItems(shoppingList.items),
+        itemId,
+        category
       );
 
-      await applyActiveFlatOrder(familyGroupId, updatedItems);
+      await persistReorder(familyGroupId, nextItems);
     },
-    [applyActiveFlatOrder, getLatestShoppingList]
+    [getLatestShoppingList, persistReorder]
   );
 
-  const handleDragReorder = useCallback(
+  const handleReorderWithinCategory = useCallback(
     async (
       familyGroupId: number | undefined,
-      allItems: ShoppingListItem[],
-      params: {
-        reorderedItems: ShoppingListItem[];
-        draggedIds: Set<number | string>;
-        hoveredItem: ShoppingListItem | null;
-        nestAsChild: boolean;
-      }
+      category: ShoppingCategory,
+      orderedIds: Array<number | string>
     ) => {
       if (!familyGroupId) {
         return;
       }
 
-      const updatedItems = applyShoppingListDropHierarchy(
-        params.reorderedItems,
-        params.draggedIds,
-        params.hoveredItem,
-        params.nestAsChild,
-        allItems
+      const shoppingList = getLatestShoppingList(familyGroupId);
+      if (!shoppingList) {
+        return;
+      }
+
+      const nextItems = applyCategoryFlatOrder(
+        asCategorizedItems(shoppingList.items),
+        category,
+        orderedIds
       );
 
-      await applyActiveFlatOrder(familyGroupId, updatedItems);
+      await persistReorder(familyGroupId, nextItems);
     },
-    [applyActiveFlatOrder]
+    [getLatestShoppingList, persistReorder]
   );
 
   const handleItemBlur = useCallback(
@@ -401,7 +390,7 @@ export function useShoppingListEditor() {
   );
 
   const handleAddNewItem = useCallback(
-    async (familyGroupId: number | undefined) => {
+    async (familyGroupId: number | undefined, category?: ShoppingCategory) => {
       const trimmedName = newItemName.trim();
       if (!familyGroupId || !trimmedName) {
         return false;
@@ -409,11 +398,13 @@ export function useShoppingListEditor() {
 
       setActionError(null);
 
+      const resolvedCategory = category ?? categorizeShoppingItemName(trimmedName);
+
       try {
         await addItemMutation.mutateAsync({
           familyGroupId,
           name: trimmedName,
-          parentItemId: null,
+          category: resolvedCategory,
         });
         setNewItemName('');
         return true;
@@ -473,21 +464,7 @@ export function useShoppingListEditor() {
 
       setActionError(null);
 
-      const idsToUpdate = [
-        ...new Set(getShoppingListCheckedUpdateIds(item, items, checked)),
-      ];
-
-      const updates = idsToUpdate
-        .map((id) => {
-          const target = items.find((entry) => entry.id === id);
-          if (!target) {
-            return null;
-          }
-          return { id, checked };
-        })
-        .filter((update): update is { id: number | string; checked: boolean } => update !== null);
-
-      const persistable = toPersistableUpdates(updates);
+      const persistable = toPersistableUpdates([{ id: itemId, checked }]);
       if (!persistable.length) {
         return;
       }
@@ -510,16 +487,9 @@ export function useShoppingListEditor() {
         return;
       }
 
-      const checkedItems = items.filter((item) => item.checked);
-      const ids = new Set<number | string>();
-
-      for (const item of checkedItems) {
-        for (const familyId of getShoppingListFamilyIds(item, items)) {
-          ids.add(familyId);
-        }
-      }
-
-      const updates = [...ids].map((id) => ({ id, checked: false }));
+      const updates = items
+        .filter((item) => item.checked)
+        .map((item) => ({ id: item.id, checked: false }));
       const persistable = toPersistableUpdates(updates);
       if (!persistable.length) {
         return;
@@ -545,16 +515,7 @@ export function useShoppingListEditor() {
         return;
       }
 
-      const checkedItems = items.filter((item) => item.checked);
-      const ids = new Set<number | string>();
-
-      for (const item of checkedItems) {
-        for (const familyId of getShoppingListFamilyIds(item, items)) {
-          ids.add(familyId);
-        }
-      }
-
-      const persistableIds = [...ids];
+      const persistableIds = items.filter((item) => item.checked).map((item) => item.id);
       if (!persistableIds.length) {
         return;
       }
@@ -591,9 +552,8 @@ export function useShoppingListEditor() {
     handleItemNameChange,
     handleItemBlur,
     handleItemSubmitEditing,
-    handleIndentItem,
-    handleOutdentItem,
-    handleDragReorder,
+    handleMoveToCategory,
+    handleReorderWithinCategory,
     handleAddNewItem,
     handleRemoveItem,
     handleSetItemChecked,

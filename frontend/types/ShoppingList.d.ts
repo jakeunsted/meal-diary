@@ -5,7 +5,7 @@ export interface ShoppingListItem {
   checked: boolean;
   deleted: boolean;
   created_by: number;
-  parent_item_id: number | null;
+  category: string;
   position: number;
   created_at: string;
   updated_at: string;
@@ -23,7 +23,7 @@ export interface PendingShoppingListChanges {
   add: ShoppingListItem[];
   update: ShoppingListItem[];
   delete: number[];
-  reorder: { id: number | string; parent_item_id: number | null; position: number }[];
+  reorder: { id: number | string; category: string; position: number }[];
 }
 
 export interface ShoppingListState {

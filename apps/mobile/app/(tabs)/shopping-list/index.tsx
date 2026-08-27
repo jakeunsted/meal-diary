@@ -1,3 +1,10 @@
+import {
+  SHOPPING_CATEGORIES,
+  categorizeShoppingItemName,
+  isShoppingCategory,
+  type ShoppingCategory,
+  type ShoppingListTab,
+} from '@meal-diary/shared';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -12,8 +19,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
 import { ShoppingListActiveList } from '@/components/shopping-list/ShoppingListActiveList';
+import { ShoppingListCategoryTabs } from '@/components/shopping-list/ShoppingListCategoryTabs';
 import { CheckedItemsSection } from '@/components/shopping-list/CheckedItemsSection';
-import type { ShoppingListDragRenderProps } from '@/components/shopping-list/shoppingListDndTypes';
+import type { ShoppingListDragHandleProps } from '@/components/shopping-list/ShoppingListSortableList';
 import { ShoppingListItemRow } from '@/components/shopping-list/ShoppingListItem';
 import { ShoppingListScrollContainer } from '@/components/shopping-list/ShoppingListScrollContainer';
 import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSkeleton';
@@ -22,16 +30,29 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import {
-  buildShoppingListDepthMap,
-  getShoppingListItemDepth,
-} from '@/lib/shopping-list/shoppingListDrop';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
 import { useShoppingListSyncStatus } from '@/lib/shopping-list/useShoppingListSyncStatus';
 import { useShoppingListViewSettings } from '@/lib/shopping-list/shoppingListViewSettings';
 import { useCurrentUser } from '@/lib/queries/profile';
 import type { ShoppingListItem } from '@/types/shoppingList';
+
+function categoryLabelKey(category: ShoppingCategory): string {
+  switch (category) {
+    case 'meat':
+      return 'shoppingList.meat';
+    case 'fruit_veg':
+      return 'shoppingList.fruitVeg';
+    case 'bakery':
+      return 'shoppingList.bakery';
+    case 'canned':
+      return 'shoppingList.canned';
+    case 'other':
+      return 'shoppingList.other';
+    default:
+      return 'shoppingList.other';
+  }
+}
 
 export default function ShoppingListScreen() {
   const { t } = useTranslation();
@@ -45,6 +66,7 @@ export default function ShoppingListScreen() {
   const viewSettings = useShoppingListViewSettings();
   const newItemInputRef = useRef<TextInput>(null);
   const itemInputRefs = useRef(new Map<string, TextInput>());
+  const [activeTab, setActiveTab] = useState<ShoppingListTab>('all');
   const [isDragging, setIsDragging] = useState(false);
 
   const hasListData = shoppingList.shoppingList !== null;
@@ -52,15 +74,36 @@ export default function ShoppingListScreen() {
   const showListLoading = shoppingList.isFetching && hasListData;
   const listItems = shoppingList.shoppingList?.items ?? [];
 
-  const itemDepthMap = useMemo(() => {
-    if (!shoppingList.shoppingList?.items) {
-      return {};
-    }
-    return buildShoppingListDepthMap(shoppingList.shoppingList.items);
-  }, [shoppingList.shoppingList?.items]);
+  const tabCounts = useMemo(() => {
+    const counts: Record<ShoppingListTab, number> = {
+      all: shoppingList.activeItems.length,
+      meat: 0,
+      fruit_veg: 0,
+      bakery: 0,
+      canned: 0,
+      other: 0,
+    };
 
-  const getItemDepth = (item: ShoppingListItem) =>
-    getShoppingListItemDepth(item, itemDepthMap);
+    for (const category of SHOPPING_CATEGORIES) {
+      counts[category] = shoppingList.itemsByCategory[category]?.length ?? 0;
+    }
+
+    return counts;
+  }, [shoppingList.activeItems.length, shoppingList.itemsByCategory]);
+
+  const activeItemsForTab = useMemo(() => {
+    if (activeTab === 'all' || !isShoppingCategory(activeTab)) {
+      return shoppingList.activeItems;
+    }
+    return shoppingList.itemsByCategory[activeTab] ?? [];
+  }, [activeTab, shoppingList.activeItems, shoppingList.itemsByCategory]);
+
+  const checkedItemsForTab = useMemo(() => {
+    if (activeTab === 'all') {
+      return shoppingList.checkedItems;
+    }
+    return shoppingList.checkedItems.filter((item) => item.category === activeTab);
+  }, [activeTab, shoppingList.checkedItems]);
 
   const setItemInputRef = useCallback((itemId: number | string, ref: TextInput | null) => {
     const key = String(itemId);
@@ -90,7 +133,17 @@ export default function ShoppingListScreen() {
   };
 
   const handleAddNewItem = async () => {
-    const added = await editor.handleAddNewItem(familyGroupId);
+    const trimmedName = editor.newItemName.trim();
+    if (!trimmedName) {
+      return;
+    }
+
+    const category: ShoppingCategory =
+      activeTab === 'all' || !isShoppingCategory(activeTab)
+        ? categorizeShoppingItemName(trimmedName)
+        : activeTab;
+
+    const added = await editor.handleAddNewItem(familyGroupId, category);
     if (added) {
       newItemInputRef.current?.focus();
     }
@@ -112,16 +165,23 @@ export default function ShoppingListScreen() {
     void editor.handleDeleteAllChecked(familyGroupId, listItems);
   };
 
+  const handleMoveCategory = (itemId: number | string, category: ShoppingCategory) => {
+    void editor.handleMoveToCategory(familyGroupId, itemId, category);
+  };
+
+  const handleReorder = (category: ShoppingCategory, orderedIds: Array<number | string>) => {
+    void editor.handleReorderWithinCategory(familyGroupId, category, orderedIds);
+  };
+
   const isItemBusy =
     editor.isUpdatingItems || editor.isPersistingItem || editor.isReordering;
 
   const renderEditableItem = (
     item: ShoppingListItem,
-    dragProps?: ShoppingListDragRenderProps
+    dragHandleProps?: ShoppingListDragHandleProps
   ) => (
     <ShoppingListItemRow
       item={item}
-      depth={dragProps?.depth ?? getItemDepth(item)}
       hideCheckbox={viewSettings.hideCheckboxes}
       editable
       isFocused={editor.focusedItemId === item.id}
@@ -135,20 +195,29 @@ export default function ShoppingListScreen() {
         void editor.handleItemSubmitEditing(familyGroupId, item.id, name, userId);
       }}
       onCheckedChange={handleCheckedChange}
-      onIndent={(itemId) => {
-        void editor.handleIndentItem(familyGroupId, listItems, itemId);
-      }}
-      onOutdent={(itemId) => {
-        void editor.handleOutdentItem(familyGroupId, listItems, itemId);
-      }}
+      onMoveCategory={handleMoveCategory}
       onRemove={handleRemoveItem}
       isRemoving={editor.removingItemId === item.id}
       isUpdating={isItemBusy}
-      drag={dragProps?.drag}
-      isActive={dragProps?.isActive}
-      onDragPointerMove={dragProps?.onDragPointerMove}
+      dragHandleProps={dragHandleProps}
     />
   );
+
+  const renderCategoryList = (category: ShoppingCategory, items: ShoppingListItem[]) => {
+    if (items.length === 0) {
+      return null;
+    }
+
+    return (
+      <ShoppingListActiveList
+        items={items}
+        disabled={!!editor.focusedItemId || isItemBusy}
+        onDraggingChange={setIsDragging}
+        onReorder={(orderedIds) => handleReorder(category, orderedIds)}
+        renderItem={(item, dragHandleProps) => renderEditableItem(item, dragHandleProps)}
+      />
+    );
+  };
 
   return (
     <Box className="flex-1 bg-base">
@@ -160,7 +229,6 @@ export default function ShoppingListScreen() {
           contentContainerClassName="pb-8"
           contentContainerStyle={{ paddingTop: insets.top + 24 }}
           keyboardShouldPersistTaps="handled"
-          scrollEnabled={!isDragging}
           refreshControl={
             isDragging ? undefined : (
               <RefreshControl
@@ -229,16 +297,34 @@ export default function ShoppingListScreen() {
           ) : (
             <Box className="relative mx-4">
               <Box className={showListLoading ? 'opacity-50' : ''}>
-                <ShoppingListActiveList
-                  activeItems={shoppingList.activeItems}
-                  allItems={listItems}
-                  disabled={!!editor.focusedItemId || isItemBusy}
-                  onDraggingChange={setIsDragging}
-                  onDragEnd={(params) => {
-                    void editor.handleDragReorder(familyGroupId, listItems, params);
-                  }}
-                  renderItem={(item, dragProps) => renderEditableItem(item, dragProps)}
+                <ShoppingListCategoryTabs
+                  value={activeTab}
+                  onChange={setActiveTab}
+                  counts={tabCounts}
                 />
+
+                {activeTab === 'all' ? (
+                  SHOPPING_CATEGORIES.map((category) => {
+                    const categoryItems = shoppingList.itemsByCategory[category] ?? [];
+                    if (categoryItems.length === 0) {
+                      return null;
+                    }
+
+                    return (
+                      <Box key={category} className="mb-4">
+                        <Text
+                          className="mb-1 px-2 text-sm font-semibold uppercase tracking-wide text-ice/70"
+                          testID={`shopping-list-section-${category}`}
+                        >
+                          {t(categoryLabelKey(category))}
+                        </Text>
+                        {renderCategoryList(category, categoryItems)}
+                      </Box>
+                    );
+                  })
+                ) : isShoppingCategory(activeTab) ? (
+                  renderCategoryList(activeTab, activeItemsForTab)
+                ) : null}
 
                 <Box className="mt-4 flex-row items-center gap-2">
                   <Pressable
@@ -273,8 +359,7 @@ export default function ShoppingListScreen() {
 
                 {!viewSettings.hideCheckedItems ? (
                   <CheckedItemsSection
-                    items={shoppingList.checkedItems}
-                    getItemDepth={getItemDepth}
+                    items={checkedItemsForTab}
                     hideCheckboxes={viewSettings.hideCheckboxes}
                     isUpdating={isItemBusy}
                     isDeleting={editor.isDeletingChecked}

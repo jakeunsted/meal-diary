@@ -1,13 +1,6 @@
-interface DragShoppingListItemOptions {
-  /** Drop on the right side of the target row to nest as a child. */
-  nest?: boolean;
-  /** Drop below the target row as a sibling (default). */
-  below?: boolean;
-}
-
 const getShoppingListRow = (itemName: string) =>
   cy.contains('[data-testid="shopping-list-active-items"] [data-testid^="shopping-item-name-"]', itemName)
-    .closest('[data-testid^="shopping-list-item-row-"]');
+    .closest('[data-testid^="shopping-list-sortable-row-"]');
 
 Cypress.Commands.add('visitShoppingList', () => {
   cy.mockApi();
@@ -16,6 +9,10 @@ Cypress.Commands.add('visitShoppingList', () => {
   cy.location('pathname').should('eq', '/shopping-list');
   cy.wait('@apiGetShoppingList');
   cy.get('[data-testid="shopping-list-active-items"]').should('be.visible');
+});
+
+Cypress.Commands.add('selectShoppingListTab', (tab: string) => {
+  cy.get(`[data-testid="shopping-list-tab-${tab}"]`).click({ force: true });
 });
 
 Cypress.Commands.add('addShoppingListItem', (name: string) => {
@@ -38,8 +35,8 @@ Cypress.Commands.add('expandCheckedShoppingListItems', () => {
 
 Cypress.Commands.add(
   'dragShoppingListItem',
-  (sourceItemName: string, targetItemName: string, options: DragShoppingListItemOptions = {}) => {
-    getShoppingListRow(sourceItemName).find('.drag-handle').then(($handle) => {
+  (sourceItemName: string, targetItemName: string, options: { below?: boolean } = {}) => {
+    getShoppingListRow(sourceItemName).find('[data-sortable-handle]').then(($handle) => {
       const handle = $handle[0];
       const handleRect = handle.getBoundingClientRect();
       const startX = handleRect.left + handleRect.width / 2;
@@ -47,12 +44,10 @@ Cypress.Commands.add(
 
       getShoppingListRow(targetItemName).then(($targetRow) => {
         const targetRect = $targetRow[0].getBoundingClientRect();
-        const endX = options.nest ? targetRect.left + 24 : targetRect.left + 8;
-        const endY = options.nest
-          ? targetRect.top + targetRect.height / 2
-          : options.below === false
-            ? targetRect.top + 4
-            : targetRect.bottom + 4;
+        const endX = targetRect.left + 8;
+        const endY = options.below === false
+          ? targetRect.top + 4
+          : targetRect.bottom + 4;
 
         const pointerOptions = {
           pointerId: 1,
@@ -101,13 +96,14 @@ declare global {
   namespace Cypress {
     interface Chainable {
       visitShoppingList(): Chainable<void>;
+      selectShoppingListTab(tab: string): Chainable<void>;
       addShoppingListItem(name: string): Chainable<void>;
       getActiveShoppingListItemNames(): Chainable<string[]>;
       expandCheckedShoppingListItems(): Chainable<void>;
       dragShoppingListItem(
         sourceItemName: string,
         targetItemName: string,
-        options?: DragShoppingListItemOptions
+        options?: { below?: boolean }
       ): Chainable<void>;
     }
   }

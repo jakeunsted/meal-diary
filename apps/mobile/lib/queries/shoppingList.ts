@@ -1,3 +1,8 @@
+import {
+  categorizeShoppingItemName,
+  isShoppingCategory,
+  type ShoppingCategory,
+} from '@meal-diary/shared';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
@@ -12,7 +17,10 @@ import {
   createPendingOpId,
   enqueuePendingOp,
 } from '@/lib/shopping-list/shoppingListPendingQueue';
-import { generateTempShoppingListItemId } from '@/lib/shopping-list/shoppingListTree';
+import {
+  generateTempShoppingListItemId,
+  resolveShoppingListItemCategory,
+} from '@/lib/shopping-list/shoppingListTree';
 import {
   loadShoppingListCache,
   saveShoppingListCache,
@@ -47,7 +55,7 @@ export async function fetchShoppingList(familyGroupId: number): Promise<Shopping
 
 export async function addShoppingListItem(
   familyGroupId: number,
-  payload: { name: string; parent_item_id?: number | null }
+  payload: { name: string; category?: ShoppingCategory }
 ): Promise<ShoppingListItem> {
   return apiFetch<ShoppingListItem>(`/shopping-list/${familyGroupId}/items`, {
     method: 'POST',
@@ -57,7 +65,7 @@ export async function addShoppingListItem(
 
 export interface BulkShoppingListItemPayload {
   name: string;
-  parent_item_id?: number | null;
+  category?: ShoppingCategory;
 }
 
 export async function bulkAddShoppingListItems(
@@ -82,7 +90,7 @@ export async function deleteShoppingListItem(
 export async function updateShoppingListItem(
   familyGroupId: number,
   itemId: number,
-  updates: { name?: string; checked?: boolean }
+  updates: { name?: string; checked?: boolean; category?: ShoppingCategory }
 ): Promise<ShoppingListItem> {
   return apiFetch<ShoppingListItem>(`/shopping-list/${familyGroupId}/items/${itemId}`, {
     method: 'PUT',
@@ -94,12 +102,14 @@ export interface BulkShoppingListItemUpdate {
   id: number;
   name?: string;
   checked?: boolean;
+  category?: ShoppingCategory;
 }
 
 export interface BulkShoppingListItemUpdateInput {
   id: number | string;
   name?: string;
   checked?: boolean;
+  category?: ShoppingCategory;
 }
 
 export async function bulkUpdateShoppingListItems(
@@ -124,13 +134,13 @@ export async function bulkDeleteShoppingListItems(
 
 export interface ShoppingListReorderItem {
   id: number;
-  parent_item_id: number | null;
+  category: ShoppingCategory;
   position: number;
 }
 
 export interface ShoppingListReorderItemInput {
   id: number | string;
-  parent_item_id: number | string | null;
+  category: ShoppingCategory;
   position: number;
 }
 
@@ -146,7 +156,12 @@ export async function reorderShoppingListItems(
 
 function applyLocalItemUpdates(
   items: ShoppingListItem[],
-  updates: { id: number | string; name?: string; checked?: boolean }[]
+  updates: {
+    id: number | string;
+    name?: string;
+    checked?: boolean;
+    category?: ShoppingCategory;
+  }[]
 ): ShoppingListItem[] {
   const updatesById = new Map(updates.map((update) => [update.id, update]));
 
@@ -160,6 +175,9 @@ function applyLocalItemUpdates(
       ...item,
       ...(update.name !== undefined ? { name: update.name } : {}),
       ...(update.checked !== undefined ? { checked: update.checked } : {}),
+      ...(update.category !== undefined
+        ? { category: resolveShoppingListItemCategory(update.category) }
+        : {}),
     };
   });
 }
@@ -225,6 +243,7 @@ function toNumericBulkUpdates(
     id: item.id as number,
     ...(item.name !== undefined ? { name: item.name } : {}),
     ...(item.checked !== undefined ? { checked: item.checked } : {}),
+    ...(item.category !== undefined ? { category: item.category } : {}),
   }));
 }
 
@@ -232,18 +251,14 @@ function toNumericReorderItems(
   items: ShoppingListReorderItemInput[]
 ): ShoppingListReorderItem[] | null {
   if (
-    items.some(
-      (item) =>
-        typeof item.id !== 'number' ||
-        (item.parent_item_id != null && typeof item.parent_item_id !== 'number')
-    )
+    items.some((item) => typeof item.id !== 'number' || !isShoppingCategory(item.category))
   ) {
     return null;
   }
 
   return items.map((item) => ({
     id: item.id as number,
-    parent_item_id: item.parent_item_id as number | null,
+    category: item.category as ShoppingCategory,
     position: item.position,
   }));
 }
@@ -320,28 +335,27 @@ export function useAddShoppingListItem() {
     mutationFn: async ({
       familyGroupId,
       name,
-      parentItemId = null,
+      category,
       replaceTempId,
     }: {
       familyGroupId: number;
       name: string;
-      parentItemId?: number | string | null;
+      category?: ShoppingCategory;
       replaceTempId?: number | string;
     }) => {
-      const numericParent =
-        parentItemId == null || typeof parentItemId === 'number' ? parentItemId : null;
-      const canCallApi = parentItemId == null || typeof parentItemId === 'number';
+      const resolvedCategory =
+        category !== undefined
+          ? resolveShoppingListItemCategory(category)
+          : categorizeShoppingItemName(name);
 
-      if (canCallApi) {
-        try {
-          return await addShoppingListItem(familyGroupId, {
-            name,
-            parent_item_id: numericParent,
-          });
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
+      try {
+        return await addShoppingListItem(familyGroupId, {
+          name,
+          category: resolvedCategory,
+        });
+      } catch (error) {
+        if (!isNetworkError(error)) {
+          throw error;
         }
       }
 
@@ -356,7 +370,7 @@ export function useAddShoppingListItem() {
         familyGroupId,
         tempId,
         name,
-        parentItemId: parentItemId ?? null,
+        category: resolvedCategory,
       });
 
       throw new ShoppingListOfflineQueuedError(tempId);
@@ -377,7 +391,7 @@ export function useAddShoppingListItem() {
         })
       );
     },
-    onError: (error, { familyGroupId, name, parentItemId = null, replaceTempId }) => {
+    onError: (error, { familyGroupId, name, category, replaceTempId }) => {
       if (!isShoppingListOfflineQueuedError(error)) {
         return;
       }
@@ -389,11 +403,23 @@ export function useAddShoppingListItem() {
 
       const tempId = error.tempId ?? generateTempShoppingListItemId();
       const now = new Date().toISOString();
+      const resolvedCategory =
+        category !== undefined
+          ? resolveShoppingListItemCategory(category)
+          : categorizeShoppingItemName(name);
 
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) => {
         if (!shoppingList) {
           return shoppingList;
         }
+
+        const categoryItems = shoppingList.items.filter(
+          (item) => resolveShoppingListItemCategory(item.category) === resolvedCategory
+        );
+        const nextPosition =
+          categoryItems.length === 0
+            ? 0
+            : Math.max(...categoryItems.map((item) => item.position)) + 1;
 
         const localItem: ShoppingListItem = {
           id: tempId,
@@ -402,8 +428,8 @@ export function useAddShoppingListItem() {
           checked: false,
           deleted: false,
           created_by: 0,
-          parent_item_id: typeof parentItemId === 'number' ? parentItemId : null,
-          position: shoppingList.items.length,
+          category: resolvedCategory,
+          position: nextPosition,
           created_at: now,
           updated_at: now,
         };
@@ -463,11 +489,18 @@ export function useUpdateShoppingListItem() {
     }: {
       familyGroupId: number;
       itemId: number | string;
-      updates: { name?: string; checked?: boolean };
+      updates: { name?: string; checked?: boolean; category?: ShoppingCategory };
     }) => {
+      const resolvedUpdates = {
+        ...updates,
+        ...(updates.category !== undefined
+          ? { category: resolveShoppingListItemCategory(updates.category) }
+          : {}),
+      };
+
       if (typeof itemId === 'number') {
         try {
-          return await updateShoppingListItem(familyGroupId, itemId, updates);
+          return await updateShoppingListItem(familyGroupId, itemId, resolvedUpdates);
         } catch (error) {
           if (!isNetworkError(error)) {
             throw error;
@@ -480,7 +513,7 @@ export function useUpdateShoppingListItem() {
         type: 'update',
         familyGroupId,
         itemId,
-        updates,
+        updates: resolvedUpdates,
       });
       throw new ShoppingListOfflineQueuedError();
     },

@@ -1,218 +1,94 @@
+import {
+  buildShoppingListReorderPayload,
+  DEFAULT_SHOPPING_CATEGORY,
+  isShoppingCategory,
+  sortShoppingListItemsForDisplay,
+  type ShoppingCategory,
+  type ShoppingListReorderChange,
+} from '@meal-diary/shared';
 import type { ShoppingListItem } from '~/types/ShoppingList';
 
 export interface ShoppingListItemReorderChange {
   id: number | string;
-  parent_item_id: number | null;
+  category: string;
   position: number;
 }
 
-export function flattenShoppingListItems(items: ShoppingListItem[]): ShoppingListItem[] {
-  const siblingsByParent = new Map<number | null, ShoppingListItem[]>();
-
-  for (const item of items) {
-    const parentId = item.parent_item_id ?? null;
-    const siblings = siblingsByParent.get(parentId) ?? [];
-    siblings.push(item);
-    siblingsByParent.set(parentId, siblings);
-  }
-
-  for (const siblings of siblingsByParent.values()) {
-    siblings.sort((a, b) => a.position - b.position);
-  }
-
-  const flattened: ShoppingListItem[] = [];
-
-  const walk = (parentId: number | null) => {
-    const siblings = siblingsByParent.get(parentId) ?? [];
-    for (const item of siblings) {
-      flattened.push(item);
-      if (typeof item.id === 'number') {
-        walk(item.id);
-      }
-    }
-  };
-
-  walk(null);
-  return flattened;
+function toItemLike(items: ShoppingListItem[]) {
+  return items.map((item) => ({
+    ...item,
+    category: (isShoppingCategory(item.category)
+      ? item.category
+      : DEFAULT_SHOPPING_CATEGORY) as ShoppingCategory,
+  }));
 }
 
-export function rebuildItemHierarchyFromFlatOrder(
+/** Sort unchecked/active items by category then position for display. */
+export function flattenShoppingListItems(items: ShoppingListItem[]): ShoppingListItem[] {
+  return sortShoppingListItemsForDisplay(toItemLike(items)) as ShoppingListItem[];
+}
+
+/** Build reorder payload (category + reindexed position) from a flat item list. */
+export function rebuildItemOrderFromFlatItems(
   flatOrder: ShoppingListItem[]
 ): ShoppingListItemReorderChange[] {
-  const positionsByParent = new Map<number | null, number>();
-
-  return flatOrder.map((item) => {
-    const parentId = item.parent_item_id ?? null;
-    const position = positionsByParent.get(parentId) ?? 0;
-    positionsByParent.set(parentId, position + 1);
-
-    return {
-      id: item.id,
-      parent_item_id: parentId,
-      position,
-    };
-  });
+  const changes: ShoppingListReorderChange[] = buildShoppingListReorderPayload(toItemLike(flatOrder));
+  return changes.map((change) => ({
+    id: change.id,
+    category: change.category,
+    position: change.position,
+  }));
 }
 
-export function isShoppingListDescendant(
+/**
+ * Insert a new item directly after an existing one, inheriting its category
+ * and reindexing positions within that category.
+ */
+export function insertShoppingListItemAfter(
   items: ShoppingListItem[],
-  ancestorId: number,
-  candidateId: number | string
-): boolean {
-  let current = items.find((item) => item.id === candidateId);
-
-  while (current?.parent_item_id != null) {
-    if (current.parent_item_id === ancestorId) {
-      return true;
-    }
-    current = items.find((item) => item.id === current?.parent_item_id);
-  }
-
-  return false;
-}
-
-/** Shopping lists support one level of nesting: root items and their direct children. */
-export function canBeShoppingListParent(item: ShoppingListItem): boolean {
-  return item.parent_item_id === null && typeof item.id === 'number';
-}
-
-/**
- * After parent_item_id changes, direct children of items that became nested
- * are reparented to the same parent to preserve one-level hierarchy.
- */
-export function enforceOneLevelShoppingListNesting(
-  before: ShoppingListItem[],
-  after: ShoppingListItem[]
+  existingItemId: number | string,
+  newItem: ShoppingListItem
 ): ShoppingListItem[] {
-  const promotions = new Map<number | string, number | null>();
-
-  for (const next of after) {
-    const prev = before.find((item) => item.id === next.id);
-    if (!prev) {
-      continue;
-    }
-
-    const prevParent = prev.parent_item_id ?? null;
-    const nextParent = next.parent_item_id ?? null;
-
-    if (nextParent === null || prevParent === nextParent) {
-      continue;
-    }
-
-    for (const candidate of after) {
-      if (candidate.parent_item_id === next.id) {
-        promotions.set(candidate.id, nextParent);
-      }
-    }
+  const existing = items.find((item) => item.id === existingItemId);
+  if (!existing) {
+    const category = isShoppingCategory(newItem.category)
+      ? newItem.category
+      : DEFAULT_SHOPPING_CATEGORY;
+    const siblings = items.filter((item) => item.category === category);
+    const nextPosition = siblings.length
+      ? Math.max(...siblings.map((item) => item.position)) + 1
+      : 0;
+    return [...items, { ...newItem, category, position: nextPosition }];
   }
 
-  if (promotions.size === 0) {
-    return after;
-  }
+  const category = isShoppingCategory(existing.category)
+    ? existing.category
+    : DEFAULT_SHOPPING_CATEGORY;
 
-  return after.map((item) => {
-    const promotedParent = promotions.get(item.id);
-    if (promotedParent !== undefined) {
-      return { ...item, parent_item_id: promotedParent };
-    }
-    return item;
-  });
-}
-
-export function indentShoppingListActiveItem(
-  activeItems: ShoppingListItem[],
-  itemId: number | string
-): ShoppingListItem[] | null {
-  const index = activeItems.findIndex((item) => item.id === itemId);
-  if (index <= 0) {
-    return null;
-  }
-
-  const previous = activeItems[index - 1];
-  const target = activeItems[index];
-  const newParentId = resolveShoppingListIndentParent(previous);
-
-  if (target.parent_item_id === newParentId) {
-    return null;
-  }
-
-  const withIndent = activeItems.map((item) =>
-    item.id === itemId ? { ...item, parent_item_id: newParentId } : item
+  const categoryItems = sortShoppingListItemsForDisplay(
+    toItemLike(items.filter((item) => item.category === category))
   );
+  const existingIndex = categoryItems.findIndex((item) => item.id === existingItemId);
+  const inserted: ShoppingListItem = {
+    ...newItem,
+    category,
+    position: existingIndex + 1,
+  };
 
-  return enforceOneLevelShoppingListNesting(activeItems, withIndent);
-}
+  const nextCategoryItems = [...categoryItems];
+  nextCategoryItems.splice(existingIndex + 1, 0, inserted as typeof categoryItems[number]);
 
-/**
- * Resolve the parent when indenting: become a child of the previous root item,
- * or join the previous child item's grouping.
- */
-export function resolveShoppingListIndentParent(previous: ShoppingListItem): number | null {
-  if (previous.parent_item_id === null) {
-    return typeof previous.id === 'number' ? previous.id : null;
-  }
+  const positionById = new Map<number | string, number>();
+  nextCategoryItems.forEach((item, index) => {
+    positionById.set(item.id, index);
+  });
 
-  return previous.parent_item_id;
-}
+  const withoutExistingCategory = items.filter((item) => item.category !== category);
+  const reindexedCategory = nextCategoryItems.map((item) => ({
+    ...item,
+    category,
+    position: positionById.get(item.id) ?? item.position,
+  })) as ShoppingListItem[];
 
-export function normalizeShoppingListParentId(
-  parentId: number | null,
-  allItems: ShoppingListItem[]
-): number | null {
-  if (parentId === null) {
-    return null;
-  }
-
-  const parent = allItems.find((item) => item.id === parentId);
-  if (!parent || parent.parent_item_id !== null) {
-    return null;
-  }
-
-  return parentId;
-}
-
-/** Parent plus direct children, or a child's parent and all siblings. */
-export function getShoppingListFamilyIds(
-  item: ShoppingListItem,
-  allItems: ShoppingListItem[]
-): Array<number | string> {
-  if (item.parent_item_id !== null) {
-    const parent = allItems.find((entry) => entry.id === item.parent_item_id);
-    const siblings = allItems.filter((entry) => entry.parent_item_id === item.parent_item_id);
-    const ids: Array<number | string> = [];
-
-    if (parent) {
-      ids.push(parent.id);
-    }
-
-    for (const sibling of siblings) {
-      ids.push(sibling.id);
-    }
-
-    return ids.length > 0 ? ids : [item.id];
-  }
-
-  if (typeof item.id !== 'number') {
-    return [item.id];
-  }
-
-  const children = allItems.filter((entry) => entry.parent_item_id === item.id);
-  return [item.id, ...children.map((child) => child.id)];
-}
-
-/** IDs that should be checked/unchecked together for parent/child grouping. */
-export function getShoppingListCheckedUpdateIds(
-  item: ShoppingListItem,
-  allItems: ShoppingListItem[],
-  checked: boolean
-): Array<number | string> {
-  if (checked && item.parent_item_id === null) {
-    return getShoppingListFamilyIds(item, allItems);
-  }
-
-  if (!checked) {
-    return getShoppingListFamilyIds(item, allItems);
-  }
-
-  return [item.id];
+  return [...withoutExistingCategory, ...reindexedCategory];
 }

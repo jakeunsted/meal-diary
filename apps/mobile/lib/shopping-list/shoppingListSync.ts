@@ -1,5 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { isShoppingCategory, type ShoppingCategory } from '@meal-diary/shared';
+
 import { ApiError } from '@/lib/api/errors';
 import { isNetworkError } from '@/lib/auth/httpError';
 import {
@@ -20,8 +22,10 @@ import {
   loadQueue,
   remapTempIdsInOps,
   replaceQueue,
+  sanitizePendingOpsForCategories,
 } from '@/lib/shopping-list/shoppingListPendingQueue';
 import { saveShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
+import { resolveShoppingListItemCategory } from '@/lib/shopping-list/shoppingListTree';
 import type {
   ShoppingList,
   ShoppingListItem,
@@ -41,6 +45,8 @@ const flushLocks = new Set<number>();
 const statusByFamily = new Map<number, ShoppingListSyncStatus>();
 const statusListeners = new Set<SyncStatusListener>();
 let statusVersion = 0;
+
+export { sanitizePendingOpsForCategories };
 
 function getDefaultStatus(pendingCount = 0): ShoppingListSyncStatus {
   return {
@@ -94,7 +100,12 @@ function isGoneError(error: unknown): boolean {
 }
 
 function toNumericBulkUpdates(
-  items: Array<{ id: number | string; name?: string; checked?: boolean }>
+  items: Array<{
+    id: number | string;
+    name?: string;
+    checked?: boolean;
+    category?: ShoppingCategory | string;
+  }>
 ): BulkShoppingListItemUpdate[] | null {
   if (items.some((item) => typeof item.id !== 'number')) {
     return null;
@@ -105,23 +116,19 @@ function toNumericBulkUpdates(
 function toNumericReorderItems(
   items: Array<{
     id: number | string;
-    parent_item_id: number | string | null;
+    category: ShoppingCategory | string;
     position: number;
   }>
 ): ShoppingListReorderItem[] | null {
   if (
-    items.some(
-      (item) =>
-        typeof item.id !== 'number' ||
-        (item.parent_item_id != null && typeof item.parent_item_id !== 'number')
-    )
+    items.some((item) => typeof item.id !== 'number' || !isShoppingCategory(item.category))
   ) {
     return null;
   }
 
   return items.map((item) => ({
     id: item.id as number,
-    parent_item_id: item.parent_item_id as number | null,
+    category: item.category as ShoppingCategory,
     position: item.position,
   }));
 }
@@ -153,13 +160,10 @@ async function executePendingOp(
 ): Promise<{ remappedTempId?: string; serverId?: number }> {
   switch (op.type) {
     case 'add': {
-      if (typeof op.parentItemId === 'string') {
-        throw new Error('Parent item still has a temporary id');
-      }
-
+      const category = resolveShoppingListItemCategory(op.category);
       const created = await addShoppingListItem(op.familyGroupId, {
         name: op.name,
-        parent_item_id: op.parentItemId,
+        category,
       });
       if (typeof created.id !== 'number') {
         throw new Error('Server returned a non-numeric shopping list item id');
@@ -240,7 +244,11 @@ export async function flushShoppingListPendingOps(
   patchSyncStatus(familyGroupId, { isFlushing: true, syncError: null });
 
   try {
-    let queue = await loadQueue(familyGroupId);
+    const loaded = await loadQueue(familyGroupId);
+    let queue = sanitizePendingOpsForCategories(loaded);
+    if (JSON.stringify(queue) !== JSON.stringify(loaded)) {
+      await replaceQueue(familyGroupId, queue);
+    }
     patchSyncStatus(familyGroupId, { pendingCount: queue.length });
 
     if (queue.length === 0) {

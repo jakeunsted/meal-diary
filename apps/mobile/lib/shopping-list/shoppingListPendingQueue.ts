@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import {
+  categorizeShoppingItemName,
+  isShoppingCategory,
+} from '@meal-diary/shared';
+
 import type { ShoppingListPendingOp } from '@/types/shoppingList';
 
 const QUEUE_PREFIX = 'shopping-list-pending';
@@ -52,6 +57,61 @@ function remapId(
   return id;
 }
 
+function isLegacyReorderItem(item: unknown): boolean {
+  return (
+    item != null &&
+    typeof item === 'object' &&
+    'parent_item_id' in item &&
+    !('category' in item && isShoppingCategory((item as { category?: unknown }).category))
+  );
+}
+
+/**
+ * Drop legacy nesting-shaped reorder ops and ensure add/bulkAdd ops have a category.
+ * Safe to run on every queue load after the category-based upgrade.
+ */
+export function sanitizePendingOpsForCategories(
+  ops: ShoppingListPendingOp[]
+): ShoppingListPendingOp[] {
+  return ops
+    .filter((op) => {
+      if (op.type !== 'reorder') {
+        return true;
+      }
+      return !op.items.some((item) => isLegacyReorderItem(item));
+    })
+    .map((op): ShoppingListPendingOp => {
+      if (op.type === 'add') {
+        const category = isShoppingCategory(op.category)
+          ? op.category
+          : categorizeShoppingItemName(op.name);
+
+        return {
+          opId: op.opId,
+          type: 'add',
+          familyGroupId: op.familyGroupId,
+          tempId: op.tempId,
+          name: op.name,
+          category,
+        };
+      }
+
+      if (op.type === 'bulkAdd') {
+        return {
+          ...op,
+          items: op.items.map((item) => {
+            const category = isShoppingCategory(item.category)
+              ? item.category
+              : categorizeShoppingItemName(item.name);
+            return { name: item.name, category };
+          }),
+        };
+      }
+
+      return op;
+    });
+}
+
 /** Pure helper: rewrite temp ids in remaining ops after a successful add. */
 export function remapTempIdsInOps(
   ops: ShoppingListPendingOp[],
@@ -63,11 +123,7 @@ export function remapTempIdsInOps(
   return ops.map((op) => {
     switch (op.type) {
       case 'add':
-        return {
-          ...op,
-          parentItemId:
-            op.parentItemId == null ? null : remapId(op.parentItemId, tempIdMap),
-        };
+        return op;
       case 'update':
         return { ...op, itemId: remapId(op.itemId, tempIdMap) };
       case 'delete':
@@ -91,10 +147,6 @@ export function remapTempIdsInOps(
           items: op.items.map((item) => ({
             ...item,
             id: remapId(item.id, tempIdMap),
-            parent_item_id:
-              item.parent_item_id == null
-                ? null
-                : remapId(item.parent_item_id, tempIdMap),
           })),
         };
       case 'bulkAdd':
@@ -122,9 +174,15 @@ export async function loadQueue(familyGroupId: number): Promise<ShoppingListPend
       return [];
     }
 
-    memoryQueues.set(familyGroupId, parsed);
+    const sanitized = sanitizePendingOpsForCategories(parsed);
+    memoryQueues.set(familyGroupId, sanitized);
     notifyListeners();
-    return parsed;
+
+    if (sanitized !== parsed && JSON.stringify(sanitized) !== JSON.stringify(parsed)) {
+      await persistQueue(familyGroupId, sanitized);
+    }
+
+    return sanitized;
   } catch (error) {
     console.warn('[shoppingListPendingQueue] Failed to load queue', error);
     memoryQueues.set(familyGroupId, []);
@@ -195,7 +253,7 @@ export async function clearPendingQueue(familyGroupId?: number): Promise<void> {
 function opReferencesItemId(op: ShoppingListPendingOp, itemId: number | string): boolean {
   switch (op.type) {
     case 'add':
-      return op.tempId === itemId || op.parentItemId === itemId;
+      return op.tempId === itemId;
     case 'update':
     case 'delete':
       return op.itemId === itemId;
@@ -204,9 +262,7 @@ function opReferencesItemId(op: ShoppingListPendingOp, itemId: number | string):
     case 'bulkDelete':
       return op.ids.includes(itemId);
     case 'reorder':
-      return op.items.some(
-        (item) => item.id === itemId || item.parent_item_id === itemId
-      );
+      return op.items.some((item) => item.id === itemId);
     case 'bulkAdd':
       return false;
     default:
