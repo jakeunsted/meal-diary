@@ -19,6 +19,7 @@ import {
   handleRevenueCatWebhook,
   type RevenueCatWebhookPayload,
 } from '../../services/revenuecat.service.ts';
+import { emitLog } from '../../utils/otelLogs.ts';
 
 const getFamilyGroupId = (value: unknown): number | null => {
   const familyGroupId = Number(value);
@@ -169,6 +170,16 @@ export const stripeWebhook = async (req: Request, res: Response) => {
     return res.status(200).json({ received: true });
   } catch (error) {
     console.error('Stripe webhook error:', error);
+    emitLog({
+      severity: 'error',
+      body: 'Stripe webhook failed',
+      req,
+      attributes: {
+        category: 'billing',
+        provider: 'stripe',
+        status: 400,
+      },
+    });
     return res.status(400).json({ message: 'Invalid Stripe webhook' });
   }
 };
@@ -183,6 +194,16 @@ export const revenueCatWebhook = async (req: Request, res: Response) => {
       return res.status(401).json({ message: error.message });
     }
     console.error('RevenueCat webhook error:', error);
+    emitLog({
+      severity: 'error',
+      body: 'RevenueCat webhook failed',
+      req,
+      attributes: {
+        category: 'billing',
+        provider: 'revenuecat',
+        status: 400,
+      },
+    });
     return res.status(400).json({ message: 'Invalid RevenueCat webhook' });
   }
 };

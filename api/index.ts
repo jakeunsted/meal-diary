@@ -16,9 +16,10 @@ import path from 'path';
 import { devCorsMiddleware } from './middleware/cors.middleware.ts';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
-import { initializeOtelLogs, shutdownOtelLogs } from './utils/otelLogs.ts';
+import { initializeOtelLogs, shutdownOtelLogs, emitLog } from './utils/otelLogs.ts';
 import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
 import { errorHandlerMiddleware } from './middleware/errorHandler.middleware.ts';
+import { serverErrorLogMiddleware } from './middleware/serverErrorLog.middleware.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -69,6 +70,8 @@ if (process.env.NODE_ENV !== 'development') {
   app.use(apiLimiter);
 }
 
+app.use(serverErrorLogMiddleware);
+
 // Routes
 app.use('/users', userRoutes);
 app.use('/meal-diaries', mealDiaryRoutes);
@@ -105,6 +108,11 @@ app.use(errorHandlerMiddleware);
     });
   } else {
     console.error('Failed to initialize database, server not started');
+    emitLog({
+      severity: 'error',
+      body: 'Database initialization failed',
+      attributes: { category: 'startup' },
+    });
   }
 })();
 

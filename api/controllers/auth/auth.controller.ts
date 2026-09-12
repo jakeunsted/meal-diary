@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../../db/models/User.model.ts';
 import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
-import { trackAuthLog } from '../../utils/otelLogs.ts';
+import { trackAuthLog, logAuth } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
 
@@ -22,6 +22,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       await trackEvent(distinctId, 'login_failure', {
         reason: 'missing_fields',
       });
+      logAuth(req, 'warn', 'login_failure', { event: 'login_failure', reason: 'missing_fields' });
       return;
     }
     
@@ -64,6 +65,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       await trackEvent(distinctId, 'login_failure', {
         reason,
       });
+      logAuth(req, 'warn', 'login_failure', { event: 'login_failure', reason });
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -72,6 +74,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     await trackEvent(distinctId, 'login_failure', {
       reason: 'server_error',
     });
+    logAuth(req, 'error', 'login_failure', { event: 'login_failure', reason: 'server_error' });
   }
 };
 
@@ -91,6 +94,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       await trackEvent(distinctId, 'token_refresh_failure', {
         reason: 'missing_token',
       });
+      logAuth(req, 'warn', 'token_refresh_failure', { event: 'token_refresh_failure', reason: 'missing_token' });
       return;
     }
     
@@ -139,6 +143,10 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       await trackEvent(distinctId, 'token_refresh_failure', {
         reason,
       });
+      logAuth(req, statusCode >= 500 ? 'error' : 'warn', 'token_refresh_failure', {
+        event: 'token_refresh_failure',
+        reason,
+      });
     }
   } catch (err) {
     if (err instanceof jwt.JsonWebTokenError) {
@@ -151,6 +159,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       await trackEvent(distinctId, 'token_refresh_failure', {
         reason: 'invalid_token',
       });
+      logAuth(req, 'warn', 'token_refresh_failure', { event: 'token_refresh_failure', reason: 'invalid_token' });
       return;
     }
     const error = err as Error;
@@ -163,6 +172,7 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     await trackEvent(distinctId, 'token_refresh_failure', {
       reason: 'server_error',
     });
+    logAuth(req, 'error', 'token_refresh_failure', { event: 'token_refresh_failure', reason: 'server_error' });
   }
 };
 
