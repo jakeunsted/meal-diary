@@ -103,19 +103,22 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 **Google Cloud Console setup:**
 
 1. Create or reuse the Web OAuth client (same as backend `GOOGLE_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`).
-2. Create **two** Android OAuth clients for package `uk.co.mealdiary.app` (Console allows one SHA-1 per Android client):
+2. Create **three** Android OAuth clients for package `uk.co.mealdiary.app` (Console allows one SHA-1 per Android client). **Do not edit a working client’s SHA-1** — that immediately breaks the builds that used the old fingerprint.
 
    ```bash
    # Debug (android/app/debug.keystore)
    keytool -list -v -keystore android/app/debug.keystore -alias androiddebugkey -storepass android
 
-   # Release (path from android/keystore.properties → storeFile)
+   # Upload / local release AAB (path from android/keystore.properties → storeFile)
    keytool -list -v -keystore ./meal-diary-release.keystore -alias meal-diary
    ```
 
-   Current fingerprints for this repo:
+   Current fingerprints:
    - Debug client SHA-1: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
-   - Release client SHA-1: `E7:AF:4A:A9:D9:5B:79:A8:9C:EC:AF:32:9F:06:CE:C4:8C:18:DB:39`
+   - Upload / local-release SHA-1: `E7:AF:4A:A9:D9:5B:79:A8:9C:EC:AF:32:9F:06:CE:C4:8C:18:DB:39`
+   - **Play App Signing SHA-1** (required for Play Store / closed testing installs): Play Console → **Test and release → App integrity → App signing**. Copy **App signing key certificate** SHA-1 — not the upload-key SHA-1.
+
+   Play re-signs every AAB it distributes. Production `DEVELOPER_ERROR` almost always means the Play App Signing SHA-1 has no Android OAuth client.
 
    You do not put these Android client IDs in app code — Play Services matches package + SHA-1. Keep using the Web client as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
 3. For **web** only, add Authorized redirect URIs on the Web client:

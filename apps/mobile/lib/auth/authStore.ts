@@ -73,7 +73,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   logout: async () => {
     try {
-      await apiFetch('/auth/logout', { method: 'POST' });
+      // Refresh first if the access token is expired so Authorization and the
+      // refresh token we revoke both match the active DB session.
+      await runWithTokenRefreshLock(async () => {
+        const accessToken = await getAccessToken();
+        const refreshToken = await getRefreshToken();
+        if (
+          accessToken &&
+          refreshToken &&
+          isTokenExpired(accessToken) &&
+          !isTokenExpired(refreshToken, 0)
+        ) {
+          await refreshTokens();
+        }
+      });
+
+      const refreshToken = await getRefreshToken();
+      await apiFetch('/auth/logout', {
+        method: 'POST',
+        body: refreshToken ? { refreshToken } : undefined,
+      });
     } catch {
       // Best-effort server logout — always clear the local session
     }

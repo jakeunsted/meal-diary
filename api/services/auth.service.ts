@@ -130,16 +130,10 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
     { expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` }
   );
   
-  // Store refresh token in database
+  // Store refresh token in database (multi-session: do not delete other sessions)
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
-  
-  // Delete any existing refresh token for this user
-  await RefreshToken.destroy({
-    where: { user_id: userId }
-  });
-  
-  // Create new refresh token
+
   await RefreshToken.create({
     token: refreshToken,
     user_id: userId,
@@ -246,8 +240,11 @@ export const refreshUserTokens = async (
     throw new Error('User not found');
   }
   
-  // Generate new tokens (this will automatically delete the old one)
+  // Rotate only this session's refresh token; leave other sessions intact
   const tokens = await generateTokens(user.id);
+  await RefreshToken.destroy({
+    where: { token: refreshToken }
+  });
   
   return { user, tokens };
 };

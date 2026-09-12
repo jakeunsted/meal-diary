@@ -152,10 +152,10 @@ RefreshToken.belongsTo(User, {
   foreignKeyConstraint: true,
   as: 'user'
 });
-User.hasOne(RefreshToken, {
+User.hasMany(RefreshToken, {
   foreignKey: 'user_id',
   foreignKeyConstraint: true,
-  as: 'refreshToken'
+  as: 'refreshTokens'
 });
 
 // Export all models

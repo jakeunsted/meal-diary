@@ -147,6 +147,9 @@ export const useAuth = () => {
         const { api } = useApi();
         await api('/api/auth/logout', {
           method: 'POST',
+          body: {
+            refreshToken: authStore.refreshToken
+          },
           headers: {
             Authorization: `Bearer ${authStore.accessToken}`
           }

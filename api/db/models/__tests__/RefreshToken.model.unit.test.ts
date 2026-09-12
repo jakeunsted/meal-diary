@@ -62,10 +62,10 @@ describe('RefreshToken Model', () => {
     expect((reference as { key?: string }).key).toBe('id');
   });
 
-  it('should enforce one refresh token per user via a hasOne association', () => {
-    expect(User.associations.refreshToken).toBeDefined();
-    expect(User.associations.refreshToken.associationType).toBe('HasOne');
-    expect(User.associations.refreshToken.foreignKey).toBe('user_id');
+  it('should allow multiple refresh tokens per user via a hasMany association', () => {
+    expect(User.associations.refreshTokens).toBeDefined();
+    expect(User.associations.refreshTokens.associationType).toBe('HasMany');
+    expect(User.associations.refreshTokens.foreignKey).toBe('user_id');
 
     expect(RefreshToken.associations.user).toBeDefined();
     expect(RefreshToken.associations.user.foreignKey).toBe('user_id');

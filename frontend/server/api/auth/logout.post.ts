@@ -2,17 +2,17 @@ import { apiFetch } from '~/server/utils/fetch';
 
 export default defineEventHandler(async (event) => {
   try {
-    // // Get the authorization header
-    // const authHeader = getRequestHeader(event, 'authorization');
-    
-    // if (!authHeader) {
-    //   // If no token, just return success since the user is already logged out
-    //   return { success: true };
-    // }
-    
-    // Forward the logout request to the API
+    const body = await readBody(event).catch(() => ({} as Record<string, unknown>));
+    // Prefer x-refresh-token: useApi stamps it after ensureFreshTokens, so it
+    // matches the active session even when the request body was built earlier.
+    const headerRefresh = getHeader(event, 'x-refresh-token');
+    const bodyRefresh =
+      typeof body?.refreshToken === 'string' ? body.refreshToken : undefined;
+    const refreshToken = headerRefresh || bodyRefresh;
+
     await apiFetch('/auth/logout', {
       method: 'POST',
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
     }, event);
     
     return { success: true };
@@ -22,4 +22,4 @@ export default defineEventHandler(async (event) => {
     console.error('Logout error:', error);
     return { success: true };
   }
-}); 
+});
