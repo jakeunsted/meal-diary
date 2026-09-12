@@ -8,6 +8,9 @@ export default defineConfig({
     include: ['**/*.unit.test.ts'],
     exclude: ['node_modules/**'],
   },
+  define: {
+    __DEV__: 'true',
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),

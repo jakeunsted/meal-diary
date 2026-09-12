@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,7 +17,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { env } from '@/constants/env';
+import { openPlans } from '@/lib/billing/openPlans';
 import { isNetworkError } from '@/lib/auth/httpError';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
@@ -76,7 +75,7 @@ export default function RecipeDetailScreen() {
   };
 
   const handleOpenPlans = () => {
-    void Linking.openURL(`${env.webUrl}/plans`);
+    openPlans(router);
   };
 
   const handleOpenAddToShoppingListModal = () => {

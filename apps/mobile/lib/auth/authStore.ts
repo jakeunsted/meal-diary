@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { identifyUser, resetAnalytics } from '@/lib/analytics/posthog';
 import { apiFetch } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
+import { logOutPurchases } from '@/lib/billing/purchases';
 import { clearMealDiaryCache } from '@/lib/diary/mealDiaryStorage';
 import { clearPendingQueue } from '@/lib/shopping-list/shoppingListPendingQueue';
 import { clearShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
@@ -179,6 +180,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await clearAuthState();
     queryClient.clear();
     resetAnalytics();
+    await logOutPurchases();
     set({ status: 'signedOut', user: null, entitlements: null });
   },
 }));

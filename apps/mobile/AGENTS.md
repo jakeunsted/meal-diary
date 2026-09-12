@@ -30,3 +30,39 @@ run `npx patch-package` manually to reapply, and verify with:
 grep -q "self-referential circular" node_modules/react-native-css/dist/commonjs/babel/react-native-web.js
 ```
 If nativewind/react-native-css ship an upstream fix, drop the patch and this section.
+
+## RevenueCat / in-app subscriptions
+
+Mobile premium uses **RevenueCat + App Store / Google Play Billing** (not Stripe). Web Stripe stays on the Nuxt app. The Express API already syncs RevenueCat webhooks into `subscriptions`.
+
+### App env
+
+Mode-specific URLs:
+
+- `.env.development` — emulator/dev API + `dev-app.mealdiary.co.uk`
+- `.env.production` — `https://api.mealdiary.co.uk` + `https://app.mealdiary.co.uk`
+
+Keys in `apps/mobile/.env` / `.env.local` (see `.env.example`):
+
+- `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` — RevenueCat public Google SDK key
+- `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` — RevenueCat public Apple SDK key
+
+Without these keys (or on Expo web), upgrade CTAs open `${EXPO_PUBLIC_WEB_URL}/plans` instead of the in-app plans screen. Do not put `EXPO_PUBLIC_API_URL` in `.env.local` — that file outranks `.env.production` during `./gradlew bundleRelease`. Release builds still refuse local hosts in `constants/env.ts`.
+
+### API env
+
+- `REVENUECAT_WEBHOOK_SECRET` — Bearer token RevenueCat sends to `POST /billing/revenuecat-webhook`
+- `REVENUECAT_ENTITLEMENT_ID` — entitlement identifier in RevenueCat (e.g. `family_plus`)
+
+### Store + RevenueCat checklist
+
+1. Create subscription products in Google Play Console (and later App Store Connect): monthly + yearly. Optional 7-day free trial to mirror web.
+2. Product IDs **must** include `month` or `year`/`annual` so the API can map billing interval.
+3. In RevenueCat: add apps, attach store products, create an offering with both packages, create an entitlement whose id matches `REVENUECAT_ENTITLEMENT_ID`.
+4. Webhook URL: `POST {API_BASE}/billing/revenuecat-webhook` with Authorization `Bearer {REVENUECAT_WEBHOOK_SECRET}`.
+5. App user id convention: `fg_{familyGroupId}` (set via `POST /billing/link-revenuecat` before purchase).
+6. Add Play (and later App Store) sandbox testers.
+
+### Dev builds
+
+Real purchases need a **development / EAS build** with native modules. Expo Go only runs RevenueCat Preview API Mode (no real store purchases). After installing `react-native-purchases`, rebuild the native app (`npx expo run:android` or EAS).

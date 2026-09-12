@@ -1,9 +1,10 @@
-import { Linking, Pressable } from 'react-native';
+import { Pressable } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
-import { env } from '@/constants/env';
+import { openPlans } from '@/lib/billing/openPlans';
 
 interface WarningAlertProps {
   message: string;
@@ -19,9 +20,10 @@ export function WarningAlert({
   testID,
 }: WarningAlertProps) {
   const { t } = useTranslation();
+  const router = useRouter();
 
   const handleOpenPlans = () => {
-    void Linking.openURL(`${env.webUrl}/plans`);
+    openPlans(router);
   };
 
   return (

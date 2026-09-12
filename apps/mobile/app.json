@@ -2,7 +2,7 @@
   "expo": {
     "name": "Meal Diary",
     "slug": "meal-diary",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mealdiary",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "uk.co.mealdiary.app",
-      "versionCode": 3,
+      "versionCode": 5,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -28,7 +28,10 @@
               "path": "/oauthredirect"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ],
       "adaptiveIcon": {
@@ -60,6 +63,12 @@
     "experiments": {
       "typedRoutes": true,
       "autolinkingModuleResolution": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "43c451d2-77d6-4296-8427-cce130c61d5c"
+      }
     }
   }
 }

@@ -4,7 +4,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  Linking,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -18,7 +17,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { env } from '@/constants/env';
+import { openPlans } from '@/lib/billing/openPlans';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
@@ -51,7 +50,7 @@ export default function RecipesScreen() {
   const showListLoading = recipesQuery.isFetching && hasRecipeData;
 
   const handleOpenPlans = () => {
-    void Linking.openURL(`${env.webUrl}/plans`);
+    openPlans(router);
   };
 
   const handleCreateRecipe = () => {

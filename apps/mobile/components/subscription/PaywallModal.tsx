@@ -1,13 +1,13 @@
 import type { EntitlementFeature } from '@meal-diary/shared';
+import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { Linking } from 'react-native';
 
 import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { env } from '@/constants/env';
+import { openPlans } from '@/lib/billing/openPlans';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
 
@@ -41,6 +41,7 @@ function getPaywallCopy(
 
 export function PaywallModal() {
   const { t } = useTranslation();
+  const router = useRouter();
   const activeFeature = usePaywallStore((state) => state.activeFeature);
   const closePaywall = usePaywallStore((state) => state.closePaywall);
   const userQuery = useCurrentUser();
@@ -57,7 +58,7 @@ export function PaywallModal() {
 
   const handleOpenPlans = () => {
     handleClose();
-    void Linking.openURL(`${env.webUrl}/plans`);
+    openPlans(router);
   };
 
   if (!activeFeature) {

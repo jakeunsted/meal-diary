@@ -10,6 +10,7 @@ import { FamilySettingsCard } from '@/components/profile/FamilySettingsCard';
 import { InviteModal } from '@/components/profile/InviteModal';
 import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { LegalLinks } from '@/components/legal/LegalLinks';
+import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { Box } from '@/components/ui/box';
 import {
   useCurrentUser,
@@ -108,6 +109,8 @@ export default function ProfileScreen() {
           members={membersQuery.data ?? []}
           currentUserId={userQuery.data?.id}
         />
+
+        <SubscriptionCard entitlements={entitlements} />
 
         <AccountCard />
 

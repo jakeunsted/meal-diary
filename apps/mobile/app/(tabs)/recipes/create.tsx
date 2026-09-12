@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -18,7 +17,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
-import { env } from '@/constants/env';
+import { openPlans } from '@/lib/billing/openPlans';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
@@ -60,7 +59,7 @@ export default function CreateRecipeScreen() {
   }, [importRecipeMutation.isPending]);
 
   const handleOpenPlans = () => {
-    void Linking.openURL(`${env.webUrl}/plans`);
+    openPlans(router);
   };
 
   const handleCloseMethodDialog = () => {
