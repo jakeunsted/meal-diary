@@ -3,7 +3,7 @@ import DailyMeal from '../db/models/DailyMeal.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 import { emitFamilyEvent } from './sse.service.ts';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const NODE_ENV = process.env.NODE_ENV;
 let WEBHOOK_BASE_URL: string | undefined;

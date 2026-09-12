@@ -19,10 +19,13 @@
     "test:e2e": "turbo run test:e2e --filter=./frontend",
     "postinstall": "patch-package"
   },
+  "dependencies": {
+    "vue-i18n": "^10.0.8"
+  },
   "devDependencies": {
     "patch-package": "^8.0.1",
     "tmp": "0.2.7",
-    "turbo": "^2.5.4",
+    "turbo": "^2.10.12",
     "uuid": "11.1.1"
   },
   "engines": {
@@ -30,7 +33,23 @@
   },
   "overrides": {
     "tmp": "0.2.7",
-    "uuid": "11.1.1"
+    "uuid": "11.1.1",
+    "tar": "7.5.22",
+    "browserslist": "4.28.9",
+    "postcss": "8.5.28",
+    "qs": "6.16.0",
+    "systeminformation": "5.33.10",
+    "dompurify": "3.4.15",
+    "baseline-browser-mapping": "2.11.22",
+    "@nuxt/devtools": "3.4.2",
+    "js-yaml": "4.3.2",
+    "body-parser": "2.3.0",
+    "metro": "0.84.5",
+    "metro-config": "0.84.5",
+    "metro-transform-worker": "0.84.5",
+    "@opentelemetry/sdk-node": "0.222.0",
+    "@opentelemetry/propagator-jaeger": "2.11.0",
+    "@xmldom/xmldom": "0.9.12"
   },
   "packageManager": "npm@11.16.0"
 }

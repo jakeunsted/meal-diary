@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import { initializeDatabase } from '../db/db.ts';
 import { getOrCreateSubscription } from '../services/entitlements.service.ts';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * Mark a family group as complimentary premium (no payment required).

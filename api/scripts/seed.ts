@@ -3,7 +3,7 @@ import { initializeDatabase } from '../db/db.ts';
 import '../db/models/associations.ts';
 import { runAllSeeds } from '../db/seeders/index.ts';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * Script to seed the database with default data

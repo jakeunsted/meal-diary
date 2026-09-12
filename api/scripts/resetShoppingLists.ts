@@ -3,7 +3,7 @@ import { initializeDatabase } from '../db/db.ts';
 import ShoppingList from '../db/models/ShoppingList.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * Script to clear all existing shopping list data.

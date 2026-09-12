@@ -7,7 +7,7 @@ import {
 import { initializeDatabase } from '../db/db.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 /**
  * One-time backfill: assign categories from names and recompute contiguous

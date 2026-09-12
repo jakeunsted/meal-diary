@@ -31,14 +31,14 @@ export const initializeOtelLogs = (config: OtelLogsConfig): void => {
       resource: resourceFromAttributes({
         'service.name': config.serviceName,
       }),
-      logRecordProcessor: new BatchLogRecordProcessor(
-        new OTLPLogExporter({
+      logRecordProcessor: new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({
           url: logsUrl,
           headers: {
             Authorization: `Bearer ${config.apiKey}`,
           },
-        })
-      ),
+        }),
+      }),
     });
 
     sdk.start();
