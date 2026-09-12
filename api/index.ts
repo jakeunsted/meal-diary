@@ -18,6 +18,7 @@ import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 import { initializeOtelLogs, shutdownOtelLogs } from './utils/otelLogs.ts';
 import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
+import { errorHandlerMiddleware } from './middleware/errorHandler.middleware.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -91,6 +92,7 @@ app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
 
 // Error tracking middleware (must be after routes)
 app.use(errorTrackingMiddleware);
+app.use(errorHandlerMiddleware);
 
 // Initialize the database
 (async () => {

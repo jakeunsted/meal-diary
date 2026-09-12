@@ -1,4 +1,4 @@
-import { logAuthError } from '~/server/utils/otelLogs';
+import { flushOtelLogs, logAuthError } from '~/server/utils/otelLogs';
 
 const ALLOWED_EVENTS = new Set([
   'oauth_login_redirect_error',
@@ -89,6 +89,7 @@ export default defineEventHandler(async (event) => {
     event: eventName,
     ...properties,
   });
+  await flushOtelLogs();
 
   return { ok: true };
 });

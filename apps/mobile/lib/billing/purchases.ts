@@ -8,6 +8,7 @@ import Purchases, {
 } from 'react-native-purchases';
 
 import { env } from '@/constants/env';
+import { logWarn } from '@/lib/analytics/posthog';
 
 export type BillingInterval = 'month' | 'year';
 
@@ -55,6 +56,7 @@ export const configurePurchases = async (): Promise<boolean> => {
       return true;
     } catch (error) {
       console.warn('[RevenueCat] configure failed', error);
+      logWarn('RevenueCat configure failed', { category: 'billing' });
       configurePromise = null;
       return false;
     }
@@ -85,6 +87,7 @@ export const logOutPurchases = async (): Promise<void> => {
     await Purchases.logOut();
   } catch (error) {
     console.warn('[RevenueCat] logOut failed', error);
+    logWarn('RevenueCat logOut failed', { category: 'billing' });
   }
 };
 

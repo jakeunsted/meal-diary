@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { AppState, Platform } from 'react-native';
 
+import { logError } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { applyFamilyRealtimeEvent } from '@/lib/realtime/applyFamilyRealtimeEvent';
@@ -79,6 +80,7 @@ export function useFamilyRealtime(): void {
         connectionRef.current = connection;
       } catch (error) {
         console.error('[SSE] Failed to connect:', error);
+        logError('SSE connection failed', { category: 'sse' });
         scheduleReconnect();
       }
     };

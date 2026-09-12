@@ -1,7 +1,7 @@
 import { handleAutoLogout } from '~/composables/useAuth';
 import { isSessionExpiredError } from '~/utils/httpError';
 
-export default defineNuxtPlugin(() => {
+export default defineNuxtPlugin((nuxtApp) => {
   // Note: We don't override global fetch here because:
   // 1. Requests through $fetch (used by useApi) go through Nuxt server which handles token refresh
   // 2. The useApi composable handles auth errors and triggers logout if needed
@@ -10,6 +10,22 @@ export default defineNuxtPlugin(() => {
   if (process.client) {
     window.addEventListener('unhandledrejection', async (event) => {
       console.error('[Global Error Handler] Unhandled promise rejection:', event.reason);
+
+      const reason = event.reason;
+      const message = reason instanceof Error
+        ? reason.message
+        : typeof reason === 'string'
+          ? reason
+          : 'unknown';
+      try {
+        (nuxtApp.$posthog as { logger?: { error: (body: string, attributes?: Record<string, unknown>) => void } })
+          ?.logger
+          ?.error('Unhandled promise rejection', {
+            reason: message.slice(0, 200),
+          });
+      } catch {
+        /* ignore */
+      }
 
       // Only trigger logout for definitive session-expired errors, not generic
       // permission/RBAC 403s which should not force the user to re-authenticate.

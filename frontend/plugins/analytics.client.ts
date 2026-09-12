@@ -44,6 +44,12 @@ function shouldDisableAnalyticsCapture(config: ReturnType<typeof useRuntimeConfi
   return hostnames.some(isCaptureDisabledHost);
 }
 
+interface PostHogLogger {
+  info: (body: string, attributes?: Record<string, any>) => void;
+  warn: (body: string, attributes?: Record<string, any>) => void;
+  error: (body: string, attributes?: Record<string, any>) => void;
+}
+
 interface AnalyticsApi {
   capture: (event: string, properties?: Record<string, any>) => void;
   identify: (distinctId: string, properties?: Record<string, any>) => void;
@@ -52,7 +58,14 @@ interface AnalyticsApi {
   track: (event: string, properties?: Record<string, any>) => void;
   isFeatureEnabled: (key: FeatureFlagKey | string) => boolean;
   getFeatureFlag: (key: FeatureFlagKey | string) => boolean | string | undefined;
+  logger: PostHogLogger;
 }
+
+const noopLogger: PostHogLogger = {
+  info: () => {},
+  warn: () => {},
+  error: () => {},
+};
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig();
@@ -64,6 +77,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     track: () => {},
     isFeatureEnabled: () => false,
     getFeatureFlag: () => undefined,
+    logger: noopLogger,
   };
 
   if (!process.client) {
@@ -88,6 +102,10 @@ export default defineNuxtPlugin((nuxtApp) => {
       // Flags load immediately; capture stays off until consent + non-dev host
       opt_out_capturing_by_default: true,
       defaults: (config.public.posthogDefaults as '2025-11-30' | undefined) || '2025-11-30',
+      logs: {
+        serviceName: 'meal-diary-web',
+        environment: import.meta.dev ? 'development' : 'production',
+      },
     });
     posthogReady = true;
 
@@ -122,7 +140,7 @@ export default defineNuxtPlugin((nuxtApp) => {
       const s = document.createElement('script');
       s.id = 'ga4-src';
       s.async = true;
-      s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURICommand(gaMeasurementId)}`;
+      s.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(gaMeasurementId)}`;
       document.head.appendChild(s);
     }
     gaReady = true;
@@ -227,6 +245,20 @@ export default defineNuxtPlugin((nuxtApp) => {
       } catch {
         return undefined;
       }
+    },
+    logger: {
+      info: (body, attributes) => {
+        if (!canCapture()) return;
+        try { posthog.logger.info(body, attributes); } catch { /* ignore */ }
+      },
+      warn: (body, attributes) => {
+        if (!canCapture()) return;
+        try { posthog.logger.warn(body, attributes); } catch { /* ignore */ }
+      },
+      error: (body, attributes) => {
+        if (!canCapture()) return;
+        try { posthog.logger.error(body, attributes); } catch { /* ignore */ }
+      },
     },
   };
 

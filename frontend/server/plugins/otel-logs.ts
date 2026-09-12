@@ -1,11 +1,14 @@
-import { initializeOtelLogs } from '../utils/otelLogs';
+import { initializeOtelLogs, shutdownOtelLogs } from '../utils/otelLogs';
 
-export default defineNitroPlugin(() => {
+export default defineNitroPlugin((nitroApp) => {
   const config = useRuntimeConfig();
 
   initializeOtelLogs({
     apiKey: config.posthogKey as string,
-    host: (config.posthogHost as string) || 'https://eu.i.posthog.com',
     serviceName: 'meal-diary-frontend',
+  });
+
+  nitroApp.hooks.hook('close', async () => {
+    await shutdownOtelLogs();
   });
 });

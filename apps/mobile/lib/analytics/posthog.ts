@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import PostHog from 'posthog-react-native';
 
 import { env } from '@/constants/env';
@@ -10,6 +11,11 @@ export const posthogClient: PostHog | null = env.posthogKey
       host: env.posthogHost,
       // Keep lifecycle analytics off in local/dev; flags still preload
       captureAppLifecycleEvents: !isDev,
+      logs: {
+        serviceName: 'meal-diary-mobile',
+        environment: isDev ? 'development' : 'production',
+        serviceVersion: Constants.expoConfig?.version ?? '1.1.1',
+      },
     })
   : null;
 
@@ -38,4 +44,20 @@ export function resetAnalytics(): void {
   if (posthogClient && isDev) {
     void posthogClient.optOut();
   }
+}
+
+interface LogAttributes {
+  [key: string]: string | number | boolean;
+}
+
+export function logInfo(body: string, attributes?: LogAttributes): void {
+  posthogClient?.logger.info(body, attributes);
+}
+
+export function logWarn(body: string, attributes?: LogAttributes): void {
+  posthogClient?.logger.warn(body, attributes);
+}
+
+export function logError(body: string, attributes?: LogAttributes): void {
+  posthogClient?.logger.error(body, attributes);
 }

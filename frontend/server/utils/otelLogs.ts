@@ -1,59 +1,103 @@
 import { logs } from '@opentelemetry/api-logs';
 import { OTLPLogExporter } from '@opentelemetry/exporter-logs-otlp-http';
 import { resourceFromAttributes } from '@opentelemetry/resources';
-import { NodeSDK } from '@opentelemetry/sdk-node';
-import { BatchLogRecordProcessor } from '@opentelemetry/sdk-logs';
+import { BatchLogRecordProcessor, LoggerProvider } from '@opentelemetry/sdk-logs';
 import { toLogAttributes } from '@meal-diary/shared';
 
-let sdk: NodeSDK | null = null;
+let loggerProvider: LoggerProvider | null = null;
 let initialized = false;
+
+const POSTHOG_LOGS_URL = 'https://eu.i.posthog.com/i/v1/logs';
+const SERVICE_VERSION = '1.0.0';
 
 interface OtelLogsConfig {
   apiKey: string;
-  host: string;
   serviceName: string;
 }
 
-const getPostHogLogsUrl = (host: string): string => {
-  const base = host.replace(/\/$/, '');
-  return `${base}/i/v1/logs`;
-};
+export interface EmitLogOptions {
+  severity: 'error' | 'warn' | 'info';
+  body: string;
+  attributes?: Record<string, unknown>;
+  loggerName?: string;
+  distinctId?: string;
+}
 
 export const initializeOtelLogs = (config: OtelLogsConfig): void => {
   if (initialized || !config.apiKey) {
     return;
   }
 
-  const logsUrl = getPostHogLogsUrl(config.host);
-
   try {
-    sdk = new NodeSDK({
+    loggerProvider = new LoggerProvider({
       resource: resourceFromAttributes({
         'service.name': config.serviceName,
+        'service.version': SERVICE_VERSION,
+        'deployment.environment': process.env.NODE_ENV || 'development',
       }),
-      logRecordProcessor: new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({
-          url: logsUrl,
-          headers: {
-            Authorization: `Bearer ${config.apiKey}`,
-          },
+      processors: [
+        new BatchLogRecordProcessor({
+          exporter: new OTLPLogExporter({
+            url: POSTHOG_LOGS_URL,
+            headers: {
+              Authorization: `Bearer ${config.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+          }),
         }),
-      }),
+      ],
     });
-
-    sdk.start();
+    logs.setGlobalLoggerProvider(loggerProvider);
     initialized = true;
+
+    emitLog({
+      severity: 'info',
+      body: 'OpenTelemetry log exporter started',
+      attributes: { category: 'startup' },
+      loggerName: config.serviceName,
+    });
   } catch (err) {
     console.error('PostHog Logs: Failed to initialise OpenTelemetry:', err);
   }
 };
 
 export const shutdownOtelLogs = async (): Promise<void> => {
-  if (sdk) {
-    await sdk.shutdown();
-    sdk = null;
+  if (loggerProvider) {
+    await loggerProvider.shutdown();
+    loggerProvider = null;
     initialized = false;
   }
+};
+
+export const flushOtelLogs = async (): Promise<void> => {
+  if (loggerProvider) {
+    await loggerProvider.forceFlush();
+  }
+};
+
+export const emitLog = ({
+  severity,
+  body,
+  attributes,
+  loggerName,
+  distinctId,
+}: EmitLogOptions): void => {
+  if (!initialized) {
+    return;
+  }
+
+  const logger = logs.getLogger(loggerName ?? 'meal-diary-frontend');
+  const logAttributes = toLogAttributes(attributes);
+
+  logger.emit({
+    severityText: severity,
+    body,
+    attributes: {
+      source: 'frontend_server',
+      ...(distinctId ? { posthogDistinctId: distinctId } : {}),
+      ...logAttributes,
+    },
+  });
 };
 
 export const logAuthError = (
@@ -61,21 +105,18 @@ export const logAuthError = (
   body: string,
   properties?: Record<string, unknown>
 ): void => {
-  if (!initialized || !distinctId) {
+  if (!distinctId) {
     return;
   }
 
-  const logger = logs.getLogger('meal-diary-auth');
-  const attributes = toLogAttributes(properties);
-
-  logger.emit({
-    severityText: 'error',
+  emitLog({
+    severity: 'error',
     body,
+    distinctId,
+    loggerName: 'meal-diary-auth',
     attributes: {
-      posthogDistinctId: distinctId,
       category: 'auth',
-      source: 'frontend_server',
-      ...attributes,
+      ...properties,
     },
   });
 };

@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 
+import { logWarn } from '@/lib/analytics/posthog';
 import { linkRevenueCatUser } from '@/lib/billing/linkRevenueCat';
 import {
   configurePurchases,
@@ -57,6 +58,7 @@ export function useRevenueCatIdentity() {
         }
       } catch (error) {
         console.warn('[RevenueCat] identity link failed', error);
+        logWarn('RevenueCat identity link failed', { category: 'billing' });
       }
     })();
 

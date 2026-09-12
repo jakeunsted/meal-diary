@@ -1,6 +1,7 @@
 import EventSource from 'react-native-sse';
 
 import { env } from '@/constants/env';
+import { logError } from '@/lib/analytics/posthog';
 import { getAccessToken } from '@/lib/auth/tokenStorage';
 
 export interface FamilySseMessage {
@@ -53,6 +54,7 @@ export async function connectFamilySse({
       onMessage(parsed);
     } catch (error) {
       console.error('[SSE] Failed to parse message:', error);
+      logError('SSE message parse failed', { category: 'sse' });
     }
   });
 
