@@ -96,7 +96,7 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 **Google Cloud Console setup:**
 
 1. Create or reuse the Web OAuth client (same as backend `GOOGLE_CLIENT_ID` / `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`).
-2. Create an Android OAuth client for package `uk.co.mealdiary.app` and add **both** SHA-1 fingerprints (debug + release):
+2. Create **two** Android OAuth clients for package `uk.co.mealdiary.app` (Console allows one SHA-1 per Android client):
 
    ```bash
    # Debug (android/app/debug.keystore)
@@ -107,8 +107,10 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
    ```
 
    Current fingerprints for this repo:
-   - Debug SHA-1: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
-   - Release SHA-1: `E7:AF:4A:A9:D9:5B:79:A8:9C:EC:AF:32:9F:06:CE:C4:8C:18:DB:39`
+   - Debug client SHA-1: `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+   - Release client SHA-1: `E7:AF:4A:A9:D9:5B:79:A8:9C:EC:AF:32:9F:06:CE:C4:8C:18:DB:39`
+
+   You do not put these Android client IDs in app code — Play Services matches package + SHA-1. Keep using the Web client as `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`.
 3. For **web** only, add Authorized redirect URIs on the Web client:
    - `https://dev-app.mealdiary.co.uk`
    - `http://localhost:3002`

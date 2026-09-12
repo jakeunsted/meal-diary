@@ -1,7 +1,7 @@
 {
   "name": "meal-diary-mobile",
   "main": "expo-router/entry",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "dependencies": {
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo/html-elements": "^0.12.5",
@@ -85,6 +85,7 @@
     "test": "vitest run",
     "start": "BROWSER=none expo start --port 3002",
     "android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
+    "run:android": "expo run:android -d Small_Phone_API_36",
     "ios": "BROWSER=none expo start --port 3002 --ios"
   },
   "private": true,
