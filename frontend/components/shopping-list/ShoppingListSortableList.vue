@@ -11,11 +11,10 @@
       class="shopping-list-sortable__row my-1"
       :class="{
         'shopping-list-sortable__row--dragging': draggingId === itemId,
-        'z-10 relative': draggingId === itemId,
+        'shopping-list-sortable__row--shifting': draggingId != null && draggingId !== itemId,
       }"
       :style="{
         transform: `translateY(${rowTranslateY(itemId)}px)`,
-        transition: draggingId ? 'transform 80ms linear' : undefined,
       }"
       data-sortable-row
       :data-sortable-id="itemId"
@@ -64,10 +63,23 @@ const {
 </script>
 
 <style scoped>
+.shopping-list-sortable__row {
+  will-change: transform;
+}
+
+.shopping-list-sortable__row--shifting {
+  transition: transform 120ms ease;
+}
+
 .shopping-list-sortable__row--dragging {
-  opacity: 0.92;
-  box-shadow: 0 4px 12px rgb(0 0 0 / 12%);
+  position: relative;
+  z-index: 20;
+  opacity: 0.96;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
   background: var(--color-base-100, white);
   border-radius: 0.5rem;
+  /* No transform transition — the row must stay glued to the pointer. */
+  transition: box-shadow 120ms ease, opacity 120ms ease;
+  touch-action: none;
 }
 </style>

@@ -20,23 +20,29 @@ interface DragState {
   itemId: number | string;
   startY: number;
   startX: number;
+  startScrollY: number;
   isTouch: boolean;
   activated: boolean;
   holdTimer: ReturnType<typeof setTimeout> | null;
   currentIndex: number;
+  fromIndex: number;
   rowHeight: number;
-  originTop: number;
 }
 
 /**
  * Pointer Events based sortable for a flat list of shopping items within one category.
  * Drag starts from a handle only (element matching [data-sortable-handle]).
+ *
+ * Behaviour matches list libraries like Base Web DnD:
+ * - DOM order stays fixed while dragging
+ * - The active row follows the pointer via translateY
+ * - Sibling rows slide with transforms to open a gap
+ * - Order is committed only on drop
  */
 export function useShoppingListSortable(options: ShoppingListSortableOptions) {
   const listRef = ref<HTMLElement | null>(null);
   const draggingId = ref<number | string | null>(null);
   const dragOffsetY = ref(0);
-  const previewOrder = ref<Array<number | string>>([]);
 
   const mouseActivationDistance = options.mouseActivationDistance ?? 4;
   const touchActivationDelayMs = options.touchActivationDelayMs ?? 160;
@@ -48,34 +54,56 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
   let autoScrollFrame: number | null = null;
   let lastPointerY = 0;
 
-  const displayOrder = computed(() => {
-    if (draggingId.value != null && previewOrder.value.length) {
-      return previewOrder.value;
-    }
-    return options.itemIds.value;
-  });
+  const displayOrder = computed(() => options.itemIds.value);
 
+  const documentScrollY = () =>
+    window.scrollY || document.documentElement.scrollTop || 0;
+
+  const findRowElement = (itemId: number | string): HTMLElement | null => {
+    const rows = listRef.value?.querySelectorAll('[data-sortable-row]');
+    if (!rows) {
+      return null;
+    }
+    const match = Array.from(rows).find(
+      (row) => row.getAttribute('data-sortable-id') === String(itemId)
+    );
+    return (match as HTMLElement | undefined) ?? null;
+  };
+
+  const pointerDeltaY = (clientY: number, state: DragState): number =>
+    clientY - state.startY + (documentScrollY() - state.startScrollY);
+
+  const buildReorder = (fromIndex: number, toIndex: number): Array<number | string> => {
+    const next = [...options.itemIds.value];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    return next;
+  };
+
+  /**
+   * Keep the dragged row under the pointer. Sibling rows between the origin and
+   * the live drop index shift by one row height to open a gap (Base Web style).
+   */
   const rowTranslateY = (itemId: number | string): number => {
-    if (draggingId.value == null || !dragState) {
+    if (draggingId.value == null || !dragState?.activated) {
       return 0;
     }
+
     if (itemId === draggingId.value) {
       return dragOffsetY.value;
     }
 
-    const fromIndex = options.itemIds.value.indexOf(draggingId.value);
-    const toIndex = dragState.currentIndex;
+    const { fromIndex, currentIndex: toIndex, rowHeight } = dragState;
     const itemIndex = options.itemIds.value.indexOf(itemId);
     if (fromIndex === -1 || itemIndex === -1 || fromIndex === toIndex) {
       return 0;
     }
 
-    const height = dragState.rowHeight;
     if (fromIndex < toIndex && itemIndex > fromIndex && itemIndex <= toIndex) {
-      return -height;
+      return -rowHeight;
     }
     if (fromIndex > toIndex && itemIndex < fromIndex && itemIndex >= toIndex) {
-      return height;
+      return rowHeight;
     }
     return 0;
   };
@@ -85,6 +113,18 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
       cancelAnimationFrame(autoScrollFrame);
       autoScrollFrame = null;
     }
+  };
+
+  const updateDropIndex = (state: DragState, clientY: number) => {
+    const deltaY = pointerDeltaY(clientY, state);
+    dragOffsetY.value = deltaY;
+
+    const deltaIndex = Math.round(deltaY / state.rowHeight);
+    const toIndex = Math.max(
+      0,
+      Math.min(options.itemIds.value.length - 1, state.fromIndex + deltaIndex)
+    );
+    state.currentIndex = toIndex;
   };
 
   const tickAutoScroll = () => {
@@ -103,6 +143,8 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
 
     if (delta !== 0) {
       window.scrollBy(0, delta);
+      // Keep the dragged row glued to the pointer while the page scrolls.
+      updateDropIndex(dragState, lastPointerY);
     }
 
     autoScrollFrame = requestAnimationFrame(tickAutoScroll);
@@ -116,22 +158,17 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     dragState = null;
     draggingId.value = null;
     dragOffsetY.value = 0;
-    previewOrder.value = [];
-  };
-
-  const buildPreviewOrder = (fromIndex: number, toIndex: number): Array<number | string> => {
-    const next = [...options.itemIds.value];
-    const [moved] = next.splice(fromIndex, 1);
-    next.splice(toIndex, 0, moved);
-    return next;
+    document.body.style.removeProperty('user-select');
+    document.body.style.removeProperty('touch-action');
   };
 
   const activateDrag = (state: DragState, row: HTMLElement) => {
     state.activated = true;
     draggingId.value = state.itemId;
-    state.rowHeight = row.getBoundingClientRect().height || 48;
-    state.originTop = row.getBoundingClientRect().top;
-    previewOrder.value = [...options.itemIds.value];
+    const rect = row.getBoundingClientRect();
+    state.rowHeight = rect.height || 48;
+    document.body.style.userSelect = 'none';
+    document.body.style.touchAction = 'none';
     if (autoScrollFrame == null) {
       autoScrollFrame = requestAnimationFrame(tickAutoScroll);
     }
@@ -149,7 +186,7 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     if (!dragState.activated) {
       const distance = Math.hypot(dx, dy);
       if (dragState.isTouch) {
-        // Still waiting for hold timer; cancel if user scrolled.
+        // Still waiting for hold timer; cancel if the user started scrolling.
         if (distance > touchActivationDistance * 2 && dragState.holdTimer) {
           clearTimeout(dragState.holdTimer);
           dragState.holdTimer = null;
@@ -160,30 +197,20 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
       if (distance < mouseActivationDistance) {
         return;
       }
-      const row = (event.target as HTMLElement | null)?.closest?.(
-        '[data-sortable-row]'
-      ) as HTMLElement | null;
+      const row = findRowElement(dragState.itemId);
       if (!row) {
         return;
       }
       activateDrag(dragState, row);
     }
 
-    event.preventDefault();
-    dragOffsetY.value = event.clientY - dragState.startY;
-
-    const fromIndex = options.itemIds.value.indexOf(dragState.itemId);
-    if (fromIndex === -1) {
-      return;
+    // Only preventDefault once the drag is active — avoids the browser
+    // "Ignored attempt to cancel a touchmove" intervention during scroll.
+    if (event.cancelable) {
+      event.preventDefault();
     }
 
-    const deltaIndex = Math.round(dragOffsetY.value / dragState.rowHeight);
-    const toIndex = Math.max(
-      0,
-      Math.min(options.itemIds.value.length - 1, fromIndex + deltaIndex)
-    );
-    dragState.currentIndex = toIndex;
-    previewOrder.value = buildPreviewOrder(fromIndex, toIndex);
+    updateDropIndex(dragState, event.clientY);
   };
 
   const handlePointerUp = (event: PointerEvent) => {
@@ -193,7 +220,7 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
 
     const state = dragState;
     const activated = state.activated;
-    const fromIndex = options.itemIds.value.indexOf(state.itemId);
+    const fromIndex = state.fromIndex;
     const toIndex = state.currentIndex;
 
     window.removeEventListener('pointermove', handlePointerMove);
@@ -203,7 +230,7 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     clearDrag();
 
     if (activated && fromIndex !== -1 && fromIndex !== toIndex) {
-      options.onReorder(buildPreviewOrder(fromIndex, toIndex));
+      options.onReorder(buildReorder(fromIndex, toIndex));
     }
   };
 
@@ -234,8 +261,8 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
       ? numericId
       : itemIdAttr;
 
-    const currentIndex = options.itemIds.value.indexOf(itemId);
-    if (currentIndex === -1) {
+    const fromIndex = options.itemIds.value.indexOf(itemId);
+    if (fromIndex === -1) {
       return;
     }
 
@@ -247,12 +274,13 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
       itemId,
       startY: event.clientY,
       startX: event.clientX,
+      startScrollY: documentScrollY(),
       isTouch,
       activated: false,
       holdTimer: null,
-      currentIndex,
+      currentIndex: fromIndex,
+      fromIndex,
       rowHeight: row.getBoundingClientRect().height || 48,
-      originTop: row.getBoundingClientRect().top,
     };
 
     try {
