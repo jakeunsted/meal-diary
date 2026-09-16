@@ -1,14 +1,18 @@
 import { useEffect, useRef } from 'react';
 
 import { logWarn } from '@/lib/analytics/posthog';
+import { apiFetch } from '@/lib/api/client';
+import { queryClient } from '@/lib/api/queryClient';
+import { useAuthStore } from '@/lib/auth/authStore';
 import { linkRevenueCatUser } from '@/lib/billing/linkRevenueCat';
 import {
   configurePurchases,
   isNativeBillingAvailable,
   logOutPurchases,
+  subscribeToCustomerInfoUpdates,
 } from '@/lib/billing/purchases';
-import { useAuthStore } from '@/lib/auth/authStore';
-import { useEntitlements } from '@/lib/queries/profile';
+import { entitlementKeys, useEntitlements } from '@/lib/queries/profile';
+import type { ResolvedEntitlements } from '@/types/api';
 
 /**
  * Configures RevenueCat and links the family owner identity for store purchases.
@@ -36,6 +40,31 @@ export function useRevenueCatIdentity() {
       return;
     }
 
+    let cancelled = false;
+    let unsubscribe: (() => void) | undefined;
+
+    void (async () => {
+      const ready = await configurePurchases();
+      if (!ready || cancelled) {
+        return;
+      }
+
+      unsubscribe = subscribeToCustomerInfoUpdates(() => {
+        void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isNativeBillingAvailable()) {
+      return;
+    }
+
     if (status !== 'signedIn' || !familyGroupId || !isOwner) {
       if (linkedFamilyGroupIdRef.current !== null) {
         linkedFamilyGroupIdRef.current = null;
@@ -53,8 +82,24 @@ export function useRevenueCatIdentity() {
     void (async () => {
       try {
         await linkRevenueCatUser(familyGroupId);
-        if (!cancelled) {
-          linkedFamilyGroupIdRef.current = familyGroupId;
+        if (cancelled) {
+          return;
+        }
+        linkedFamilyGroupIdRef.current = familyGroupId;
+
+        try {
+          const synced = await apiFetch<ResolvedEntitlements>('/billing/sync-revenuecat', {
+            method: 'POST',
+            body: { family_group_id: familyGroupId },
+          });
+          if (cancelled) {
+            return;
+          }
+          queryClient.setQueryData(entitlementKeys.family(familyGroupId), synced);
+          await useAuthStore.getState().setEntitlements(synced);
+        } catch (error) {
+          console.warn('[RevenueCat] subscription sync failed', error);
+          void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
         }
       } catch (error) {
         console.warn('[RevenueCat] identity link failed', error);

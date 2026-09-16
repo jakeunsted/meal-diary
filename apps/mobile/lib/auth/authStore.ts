@@ -32,6 +32,7 @@ interface AuthState {
   initializeAuth: () => Promise<void>;
   setAuth: (authData: SetAuthPayload) => Promise<void>;
   setUser: (user: User) => void;
+  setEntitlements: (entitlements: ResolvedEntitlements | null) => Promise<void>;
   clearSession: () => Promise<void>;
 }
 
@@ -191,6 +192,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setUser: (user) => set({ user }),
+
+  setEntitlements: async (entitlements) => {
+    set({ entitlements });
+    const stored = await getAuthState();
+    if (!stored) {
+      return;
+    }
+    await setAuthState({ ...stored, entitlements });
+  },
 
   clearSession: async () => {
     await clearMealDiaryCache();

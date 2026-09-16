@@ -26,7 +26,7 @@ import { ShoppingListSkeleton } from '@/components/shopping-list/ShoppingListSke
 import { ShoppingListViewSettingsMenu } from '@/components/shopping-list/ShoppingListViewSettingsMenu';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
@@ -232,10 +232,8 @@ export default function ShoppingListScreen() {
             )
           }
         >
-          <Box className="relative mx-4 mb-4 items-center justify-center">
-            <Heading size="2xl" className="text-ice text-center" testID="shopping-list-title">
-              {t('shoppingList.title')}
-            </Heading>
+          <Box className="relative mx-4 items-center justify-center">
+            <ScreenTitle testID="shopping-list-title">{t('shoppingList.title')}</ScreenTitle>
             <ShoppingListViewSettingsMenu
               hideCheckedItems={viewSettings.hideCheckedItems}
               hideCheckboxes={viewSettings.hideCheckboxes}

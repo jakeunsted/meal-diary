@@ -52,13 +52,28 @@ export function useFamilyMembers(familyGroupId: number | undefined) {
   });
 }
 
+export const entitlementKeys = {
+  all: ['entitlements'] as const,
+  family: (familyGroupId: number) => ['entitlements', familyGroupId] as const,
+};
+
+export async function fetchEntitlements(familyGroupId: number): Promise<ResolvedEntitlements> {
+  const entitlements = await apiFetch<ResolvedEntitlements>(
+    `/family-groups/${familyGroupId}/entitlements`
+  );
+  await useAuthStore.getState().setEntitlements(entitlements);
+  return entitlements;
+}
+
 export function useEntitlements(familyGroupId: number | undefined) {
-  const initialEntitlements = useAuthStore((state) => state.entitlements);
+  const placeholderEntitlements = useAuthStore((state) => state.entitlements);
 
   return useQuery({
-    queryKey: ['entitlements', familyGroupId],
-    queryFn: () => apiFetch<ResolvedEntitlements>(`/family-groups/${familyGroupId}/entitlements`),
+    queryKey: familyGroupId ? entitlementKeys.family(familyGroupId) : entitlementKeys.all,
+    queryFn: () => fetchEntitlements(familyGroupId as number),
     enabled: !!familyGroupId,
-    initialData: initialEntitlements ?? undefined,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    placeholderData: placeholderEntitlements ?? undefined,
   });
 }

@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import type { PurchasesPackage } from 'react-native-purchases';
 
 import { apiFetch } from '@/lib/api/client';
+import { useAuthStore } from '@/lib/auth/authStore';
 import { linkRevenueCatUser } from '@/lib/billing/linkRevenueCat';
 import {
   formatPurchasesError,
@@ -13,9 +14,10 @@ import {
   type OfferingPackages,
 } from '@/lib/billing/purchases';
 import { logWarn } from '@/lib/analytics/posthog';
+import { entitlementKeys, fetchEntitlements } from '@/lib/queries/profile';
 import type { ResolvedEntitlements } from '@/types/api';
 
-const POLL_ATTEMPTS = 8;
+const POLL_ATTEMPTS = 12;
 const POLL_DELAY_MS = 1500;
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -31,18 +33,55 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
   });
   const [error, setError] = useState<string | null>(null);
 
+  const applyEntitlements = useCallback(
+    async (entitlements: ResolvedEntitlements): Promise<ResolvedEntitlements> => {
+      if (familyGroupId) {
+        queryClient.setQueryData(entitlementKeys.family(familyGroupId), entitlements);
+        await useAuthStore.getState().setEntitlements(entitlements);
+      }
+      return entitlements;
+    },
+    [familyGroupId, queryClient]
+  );
+
   const refreshEntitlementsUntilPremium = useCallback(async (): Promise<ResolvedEntitlements | null> => {
     if (!familyGroupId) {
       return null;
     }
 
-    for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+    const loadEntitlements = async (): Promise<ResolvedEntitlements> => {
       const entitlements = await queryClient.fetchQuery({
-        queryKey: ['entitlements', familyGroupId],
-        queryFn: () =>
-          apiFetch<ResolvedEntitlements>(`/family-groups/${familyGroupId}/entitlements`),
+        queryKey: entitlementKeys.family(familyGroupId),
+        queryFn: () => fetchEntitlements(familyGroupId),
+        staleTime: 0,
       });
+      await applyEntitlements(entitlements);
+      return entitlements;
+    };
 
+    let entitlements = await loadEntitlements();
+    if (entitlements.plan === 'premium') {
+      return entitlements;
+    }
+
+    try {
+      const synced = await apiFetch<ResolvedEntitlements>('/billing/sync-revenuecat', {
+        method: 'POST',
+        body: { family_group_id: familyGroupId },
+      });
+      entitlements = await applyEntitlements(synced);
+      if (entitlements.plan === 'premium') {
+        return entitlements;
+      }
+    } catch (err) {
+      logWarn('RevenueCat subscription sync failed', {
+        category: 'billing',
+        message: err instanceof Error ? err.message : 'sync failed',
+      });
+    }
+
+    for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+      entitlements = await loadEntitlements();
       if (entitlements.plan === 'premium') {
         return entitlements;
       }
@@ -52,11 +91,8 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
       }
     }
 
-    return (
-      (queryClient.getQueryData(['entitlements', familyGroupId]) as ResolvedEntitlements | undefined) ??
-      null
-    );
-  }, [familyGroupId, queryClient]);
+    return entitlements;
+  }, [applyEntitlements, familyGroupId, queryClient]);
 
   const loadOfferings = useCallback(async () => {
     setIsLoadingOfferings(true);

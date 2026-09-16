@@ -2,7 +2,7 @@ import { ActivityIndicator } from 'react-native';
 
 import { MemberAvatar } from '@/components/profile/MemberAvatar';
 import { Box } from '@/components/ui/box';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import type { User } from '@/types/api';
 
@@ -40,9 +40,7 @@ export function ProfileHeader({ user, isLoading, error }: ProfileHeaderProps) {
       <Box className="mb-4">
         <MemberAvatar avatarUrl={user.avatar_url} size={128} />
       </Box>
-      <Heading size="xl" className="text-ice text-center">
-        {getFullName(user)}
-      </Heading>
+      <ScreenTitle className="mb-0">{getFullName(user)}</ScreenTitle>
     </Box>
   );
 }

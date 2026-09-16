@@ -4,6 +4,7 @@ import Purchases, {
   LOG_LEVEL,
   PACKAGE_TYPE,
   PURCHASES_ERROR_CODE,
+  type CustomerInfo,
   type PurchasesError,
   type PurchasesPackage,
 } from 'react-native-purchases';
@@ -155,6 +156,11 @@ export const purchasePackage = async (pkg: PurchasesPackage): Promise<'purchased
 
   try {
     await Purchases.purchasePackage(pkg);
+    try {
+      await Purchases.syncPurchases();
+    } catch (error) {
+      console.warn('[RevenueCat] syncPurchases after purchase failed', error);
+    }
     return 'purchased';
   } catch (error) {
     if (isPurchaseCancelledError(error)) {
@@ -162,6 +168,19 @@ export const purchasePackage = async (pkg: PurchasesPackage): Promise<'purchased
     }
     throw error;
   }
+};
+
+export const subscribeToCustomerInfoUpdates = (
+  listener: (info: CustomerInfo) => void
+): (() => void) => {
+  if (!isNativeBillingAvailable()) {
+    return () => undefined;
+  }
+
+  Purchases.addCustomerInfoUpdateListener(listener);
+  return () => {
+    Purchases.removeCustomerInfoUpdateListener(listener);
+  };
 };
 
 export const restorePurchases = async (): Promise<void> => {

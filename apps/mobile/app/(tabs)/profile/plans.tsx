@@ -9,6 +9,7 @@ import { PricingCards } from '@/components/subscription/PricingCards';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { openWebManageBilling, openWebPlans } from '@/lib/billing/openPlans';
 import {
@@ -109,9 +110,10 @@ export default function PlansScreen() {
   return (
     <Box className="flex-1 bg-base" testID="plans-screen">
       <ScrollView
-        contentContainerClassName="px-4 pb-10"
-        contentContainerStyle={{ paddingTop: insets.top + 16 }}
+        contentContainerClassName="pb-8"
+        contentContainerStyle={{ paddingTop: insets.top + 24 }}
       >
+        <Box className="mx-4">
         <Pressable
           accessibilityRole="button"
           className="mb-4 flex-row items-center gap-2 py-2 self-start"
@@ -122,9 +124,9 @@ export default function PlansScreen() {
           <Text className="text-ice">{t('common.back')}</Text>
         </Pressable>
 
-        <Heading size="xl" className="text-ice mb-2">
+        <ScreenTitle align="left" className="mb-2">
           {t('plansPage.title')}
-        </Heading>
+        </ScreenTitle>
         <Text className="text-ice/70 mb-6 text-sm">{t('plansPage.intro')}</Text>
 
         {entitlementsQuery.isLoading ? (
@@ -231,6 +233,7 @@ export default function PlansScreen() {
             </Box>
           </>
         )}
+        </Box>
       </ScrollView>
     </Box>
   );

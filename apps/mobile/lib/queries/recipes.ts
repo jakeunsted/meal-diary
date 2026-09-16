@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { apiFetch } from '@/lib/api/client';
+import { entitlementKeys } from '@/lib/queries/profile';
 import type {
   CreateRecipePayload,
   ImportRecipeFromUrlPayload,
@@ -14,10 +15,6 @@ export const recipeKeys = {
   all: ['recipes'] as const,
   family: (familyGroupId: number) => ['recipes', familyGroupId] as const,
   detail: (recipeId: number) => ['recipes', 'detail', recipeId] as const,
-};
-
-export const entitlementKeys = {
-  family: (familyGroupId: number) => ['entitlements', familyGroupId] as const,
 };
 
 export async function fetchFamilyRecipes(

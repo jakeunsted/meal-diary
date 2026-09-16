@@ -9,11 +9,13 @@ import { runWithTokenRefreshLock } from '@/lib/auth/tokenRefreshLock';
 import { getAccessToken, getRefreshToken } from '@/lib/auth/tokenStorage';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { mealDiaryKeys } from '@/lib/queries/mealDiary';
+import { entitlementKeys } from '@/lib/queries/profile';
 import { shoppingListKeys } from '@/lib/queries/shoppingList';
 
 function invalidateResumableQueries(): void {
   void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
   void queryClient.invalidateQueries({ queryKey: shoppingListKeys.all });
+  void queryClient.invalidateQueries({ queryKey: entitlementKeys.all });
 }
 
 async function handleAppResume(): Promise<void> {

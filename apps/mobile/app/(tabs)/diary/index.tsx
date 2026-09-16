@@ -11,7 +11,7 @@ import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
 import { WarningAlert } from '@/components/profile/WarningAlert';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useDiaryEntitlements } from '@/lib/entitlements/useDiaryEntitlements';
@@ -128,9 +128,7 @@ export default function DiaryScreen() {
           />
         }
       >
-        <Heading size="2xl" className="text-ice mb-4 text-center" testID="diary-title">
-          {t('diary.title')}
-        </Heading>
+        <ScreenTitle testID="diary-title">{t('diary.title')}</ScreenTitle>
 
         {diary.lastFetchError && !diary.loading ? (
           <Box

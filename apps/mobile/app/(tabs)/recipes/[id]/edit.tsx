@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecipeForm, type RecipeFormValues } from '@/components/recipe/RecipeForm';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { useCurrentUser } from '@/lib/queries/profile';
 import { useRecipe, useUpdateRecipe } from '@/lib/queries/recipes';
@@ -59,10 +59,14 @@ export default function EditRecipeScreen() {
   };
 
   return (
-    <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
+    <Box className="flex-1 bg-base">
       <KeyboardAwareScrollView
         bottomOffset={24}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + 24,
+          paddingHorizontal: 16,
+          paddingBottom: 32,
+        }}
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
       >
@@ -75,9 +79,7 @@ export default function EditRecipeScreen() {
             <Text className="text-ice">{t('common.back')}</Text>
           </Pressable>
 
-          <Heading className="mb-4 text-ice" size="lg">
-            {t('recipeForm.editRecipe')}
-          </Heading>
+          <ScreenTitle align="left">{t('recipeForm.editRecipe')}</ScreenTitle>
 
           {recipeQuery.isLoading ? (
             <Box className="items-center py-8">

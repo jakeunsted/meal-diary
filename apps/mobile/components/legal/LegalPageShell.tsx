@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LegalLinks } from '@/components/legal/LegalLinks';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 
 interface LegalPageShellProps {
   title: string;
@@ -34,9 +34,9 @@ export function LegalPageShell({ title, children }: LegalPageShellProps) {
         contentContainerStyle={{ paddingTop: insets.top + 24, paddingHorizontal: 16 }}
       >
         <Box className="mb-2 flex-row items-center justify-between">
-          <Heading size="xl" className="text-ice flex-1">
+          <ScreenTitle align="left" className="mb-0 flex-1">
             {title}
-          </Heading>
+          </ScreenTitle>
           <Button variant="ghost" size="sm" onPress={handleBack} testID="back-button">
             <ButtonText>{t('common.back')}</ButtonText>
           </Button>

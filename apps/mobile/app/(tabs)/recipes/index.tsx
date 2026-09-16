@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
-import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { openPlans } from '@/lib/billing/openPlans';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
@@ -83,10 +83,14 @@ export default function RecipesScreen() {
   );
 
   return (
-    <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
+    <Box className="flex-1 bg-base">
       <KeyboardAwareScrollView
         bottomOffset={24}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + 24,
+          paddingHorizontal: 16,
+          paddingBottom: 32,
+        }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
@@ -97,9 +101,7 @@ export default function RecipesScreen() {
         }
         style={{ flex: 1 }}
       >
-        <Heading className="my-4 text-center text-2xl text-ice" size="xl">
-          {t('recipeForm.title')}
-        </Heading>
+        <ScreenTitle>{t('recipeForm.title')}</ScreenTitle>
 
         {recipeEntitlements.recipeUsageLabel ? (
           <Text

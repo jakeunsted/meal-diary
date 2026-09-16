@@ -16,6 +16,7 @@ import { DeleteRecipeModal } from '@/components/recipe/DeleteRecipeModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { openPlans } from '@/lib/billing/openPlans';
 import { isNetworkError } from '@/lib/auth/httpError';
@@ -145,10 +146,11 @@ export default function RecipeDetailScreen() {
   };
 
   return (
-    <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
+    <Box className="flex-1 bg-base">
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-4 pb-8"
+        contentContainerStyle={{ paddingTop: insets.top + 24 }}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -217,9 +219,7 @@ export default function RecipeDetailScreen() {
                 <Text className="text-sm text-red-400">{deleteError}</Text>
               </Box>
             ) : null}
-            <Heading className="mb-4 text-2xl text-ice" size="xl">
-              {recipe.name}
-            </Heading>
+            <ScreenTitle align="left">{recipe.name}</ScreenTitle>
 
             {recipe.description ? (
               <Text className="mb-4 text-ice/70">{recipe.description}</Text>

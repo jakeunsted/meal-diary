@@ -51,7 +51,7 @@ export function SubscriptionCard({ entitlements }: SubscriptionCardProps) {
   };
 
   return (
-    <ProfileCard title={t('plansPage.subscription')} className="mt-6">
+    <ProfileCard title={t('plansPage.subscription')} className="mb-6">
       <Text className="text-ice mb-1 text-base">
         {t('plansPage.currentPlanLabel', { plan: planLabel })}
       </Text>

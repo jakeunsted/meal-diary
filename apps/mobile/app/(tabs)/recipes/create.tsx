@@ -14,6 +14,7 @@ import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
+import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { openPlans } from '@/lib/billing/openPlans';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
@@ -145,10 +146,14 @@ export default function CreateRecipeScreen() {
     'rounded-lg border border-white/10 bg-surface px-4 py-3 text-base text-ice';
 
   return (
-    <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
+    <Box className="flex-1 bg-base">
       <KeyboardAwareScrollView
         bottomOffset={24}
-        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        contentContainerStyle={{
+          paddingTop: insets.top + 24,
+          paddingHorizontal: 16,
+          paddingBottom: 32,
+        }}
         keyboardShouldPersistTaps="handled"
         style={{ flex: 1 }}
       >
@@ -161,9 +166,7 @@ export default function CreateRecipeScreen() {
             <Text className="text-ice">{t('common.back')}</Text>
           </Pressable>
 
-          <Heading className="mb-4 text-ice" size="lg">
-            {t('recipeForm.newRecipe')}
-          </Heading>
+          <ScreenTitle align="left">{t('recipeForm.newRecipe')}</ScreenTitle>
 
           {!recipeEntitlements.canCreateRecipe ? (
             <Box
