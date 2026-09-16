@@ -14,11 +14,13 @@ import {
 } from '../../services/billing.service.ts';
 import {
   linkRevenueCatUser,
+  reprocessLatestRevenueCatEvent,
   RevenueCatAuthorizationError,
   RevenueCatConfigError,
   handleRevenueCatWebhook,
   type RevenueCatWebhookPayload,
 } from '../../services/revenuecat.service.ts';
+import { resolveEntitlements } from '../../services/entitlements.service.ts';
 import { emitLog } from '../../utils/otelLogs.ts';
 
 const getFamilyGroupId = (value: unknown): number | null => {
@@ -223,6 +225,31 @@ export const linkRevenueCat = async (req: Request, res: Response) => {
 
     const appUserId = await linkRevenueCatUser(familyGroupId, user.dataValues.id);
     return res.status(200).json({ app_user_id: appUserId });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('Only the family owner')) {
+      return res.status(403).json({ message: error.message });
+    }
+    return handleBillingError(error, res);
+  }
+};
+
+export const syncRevenueCat = async (req: Request, res: Response) => {
+  try {
+    const familyGroupId = getFamilyGroupId(req.body.family_group_id);
+    const user = req.user as User | undefined;
+
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (!familyGroupId) {
+      return res.status(400).json({ message: 'family_group_id is required' });
+    }
+
+    await linkRevenueCatUser(familyGroupId, user.dataValues.id);
+    await reprocessLatestRevenueCatEvent(familyGroupId);
+    const entitlements = await resolveEntitlements(familyGroupId, user.dataValues.id);
+    return res.status(200).json(entitlements);
   } catch (error) {
     if (error instanceof Error && error.message.includes('Only the family owner')) {
       return res.status(403).json({ message: error.message });

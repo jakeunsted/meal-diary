@@ -201,6 +201,44 @@ router.post('/link-revenuecat', authenticateToken, async (req, res, next) => {
 });
 
 /**
+ * @openapi
+ * /billing/sync-revenuecat:
+ *   post:
+ *     summary: Re-apply the latest RevenueCat webhook for the family subscription
+ *     tags: [Billing]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - family_group_id
+ *             properties:
+ *               family_group_id:
+ *                 type: integer
+ *                 description: The family group to sync
+ *     responses:
+ *       200:
+ *         description: The refreshed entitlements after reprocessing the latest store event
+ *       400:
+ *         description: family_group_id is required
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Only the family owner can manage billing
+ *       404:
+ *         description: Family group not found
+ */
+router.post('/sync-revenuecat', authenticateToken, async (req, res, next) => {
+  try {
+    await billingController.syncRevenueCat(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * The two webhook routes below are registered directly in index.ts (before the
  * JSON body parser) but are documented here so they appear in the API docs.
  *
