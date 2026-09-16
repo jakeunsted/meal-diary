@@ -1,3 +1,4 @@
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
 import Purchases, {
   LOG_LEVEL,
@@ -29,8 +30,11 @@ const getApiKey = (): string => {
   return '';
 };
 
+export const isExpoGo = (): boolean =>
+  Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 export const isNativeBillingAvailable = (): boolean =>
-  Platform.OS !== 'web' && getApiKey().length > 0;
+  Platform.OS !== 'web' && !isExpoGo() && getApiKey().length > 0;
 
 export const configurePurchases = async (): Promise<boolean> => {
   if (!isNativeBillingAvailable()) {
@@ -48,11 +52,12 @@ export const configurePurchases = async (): Promise<boolean> => {
         return true;
       }
 
-      if (__DEV__) {
-        await Purchases.setLogLevel(LOG_LEVEL.DEBUG);
-      }
+      await Purchases.setLogLevel(LOG_LEVEL.DEBUG);
 
-      Purchases.configure({ apiKey: getApiKey() });
+      Purchases.configure({
+        apiKey: getApiKey(),
+        ...(Platform.OS === 'android' ? { store: 'PLAY_STORE' as const } : {}),
+      });
       return true;
     } catch (error) {
       console.warn('[RevenueCat] configure failed', error);
@@ -117,7 +122,14 @@ export const getOfferingPackages = async (): Promise<OfferingPackages> => {
   }
 
   const offerings = await Purchases.getOfferings();
-  const available = offerings.current?.availablePackages ?? [];
+  const current = offerings.current;
+  const available = current?.availablePackages ?? [];
+
+  if (!current || available.length === 0) {
+    throw new Error(
+      'No Play Store products were returned. Install the app from the Play testing track (not Expo Go or a sideload), confirm family_plus monthly/yearly are Active, and that RevenueCat Play credentials are valid. https://rev.cat/why-are-offerings-empty'
+    );
+  }
 
   let monthly: PurchasesPackage | null = null;
   let yearly: PurchasesPackage | null = null;
@@ -159,6 +171,22 @@ export const restorePurchases = async (): Promise<void> => {
   }
 
   await Purchases.restorePurchases();
+};
+
+export const formatPurchasesError = (error: unknown): string => {
+  const purchasesError = error as PurchasesError | undefined;
+  if (!purchasesError || typeof purchasesError.message !== 'string') {
+    return error instanceof Error ? error.message : 'Purchase failed';
+  }
+
+  const underlying = purchasesError.underlyingErrorMessage?.trim();
+  const readable = purchasesError.userInfo?.readableErrorCode;
+  const details = [readable, underlying].filter((part) => part && part !== purchasesError.message);
+  if (details.length > 0) {
+    return `${purchasesError.message} (${details.join(': ')})`;
+  }
+
+  return purchasesError.message;
 };
 
 export const isPurchaseCancelledError = (error: unknown): boolean => {

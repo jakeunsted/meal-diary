@@ -7,6 +7,7 @@ import { PostHogProvider } from 'posthog-react-native';
 import { useEffect, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
@@ -115,7 +116,13 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <SafeAreaProvider>
             <GestureHandlerRootView style={{ flex: 1 }}>
-              <RootLayoutNav />
+              <KeyboardProvider
+                statusBarTranslucent
+                navigationBarTranslucent
+                preserveEdgeToEdge
+              >
+                <RootLayoutNav />
+              </KeyboardProvider>
             </GestureHandlerRootView>
           </SafeAreaProvider>
         </QueryClientProvider>

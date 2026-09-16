@@ -65,4 +65,4 @@ Without these keys (or on Expo web), upgrade CTAs open `${EXPO_PUBLIC_WEB_URL}/p
 
 ### Dev builds
 
-Real purchases need a **development / EAS build** with native modules. Expo Go only runs RevenueCat Preview API Mode (no real store purchases). After installing `react-native-purchases`, rebuild the native app (`npx expo run:android` or EAS).
+Real purchases need a **Play testing / EAS / `expo run:android` build** with native modules. Expo Go only runs RevenueCat Browser Mode and cannot fetch Play products. After installing `react-native-purchases`, rebuild the native app (`npx expo run:android` or EAS).

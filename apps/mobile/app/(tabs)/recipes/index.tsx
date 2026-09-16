@@ -6,10 +6,10 @@ import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
-  ScrollView,
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RecipeCard } from '@/components/recipe/RecipeCard';
@@ -84,9 +84,9 @@ export default function RecipesScreen() {
 
   return (
     <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
-      <ScrollView
-        className="flex-1"
-        contentContainerClassName="px-4 pb-8"
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
@@ -95,6 +95,7 @@ export default function RecipesScreen() {
             tintColor="#6366F1"
           />
         }
+        style={{ flex: 1 }}
       >
         <Heading className="my-4 text-center text-2xl text-ice" size="xl">
           {t('recipeForm.title')}
@@ -206,7 +207,7 @@ export default function RecipesScreen() {
             ))}
           </View>
         )}
-      </ScrollView>
+      </KeyboardAwareScrollView>
     </Box>
   );
 }

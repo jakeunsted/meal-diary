@@ -17,6 +17,7 @@
     "build": "turbo run build",
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e --filter=./frontend",
+    "bump-mobile-version": "node scripts/bump-mobile-version.mjs",
     "postinstall": "patch-package"
   },
   "dependencies": {

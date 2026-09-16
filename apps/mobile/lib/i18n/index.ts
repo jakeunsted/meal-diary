@@ -223,7 +223,7 @@ const resources = {
         restorePurchases: 'Restore purchases',
         priceUnavailable: 'Price unavailable',
         nativeBillingUnavailable:
-          'In-app purchases need a development build with RevenueCat keys. You can still upgrade on the web.',
+          'In-app purchases need a Play testing install (not Expo Go). You can still upgrade on the web.',
         rows: {
           familyMembers: 'More family members',
           weeksAhead: 'Plan further ahead',

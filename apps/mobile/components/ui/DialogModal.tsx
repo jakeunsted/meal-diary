@@ -8,6 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { colors } from '@/constants/theme';
 
@@ -44,8 +45,6 @@ interface DialogModalProps {
   children: ReactNode;
   testID?: string;
   placement?: DialogModalPlacement;
-  /** Lifts content above the software keyboard (e.g. from Keyboard event height). */
-  keyboardInset?: number;
 }
 
 const placementClassNames: Record<DialogModalPlacement, string> = {
@@ -60,14 +59,7 @@ export function DialogModal({
   children,
   testID,
   placement = 'center',
-  keyboardInset = 0,
 }: DialogModalProps) {
-  const isKeyboardVisible = keyboardInset > 0;
-  const placementClassName =
-    isKeyboardVisible && placement === 'center'
-      ? 'items-center justify-end px-6'
-      : placementClassNames[placement];
-
   return (
     <Modal
       visible={visible}
@@ -82,21 +74,30 @@ export function DialogModal({
           onPress={onClose}
           accessibilityRole="button"
         />
-        <View
-          className={`flex-1 ${placementClassName}`}
+        <KeyboardAvoidingView
+          behavior="padding"
+          automaticOffset
+          keyboardVerticalOffset={16}
           pointerEvents="box-none"
-          style={
-            isKeyboardVisible
-              ? { paddingBottom: keyboardInset + 16 }
-              : undefined
-          }
+          style={styles.keyboardAvoiding}
         >
-          {children}
-        </View>
+          <View
+            className={`flex-1 ${placementClassNames[placement]}`}
+            pointerEvents="box-none"
+          >
+            {children}
+          </View>
+        </KeyboardAvoidingView>
       </View>
     </Modal>
   );
 }
+
+const styles = StyleSheet.create({
+  keyboardAvoiding: {
+    flex: 1,
+  },
+});
 
 interface DialogPanelProps {
   children: ReactNode;

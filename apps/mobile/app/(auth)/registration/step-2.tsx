@@ -2,12 +2,10 @@ import { Redirect, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
   TextInput,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -97,13 +95,18 @@ export default function RegistrationStep2Screen() {
     `flex-1 rounded-lg px-4 py-3 ${activeTab === tab ? 'bg-primary' : 'bg-surface'}`;
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-base"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
+    <Box className="flex-1 bg-base">
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingVertical: 48,
+        }}
         keyboardShouldPersistTaps="handled"
+        mode="layout"
+        style={{ flex: 1 }}
       >
         <Heading size="2xl" className="text-ice mb-6 text-center">
           {t('registrationStep2.title')}
@@ -197,7 +200,7 @@ export default function RegistrationStep2Screen() {
             </Text>
           ) : null}
         </Box>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </Box>
   );
 }

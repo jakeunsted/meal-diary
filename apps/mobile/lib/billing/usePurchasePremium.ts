@@ -5,12 +5,14 @@ import type { PurchasesPackage } from 'react-native-purchases';
 import { apiFetch } from '@/lib/api/client';
 import { linkRevenueCatUser } from '@/lib/billing/linkRevenueCat';
 import {
+  formatPurchasesError,
   getOfferingPackages,
   purchasePackage,
   restorePurchases,
   type BillingInterval,
   type OfferingPackages,
 } from '@/lib/billing/purchases';
+import { logWarn } from '@/lib/analytics/posthog';
 import type { ResolvedEntitlements } from '@/types/api';
 
 const POLL_ATTEMPTS = 8;
@@ -64,7 +66,8 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
       setOfferings(next);
       return next;
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load plans';
+      const message = formatPurchasesError(err);
+      logWarn('RevenueCat offerings failed', { category: 'billing', message });
       setError(message);
       return { monthly: null, yearly: null };
     } finally {
@@ -113,7 +116,8 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
         await refreshEntitlementsUntilPremium();
         return 'purchased';
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Purchase failed';
+        const message = formatPurchasesError(err);
+        logWarn('RevenueCat purchase failed', { category: 'billing', message });
         setError(message);
         return 'failed';
       } finally {
@@ -144,7 +148,8 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
       await refreshEntitlementsUntilPremium();
       return 'restored';
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Restore failed';
+      const message = formatPurchasesError(err);
+      logWarn('RevenueCat restore failed', { category: 'billing', message });
       setError(message);
       return 'failed';
     } finally {

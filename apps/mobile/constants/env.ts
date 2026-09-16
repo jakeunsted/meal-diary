@@ -60,8 +60,8 @@ const googleRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI ?? '';
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
 const posthogHost =
   process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://prxhg.mealdiary.co.uk';
-const revenueCatAndroidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? '';
-const revenueCatIosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? '';
+const revenueCatAndroidApiKey = (process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY ?? '').trim();
+const revenueCatIosApiKey = (process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY ?? '').trim();
 
 export const env = {
   apiUrl,

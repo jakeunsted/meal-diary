@@ -1,5 +1,6 @@
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Pressable, Text, View } from 'react-native';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
@@ -10,6 +11,11 @@ import { colors } from '@/constants/theme';
 export function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const isKeyboardVisible = useKeyboardState((keyboard) => keyboard.isVisible);
+
+  if (isKeyboardVisible) {
+    return null;
+  }
 
   return (
     <View

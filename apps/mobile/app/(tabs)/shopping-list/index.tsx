@@ -9,8 +9,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   RefreshControl,
   TextInput,
@@ -221,13 +219,8 @@ export default function ShoppingListScreen() {
 
   return (
     <Box className="flex-1 bg-base">
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ShoppingListScrollContainer
-          contentContainerClassName="pb-8"
-          contentContainerStyle={{ paddingTop: insets.top + 24 }}
+      <ShoppingListScrollContainer
+          contentContainerStyle={{ paddingTop: insets.top + 24, paddingBottom: 32 }}
           keyboardShouldPersistTaps="handled"
           refreshControl={
             isDragging ? undefined : (
@@ -384,7 +377,6 @@ export default function ShoppingListScreen() {
             </Box>
           )}
         </ShoppingListScrollContainer>
-      </KeyboardAvoidingView>
     </Box>
   );
 }

@@ -1,7 +1,8 @@
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, TextInput } from 'react-native';
+import { Pressable, TextInput } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
 import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 
@@ -48,13 +49,18 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      className="flex-1 bg-base"
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView
-        contentContainerClassName="flex-grow justify-center px-6 py-12"
+    <Box className="flex-1 bg-base">
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: 'center',
+          paddingHorizontal: 24,
+          paddingVertical: 48,
+        }}
         keyboardShouldPersistTaps="handled"
+        mode="layout"
+        style={{ flex: 1 }}
       >
         <Heading size="2xl" className="text-ice mb-1 text-center">
           {t('login.title')}
@@ -129,7 +135,7 @@ export default function LoginScreen() {
             </Link>
           </Box>
         </Box>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+    </Box>
   );
 }

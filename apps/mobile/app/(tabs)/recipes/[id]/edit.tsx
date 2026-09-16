@@ -4,11 +4,9 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
-  ScrollView,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RecipeForm, type RecipeFormValues } from '@/components/recipe/RecipeForm';
@@ -62,15 +60,12 @@ export default function EditRecipeScreen() {
 
   return (
     <Box className="flex-1 bg-base" style={{ paddingTop: insets.top }}>
-      <KeyboardAvoidingView
-        className="flex-1"
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      <KeyboardAwareScrollView
+        bottomOffset={24}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 32 }}
+        keyboardShouldPersistTaps="handled"
+        style={{ flex: 1 }}
       >
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="px-4 pb-8"
-          keyboardShouldPersistTaps="handled"
-        >
           <Pressable
             accessibilityRole="button"
             className="mb-4 flex-row items-center gap-2 py-2"
@@ -111,8 +106,7 @@ export default function EditRecipeScreen() {
               />
             </>
           )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
     </Box>
   );
 }
