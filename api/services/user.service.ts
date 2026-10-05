@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import { Op } from 'sequelize';
+import { isPasswordValid, isValidEmail } from '@meal-diary/shared';
 import sequelize from '../db/models/index.ts';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import FamilyGroup from '../db/models/FamilyGroup.model.ts';
@@ -9,6 +10,8 @@ import { deleteFamilyGroupData } from './familyGroup.service.ts';
 import { deletePersonData } from '../utils/posthog.ts';
 import { assertCanAddFamilyMember } from './entitlements.service.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
+
+export { isValidEmail };
 
 export interface CreateUserData {
   username: string;
@@ -68,44 +71,6 @@ const userExists = async (username: string, email: string): Promise<boolean> => 
   return !!existingUser;
 };
 
-const MAX_EMAIL_LENGTH = 254;
-
-/**
- * Validate an email address format (linear-time; avoids ReDoS-prone regex).
- * @param {string} email - Email to validate
- * @returns {boolean} True if the email format is valid
- */
-export const isValidEmail = (email: string): boolean => {
-  if (typeof email !== 'string' || email.length === 0 || email.length > MAX_EMAIL_LENGTH) {
-    return false;
-  }
-
-  const atIndex = email.indexOf('@');
-  if (atIndex <= 0 || atIndex !== email.lastIndexOf('@')) {
-    return false;
-  }
-
-  const localPart = email.slice(0, atIndex);
-  const domain = email.slice(atIndex + 1);
-  if (localPart.length === 0 || domain.length === 0) {
-    return false;
-  }
-
-  const dotIndex = domain.indexOf('.');
-  if (dotIndex <= 0 || dotIndex === domain.length - 1) {
-    return false;
-  }
-
-  for (let i = 0; i < email.length; i++) {
-    const code = email.charCodeAt(i);
-    if (code <= 32 || code === 127) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
 /**
  * Hash password
  * @param {string} password - Plain text password
@@ -152,6 +117,10 @@ export const createUser = async (userData: CreateUserData): Promise<{
 
   if (!isValidEmail(email)) {
     throw new Error('A valid email address is required');
+  }
+
+  if (!isPasswordValid(password)) {
+    throw new Error('Password does not meet requirements');
   }
 
   if (!terms_accepted) {

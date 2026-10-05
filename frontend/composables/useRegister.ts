@@ -1,10 +1,9 @@
 import { Preferences } from '@capacitor/preferences';
+import { isPasswordValid, isValidEmail } from '@meal-diary/shared';
 
 interface RegisterData {
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
   password: string;
   confirm_password: string;
   terms_accepted: boolean;
@@ -55,8 +54,6 @@ export const useRegister = () => {
     const errors = ref({
       username: '',
       email: '',
-      first_name: '',
-      last_name: '',
       password: '',
       confirm_password: '',
       terms_accepted: '',
@@ -64,46 +61,39 @@ export const useRegister = () => {
     });
 
     // validate form inputs
-    if (!registrationData.username) {
-      errors.value.username = 'Username is required';
+    if (!registrationData.username.trim()) {
+      errors.value.username = t('registration.errors.displayNameRequired');
       hasErrors = true;
     }
   
-    if (!registrationData.email) {
-      errors.value.email = 'Email is required';
+    if (!registrationData.email.trim()) {
+      errors.value.email = t('registration.errors.emailRequired');
       hasErrors = true;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registrationData.email)) {
-      errors.value.email = 'Please enter a valid email address';
-      hasErrors = true;
-    }
-  
-    if (!registrationData.first_name) {
-      errors.value.first_name = 'First name is required';
-      hasErrors = true;
-    }
-  
-    if (!registrationData.last_name) {
-      errors.value.last_name = 'Last name is required';
+    } else if (!isValidEmail(registrationData.email.trim())) {
+      errors.value.email = t('registration.errors.emailInvalid');
       hasErrors = true;
     }
   
     if (!registrationData.password) {
-      errors.value.password = 'Password is required';
+      errors.value.password = t('registration.errors.passwordRequired');
+      hasErrors = true;
+    } else if (!isPasswordValid(registrationData.password)) {
+      errors.value.password = t('registration.errors.passwordRequirements');
       hasErrors = true;
     }
   
     if (!registrationData.confirm_password) {
-      errors.value.confirm_password = 'You need to confirm your password';
+      errors.value.confirm_password = t('registration.errors.confirmPasswordRequired');
       hasErrors = true;
     }
   
     if (registrationData.password !== registrationData.confirm_password) {
-      errors.value.confirm_password = 'Passwords do not match';
+      errors.value.confirm_password = t('registration.errors.passwordMismatch');
       hasErrors = true;
     }
 
     if (!registrationData.terms_accepted) {
-      errors.value.terms_accepted = 'You must accept the terms of service and privacy policy';
+      errors.value.terms_accepted = t('registration.errors.termsRequired');
       hasErrors = true;
     }
   
@@ -123,10 +113,8 @@ export const useRegister = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: registrationData.username,
-          email: registrationData.email,
-          first_name: registrationData.first_name,
-          last_name: registrationData.last_name,
+          username: registrationData.username.trim(),
+          email: registrationData.email.trim(),
           password: registrationData.password,
           family_group_code: registerString.value,
           terms_accepted: registrationData.terms_accepted
@@ -140,7 +128,7 @@ export const useRegister = () => {
         if (response.status === 409) {
           // Deliberately vague between username and email to limit
           // account-enumeration value while staying helpful
-          errors.value.general = 'An account with these details already exists. Try logging in instead.';
+          errors.value.general = t('registration.errors.duplicateAccount');
         } else if (
           response.status === 403 &&
           errorBody?.code === 'ENTITLEMENT_REQUIRED' &&
@@ -150,7 +138,7 @@ export const useRegister = () => {
         } else if (response.status === 400 && body?.message) {
           errors.value.general = body.message;
         } else {
-          errors.value.general = 'Registration failed. Please try again.';
+          errors.value.general = t('registration.errors.failed');
         }
 
         return {
@@ -167,7 +155,7 @@ export const useRegister = () => {
       };
     } catch (error) {
       console.error('Error registering user:', error);
-      errors.value.general = 'Failed to register user';
+      errors.value.general = t('registration.errors.failed');
       return {
         response: null,
         hasErrors: true,

@@ -18,7 +18,7 @@ vi.mock('../familyGroup.service.ts', () => ({
 const validInput = {
   username: 'newuser',
   email: 'New@Example.com',
-  password: 'password123',
+  password: 'Password1!',
   terms_accepted: true,
 };
 
@@ -57,6 +57,12 @@ describe('createUser', () => {
     await expect(
       createUser({ ...validInput, email: 'child' })
     ).rejects.toThrow('A valid email address is required');
+  });
+
+  it('throws when the password does not meet requirements', async () => {
+    await expect(
+      createUser({ ...validInput, password: 'password123' })
+    ).rejects.toThrow('Password does not meet requirements');
   });
 
   it('throws when joining a family group that is at the member limit', async () => {

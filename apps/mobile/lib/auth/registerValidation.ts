@@ -1,8 +1,8 @@
+import { evaluatePassword, isPasswordValid, isValidEmail } from '@meal-diary/shared';
+
 export interface RegisterFormData {
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
   password: string;
   confirm_password: string;
   terms_accepted: boolean;
@@ -11,8 +11,6 @@ export interface RegisterFormData {
 export interface RegisterFieldErrors {
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
   password: string;
   confirm_password: string;
   terms_accepted: string;
@@ -22,8 +20,6 @@ export interface RegisterFieldErrors {
 export const emptyRegisterErrors = (): RegisterFieldErrors => ({
   username: '',
   email: '',
-  first_name: '',
-  last_name: '',
   password: '',
   confirm_password: '',
   terms_accepted: '',
@@ -38,30 +34,23 @@ export function validateRegisterForm(
   let hasErrors = false;
 
   if (!data.username.trim()) {
-    errors.username = t('registration.errors.usernameRequired');
+    errors.username = t('registration.errors.displayNameRequired');
     hasErrors = true;
   }
 
   if (!data.email.trim()) {
     errors.email = t('registration.errors.emailRequired');
     hasErrors = true;
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+  } else if (!isValidEmail(data.email.trim())) {
     errors.email = t('registration.errors.emailInvalid');
-    hasErrors = true;
-  }
-
-  if (!data.first_name.trim()) {
-    errors.first_name = t('registration.errors.firstNameRequired');
-    hasErrors = true;
-  }
-
-  if (!data.last_name.trim()) {
-    errors.last_name = t('registration.errors.lastNameRequired');
     hasErrors = true;
   }
 
   if (!data.password) {
     errors.password = t('registration.errors.passwordRequired');
+    hasErrors = true;
+  } else if (!isPasswordValid(data.password)) {
+    errors.password = t('registration.errors.passwordRequirements');
     hasErrors = true;
   }
 
@@ -80,3 +69,5 @@ export function validateRegisterForm(
 
   return { hasErrors, errors };
 }
+
+export { evaluatePassword };

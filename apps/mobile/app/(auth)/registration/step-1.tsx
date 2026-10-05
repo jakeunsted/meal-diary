@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
@@ -7,6 +7,7 @@ import {
   TextInput,
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
+import { evaluatePassword } from '@meal-diary/shared';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
@@ -43,13 +44,16 @@ export default function RegistrationStep1Screen() {
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<RegisterFieldErrors>(emptyRegisterErrors());
+
+  const passwordRequirementResults = useMemo(
+    () => evaluatePassword(password),
+    [password]
+  );
 
   useEffect(() => {
     if (typeof code === 'string' && code.length > 0) {
@@ -70,8 +74,6 @@ export default function RegistrationStep1Screen() {
       {
         username,
         email,
-        first_name: firstName,
-        last_name: lastName,
         password,
         confirm_password: confirmPassword,
         terms_accepted: termsAccepted,
@@ -93,8 +95,6 @@ export default function RegistrationStep1Screen() {
       await registerUser({
         username: username.trim(),
         email: email.trim(),
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
         password,
         terms_accepted: termsAccepted,
         family_group_code: familyGroupCode,
@@ -155,11 +155,26 @@ export default function RegistrationStep1Screen() {
         </Heading>
 
         <Box className="gap-4">
+          <GoogleSignInSection
+            label={t('registration.signUpWithGoogle')}
+            showLegal
+            dividerPosition="below"
+            disabled={isSubmitting}
+            testID="google-signup-button"
+            onSuccess={async () => {
+              let currentUser = useAuthStore.getState().user;
+              if (currentUser) {
+                currentUser = await applyPendingFamilyInvite(currentUser);
+              }
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
+
           <Box>
-            <Text className="text-ice/80 mb-2 text-sm">{t('registration.username')}</Text>
+            <Text className="text-ice/80 mb-2 text-sm">{t('registration.displayName')}</Text>
             <TextInput
               className={inputClassName}
-              placeholder={t('registration.usernamePlaceholder')}
+              placeholder={t('registration.displayNamePlaceholder')}
               placeholderTextColor="rgba(241, 245, 249, 0.4)"
               autoCapitalize="none"
               value={username}
@@ -188,34 +203,6 @@ export default function RegistrationStep1Screen() {
           </Box>
 
           <Box>
-            <Text className="text-ice/80 mb-2 text-sm">{t('registration.firstName')}</Text>
-            <TextInput
-              className={inputClassName}
-              placeholder={t('registration.firstNamePlaceholder')}
-              placeholderTextColor="rgba(241, 245, 249, 0.4)"
-              value={firstName}
-              onChangeText={setFirstName}
-              editable={!isSubmitting}
-              testID="register-first-name-input"
-            />
-            <FieldError message={errors.first_name} />
-          </Box>
-
-          <Box>
-            <Text className="text-ice/80 mb-2 text-sm">{t('registration.lastName')}</Text>
-            <TextInput
-              className={inputClassName}
-              placeholder={t('registration.lastNamePlaceholder')}
-              placeholderTextColor="rgba(241, 245, 249, 0.4)"
-              value={lastName}
-              onChangeText={setLastName}
-              editable={!isSubmitting}
-              testID="register-last-name-input"
-            />
-            <FieldError message={errors.last_name} />
-          </Box>
-
-          <Box>
             <Text className="text-ice/80 mb-2 text-sm">{t('registration.password')}</Text>
             <TextInput
               className={inputClassName}
@@ -227,6 +214,22 @@ export default function RegistrationStep1Screen() {
               editable={!isSubmitting}
               testID="register-password-input"
             />
+            <Box className="mt-2 gap-1" testID="password-requirements">
+              {passwordRequirementResults.map((requirement) => (
+                <Box key={requirement.id} className="flex-row items-center gap-2">
+                  <Text
+                    className={`text-sm ${requirement.met ? 'text-green-400' : 'text-ice/50'}`}
+                  >
+                    {requirement.met ? '✓' : '○'}
+                  </Text>
+                  <Text
+                    className={`text-sm ${requirement.met ? 'text-green-400' : 'text-ice/50'}`}
+                  >
+                    {t(`registration.passwordRequirements.${requirement.id}`)}
+                  </Text>
+                </Box>
+              ))}
+            </Box>
             <FieldError message={errors.password} />
           </Box>
 
@@ -289,20 +292,6 @@ export default function RegistrationStep1Screen() {
             {isSubmitting && <ButtonSpinner color="#F1F5F9" />}
             <ButtonText>{t('registration.register')}</ButtonText>
           </Button>
-
-          <GoogleSignInSection
-            label={t('registration.signUpWithGoogle')}
-            showLegal
-            disabled={isSubmitting}
-            testID="google-signup-button"
-            onSuccess={async () => {
-              let currentUser = useAuthStore.getState().user;
-              if (currentUser) {
-                currentUser = await applyPendingFamilyInvite(currentUser);
-              }
-              router.replace(getPostAuthRoute(currentUser));
-            }}
-          />
 
           <Box className="mt-4 flex-row justify-center gap-1">
             <Text className="text-ice/60">{t('registration.alreadyHaveAccount')}</Text>

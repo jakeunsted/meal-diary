@@ -14,14 +14,28 @@ interface GoogleSignInSectionProps {
   label: string;
   showLegal?: boolean;
   disabled?: boolean;
+  /** Where to place the OR divider relative to the Google button. Default: above (legacy). */
+  dividerPosition?: 'above' | 'below' | 'none';
   onSuccess: () => void | Promise<void>;
   testID?: string;
+}
+
+function OrDivider() {
+  const { t } = useTranslation();
+  return (
+    <Box className="flex-row items-center gap-3">
+      <Box className="h-px flex-1 bg-white/10" />
+      <Text className="text-ice/60 text-sm">{t('login.or')}</Text>
+      <Box className="h-px flex-1 bg-white/10" />
+    </Box>
+  );
 }
 
 function GoogleSignInSectionContent({
   label,
   showLegal = false,
   disabled = false,
+  dividerPosition = 'above',
   onSuccess,
   testID = 'google-sign-in-button',
 }: GoogleSignInSectionProps) {
@@ -49,11 +63,7 @@ function GoogleSignInSectionContent({
 
   return (
     <Box className="gap-4">
-      <Box className="flex-row items-center gap-3">
-        <Box className="h-px flex-1 bg-white/10" />
-        <Text className="text-ice/60 text-sm">{t('login.or')}</Text>
-        <Box className="h-px flex-1 bg-white/10" />
-      </Box>
+      {dividerPosition === 'above' ? <OrDivider /> : null}
 
       <Button
         variant="outline"
@@ -84,6 +94,8 @@ function GoogleSignInSectionContent({
           </Text>
         </Text>
       ) : null}
+
+      {dividerPosition === 'below' ? <OrDivider /> : null}
     </Box>
   );
 }

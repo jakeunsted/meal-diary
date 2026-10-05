@@ -43,10 +43,10 @@ export async function deleteFamilyGroup(familyGroupId: number): Promise<{ messag
 export interface RegisterUserPayload {
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
   password: string;
   terms_accepted: boolean;
+  first_name?: string;
+  last_name?: string;
   family_group_code?: string;
 }
 
@@ -60,6 +60,24 @@ export async function registerUser(payload: RegisterUserPayload): Promise<User> 
 
 export async function fetchUserById(userId: number): Promise<User> {
   return apiFetch<User>(`/users/${userId}`);
+}
+
+export async function updateUserProfile(
+  userId: number,
+  payload: { username?: string; avatar_url?: string }
+): Promise<User> {
+  const user = await apiFetch<User>(`/users/${userId}`, {
+    method: 'PUT',
+    body: payload,
+  });
+  const stored = await getAuthState();
+  if (stored) {
+    await setAuthState({ ...stored, user });
+  }
+  useAuthStore.getState().setUser(user);
+  await queryClient.invalidateQueries({ queryKey: ['user', userId] });
+  await queryClient.invalidateQueries({ queryKey: ['familyMembers'] });
+  return user;
 }
 
 export async function refreshUserAfterFamilyChange(userId: number): Promise<User> {

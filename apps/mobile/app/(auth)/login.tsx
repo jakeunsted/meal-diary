@@ -68,6 +68,18 @@ export default function LoginScreen() {
         <Text className="text-ice/60 mb-8 text-center">{t('login.subtitle')}</Text>
 
         <Box className="gap-4">
+          <GoogleSignInSection
+            label={t('login.signInWithGoogle')}
+            showLegal
+            dividerPosition="below"
+            disabled={isSubmitting}
+            testID="google-login-button"
+            onSuccess={() => {
+              const currentUser = useAuthStore.getState().user ?? user;
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
+
           <Box>
             <Text className="text-ice/80 mb-2 text-sm">{t('login.email')}</Text>
             <TextInput
@@ -114,17 +126,6 @@ export default function LoginScreen() {
             {isSubmitting && <ButtonSpinner color="#F1F5F9" />}
             <ButtonText>{t('login.signIn')}</ButtonText>
           </Button>
-
-          <GoogleSignInSection
-            label={t('login.signInWithGoogle')}
-            showLegal
-            disabled={isSubmitting}
-            testID="google-login-button"
-            onSuccess={() => {
-              const currentUser = useAuthStore.getState().user ?? user;
-              router.replace(getPostAuthRoute(currentUser));
-            }}
-          />
 
           <Box className="mt-6 flex-row flex-wrap justify-center gap-1">
             <Text className="text-sm text-ice/60">{t('login.noAccount')}</Text>

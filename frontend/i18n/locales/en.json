@@ -61,8 +61,12 @@
     "familyMemberLimitNonOwner": "Ask {name} to upgrade to add more family members.",
     "familyMemberLimitNonOwnerGeneric": "Ask the family owner to upgrade to add more family members.",
     "viewPlansToUpgrade": "View plans to upgrade",
-    "upgradeSuccess": "Your subscription is active. Welcome to Family Plus!"
+    "upgradeSuccess": "Your subscription is active. Welcome to Family Plus!",
+    "displayNameUpdated": "Display name updated",
+    "displayNameUpdateFailed": "Failed to update display name"
   },
+  "Customize Avatar": "Customize Avatar",
+  "Customize Your Avatar": "Customize Your Avatar",
   "Family Group": "Family Group",
   "Create New": "Create New",
   "Join Existing": "Join Existing",
@@ -78,9 +82,32 @@
   "Too many token refresh attempts, please try again later": "Too many token refresh attempts, please try again later",
   "Too many token validation requests, please try again later": "Too many token validation requests, please try again later",
   "Username": "Username",
+  "Display name": "Display name",
   "First name": "First name",
   "Last name": "Last name",
   "Confirm password": "Confirm password",
+  "registration": {
+    "errors": {
+      "displayNameRequired": "Display name is required",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordRequirements": "Password does not meet the requirements below",
+      "confirmPasswordRequired": "You need to confirm your password",
+      "passwordMismatch": "Passwords do not match",
+      "termsRequired": "You must accept the terms of service and privacy policy",
+      "duplicateAccount": "An account with these details already exists. Try logging in instead.",
+      "failed": "Registration failed. Please try again.",
+      "googleFailed": "Google sign-up failed. Please try again."
+    },
+    "passwordRequirements": {
+      "minLength": "At least 8 characters",
+      "lowercase": "At least one lowercase letter",
+      "uppercase": "At least one uppercase letter",
+      "number": "At least one number",
+      "special": "At least one special character"
+    }
+  },
   "Family code copied to clipboard!": "Family code copied to clipboard!",
   "Failed to copy family code to clipboard!": "Failed to copy family code to clipboard!",
   "Your family details": "Your family details",

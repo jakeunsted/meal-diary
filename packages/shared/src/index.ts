@@ -9,6 +9,18 @@ export type { FeatureFlagKey } from './featureFlags.ts';
 
 export { toLogAttributes } from './logAttributes.ts';
 
+export {
+  PASSWORD_REQUIREMENTS,
+  evaluatePassword,
+  isPasswordValid,
+  isValidEmail,
+} from './authValidation.ts';
+export type {
+  PasswordRequirement,
+  PasswordRequirementId,
+  PasswordRequirementResult,
+} from './authValidation.ts';
+
 export type {
   LegalPage,
   LegalSection,

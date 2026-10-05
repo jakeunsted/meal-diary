@@ -18,6 +18,7 @@
     "test": "turbo run test",
     "test:e2e": "turbo run test:e2e --filter=./frontend",
     "bump-mobile-version": "node scripts/bump-mobile-version.mjs",
+    "logcat:android": "bash scripts/android-wireless-logcat.sh",
     "postinstall": "patch-package"
   },
   "dependencies": {
