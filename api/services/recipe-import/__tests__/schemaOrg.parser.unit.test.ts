@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { InvalidRecipeImportUrlError, RecipeImportParseError } from '../errors.ts';
-import { parseRecipeFromHtml } from '../schemaOrg.parser.ts';
+import { parseRecipeFromHtml, fetchAndParseSchemaOrgRecipe } from '../schemaOrg.parser.ts';
 import { normalizeRecipeImportUrl, parseRecipeFromUrl } from '../parseRecipeFromUrl.ts';
 
 describe('recipe-import/schemaOrg.parser', () => {
@@ -75,5 +75,95 @@ describe('recipe-import/schemaOrg.parser', () => {
 
   it('rejects malformed urls through parseRecipeFromUrl', async () => {
     await expect(parseRecipeFromUrl('not-a-url')).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
+  });
+
+  it('rejects internal, link-local, and metadata targets before fetching', async () => {
+    const fetchImpl = vi.fn();
+    const blockedUrls = [
+      'http://127.0.0.1/recipe',
+      'http://localhost/recipe',
+      'http://[::1]/recipe',
+      'http://10.1.2.3/recipe',
+      'http://192.168.1.20/recipe',
+      'http://172.16.0.5/recipe',
+      'http://169.254.169.254/latest/meta-data',
+      'http://metadata.google.internal/recipe',
+      'https://user:pass@example.com/recipe',
+    ];
+
+    for (const blockedUrl of blockedUrls) {
+      await expect(
+        fetchAndParseSchemaOrgRecipe(new URL(blockedUrl), fetchImpl as unknown as typeof fetch)
+      ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
+    }
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('rejects a hostname that resolves to a loopback address', async () => {
+    const fetchImpl = vi.fn();
+    const lookupImpl = vi.fn().mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
+
+    await expect(
+      fetchAndParseSchemaOrgRecipe(
+        new URL('https://rebind.example/recipe'),
+        fetchImpl as unknown as typeof fetch,
+        lookupImpl
+      )
+    ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it('rejects a redirect to a loopback address', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      status: 302,
+      ok: false,
+      headers: {
+        get: (name: string) => (name.toLowerCase() === 'location' ? 'http://127.0.0.1/latest/meta-data' : null),
+      },
+    });
+    const lookupImpl = vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+
+    await expect(
+      fetchAndParseSchemaOrgRecipe(
+        new URL('https://example.com/recipe'),
+        fetchImpl as unknown as typeof fetch,
+        lookupImpl
+      )
+    ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://example.com/recipe',
+      expect.objectContaining({ redirect: 'manual' })
+    );
+  });
+
+  it('imports a public recipe page when the host resolves to a public address', async () => {
+    const html = `
+      <script type="application/ld+json">
+        { "@type": "Recipe", "name": "Soup" }
+      </script>
+    `;
+    const fetchImpl = vi.fn().mockResolvedValue({
+      status: 200,
+      ok: true,
+      headers: { get: () => null },
+      text: async () => html,
+    });
+    const lookupImpl = vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+
+    const draft = await fetchAndParseSchemaOrgRecipe(
+      new URL('https://example.com/soup'),
+      fetchImpl as unknown as typeof fetch,
+      lookupImpl
+    );
+
+    expect(draft.name).toBe('Soup');
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://example.com/soup',
+      expect.objectContaining({ redirect: 'manual' })
+    );
   });
 });

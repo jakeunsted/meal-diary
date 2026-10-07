@@ -4,6 +4,7 @@ import type { ParsedRecipeDraft, ParsedRecipeIngredient } from './types.ts';
 const GOUSTO_HOST_SUFFIX = 'gousto.co.uk';
 const GOUSTO_RECIPE_API = 'https://production-api.gousto.co.uk/cookbook/v1/recipes';
 const DEFAULT_PORTIONS = 2;
+const goustoSlugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/i;
 
 interface GoustoIngredientRef {
   id: string;
@@ -47,7 +48,17 @@ export const isGoustoRecipeUrl = (url: URL): boolean => {
 export const extractGoustoRecipeSlug = (url: URL): string | null => {
   // /cookbook/recipes/{slug} and /cookbook/{category}/{slug} (e.g. chicken-recipes)
   const match = url.pathname.match(/\/cookbook\/(?:[^/]+\/)+([^/?#]+)\/?$/i);
-  return match?.[1] ? decodeURIComponent(match[1]) : null;
+
+  if (!match?.[1]) {
+    return null;
+  }
+
+  try {
+    const slug = decodeURIComponent(match[1]);
+    return goustoSlugPattern.test(slug) ? slug : null;
+  } catch {
+    return null;
+  }
 };
 
 const stripHtml = (value: string): string =>

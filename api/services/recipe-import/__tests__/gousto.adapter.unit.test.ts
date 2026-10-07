@@ -28,6 +28,23 @@ describe('recipe-import/gousto.adapter', () => {
         new URL('https://www.gousto.co.uk/cookbook/chicken-recipes/sicilian-chicken-red-pepper-linguine')
       )
     ).toBe('sicilian-chicken-red-pepper-linguine');
+
+    expect(
+      extractGoustoRecipeSlug(new URL('https://www.gousto.co.uk/cookbook/recipes/..'))
+    ).toBeNull();
+  });
+
+  it('does not request the Gousto API for a traversal slug', async () => {
+    const fetchImpl = vi.fn();
+
+    await expect(
+      parseGoustoRecipeFromUrl(
+        new URL('https://www.gousto.co.uk/cookbook/recipes/..'),
+        fetchImpl as unknown as typeof fetch
+      )
+    ).rejects.toBeInstanceOf(UnsupportedRecipeImportSiteError);
+
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('parses quantity and unit from Gousto ingredient labels', () => {

@@ -42,5 +42,5 @@ export const parseRecipeFromUrl = async (
     return parseGoustoRecipeFromUrl(url, fetchImpl);
   }
 
-  return fetchAndParseSchemaOrgRecipe(url.toString(), fetchImpl);
+  return fetchAndParseSchemaOrgRecipe(url, fetchImpl);
 };

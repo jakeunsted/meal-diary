@@ -1,4 +1,6 @@
 import { RecipeImportParseError } from './errors.ts';
+import { fetchPublicHtml } from './publicUrl.ts';
+import type { DnsLookup } from './publicUrl.ts';
 import type { ParsedRecipeDraft, ParsedRecipeIngredient } from './types.ts';
 
 const commonUnits = new Set([
@@ -232,15 +234,11 @@ export const parseRecipeFromHtml = (html: string): ParsedRecipeDraft => {
 };
 
 export const fetchAndParseSchemaOrgRecipe = async (
-  url: string,
-  fetchImpl: typeof fetch = fetch
+  url: URL,
+  fetchImpl: typeof fetch = fetch,
+  lookupImpl?: DnsLookup
 ): Promise<ParsedRecipeDraft> => {
-  const response = await fetchImpl(url, {
-    headers: {
-      'User-Agent': 'MealDiaryRecipeImporter/1.0',
-      'Accept': 'text/html,application/xhtml+xml',
-    },
-  });
+  const response = await fetchPublicHtml(url, fetchImpl, lookupImpl);
 
   if (!response.ok) {
     throw new RecipeImportParseError(`Failed to fetch recipe page (${response.status})`);
