@@ -276,11 +276,32 @@ const KEYWORD_ENTRIES: KeywordEntry[] = (() => {
 
 /** Strip trailing quantity parentheses e.g. "Pasta (500 g)" → "Pasta". */
 export function normalizeShoppingItemName(name: string): string {
-  return name
-    .trim()
-    .replace(/\s*\([^)]*\)\s*$/g, '')
-    .trim()
-    .toLowerCase();
+  const stripped = stripTrailingParenthetical(name.trim());
+  return stripped.trim().toLowerCase();
+}
+
+/**
+ * Drop one trailing "(...)" group that contains no ")".
+ * Linear scan so a long run of spaces or "(" cannot force regex backtracking.
+ */
+function stripTrailingParenthetical(value: string): string {
+  if (!value.endsWith(')')) {
+    return value;
+  }
+
+  let index = value.length - 2;
+  while (index >= 0) {
+    const char = value[index];
+    if (char === ')') {
+      return value;
+    }
+    if (char === '(') {
+      return value.slice(0, index);
+    }
+    index--;
+  }
+
+  return value;
 }
 
 function matchesKeyword(normalized: string, keyword: string): boolean {
