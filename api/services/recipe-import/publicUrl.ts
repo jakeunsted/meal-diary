@@ -140,13 +140,7 @@ export const fetchPublicHtml = async (
     // Public http(s) only. Non-public addresses are rejected, and each redirect is checked again.
     // An allow-list is not used so any public recipe site can be imported.
     // codeql[js/request-forgery]
-    const response = await fetchImpl(current.toString(), {
-      redirect: 'manual',
-      headers: {
-        'User-Agent': 'MealDiaryRecipeImporter/1.0',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-    });
+    const response = await fetchImpl(current.toString(), { redirect: 'manual', headers: { 'User-Agent': 'MealDiaryRecipeImporter/1.0', 'Accept': 'text/html,application/xhtml+xml' } });
 
     if (!redirectStatuses.has(response.status)) {
       return response;
