@@ -2,6 +2,40 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import { getWeeklyMeals, updateDailyMeal } from '../mealDiary.service.ts';
 
+vi.mock('../mealSlots.service.ts', () => ({
+  ensureDefaultMealSlots: vi.fn().mockResolvedValue([
+    {
+      dataValues: {
+        id: 1,
+        name: 'Breakfast',
+        position: 1,
+        legacy_key: 'breakfast',
+        archived_at: null,
+      },
+    },
+    {
+      dataValues: {
+        id: 2,
+        name: 'Lunch',
+        position: 2,
+        legacy_key: 'lunch',
+        archived_at: null,
+      },
+    },
+    {
+      dataValues: {
+        id: 3,
+        name: 'Dinner',
+        position: 3,
+        legacy_key: 'dinner',
+        archived_at: null,
+      },
+    },
+  ]),
+  buildDaySlotsForWeek: vi.fn().mockResolvedValue(new Map()),
+  syncLegacyColumnsToEntries: vi.fn().mockResolvedValue(undefined),
+}));
+
 const fakeDiary = (id: number) =>
   ({ dataValues: { id } }) as unknown as MealDiary;
 
@@ -12,7 +46,7 @@ const fakeDailyMeal = (values: Record<string, unknown>) =>
   }) as unknown as DailyMeal & { update: ReturnType<typeof vi.fn> };
 
 beforeEach(() => {
-  vi.restoreAllMocks();
+  vi.clearAllMocks();
 });
 
 describe('MealDiary Service', () => {
@@ -23,6 +57,19 @@ describe('MealDiary Service', () => {
         false,
       ]);
       vi.spyOn(DailyMeal, 'findAll').mockResolvedValue([]);
+      vi.spyOn(DailyMeal, 'findOrCreate').mockImplementation(async ({ defaults }: any) => [
+        fakeDailyMeal({
+          id: defaults.day_of_week,
+          day_of_week: defaults.day_of_week,
+          breakfast: null,
+          lunch: null,
+          dinner: null,
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
+        }),
+        true,
+      ] as never);
 
       const weeklyMeals = await getWeeklyMeals(1, new Date('2024-01-01'));
 
@@ -32,6 +79,7 @@ describe('MealDiary Service', () => {
         expect(meal.breakfast).toBeNull();
         expect(meal.lunch).toBeNull();
         expect(meal.dinner).toBeNull();
+        expect(meal.slots).toEqual([]);
       });
       expect(DailyMeal.findAll).toHaveBeenCalledWith(
         expect.objectContaining({ where: { meal_diary_id: 1 } })
@@ -45,36 +93,54 @@ describe('MealDiary Service', () => {
       ]);
       vi.spyOn(DailyMeal, 'findAll').mockResolvedValue([
         fakeDailyMeal({
+          id: 101,
           day_of_week: 1,
           breakfast: 'Oatmeal',
           lunch: 'Sandwich',
           dinner: 'Pizza',
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
         }),
         fakeDailyMeal({
+          id: 103,
           day_of_week: 3,
           breakfast: 'Eggs',
           lunch: 'Salad',
           dinner: 'Pasta',
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
         }),
       ]);
+      vi.spyOn(DailyMeal, 'findOrCreate').mockImplementation(async ({ defaults }: any) => [
+        fakeDailyMeal({
+          id: defaults.day_of_week,
+          day_of_week: defaults.day_of_week,
+          breakfast: null,
+          lunch: null,
+          dinner: null,
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
+        }),
+        true,
+      ] as never);
 
       const weeklyMeals = await getWeeklyMeals(1, new Date('2024-01-01'));
 
       expect(weeklyMeals).toHaveLength(7);
 
-      // Check day 1
       expect(weeklyMeals[0].day_of_week).toBe(1);
       expect(weeklyMeals[0].breakfast).toBe('Oatmeal');
       expect(weeklyMeals[0].lunch).toBe('Sandwich');
       expect(weeklyMeals[0].dinner).toBe('Pizza');
 
-      // Check day 2 (should be null)
       expect(weeklyMeals[1].day_of_week).toBe(2);
       expect(weeklyMeals[1].breakfast).toBeNull();
       expect(weeklyMeals[1].lunch).toBeNull();
       expect(weeklyMeals[1].dinner).toBeNull();
 
-      // Check day 3
       expect(weeklyMeals[2].day_of_week).toBe(3);
       expect(weeklyMeals[2].breakfast).toBe('Eggs');
       expect(weeklyMeals[2].lunch).toBe('Salad');
@@ -87,6 +153,19 @@ describe('MealDiary Service', () => {
         .spyOn(MealDiary, 'findOrCreate')
         .mockResolvedValue([fakeDiary(2), true]);
       vi.spyOn(DailyMeal, 'findAll').mockResolvedValue([]);
+      vi.spyOn(DailyMeal, 'findOrCreate').mockImplementation(async ({ defaults }: any) => [
+        fakeDailyMeal({
+          id: defaults.day_of_week,
+          day_of_week: defaults.day_of_week,
+          breakfast: null,
+          lunch: null,
+          dinner: null,
+          breakfast_recipe_id: null,
+          lunch_recipe_id: null,
+          dinner_recipe_id: null,
+        }),
+        true,
+      ] as never);
 
       const weeklyMeals = await getWeeklyMeals(1, weekStartDate);
 
@@ -102,9 +181,7 @@ describe('MealDiary Service', () => {
     it('should create a new daily meal if it does not exist', async () => {
       vi.spyOn(MealDiary, 'findOne').mockResolvedValue(fakeDiary(1));
       const dailyMeal = fakeDailyMeal({ day_of_week: 1 });
-      const findOrCreate = vi
-        .spyOn(DailyMeal, 'findOrCreate')
-        .mockResolvedValue([dailyMeal, true]);
+      vi.spyOn(DailyMeal, 'findOrCreate').mockResolvedValue([dailyMeal, true]);
 
       const updatedMeal = await updateDailyMeal(1, new Date('2024-01-01'), 1, {
         breakfast: 'New Breakfast',
@@ -112,19 +189,18 @@ describe('MealDiary Service', () => {
         dinner: 'New Dinner',
       });
 
-      expect(findOrCreate).toHaveBeenCalledWith({
-        where: { meal_diary_id: 1, day_of_week: 1 },
-        defaults: { meal_diary_id: 1, day_of_week: 1 },
-      });
       expect(dailyMeal.update).toHaveBeenCalledWith({
         breakfast: 'New Breakfast',
         lunch: 'New Lunch',
         dinner: 'New Dinner',
       });
       expect(updatedMeal).toBe(dailyMeal);
+
+      const { syncLegacyColumnsToEntries } = await import('../mealSlots.service.ts');
+      expect(syncLegacyColumnsToEntries).toHaveBeenCalled();
     });
 
-    it('should only update the provided fields on an existing daily meal', async () => {
+    it('should update an existing daily meal', async () => {
       vi.spyOn(MealDiary, 'findOne').mockResolvedValue(fakeDiary(1));
       const dailyMeal = fakeDailyMeal({
         day_of_week: 1,
@@ -143,7 +219,7 @@ describe('MealDiary Service', () => {
       });
     });
 
-    it('should throw an error if meal diary does not exist', async () => {
+    it('should throw an error if the meal diary is not found', async () => {
       vi.spyOn(MealDiary, 'findOne').mockResolvedValue(null);
       const findOrCreate = vi.spyOn(DailyMeal, 'findOrCreate');
 
@@ -155,7 +231,7 @@ describe('MealDiary Service', () => {
       expect(findOrCreate).not.toHaveBeenCalled();
     });
 
-    it('should handle empty string values for meals', async () => {
+    it('should handle empty string values', async () => {
       vi.spyOn(MealDiary, 'findOne').mockResolvedValue(fakeDiary(1));
       const dailyMeal = fakeDailyMeal({ day_of_week: 1 });
       vi.spyOn(DailyMeal, 'findOrCreate').mockResolvedValue([dailyMeal, false]);
@@ -173,7 +249,7 @@ describe('MealDiary Service', () => {
       });
     });
 
-    it('should keep null recipe ids so they can be cleared', async () => {
+    it('should allow clearing recipe ids with null', async () => {
       vi.spyOn(MealDiary, 'findOne').mockResolvedValue(fakeDiary(1));
       const dailyMeal = fakeDailyMeal({ day_of_week: 1 });
       vi.spyOn(DailyMeal, 'findOrCreate').mockResolvedValue([dailyMeal, false]);

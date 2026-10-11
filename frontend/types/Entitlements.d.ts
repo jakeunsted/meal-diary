@@ -12,6 +12,7 @@ export interface PlanLimits {
   maxWeeksAhead: number;
   canEditPastWeeks: boolean;
   canAddRecipeToShoppingList: boolean;
+  canCustomizeMealSlots: boolean;
 }
 
 export interface ResolvedEntitlements {

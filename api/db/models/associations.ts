@@ -3,6 +3,8 @@ import FamilyGroup from './FamilyGroup.model.ts';
 import ShoppingList from './ShoppingList.model.ts';
 import MealDiary from './MealDiary.model.ts';
 import DailyMeal from './DailyMeal.model.ts';
+import MealSlot from './MealSlot.model.ts';
+import DailyMealEntry from './DailyMealEntry.model.ts';
 import RefreshToken from './RefreshToken.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
@@ -146,6 +148,46 @@ DailyMeal.belongsTo(Recipe, {
   as: 'dinnerRecipe'
 });
 
+// FamilyGroup <-> MealSlot associations
+FamilyGroup.hasMany(MealSlot, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'mealSlots',
+});
+MealSlot.belongsTo(FamilyGroup, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+// DailyMeal <-> DailyMealEntry associations
+DailyMeal.hasMany(DailyMealEntry, {
+  foreignKey: 'daily_meal_id',
+  foreignKeyConstraint: true,
+  as: 'entries',
+});
+DailyMealEntry.belongsTo(DailyMeal, {
+  foreignKey: 'daily_meal_id',
+  foreignKeyConstraint: true,
+});
+
+// MealSlot <-> DailyMealEntry associations
+MealSlot.hasMany(DailyMealEntry, {
+  foreignKey: 'meal_slot_id',
+  foreignKeyConstraint: true,
+  as: 'entries',
+});
+DailyMealEntry.belongsTo(MealSlot, {
+  foreignKey: 'meal_slot_id',
+  foreignKeyConstraint: true,
+  as: 'slot',
+});
+
+DailyMealEntry.belongsTo(Recipe, {
+  foreignKey: 'recipe_id',
+  foreignKeyConstraint: false,
+  as: 'recipe',
+});
+
 // User <-> RefreshToken associations
 RefreshToken.belongsTo(User, {
   foreignKey: 'user_id',
@@ -165,6 +207,8 @@ export {
   ShoppingList,
   MealDiary,
   DailyMeal,
+  MealSlot,
+  DailyMealEntry,
   RefreshToken,
   ShoppingListItem,
   Recipe,

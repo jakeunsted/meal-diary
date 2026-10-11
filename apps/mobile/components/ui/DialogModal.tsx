@@ -8,6 +8,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 
 import { colors } from '@/constants/theme';
@@ -45,11 +46,16 @@ interface DialogModalProps {
   children: ReactNode;
   testID?: string;
   placement?: DialogModalPlacement;
+  /** Overrides default placement layout classes (e.g. edge-to-edge bottom sheets). */
+  contentClassName?: string;
+  /** Accessible name for the dimmed backdrop dismiss control. */
+  backdropAccessibilityLabel?: string;
 }
 
 const placementClassNames: Record<DialogModalPlacement, string> = {
   center: 'items-center justify-center px-6',
-  bottom: 'justify-end px-6',
+  // Full-bleed bottom sheets (no side inset) — panels opt into top-only radius.
+  bottom: 'justify-end',
   topEnd: 'items-end justify-start px-4 pt-24',
 };
 
@@ -59,6 +65,8 @@ export function DialogModal({
   children,
   testID,
   placement = 'center',
+  contentClassName,
+  backdropAccessibilityLabel = 'Dismiss',
 }: DialogModalProps) {
   return (
     <Modal
@@ -67,34 +75,39 @@ export function DialogModal({
       animationType="fade"
       onRequestClose={onClose}
       testID={testID}
+      accessibilityViewIsModal
     >
-      <View className="flex-1">
-        <Pressable
-          style={[StyleSheet.absoluteFill, dialogBackdropStyle]}
-          onPress={onClose}
-          accessibilityRole="button"
-        />
-        <KeyboardAvoidingView
-          behavior="padding"
-          automaticOffset
-          keyboardVerticalOffset={16}
-          pointerEvents="box-none"
-          style={styles.keyboardAvoiding}
-        >
-          <View
-            className={`flex-1 ${placementClassNames[placement]}`}
+      {/* Modals create a separate root — RNGH gestures need a root inside the Modal. */}
+      <GestureHandlerRootView style={styles.flex}>
+        <View className="flex-1">
+          <Pressable
+            style={[StyleSheet.absoluteFill, dialogBackdropStyle]}
+            onPress={onClose}
+            accessibilityRole="button"
+            accessibilityLabel={backdropAccessibilityLabel}
+          />
+          <KeyboardAvoidingView
+            behavior="padding"
+            automaticOffset
+            keyboardVerticalOffset={16}
             pointerEvents="box-none"
+            style={styles.flex}
           >
-            {children}
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+            <View
+              className={`flex-1 ${contentClassName ?? placementClassNames[placement]}`}
+              pointerEvents="box-none"
+            >
+              {children}
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  keyboardAvoiding: {
+  flex: {
     flex: 1,
   },
 });

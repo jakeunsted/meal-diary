@@ -29,6 +29,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     loading: false,
     selectedMeal: {
       type: null,
+      mealSlotId: null,
       dayOfWeek: null,
       name: '',
       recipeId: null,
@@ -217,24 +218,34 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       }
     },
 
-    // Set selected meal for modal
-    setSelectedMeal(type: string, dayOfWeek: number) {
-      // Find the existing meal for this day
+    // Set selected meal for modal (legacy type and/or meal_slot_id)
+    setSelectedMeal(
+      type: string,
+      dayOfWeek: number,
+      mealSlotId: number | null = null
+    ) {
       const existingDayMeal = this.weeklyMeals.find(meal => meal.day_of_week === dayOfWeek);
 
-      // Get the existing meal name if it exists
-      const existingMealName = existingDayMeal
-        ? existingDayMeal[type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] || ''
-        : '';
+      let existingMealName = '';
+      let existingRecipeId: number | null = null;
 
-      // Get the existing recipe ID if it exists
-      const recipeIdKey = `${type}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
-      const existingRecipeId = existingDayMeal
-        ? existingDayMeal[recipeIdKey] || null
-        : null;
+      if (mealSlotId != null && existingDayMeal?.slots?.length) {
+        const slot = existingDayMeal.slots.find((s) => s.meal_slot_id === mealSlotId);
+        existingMealName = slot?.dish || '';
+        existingRecipeId = slot?.recipe_id ?? null;
+      } else if (existingDayMeal && (type === 'breakfast' || type === 'lunch' || type === 'dinner')) {
+        existingMealName =
+          existingDayMeal[type as keyof Pick<DailyMeal, 'breakfast' | 'lunch' | 'dinner'>] || '';
+        const recipeIdKey = `${type}_recipe_id` as keyof Pick<
+          DailyMeal,
+          'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'
+        >;
+        existingRecipeId = existingDayMeal[recipeIdKey] || null;
+      }
 
       this.selectedMeal = {
         type,
+        mealSlotId,
         dayOfWeek,
         name: existingMealName,
         recipeId: existingRecipeId,
@@ -258,7 +269,13 @@ export const useMealDiaryStore = defineStore('mealDiary', {
     // Save meal to API
     async saveMeal() {
       const userStore = useUserStore();
-      if (!userStore.user?.family_group_id || !this.selectedMeal.type || !this.selectedMeal.dayOfWeek) return;
+      if (
+        !userStore.user?.family_group_id ||
+        (!this.selectedMeal.type && this.selectedMeal.mealSlotId == null) ||
+        !this.selectedMeal.dayOfWeek
+      ) {
+        return;
+      }
 
       try {
         // Get the existing day meals or create empty values
@@ -269,7 +286,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           breakfast_recipe_id: null,
           lunch_recipe_id: null,
           dinner_recipe_id: null,
-          day_of_week: this.selectedMeal.dayOfWeek
+          day_of_week: this.selectedMeal.dayOfWeek,
+          slots: [],
         };
         // Create a complete meal object with all meal types
         const mealData: any = {
@@ -284,24 +302,57 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           dinner_recipe_id: dayMeal.dinner_recipe_id || null,
         };
 
-        // Update the specific meal type that changed
-        const mealType = this.selectedMeal.type as 'breakfast' | 'lunch' | 'dinner';
         const mealName = this.selectedMeal.name?.trim() ?? '';
-        mealData[mealType] = mealName;
-        mealData[`${mealType}_recipe_id`] = this.selectedMeal.recipeId;
+        const mealType = this.selectedMeal.type as 'breakfast' | 'lunch' | 'dinner' | string;
+        if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
+          mealData[mealType] = mealName;
+          mealData[`${mealType}_recipe_id`] = this.selectedMeal.recipeId;
+        }
+
+        if (this.selectedMeal.mealSlotId != null) {
+          mealData.slot_updates = [
+            {
+              meal_slot_id: this.selectedMeal.mealSlotId,
+              dish: mealName,
+              recipe_id: this.selectedMeal.recipeId,
+            },
+          ];
+        }
 
         const { api } = useApi();
-        await api(`/api/meal-diaries/${userStore.user.family_group_id}/daily-meals`, {
-          method: 'PATCH',
-          body: mealData
-        });
+        const savedMeal = await api(
+          `/api/meal-diaries/${userStore.user.family_group_id}/daily-meals`,
+          {
+            method: 'PATCH',
+            body: mealData,
+          }
+        );
 
         // Update local state
         const existingDayMeal = this.weeklyMeals.find(meal => meal.day_of_week === this.selectedMeal.dayOfWeek);
         if (existingDayMeal) {
-          existingDayMeal[mealType] = mealName || null;
-          const recipeIdKey = `${mealType}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
-          (existingDayMeal as any)[recipeIdKey] = this.selectedMeal.recipeId;
+          if (mealType === 'breakfast' || mealType === 'lunch' || mealType === 'dinner') {
+            existingDayMeal[mealType] = mealName || null;
+            const recipeIdKey = `${mealType}_recipe_id` as keyof Pick<DailyMeal, 'breakfast_recipe_id' | 'lunch_recipe_id' | 'dinner_recipe_id'>;
+            (existingDayMeal as any)[recipeIdKey] = this.selectedMeal.recipeId;
+          }
+          if (Array.isArray(savedMeal?.slots) && savedMeal.slots.length > 0) {
+            existingDayMeal.slots = savedMeal.slots;
+          } else if (this.selectedMeal.mealSlotId != null) {
+            if (!existingDayMeal.slots) {
+              existingDayMeal.slots = [];
+            }
+            const slotIndex = existingDayMeal.slots.findIndex(
+              (s) => s.meal_slot_id === this.selectedMeal.mealSlotId
+            );
+            if (slotIndex >= 0) {
+              existingDayMeal.slots[slotIndex] = {
+                ...existingDayMeal.slots[slotIndex],
+                dish: mealName || null,
+                recipe_id: this.selectedMeal.recipeId,
+              };
+            }
+          }
         } else {
           this.weeklyMeals.push({
             day_of_week: this.selectedMeal.dayOfWeek,
@@ -313,6 +364,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             breakfast_recipe_id: mealType === 'breakfast' ? this.selectedMeal.recipeId : null,
             lunch_recipe_id: mealType === 'lunch' ? this.selectedMeal.recipeId : null,
             dinner_recipe_id: mealType === 'dinner' ? this.selectedMeal.recipeId : null,
+            slots: Array.isArray(savedMeal?.slots) ? savedMeal.slots : [],
           });
         }
 
@@ -321,6 +373,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         // Reset selected meal
         this.selectedMeal = {
           type: null,
+          mealSlotId: null,
           dayOfWeek: null,
           name: '',
           recipeId: null,

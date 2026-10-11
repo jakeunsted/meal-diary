@@ -224,6 +224,7 @@ export default function PlansScreen() {
                   'editPastWeeks',
                   'recipes',
                   'recipeToShoppingList',
+                  'customMealSlots',
                 ] as const
               ).map((row) => (
                 <Text key={row} className="text-ice/70 text-sm">

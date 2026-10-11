@@ -50,6 +50,14 @@ describe('Entitlements diary', () => {
     cy.get('[data-testid="diary-week-read-only-upgrade"]').should('be.visible').and('have.attr', 'href', '/plans');
     cy.get('[data-testid="set-meal-breakfast-button"]').should('not.exist');
   });
+
+  it('opens the paywall when editing meal slots on a free plan', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="diary-settings-button"]').click();
+    cy.wait('@apiGetMealSlots');
+    cy.get('[data-testid="meal-slot-name-input-0"]').click().type('Brunch');
+    cy.get('[data-testid="paywall-modal"]').should('be.visible');
+  });
 });
 
 describe('Entitlements diary clamping', () => {
@@ -69,6 +77,7 @@ describe('Entitlements diary clamping', () => {
             edit_past_weeks: false,
             recipes: true,
             recipe_to_shopping_list: false,
+            custom_meal_slots: false,
           },
           limits: {
             maxFamilyMembers: 2,
@@ -76,6 +85,7 @@ describe('Entitlements diary clamping', () => {
             maxWeeksAhead: 1,
             canEditPastWeeks: false,
             canAddRecipeToShoppingList: false,
+            canCustomizeMealSlots: false,
           },
           usage: {
             familyMemberCount: 1,

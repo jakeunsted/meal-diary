@@ -6,6 +6,8 @@ import {
   ShoppingList,
   MealDiary,
   DailyMeal,
+  DailyMealEntry,
+  MealSlot,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
@@ -104,6 +106,9 @@ describe('deleteFamilyGroup', () => {
     vi.spyOn(MealDiary, 'findAll').mockResolvedValue([
       { dataValues: { id: 10 } },
     ] as never);
+    vi.spyOn(DailyMeal, 'findAll').mockResolvedValue([
+      { dataValues: { id: 15 } },
+    ] as never);
     vi.spyOn(ShoppingList, 'findAll').mockResolvedValue([
       { dataValues: { id: 20 } },
     ] as never);
@@ -111,8 +116,10 @@ describe('deleteFamilyGroup', () => {
       { dataValues: { id: 30 } },
     ] as never);
     return {
+      entries: vi.spyOn(DailyMealEntry, 'destroy').mockResolvedValue(0),
       dailyMeals: vi.spyOn(DailyMeal, 'destroy').mockResolvedValue(0),
       diaries: vi.spyOn(MealDiary, 'destroy').mockResolvedValue(0),
+      mealSlots: vi.spyOn(MealSlot, 'destroy').mockResolvedValue(0),
       items: vi.spyOn(ShoppingListItem, 'destroy').mockResolvedValue(0),
       lists: vi.spyOn(ShoppingList, 'destroy').mockResolvedValue(0),
       ingredients: vi.spyOn(RecipeIngredient, 'destroy').mockResolvedValue(0),
@@ -142,8 +149,10 @@ describe('deleteFamilyGroup', () => {
 
     await deleteFamilyGroup(5, 1);
 
+    expect(spies.entries).toHaveBeenCalled();
     expect(spies.dailyMeals).toHaveBeenCalled();
     expect(spies.diaries).toHaveBeenCalled();
+    expect(spies.mealSlots).toHaveBeenCalled();
     expect(spies.items).toHaveBeenCalled();
     expect(spies.lists).toHaveBeenCalled();
     expect(spies.ingredients).toHaveBeenCalled();

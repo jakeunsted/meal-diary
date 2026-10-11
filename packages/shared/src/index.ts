@@ -61,3 +61,30 @@ export type {
   ShoppingListReorderChange,
   ShoppingListTab,
 } from './shoppingList/index.ts';
+
+export {
+  DEFAULT_LEGACY_MEAL_KEYS,
+  DEFAULT_MEAL_SLOT_NAMES,
+  MAX_MEAL_SLOT_NAME_LENGTH,
+  MAX_MEAL_SLOTS,
+  MEAL_SLOT_QUICK_ADD_PRESETS,
+  MIN_MEAL_SLOTS,
+  diffMealSlots,
+  getMealSlotNameError,
+  isLegacyMealKey,
+  isValidMealSlotCount,
+  normalizeMealSlotName,
+  validateMealSlotNames,
+} from './mealSlots/index.ts';
+
+export type {
+  DiffMealSlotsOptions,
+  LegacyMealKey,
+  MealSlotInput,
+  MealSlotLike,
+  MealSlotNameError,
+  MealSlotQuickAddPreset,
+  MealSlotsDiff,
+  MealSlotsValidationResult,
+  RemovedSlotImpact,
+} from './mealSlots/index.ts';

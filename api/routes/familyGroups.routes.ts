@@ -1,6 +1,7 @@
 import express from 'express';
 import * as familyGroupController from '../controllers/family-group/familyGroup.controller.ts';
 import * as entitlementsController from '../controllers/entitlements/entitlements.controller.ts';
+import * as mealSlotsController from '../controllers/meal-slots/mealSlots.controller.ts';
 import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
@@ -367,6 +368,80 @@ router.get('/:family_group_id/entitlements', authenticateToken, requireFamilyMem
 router.post('/:family_group_id/entitlements/dismiss-prompt', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await entitlementsController.dismissEntitlementPrompt(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/meal-slots:
+ *   get:
+ *     summary: Get active meal slots for a family group
+ *     tags: [MealSlots]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Active meal slots
+ *       403:
+ *         description: Access denied
+ *   put:
+ *     summary: Replace the family's meal slot layout from today forward
+ *     tags: [MealSlots]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - slots
+ *               - today
+ *             properties:
+ *               slots:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: integer
+ *                     name:
+ *                       type: string
+ *               today:
+ *                 type: string
+ *                 format: date
+ *               confirm:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Updated meal slots
+ *       403:
+ *         description: Entitlement required
+ *       409:
+ *         description: Confirmation required before removing slots with future meals
+ */
+router.get('/:family_group_id/meal-slots', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await mealSlotsController.getMealSlots(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.put('/:family_group_id/meal-slots', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await mealSlotsController.updateMealSlots(req, res);
   } catch (error) {
     next(error);
   }

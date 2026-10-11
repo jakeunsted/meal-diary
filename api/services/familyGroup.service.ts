@@ -7,6 +7,8 @@ import {
   ShoppingList,
   MealDiary,
   DailyMeal,
+  DailyMealEntry,
+  MealSlot,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
@@ -29,12 +31,25 @@ export const deleteFamilyGroupData = async (
   });
   const mealDiaryIds = mealDiaries.map(diary => diary.dataValues.id);
   if (mealDiaryIds.length > 0) {
+    const dailyMeals = await DailyMeal.findAll({
+      where: { meal_diary_id: { [Op.in]: mealDiaryIds } },
+      attributes: ['id'],
+      transaction,
+    });
+    const dailyMealIds = dailyMeals.map((meal) => meal.dataValues.id);
+    if (dailyMealIds.length > 0) {
+      await DailyMealEntry.destroy({
+        where: { daily_meal_id: { [Op.in]: dailyMealIds } },
+        transaction,
+      });
+    }
     await DailyMeal.destroy({
       where: { meal_diary_id: { [Op.in]: mealDiaryIds } },
       transaction,
     });
   }
   await MealDiary.destroy({ where: { family_group_id: familyGroupId }, transaction });
+  await MealSlot.destroy({ where: { family_group_id: familyGroupId }, transaction });
 
   const shoppingLists = await ShoppingList.findAll({
     where: { family_group_id: familyGroupId },

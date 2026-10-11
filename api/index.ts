@@ -102,6 +102,21 @@ app.use(errorHandlerMiddleware);
   const dbInitialized = await initializeDatabase(false);
   
   if (dbInitialized) {
+    try {
+      const { backfillMealSlots } = await import('./services/mealSlots.service.ts');
+      const result = await backfillMealSlots();
+      console.log(
+        `Meal slots backfill: ${result.familiesEnsured} families, ${result.entriesCreated} entries created`
+      );
+    } catch (error) {
+      console.error('Meal slots backfill failed:', error);
+      emitLog({
+        severity: 'error',
+        body: 'Meal slots backfill failed',
+        attributes: { category: 'startup' },
+      });
+    }
+
     // Start the server
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);

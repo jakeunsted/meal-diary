@@ -34,6 +34,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       edit_past_weeks: options.features?.edit_past_weeks ?? isPremium,
       recipes: options.features?.recipes ?? true,
       recipe_to_shopping_list: options.features?.recipe_to_shopping_list ?? isPremium,
+      custom_meal_slots: options.features?.custom_meal_slots ?? isPremium,
     },
     limits: {
       maxFamilyMembers: isPremium ? 8 : 2,
@@ -41,6 +42,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       maxWeeksAhead: isPremium ? Number.POSITIVE_INFINITY : 1,
       canEditPastWeeks: isPremium,
       canAddRecipeToShoppingList: isPremium,
+      canCustomizeMealSlots: isPremium,
     },
     usage: {
       familyMemberCount: options.usage?.familyMemberCount ?? 1,
@@ -103,6 +105,7 @@ interface MockApiState {
   activeUser: Record<string, any>;
   familyGroup: Record<string, any>;
   weeklyMeals: Array<Record<string, any>>;
+  mealSlots: Array<Record<string, any>>;
   shoppingList: Record<string, any>;
   recipes: Array<Record<string, any>>;
   entitlements: Record<string, any>;
@@ -115,7 +118,23 @@ const getIsoDate = () => new Date().toISOString();
 
 const getCurrentWeekStartKey = () => normalizeMealDiaryWeekKey(new Date());
 
+const defaultMealSlots = () => [
+  { id: 1, name: 'Breakfast', position: 1, legacy_key: 'breakfast' },
+  { id: 2, name: 'Lunch', position: 2, legacy_key: 'lunch' },
+  { id: 3, name: 'Dinner', position: 3, legacy_key: 'dinner' },
+];
+
 const createWeeklyMeals = (weekStartDate: string) => {
+  const slots = defaultMealSlots().map((slot) => ({
+    id: 0,
+    meal_slot_id: slot.id,
+    name: slot.name,
+    position: slot.position,
+    dish: null,
+    recipe_id: null,
+    legacy_key: slot.legacy_key,
+  }));
+
   return Array.from({ length: 7 }, (_, index) => ({
     day_of_week: index + 1,
     breakfast: null,
@@ -125,6 +144,7 @@ const createWeeklyMeals = (weekStartDate: string) => {
     lunch_recipe_id: null,
     dinner_recipe_id: null,
     week_start_date: weekStartDate,
+    slots: slots.map((slot) => ({ ...slot })),
   }));
 };
 
@@ -208,6 +228,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     activeUser: options.userWithoutFamilyGroup ? userWithoutFamily : userWithFamily,
     familyGroup,
     weeklyMeals: createWeeklyMeals(weekStartDate),
+    mealSlots: defaultMealSlots(),
     shoppingList,
     recipes,
     entitlements: resolveEntitlementsProfile(options.entitlementsProfile),
@@ -524,6 +545,62 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       },
     });
   }).as('apiPatchMealDiary');
+
+  cy.intercept('GET', /\/api\/family-groups\/\d+\/meal-slots$/, (req) => {
+    req.reply({ statusCode: 200, body: { slots: state.mealSlots } });
+  }).as('apiGetMealSlots');
+
+  cy.intercept('PUT', /\/api\/family-groups\/\d+\/meal-slots$/, (req) => {
+    const canCustomize = state.entitlements.features?.custom_meal_slots;
+    if (!canCustomize) {
+      req.reply({
+        statusCode: 403,
+        body: {
+          code: 'ENTITLEMENT_REQUIRED',
+          feature: 'custom_meal_slots',
+          plan: state.entitlements.plan ?? 'free',
+          upgradeUrl: '/plans',
+        },
+      });
+      return;
+    }
+
+    const slots = Array.isArray(req.body?.slots) ? req.body.slots : [];
+    const currentById = new Map(state.mealSlots.map((slot) => [slot.id, slot]));
+    const removed = state.mealSlots.filter(
+      (slot) => !slots.some((next: Record<string, any>) => next.id === slot.id),
+    );
+
+    if (removed.length && !req.body?.confirm) {
+      const futureCounts = removed.map((slot) => ({
+        id: slot.id,
+        name: slot.name,
+        futureMealsWithContent: slot.name === 'Lunch' ? 2 : 0,
+      }));
+      if (futureCounts.some((entry) => entry.futureMealsWithContent > 0)) {
+        req.reply({
+          statusCode: 409,
+          body: {
+            code: 'MEAL_SLOTS_CONFIRMATION_REQUIRED',
+            removed: futureCounts.filter((entry) => entry.futureMealsWithContent > 0),
+          },
+        });
+        return;
+      }
+    }
+
+    state.mealSlots = slots.map((slot: Record<string, any>, index: number) => {
+      const existing = slot.id != null ? currentById.get(slot.id) : undefined;
+      return {
+        id: existing?.id ?? 100 + index,
+        name: slot.name,
+        position: index + 1,
+        legacy_key: existing?.legacy_key ?? null,
+      };
+    });
+
+    req.reply({ statusCode: 200, body: { slots: state.mealSlots } });
+  }).as('apiPutMealSlots');
 
   cy.intercept('GET', /\/api\/recipes\/family\/\d+(\?.*)?$/, (req) => {
     const search = req.query.search?.toString().toLowerCase() || '';

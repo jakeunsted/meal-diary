@@ -1,3 +1,13 @@
+export interface DayMealSlot {
+  id: number;
+  meal_slot_id: number;
+  name: string;
+  position: number;
+  dish: string | null;
+  recipe_id: number | null;
+  legacy_key: 'breakfast' | 'lunch' | 'dinner' | null;
+}
+
 export interface DailyMeal {
   day_of_week: number;
   breakfast: string | null;
@@ -7,6 +17,14 @@ export interface DailyMeal {
   lunch_recipe_id: number | null;
   dinner_recipe_id: number | null;
   week_start_date: string;
+  slots?: DayMealSlot[];
+}
+
+export interface MealSlotTemplate {
+  id: number;
+  name: string;
+  position: number;
+  legacy_key: 'breakfast' | 'lunch' | 'dinner' | null;
 }
 
 export interface MealDiaryState {
@@ -14,6 +32,7 @@ export interface MealDiaryState {
   loading: boolean;
   selectedMeal: {
     type: string | null;
+    mealSlotId: number | null;
     dayOfWeek: number | null;
     name: string;
     recipeId: number | null;

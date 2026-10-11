@@ -4,9 +4,10 @@ export function buildSaveDailyMealPayload(
   weeklyMeals: DailyMeal[],
   weekKey: string,
   dayOfWeek: number,
-  mealType: MealType,
+  mealType: MealType | null,
   mealName: string,
-  recipeId: number | null
+  recipeId: number | null,
+  mealSlotId: number | null = null
 ): SaveDailyMealPayload {
   const dayMeal = weeklyMeals.find((meal) => meal.day_of_week === dayOfWeek);
 
@@ -21,8 +22,20 @@ export function buildSaveDailyMealPayload(
     dinner_recipe_id: dayMeal?.dinner_recipe_id ?? null,
   };
 
-  payload[mealType] = mealName.trim();
-  payload[`${mealType}_recipe_id`] = recipeId;
+  if (mealType) {
+    payload[mealType] = mealName.trim();
+    payload[`${mealType}_recipe_id`] = recipeId;
+  }
+
+  if (mealSlotId != null) {
+    payload.slot_updates = [
+      {
+        meal_slot_id: mealSlotId,
+        dish: mealName.trim(),
+        recipe_id: recipeId,
+      },
+    ];
+  }
 
   return payload;
 }

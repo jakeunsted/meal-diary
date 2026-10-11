@@ -51,5 +51,11 @@ const rows = [
     free: '✗',
     premium: '✓',
   },
+  {
+    key: 'custom_meal_slots',
+    labelKey: 'plansPage.rows.customMealSlots',
+    free: '✗',
+    premium: '✓',
+  },
 ];
 </script>

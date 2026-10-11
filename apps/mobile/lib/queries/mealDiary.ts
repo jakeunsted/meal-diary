@@ -104,21 +104,36 @@ export function useInvalidateWeeklyMeals() {
   };
 }
 
+/** Merge PATCH response into week cache without dropping custom meal slots. */
+function mergeSavedDailyMeal(
+  previous: DailyMeal | undefined,
+  savedMeal: DailyMeal,
+  payload: SaveDailyMealPayload
+): DailyMeal {
+  return {
+    ...previous,
+    ...savedMeal,
+    week_start_date: payload.week_start_date,
+    slots: savedMeal.slots?.length ? savedMeal.slots : previous?.slots,
+  };
+}
+
 function updateWeeklyMealsCache(
   weeklyMeals: DailyMeal[] | undefined,
-  savedMeal: DailyMeal
+  savedMeal: DailyMeal,
+  payload: SaveDailyMealPayload
 ): DailyMeal[] {
   if (!weeklyMeals) {
-    return [savedMeal];
+    return [mergeSavedDailyMeal(undefined, savedMeal, payload)];
   }
 
   const existingIndex = weeklyMeals.findIndex((meal) => meal.day_of_week === savedMeal.day_of_week);
   if (existingIndex === -1) {
-    return [...weeklyMeals, savedMeal];
+    return [...weeklyMeals, mergeSavedDailyMeal(undefined, savedMeal, payload)];
   }
 
   const next = [...weeklyMeals];
-  next[existingIndex] = savedMeal;
+  next[existingIndex] = mergeSavedDailyMeal(weeklyMeals[existingIndex], savedMeal, payload);
   return next;
 }
 
@@ -137,7 +152,7 @@ export function useSaveDailyMeal() {
       const queryKey = mealDiaryKeys.weekly(familyGroupId, payload.week_start_date);
 
       queryClient.setQueryData<DailyMeal[]>(queryKey, (weeklyMeals) => {
-        const next = updateWeeklyMealsCache(weeklyMeals, savedMeal);
+        const next = updateWeeklyMealsCache(weeklyMeals, savedMeal, payload);
         void saveWeeklyMealsCache(familyGroupId, payload.week_start_date, next);
         return next;
       });
