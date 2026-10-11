@@ -1,10 +1,16 @@
 import { MealDiary, DailyMeal } from '../db/models/associations.ts';
-import { Op } from 'sequelize';
+import {
+  applySlotDishUpdates,
+  buildDaySlotsForWeek,
+  ensureDefaultMealSlots,
+  syncLegacyColumnsToEntries,
+  type DayMealSlotDto,
+} from './mealSlots.service.ts';
 
 /**
  * Interface representing a daily meal with day of week information
  */
-interface DailyMealWithDay {
+export interface DailyMealWithDay {
   day_of_week: number;
   breakfast: string | null;
   lunch: string | null;
@@ -12,21 +18,48 @@ interface DailyMealWithDay {
   breakfast_recipe_id: number | null;
   lunch_recipe_id: number | null;
   dinner_recipe_id: number | null;
+  slots: DayMealSlotDto[];
+  week_start_date?: string;
 }
+
+const toDailyMealWithDay = (
+  dayOfWeek: number,
+  meal: {
+    breakfast?: string | null;
+    lunch?: string | null;
+    dinner?: string | null;
+    breakfast_recipe_id?: number | null;
+    lunch_recipe_id?: number | null;
+    dinner_recipe_id?: number | null;
+  },
+  slots: DayMealSlotDto[],
+  weekStartDate?: string
+): DailyMealWithDay => ({
+  day_of_week: dayOfWeek,
+  breakfast: meal.breakfast ?? null,
+  lunch: meal.lunch ?? null,
+  dinner: meal.dinner ?? null,
+  breakfast_recipe_id: meal.breakfast_recipe_id ?? null,
+  lunch_recipe_id: meal.lunch_recipe_id ?? null,
+  dinner_recipe_id: meal.dinner_recipe_id ?? null,
+  slots,
+  ...(weekStartDate ? { week_start_date: weekStartDate } : {}),
+});
 
 /**
  * Creates a new weekly meal plan for a family group
- * @param familyGroupId - The ID of the family group
- * @param weekStartDate - The start date of the week for the meal plan
- * @returns {Promise<DailyMealWithDay[]>} An array of daily meals with day of week information
  */
-export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
+export const createNewWeeklyMeals = async (
+  familyGroupId: number,
+  weekStartDate: Date
+): Promise<DailyMealWithDay[]> => {
+  await ensureDefaultMealSlots(familyGroupId);
+
   const mealDiary = await MealDiary.create({
     family_group_id: familyGroupId,
-    week_start_date: weekStartDate
+    week_start_date: weekStartDate,
   });
 
-  // Build all 7 rows at once (Monday=1 … Sunday=7)
   const rows = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(weekStartDate);
     date.setDate(date.getDate() + index);
@@ -37,64 +70,126 @@ export const createNewWeeklyMeals = async (familyGroupId: number, weekStartDate:
     };
   });
 
-  await DailyMeal.bulkCreate(rows, { ignoreDuplicates: true });
-
-  return Array.from({ length: 7 }, (_, i) => ({
-    day_of_week: i + 1,
-    breakfast: null,
-    lunch: null,
-    dinner: null,
-    breakfast_recipe_id: null,
-    lunch_recipe_id: null,
-    dinner_recipe_id: null,
+  const created = await DailyMeal.bulkCreate(rows, { ignoreDuplicates: true });
+  const dayRows = created.map((meal) => ({
+    id: meal.dataValues.id,
+    day_of_week: meal.dataValues.day_of_week,
   }));
+
+  // bulkCreate with ignoreDuplicates may skip rows — reload if needed
+  const dayRowsForSlots =
+    dayRows.length === 7
+      ? dayRows
+      : (
+          await DailyMeal.findAll({
+            where: { meal_diary_id: mealDiary.dataValues.id },
+            attributes: ['id', 'day_of_week'],
+            order: [['day_of_week', 'ASC']],
+          })
+        ).map((meal) => ({
+          id: meal.dataValues.id,
+          day_of_week: meal.dataValues.day_of_week,
+        }));
+
+  const slotsByDay = await buildDaySlotsForWeek(
+    familyGroupId,
+    weekStartDate,
+    dayRowsForSlots
+  );
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = i + 1;
+    return toDailyMealWithDay(
+      day,
+      {
+        breakfast: null,
+        lunch: null,
+        dinner: null,
+        breakfast_recipe_id: null,
+        lunch_recipe_id: null,
+        dinner_recipe_id: null,
+      },
+      slotsByDay.get(day) ?? []
+    );
+  });
 };
 
 /**
  * Retrieves the weekly meal plan for a family group
- * @param familyGroupId - The ID of the family group
- * @param weekStartDate - The start date of the week for the meal plan
- * @returns {Promise<DailyMealWithDay[]>} An array of daily meals with day of week information
- * @throws {Error} If the meal diary for the specified week is not found
  */
-export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date): Promise<DailyMealWithDay[]> => {
-  // First, find or create the meal diary for this week
+export const getWeeklyMeals = async (
+  familyGroupId: number,
+  weekStartDate: Date,
+  today?: Date
+): Promise<DailyMealWithDay[]> => {
+  await ensureDefaultMealSlots(familyGroupId);
+
   const [mealDiary] = await MealDiary.findOrCreate({
     where: {
       family_group_id: familyGroupId,
-      week_start_date: weekStartDate
+      week_start_date: weekStartDate,
     },
     defaults: {
       family_group_id: familyGroupId,
-      week_start_date: weekStartDate
-    }
+      week_start_date: weekStartDate,
+    },
   });
 
-  // Get all daily meals for this week
   const dailyMeals = await DailyMeal.findAll({
     where: { meal_diary_id: mealDiary.dataValues.id },
-    attributes: ['day_of_week', 'breakfast', 'lunch', 'dinner', 'breakfast_recipe_id', 'lunch_recipe_id', 'dinner_recipe_id'],
-    order: [['day_of_week', 'ASC']]
+    attributes: [
+      'id',
+      'day_of_week',
+      'breakfast',
+      'lunch',
+      'dinner',
+      'breakfast_recipe_id',
+      'lunch_recipe_id',
+      'dinner_recipe_id',
+    ],
+    order: [['day_of_week', 'ASC']],
   });
-  
-  // Create a map of existing daily meals
+
   const existingMealsMap = new Map(
-    dailyMeals.map(meal => [meal.dataValues.day_of_week, meal])
+    dailyMeals.map((meal) => [meal.dataValues.day_of_week, meal])
   );
 
-  // Create an array of all 7 days, with existing meals or null values
+  // Ensure all 7 day rows exist for slot building
+  for (let day = 1; day <= 7; day++) {
+    if (!existingMealsMap.has(day)) {
+      const [created] = await DailyMeal.findOrCreate({
+        where: {
+          meal_diary_id: mealDiary.dataValues.id,
+          day_of_week: day,
+        },
+        defaults: {
+          meal_diary_id: mealDiary.dataValues.id,
+          day_of_week: day,
+        },
+      });
+      existingMealsMap.set(day, created);
+    }
+  }
+
+  const dayRows = Array.from({ length: 7 }, (_, i) => {
+    const day = i + 1;
+    const meal = existingMealsMap.get(day)!;
+    return { id: meal.dataValues.id, day_of_week: day };
+  });
+
+  const slotsByDay = await buildDaySlotsForWeek(
+    familyGroupId,
+    weekStartDate,
+    dayRows,
+    today
+  );
+
   const weeklyMeals: DailyMealWithDay[] = [];
   for (let day = 1; day <= 7; day++) {
-    const existingMeal = existingMealsMap.get(day);
-    weeklyMeals.push({
-      day_of_week: day,
-      breakfast: existingMeal?.dataValues.breakfast ?? null,
-      lunch: existingMeal?.dataValues.lunch ?? null,
-      dinner: existingMeal?.dataValues.dinner ?? null,
-      breakfast_recipe_id: existingMeal?.dataValues.breakfast_recipe_id ?? null,
-      lunch_recipe_id: existingMeal?.dataValues.lunch_recipe_id ?? null,
-      dinner_recipe_id: existingMeal?.dataValues.dinner_recipe_id ?? null,
-    });
+    const existingMeal = existingMealsMap.get(day)!;
+    weeklyMeals.push(
+      toDailyMealWithDay(day, existingMeal.dataValues, slotsByDay.get(day) ?? [])
+    );
   }
 
   return weeklyMeals;
@@ -102,12 +197,6 @@ export const getWeeklyMeals = async (familyGroupId: number, weekStartDate: Date)
 
 /**
  * Updates a specific daily meal in a family's weekly meal plan
- * @param familyGroupId - The ID of the family group
- * @param weekStartDate - The start date of the week for the meal plan
- * @param dayOfWeek - The day of the week to update (1-7)
- * @param updates - Object containing the meal updates (breakfast, lunch, dinner)
- * @returns {Promise<DailyMeal>} The updated DailyMeal
- * @throws {Error} If the meal diary for the specified week is not found
  */
 export const updateDailyMeal = async (
   familyGroupId: number,
@@ -122,29 +211,27 @@ export const updateDailyMeal = async (
     dinner_recipe_id?: number | null;
   }
 ): Promise<DailyMeal> => {
-  // Find the meal diary for this week
   const mealDiary = await MealDiary.findOne({
     where: {
       family_group_id: familyGroupId,
-      week_start_date: weekStartDate
+      week_start_date: weekStartDate,
     },
-    attributes: ['id']
+    attributes: ['id'],
   });
 
   if (!mealDiary) {
     throw new Error('Meal diary not found for this week');
   }
 
-  // Find or create the daily meal
   const [dailyMeal] = await DailyMeal.findOrCreate({
     where: {
       meal_diary_id: mealDiary.dataValues.id,
-      day_of_week: dayOfWeek
+      day_of_week: dayOfWeek,
     },
     defaults: {
       meal_diary_id: mealDiary.dataValues.id,
-      day_of_week: dayOfWeek
-    }
+      day_of_week: dayOfWeek,
+    },
   });
 
   const recipeIdKeys = new Set([
@@ -167,5 +254,56 @@ export const updateDailyMeal = async (
 
   await dailyMeal.update(sanitizedUpdates);
 
+  await syncLegacyColumnsToEntries(familyGroupId, dailyMeal.dataValues.id, updates);
+
   return dailyMeal;
+};
+
+/** Apply optional slot dish updates and return the day shaped like GET weekly meals. */
+export const updateDailyMealWithSlots = async (
+  familyGroupId: number,
+  weekStartDate: Date,
+  dayOfWeek: number,
+  legacyUpdates: {
+    breakfast?: string;
+    lunch?: string;
+    dinner?: string;
+    breakfast_recipe_id?: number | null;
+    lunch_recipe_id?: number | null;
+    dinner_recipe_id?: number | null;
+  },
+  slotUpdates?: Array<{
+    meal_slot_id: number;
+    dish?: string | null;
+    recipe_id?: number | null;
+  }>,
+  weekStartDateStr?: string
+): Promise<{ meal: DailyMeal; response: DailyMealWithDay }> => {
+  const updatedMeal = await updateDailyMeal(
+    familyGroupId,
+    weekStartDate,
+    dayOfWeek,
+    legacyUpdates
+  );
+
+  if (Array.isArray(slotUpdates) && slotUpdates.length > 0) {
+    await applySlotDishUpdates(familyGroupId, updatedMeal.dataValues.id, slotUpdates);
+    await updatedMeal.reload();
+  }
+
+  const slotsByDay = await buildDaySlotsForWeek(
+    familyGroupId,
+    weekStartDate,
+    [{ id: updatedMeal.dataValues.id, day_of_week: dayOfWeek }]
+  );
+
+  return {
+    meal: updatedMeal,
+    response: toDailyMealWithDay(
+      dayOfWeek,
+      updatedMeal.dataValues,
+      slotsByDay.get(dayOfWeek) ?? [],
+      weekStartDateStr
+    ),
+  };
 };

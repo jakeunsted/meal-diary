@@ -6,6 +6,7 @@ import type { DailyMeal, MealType, SelectedMeal } from '@/types/mealDiary';
 
 const emptySelectedMeal: SelectedMeal = {
   type: null,
+  mealSlotId: null,
   dayOfWeek: null,
   name: '',
   recipeId: null,
@@ -13,9 +14,22 @@ const emptySelectedMeal: SelectedMeal = {
 
 function getExistingMealValues(
   dayMeal: DailyMeal | undefined,
-  mealType: MealType
+  mealType: MealType | null,
+  mealSlotId: number | null
 ): { name: string; recipeId: number | null } {
   if (!dayMeal) {
+    return { name: '', recipeId: null };
+  }
+
+  if (mealSlotId != null && dayMeal.slots?.length) {
+    const slot = dayMeal.slots.find((entry) => entry.meal_slot_id === mealSlotId);
+    return {
+      name: slot?.dish || '',
+      recipeId: slot?.recipe_id ?? null,
+    };
+  }
+
+  if (!mealType) {
     return { name: '', recipeId: null };
   }
 
@@ -35,20 +49,31 @@ export function useMealDiaryEditor() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveDailyMealMutation = useSaveDailyMeal();
 
-  const isModalVisible = selectedMeal.type !== null && selectedMeal.dayOfWeek !== null;
+  const isModalVisible =
+    (selectedMeal.type !== null || selectedMeal.mealSlotId !== null) &&
+    selectedMeal.dayOfWeek !== null;
 
-  const openMealEditor = useCallback((mealType: MealType, dayOfWeek: number, weeklyMeals: DailyMeal[]) => {
-    const dayMeal = weeklyMeals.find((meal) => meal.day_of_week === dayOfWeek);
-    const existing = getExistingMealValues(dayMeal, mealType);
+  const openMealEditor = useCallback(
+    (
+      mealType: MealType | null,
+      dayOfWeek: number,
+      weeklyMeals: DailyMeal[],
+      mealSlotId: number | null = null
+    ) => {
+      const dayMeal = weeklyMeals.find((meal) => meal.day_of_week === dayOfWeek);
+      const existing = getExistingMealValues(dayMeal, mealType, mealSlotId);
 
-    setSelectedMeal({
-      type: mealType,
-      dayOfWeek,
-      name: existing.name,
-      recipeId: existing.recipeId,
-    });
-    setSaveError(null);
-  }, []);
+      setSelectedMeal({
+        type: mealType,
+        mealSlotId,
+        dayOfWeek,
+        name: existing.name,
+        recipeId: existing.recipeId,
+      });
+      setSaveError(null);
+    },
+    []
+  );
 
   const closeMealEditor = useCallback(() => {
     setSelectedMeal(emptySelectedMeal);
@@ -76,10 +101,11 @@ export function useMealDiaryEditor() {
       familyGroupId: number,
       weekKey: string,
       weeklyMeals: DailyMeal[],
-      mealType: MealType,
+      mealType: MealType | null,
       dayOfWeek: number,
       mealName: string,
-      recipeId: number | null
+      recipeId: number | null,
+      mealSlotId: number | null
     ) => {
       setSaveError(null);
 
@@ -90,7 +116,8 @@ export function useMealDiaryEditor() {
           dayOfWeek,
           mealType,
           mealName,
-          recipeId
+          recipeId,
+          mealSlotId
         );
 
         await saveDailyMealMutation.mutateAsync({ familyGroupId, payload });
@@ -104,7 +131,11 @@ export function useMealDiaryEditor() {
 
   const handleSave = useCallback(
     async (familyGroupId: number | undefined, weekKey: string, weeklyMeals: DailyMeal[]) => {
-      if (!familyGroupId || !selectedMeal.type || selectedMeal.dayOfWeek === null) {
+      if (
+        !familyGroupId ||
+        selectedMeal.dayOfWeek === null ||
+        (selectedMeal.type === null && selectedMeal.mealSlotId === null)
+      ) {
         return;
       }
 
@@ -115,7 +146,8 @@ export function useMealDiaryEditor() {
         selectedMeal.type,
         selectedMeal.dayOfWeek,
         selectedMeal.name,
-        selectedMeal.recipeId
+        selectedMeal.recipeId,
+        selectedMeal.mealSlotId
       );
     },
     [performSave, selectedMeal]
@@ -123,7 +155,11 @@ export function useMealDiaryEditor() {
 
   const handleClear = useCallback(
     async (familyGroupId: number | undefined, weekKey: string, weeklyMeals: DailyMeal[]) => {
-      if (!familyGroupId || !selectedMeal.type || selectedMeal.dayOfWeek === null) {
+      if (
+        !familyGroupId ||
+        selectedMeal.dayOfWeek === null ||
+        (selectedMeal.type === null && selectedMeal.mealSlotId === null)
+      ) {
         return;
       }
 
@@ -140,10 +176,11 @@ export function useMealDiaryEditor() {
         selectedMeal.type,
         selectedMeal.dayOfWeek,
         '',
-        null
+        null,
+        selectedMeal.mealSlotId
       );
     },
-    [performSave, selectedMeal.dayOfWeek, selectedMeal.type]
+    [performSave, selectedMeal.dayOfWeek, selectedMeal.mealSlotId, selectedMeal.type]
   );
 
   return {

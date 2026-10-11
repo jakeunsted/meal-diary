@@ -215,5 +215,10 @@ export function applyFamilyRealtimeEvent(
 
   if (eventType === 'update-daily-meal') {
     applyDailyMealEvent(queryClient, familyGroupId, data as DailyMealEventData);
+    return;
+  }
+
+  if (eventType === 'meal-slots-updated') {
+    void queryClient.invalidateQueries({ queryKey: mealDiaryKeys.all });
   }
 }

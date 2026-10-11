@@ -3,6 +3,7 @@ import { FamilyGroup, User, Subscription } from '../../db/models/associations.ts
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
+import { ensureDefaultMealSlots } from '../../services/mealSlots.service.ts';
 import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
@@ -61,6 +62,8 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
     await Subscription.create({ family_group_id: Number(familyGroup.dataValues.id) });
 
     await ShoppingList.create({ family_group_id: Number(familyGroup.dataValues.id) });
+
+    await ensureDefaultMealSlots(Number(familyGroup.dataValues.id));
 
     // Create initial meal diary for the current week
     const monday = new Date();

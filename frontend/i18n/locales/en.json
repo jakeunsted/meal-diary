@@ -272,7 +272,8 @@
       "weeksAhead": "Weeks you can plan ahead",
       "editPastWeeks": "Edit past weeks",
       "recipes": "Recipes",
-      "recipeToShoppingList": "Add recipe ingredients to shopping list"
+      "recipeToShoppingList": "Add recipe ingredients to shopping list",
+      "customMealSlots": "Custom daily meal names"
     }
   },
   "paywall": {
@@ -313,6 +314,13 @@
       "nonOwnerCta": "Ask {name} to upgrade",
       "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
     },
+    "custom_meal_slots": {
+      "title": "Custom meal layout",
+      "description": "Rename, reorder, and choose how many daily meals you plan with Family Plus.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
     "trialExpired": {
       "title": "Your free trial has ended",
       "description": "Subscribe to Family Plus to keep premium features for your household.",
@@ -337,6 +345,35 @@
     "upgradeLink": "View plans to upgrade",
     "askOwnerToUpgrade": "Ask {name} to upgrade for past-week editing.",
     "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for past-week editing."
+  },
+  "diarySettings": {
+    "open": "Diary settings",
+    "title": "Daily meals",
+    "subtitle": "Rename, reorder or add the meals you track each day.",
+    "applyFromToday": "Changes apply from today. Earlier days keep the names they already have.",
+    "quickAdd": "Quick add",
+    "customMeal": "Custom...",
+    "addMeal": "Add meal",
+    "mealNameLabel": "Meal name",
+    "mealNameLabelIndexed": "Meal name {index}",
+    "removeMeal": "Remove {name}",
+    "reorder": "Reorder meal",
+    "reorderHint": "Drag to reorder",
+    "moveUp": "Move {name} up",
+    "moveDown": "Move {name} down",
+    "dismiss": "Dismiss",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saved": "Meal layout saved",
+    "saveFailed": "Failed to save meal layout",
+    "invalidCount": "You need between 1 and 6 meals.",
+    "duplicateName": "Each meal name must be unique.",
+    "noEmoji": "Meal names cannot include emoji.",
+    "nameTooLong": "Meal names can be at most 32 characters.",
+    "nameRequired": "Every meal needs a name.",
+    "invalidName": "One or more meal names are invalid.",
+    "removeWithContent": "{name} will be removed from today onwards. {count} upcoming planned meals in that slot will be deleted.",
+    "removeEmpty": "Removed meals will disappear from today onwards. No planned meals will be deleted."
   },
   "recipesPage": {
     "usageLabel": "{count} of {max} recipes",

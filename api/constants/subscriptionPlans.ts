@@ -8,6 +8,7 @@ export interface PlanLimits {
   maxWeeksAhead: number;
   canEditPastWeeks: boolean;
   canAddRecipeToShoppingList: boolean;
+  canCustomizeMealSlots: boolean;
 }
 
 export const PLANS = {
@@ -17,6 +18,7 @@ export const PLANS = {
     maxWeeksAhead: 1,
     canEditPastWeeks: false,
     canAddRecipeToShoppingList: false,
+    canCustomizeMealSlots: false,
   },
   premium: {
     maxFamilyMembers: 8,
@@ -24,5 +26,6 @@ export const PLANS = {
     maxWeeksAhead: Number.POSITIVE_INFINITY,
     canEditPastWeeks: true,
     canAddRecipeToShoppingList: true,
+    canCustomizeMealSlots: true,
   },
 } as const satisfies Record<'free' | 'premium', PlanLimits>;

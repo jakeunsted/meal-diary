@@ -1,4 +1,4 @@
-import { Recipe, RecipeIngredient, DailyMeal } from '../db/models/associations.ts';
+import { Recipe, RecipeIngredient, DailyMeal, DailyMealEntry } from '../db/models/associations.ts';
 import { Op } from 'sequelize';
 import sequelize from '../db/models/index.ts';
 
@@ -190,6 +190,11 @@ export const deleteRecipe = async (recipeId: number): Promise<void> => {
     await sequelize.query(
       `UPDATE daily_meals SET dinner_recipe_id = NULL WHERE dinner_recipe_id = $1`,
       { bind: [recipeId], transaction }
+    );
+
+    await DailyMealEntry.update(
+      { dish: '', recipe_id: null },
+      { where: { recipe_id: recipeId }, transaction }
     );
 
     // Delete ingredients (cascade should handle this, but explicit is safer)

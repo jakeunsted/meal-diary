@@ -61,3 +61,10 @@ export function logWarn(body: string, attributes?: LogAttributes): void {
 export function logError(body: string, attributes?: LogAttributes): void {
   posthogClient?.logger.error(body, attributes);
 }
+
+export function captureEvent(
+  event: string,
+  properties?: Record<string, string | number | boolean>
+): void {
+  posthogClient?.capture(event, properties);
+}

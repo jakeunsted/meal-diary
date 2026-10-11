@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import { MealDiary, DailyMeal } from '../../db/models/associations.ts';
-import { createNewWeeklyMeals, getWeeklyMeals, updateDailyMeal } from '../../services/mealDiary.service.ts';
+import {
+  createNewWeeklyMeals,
+  getWeeklyMeals,
+  updateDailyMealWithSlots,
+} from '../../services/mealDiary.service.ts';
 import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
@@ -139,12 +143,13 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     const {
       week_start_date,
       day_of_week,
-      breakfast = null,
-      lunch = null,
-      dinner = null,
-      breakfast_recipe_id = null,
-      lunch_recipe_id = null,
-      dinner_recipe_id = null,
+      breakfast,
+      lunch,
+      dinner,
+      breakfast_recipe_id,
+      lunch_recipe_id,
+      dinner_recipe_id,
+      slot_updates,
     } = req.body;
     const user = req.user as User;
 
@@ -181,36 +186,63 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       throw error;
     }
 
-    const updatedMeal = await updateDailyMeal(
-      parseInt(family_group_id),
+    const legacyUpdates: {
+      breakfast?: string;
+      lunch?: string;
+      dinner?: string;
+      breakfast_recipe_id?: number | null;
+      lunch_recipe_id?: number | null;
+      dinner_recipe_id?: number | null;
+    } = {};
+    if (breakfast !== undefined) legacyUpdates.breakfast = breakfast;
+    if (lunch !== undefined) legacyUpdates.lunch = lunch;
+    if (dinner !== undefined) legacyUpdates.dinner = dinner;
+    if (breakfast_recipe_id !== undefined) {
+      legacyUpdates.breakfast_recipe_id = breakfast_recipe_id;
+    }
+    if (lunch_recipe_id !== undefined) legacyUpdates.lunch_recipe_id = lunch_recipe_id;
+    if (dinner_recipe_id !== undefined) legacyUpdates.dinner_recipe_id = dinner_recipe_id;
+
+    const familyGroupId = parseInt(family_group_id);
+    const weekStartDateStr =
+      typeof week_start_date === 'string' ? week_start_date : undefined;
+    const { meal: updatedMeal, response: responseBody } = await updateDailyMealWithSlots(
+      familyGroupId,
       parsedDate,
       parsedDayOfWeek,
-      { breakfast, lunch, dinner, breakfast_recipe_id, lunch_recipe_id, dinner_recipe_id }
+      legacyUpdates,
+      Array.isArray(slot_updates) ? slot_updates : undefined,
+      weekStartDateStr
     );
 
     sendDailyMealWebhook(
-      parseInt(family_group_id),
+      familyGroupId,
       'update-daily-meal',
       updatedMeal,
-      typeof week_start_date === 'string' ? week_start_date : undefined
+      weekStartDateStr
     );
 
     // Track meal updated
     if (user) {
       const mealTypes: string[] = [];
-      if (breakfast) mealTypes.push('breakfast');
-      if (lunch) mealTypes.push('lunch');
-      if (dinner) mealTypes.push('dinner');
+      if (legacyUpdates.breakfast) mealTypes.push('breakfast');
+      if (legacyUpdates.lunch) mealTypes.push('lunch');
+      if (legacyUpdates.dinner) mealTypes.push('dinner');
+      if (Array.isArray(slot_updates)) {
+        for (const update of slot_updates) {
+          if (update?.dish) mealTypes.push(`slot_${update.meal_slot_id}`);
+        }
+      }
       
       await trackEvent(user.dataValues.id.toString(), 'meal_updated', {
-        family_group_id: parseInt(family_group_id),
+        family_group_id: familyGroupId,
         week_start_date: week_start_date as string,
         day_of_week: parsedDayOfWeek,
         meal_types: mealTypes,
       });
     }
 
-    return res.status(200).json(updatedMeal);
+    return res.status(200).json(responseBody);
   } catch (error) {
     console.error('Error updating daily meal:', error);
     return res.status(500).json({ message: 'Failed to update daily meal' });

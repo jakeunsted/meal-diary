@@ -131,6 +131,9 @@ export const useSSE = () => {
 
         // Meal diary events
         'update-daily-meal': (data) => mealDiaryStore.handleDailyMealUpdate(data.dailyMeal),
+        'meal-slots-updated': () => {
+          void mealDiaryStore.fetchWeeklyMeals(mealDiaryStore.currentWeekStart || undefined);
+        },
         'initial': (data) => {
           if (data.mealDiary) {
             mealDiaryStore.updateMealsFromEvents(data.mealDiary);

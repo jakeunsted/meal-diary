@@ -3,7 +3,8 @@ export type EntitlementFeature =
   | 'weeks_ahead'
   | 'edit_past_weeks'
   | 'recipes'
-  | 'recipe_to_shopping_list';
+  | 'recipe_to_shopping_list'
+  | 'custom_meal_slots';
 
 export type SubscriptionPlan = 'free' | 'premium';
 

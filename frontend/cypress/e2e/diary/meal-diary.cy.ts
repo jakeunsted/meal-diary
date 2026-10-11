@@ -72,4 +72,27 @@ describe('Meal diary', () => {
     cy.location('search').should('include', `week=${weekStart}`);
     cy.get('[data-testid="day-food-plan-card"]').should('have.length.at.least', 7);
   });
+
+  it('opens diary settings and renames a meal slot', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="diary-settings-button"]').click();
+    cy.wait('@apiGetMealSlots');
+    cy.get('[data-testid="meal-slots-settings-modal"]').should('be.visible');
+    cy.get('[data-testid="meal-slot-name-input-0"]').clear().type('Brunch');
+    cy.get('[data-testid="meal-slots-save"]').click();
+    cy.wait('@apiPutMealSlots');
+    cy.get('[data-testid="meal-slots-settings-modal"]').should('not.be.visible');
+  });
+
+  it('warns when removing a meal slot that may clear future meals', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="diary-settings-button"]').click();
+    cy.wait('@apiGetMealSlots');
+    cy.get('[data-testid="meal-slot-remove-1"]').click();
+    cy.get('[data-testid="meal-slots-save"]').click();
+    cy.wait('@apiPutMealSlots');
+    cy.get('[data-testid="meal-slots-removal-warning"]').should('be.visible');
+    cy.get('[data-testid="meal-slots-save"]').click();
+    cy.wait('@apiPutMealSlots');
+  });
 });

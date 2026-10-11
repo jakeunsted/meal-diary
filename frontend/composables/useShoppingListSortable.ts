@@ -150,16 +150,22 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     autoScrollFrame = requestAnimationFrame(tickAutoScroll);
   };
 
+  const lockScrollTarget = (): HTMLElement => listRef.value ?? document.body;
+
   const clearDrag = () => {
     stopAutoScroll();
     if (dragState?.holdTimer) {
       clearTimeout(dragState.holdTimer);
     }
+    const target = lockScrollTarget();
+    target.style.removeProperty('user-select');
+    target.style.removeProperty('touch-action');
+    // Legacy cleanup: older builds applied these on document.body.
+    document.body.style.removeProperty('user-select');
+    document.body.style.removeProperty('touch-action');
     dragState = null;
     draggingId.value = null;
     dragOffsetY.value = 0;
-    document.body.style.removeProperty('user-select');
-    document.body.style.removeProperty('touch-action');
   };
 
   const activateDrag = (state: DragState, row: HTMLElement) => {
@@ -167,8 +173,9 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     draggingId.value = state.itemId;
     const rect = row.getBoundingClientRect();
     state.rowHeight = rect.height || 48;
-    document.body.style.userSelect = 'none';
-    document.body.style.touchAction = 'none';
+    const target = lockScrollTarget();
+    target.style.userSelect = 'none';
+    target.style.touchAction = 'none';
     if (autoScrollFrame == null) {
       autoScrollFrame = requestAnimationFrame(tickAutoScroll);
     }
@@ -316,6 +323,7 @@ export function useShoppingListSortable(options: ShoppingListSortableOptions) {
     displayOrder,
     rowTranslateY,
     handlePointerDown,
+    clearDrag,
     isDragging: computed(() => draggingId.value != null),
   };
 }

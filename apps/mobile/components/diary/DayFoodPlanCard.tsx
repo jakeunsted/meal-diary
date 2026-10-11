@@ -1,33 +1,39 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
-import type { MealType } from '@/types/mealDiary';
+import type { DayMealSlot, MealType } from '@/types/mealDiary';
 
-interface MealSlot {
+interface MealSlotView {
   name: string;
   recipeId: number | null;
+}
+
+export interface SetMealPayload {
+  type: MealType | null;
+  mealSlotId: number | null;
 }
 
 interface DayFoodPlanCardProps {
   day: string;
   date: string;
-  breakfast?: MealSlot;
-  lunch?: MealSlot;
-  dinner?: MealSlot;
+  breakfast?: MealSlotView;
+  lunch?: MealSlotView;
+  dinner?: MealSlotView;
+  slots?: DayMealSlot[];
   isPastDay?: boolean;
   readOnly?: boolean;
-  onSetMeal?: (mealType: MealType) => void;
+  onSetMeal?: (payload: SetMealPayload) => void;
   onRecipePress?: (recipeId: number) => void;
 }
 
 interface MealRowProps {
   label: string;
-  meal?: MealSlot;
+  meal?: MealSlotView;
   readOnly: boolean;
   testIdPrefix: string;
   onSetMeal?: () => void;
@@ -93,6 +99,7 @@ export function DayFoodPlanCard({
   breakfast,
   lunch,
   dinner,
+  slots = [],
   isPastDay = false,
   readOnly = false,
   onSetMeal,
@@ -108,6 +115,50 @@ export function DayFoodPlanCard({
   const handleToggle = () => {
     setIsOpen((value) => !value);
   };
+
+  const displaySlots = useMemo(() => {
+    if (slots.length > 0) {
+      return [...slots]
+        .sort((a, b) => a.position - b.position)
+        .map((slot) => ({
+          key: String(slot.meal_slot_id),
+          label: slot.name,
+          testIdPrefix: slot.legacy_key || `slot-${slot.meal_slot_id}`,
+          meal: {
+            name: slot.dish || '',
+            recipeId: slot.recipe_id,
+          },
+          payload: {
+            type: slot.legacy_key,
+            mealSlotId: slot.meal_slot_id,
+          } satisfies SetMealPayload,
+        }));
+    }
+
+    return [
+      {
+        key: 'breakfast',
+        label: t('diary.breakfast'),
+        testIdPrefix: 'breakfast',
+        meal: breakfast,
+        payload: { type: 'breakfast' as const, mealSlotId: null },
+      },
+      {
+        key: 'lunch',
+        label: t('diary.lunch'),
+        testIdPrefix: 'lunch',
+        meal: lunch,
+        payload: { type: 'lunch' as const, mealSlotId: null },
+      },
+      {
+        key: 'dinner',
+        label: t('diary.dinner'),
+        testIdPrefix: 'dinner',
+        meal: dinner,
+        payload: { type: 'dinner' as const, mealSlotId: null },
+      },
+    ];
+  }, [breakfast, dinner, lunch, slots, t]);
 
   return (
     <Box className="mx-4 mb-4 overflow-hidden rounded-2xl bg-surface" testID="day-food-plan-card">
@@ -130,30 +181,17 @@ export function DayFoodPlanCard({
 
       {isOpen ? (
         <Box className="bg-base px-6 pb-5 pt-2">
-          <MealRow
-            label={t('diary.breakfast')}
-            meal={breakfast}
-            readOnly={readOnly}
-            testIdPrefix="breakfast"
-            onSetMeal={onSetMeal ? () => onSetMeal('breakfast') : undefined}
-            onRecipePress={onRecipePress}
-          />
-          <MealRow
-            label={t('diary.lunch')}
-            meal={lunch}
-            readOnly={readOnly}
-            testIdPrefix="lunch"
-            onSetMeal={onSetMeal ? () => onSetMeal('lunch') : undefined}
-            onRecipePress={onRecipePress}
-          />
-          <MealRow
-            label={t('diary.dinner')}
-            meal={dinner}
-            readOnly={readOnly}
-            testIdPrefix="dinner"
-            onSetMeal={onSetMeal ? () => onSetMeal('dinner') : undefined}
-            onRecipePress={onRecipePress}
-          />
+          {displaySlots.map((slot) => (
+            <MealRow
+              key={slot.key}
+              label={slot.label}
+              meal={slot.meal}
+              readOnly={readOnly}
+              testIdPrefix={slot.testIdPrefix}
+              onSetMeal={onSetMeal ? () => onSetMeal(slot.payload) : undefined}
+              onRecipePress={onRecipePress}
+            />
+          ))}
         </Box>
       ) : null}
     </Box>

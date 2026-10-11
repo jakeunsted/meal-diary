@@ -1,7 +1,18 @@
 <template>
   <div class="max-w-4xl mx-auto">
     <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="refreshWeek" />
-    <h1 class="text-2xl font-bold text-center m-4" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
+    <div class="relative mx-4 my-4 flex items-center justify-center">
+      <h1 class="text-2xl font-bold text-center" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
+      <button
+        type="button"
+        class="btn btn-ghost btn-sm btn-circle absolute right-0"
+        data-testid="diary-settings-button"
+        :aria-label="$t('diarySettings.open')"
+        @click="handleOpenSettings"
+      >
+        <fa :icon="['fas', 'cog']" />
+      </button>
+    </div>
 
     <div
       v-if="lastFetchError && !loading"
@@ -65,9 +76,10 @@
           :breakfast="{ name: dayMeal.breakfast, recipeId: dayMeal.breakfast_recipe_id }"
           :lunch="{ name: dayMeal.lunch, recipeId: dayMeal.lunch_recipe_id }"
           :dinner="{ name: dayMeal.dinner, recipeId: dayMeal.dinner_recipe_id }"
+          :slots="dayMeal.slots || []"
           :isPastDay="isDayInPast(dayMeal.week_start_date, dayMeal.day_of_week)"
           :readOnly="isWeekReadOnly"
-          @setMeal="(mealType) => handleSetMeal(mealType, dayMeal.day_of_week)"
+          @setMeal="(payload) => handleSetMeal(payload, dayMeal.day_of_week)"
         />
       </div>
       <div
@@ -82,12 +94,19 @@
 
     <dialog id="set_meal_modal" class="modal" data-testid="set-meal-modal">
       <SetUpdateMealModal
-        v-if="mealDiaryStore.selectedMeal.type !== null"
+        v-if="mealDiaryStore.selectedMeal.type !== null || mealDiaryStore.selectedMeal.mealSlotId !== null"
         :meal="mealDiaryStore.selectedMeal.name"
         :recipeId="mealDiaryStore.selectedMeal.recipeId"
         @update:meal="mealDiaryStore.updateSelectedMealName"
         @update:recipeId="mealDiaryStore.updateSelectedMealRecipeId"
         @saveMeal="handleSaveMeal"
+      />
+    </dialog>
+
+    <dialog id="meal_slots_settings_modal" class="modal" data-testid="meal-slots-settings-dialog">
+      <MealSlotsSettingsModal
+        :initial-slots="mealSlots"
+        @saved="handleMealSlotsSaved"
       />
     </dialog>
   </div>
@@ -101,6 +120,7 @@ definePageMeta({
 import { useMealDiaryStore } from '~/stores/mealDiary';
 import DayFoodPlanCard from '~/components/diary/DayFoodPlanCard.vue';
 import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
+import MealSlotsSettingsModal from '~/components/diary/MealSlotsSettingsModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
 import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
@@ -108,17 +128,26 @@ import { useDateUtils } from '~/composables/useDateUtils.ts';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useMealDiaryWeek } from '~/composables/useMealDiaryWeek';
 import { useToast } from '~/composables/useToast';
+import { useApi } from '~/composables/useApi';
+import { useUserStore } from '~/stores/user';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
 const mealDiaryStore = useMealDiaryStore();
+const userStore = useUserStore();
+const { api } = useApi();
 const { showSuccess } = useToast();
 const { track } = useAnalytics();
 const { refreshEntitlements, canNavigateToWeek, isWeekReadOnly: checkWeekReadOnly, billing } = useEntitlements();
 const { openPaywall } = usePaywall();
 
+const mealSlots = ref([]);
+
 onMounted(() => {
   track('diary_viewed');
   void refreshEntitlements(true);
+  // Meal-slot drag can leave body touch-action:none if the dialog closed mid-drag.
+  document.body.style.removeProperty('touch-action');
+  document.body.style.removeProperty('user-select');
 });
 const { t } = useI18n();
 const { getDayName, getDateForDay, isDayInPast } = useDateUtils();
@@ -156,14 +185,38 @@ const weekReadOnlyHelperText = computed(() => {
 
 const canSelectWeek = (weekStart) => canNavigateToWeek(weekStart);
 
-const handleSetMeal = (mealType, dayOfWeek) => {
+const handleSetMeal = (payload, dayOfWeek) => {
   if (isWeekReadOnly.value) {
     openPaywall('edit_past_weeks');
     return;
   }
 
-  mealDiaryStore.setSelectedMeal(mealType, dayOfWeek);
+  const type = typeof payload === 'string' ? payload : payload?.type;
+  const mealSlotId = typeof payload === 'object' ? payload?.mealSlotId ?? null : null;
+  mealDiaryStore.setSelectedMeal(type, dayOfWeek, mealSlotId);
   set_meal_modal.showModal();
+};
+
+const fetchMealSlots = async () => {
+  const familyGroupId = userStore.user?.family_group_id;
+  if (!familyGroupId) return;
+  try {
+    const response = await api(`/api/family-groups/${familyGroupId}/meal-slots`);
+    mealSlots.value = response?.slots || [];
+  } catch (error) {
+    console.error('Failed to load meal slots:', error);
+  }
+};
+
+const handleOpenSettings = async () => {
+  track('diary_settings_opened');
+  await fetchMealSlots();
+  meal_slots_settings_modal.showModal();
+};
+
+const handleMealSlotsSaved = async () => {
+  await fetchMealSlots();
+  await refreshWeek();
 };
 
 const handleSaveMeal = async () => {
