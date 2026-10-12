@@ -18,13 +18,25 @@ import {
   type BulkShoppingListItemUpdate,
   type ShoppingListReorderItem,
 } from '@/lib/queries/shoppingList';
+import { isShoppingListDeviceOnline } from '@/lib/shopping-list/shoppingListNetwork';
 import {
   loadQueue,
   remapTempIdsInOps,
   replaceQueue,
   sanitizePendingOpsForCategories,
 } from '@/lib/shopping-list/shoppingListPendingQueue';
-import { saveShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
+import {
+  isShoppingListReconcilePlanEmpty,
+  planShoppingListReconcile,
+} from '@/lib/shopping-list/shoppingListReconcile';
+import {
+  getShoppingListDirtyEpoch,
+  loadShoppingListCache,
+  saveShoppingListBaseline,
+  saveShoppingListCache,
+  saveShoppingListServerCopy,
+  startShoppingListReconcileHold,
+} from '@/lib/shopping-list/shoppingListStorage';
 import { resolveShoppingListItemCategory } from '@/lib/shopping-list/shoppingListTree';
 import type {
   ShoppingList,
@@ -35,6 +47,7 @@ import type {
 export type ShoppingListSyncStatus = {
   isFlushing: boolean;
   isOnline: boolean;
+  isDirty: boolean;
   syncError: string | null;
   pendingCount: number;
 };
@@ -42,6 +55,7 @@ export type ShoppingListSyncStatus = {
 type SyncStatusListener = () => void;
 
 const flushLocks = new Set<number>();
+const flushAgain = new Set<number>();
 const statusByFamily = new Map<number, ShoppingListSyncStatus>();
 const statusListeners = new Set<SyncStatusListener>();
 let statusVersion = 0;
@@ -52,6 +66,7 @@ function getDefaultStatus(pendingCount = 0): ShoppingListSyncStatus {
   return {
     isFlushing: false,
     isOnline: true,
+    isDirty: false,
     syncError: null,
     pendingCount,
   };
@@ -93,6 +108,10 @@ export function setShoppingListOnlineStatus(
   isOnline: boolean
 ): void {
   patchSyncStatus(familyGroupId, { isOnline });
+}
+
+export function setShoppingListDirtyStatus(familyGroupId: number, isDirty: boolean): void {
+  patchSyncStatus(familyGroupId, { isDirty });
 }
 
 function isGoneError(error: unknown): boolean {
@@ -225,11 +244,119 @@ async function executePendingOp(
 
 async function refreshShoppingListFromServer(
   queryClient: QueryClient,
-  familyGroupId: number
-): Promise<void> {
+  familyGroupId: number,
+  epoch: number
+): Promise<boolean> {
   const shoppingList = await fetchShoppingList(familyGroupId);
+  const cached = await loadShoppingListCache(familyGroupId);
+  if (cached?.dirty || getShoppingListDirtyEpoch(familyGroupId) !== epoch) {
+    await saveShoppingListBaseline(familyGroupId, shoppingList);
+    return false;
+  }
+  const saved = await saveShoppingListServerCopy(familyGroupId, shoppingList, epoch);
+  if (!saved) {
+    return false;
+  }
   queryClient.setQueryData<ShoppingList>(shoppingListKeys.family(familyGroupId), shoppingList);
-  await saveShoppingListCache(familyGroupId, shoppingList);
+  setShoppingListDirtyStatus(familyGroupId, false);
+  return true;
+}
+
+function replaceTempItems(
+  list: ShoppingList,
+  adds: { tempId: string }[],
+  created: ShoppingListItem[]
+): ShoppingList {
+  const createdByTempId = new Map<string, ShoppingListItem>();
+  adds.forEach((add, index) => {
+    const serverItem = created[index];
+    if (serverItem && typeof serverItem.id === 'number') {
+      createdByTempId.set(add.tempId, serverItem);
+    }
+  });
+
+  return {
+    ...list,
+    items: list.items.flatMap((item) => {
+      if (typeof item.id !== 'string') {
+        return [item];
+      }
+      const serverItem = createdByTempId.get(item.id);
+      if (!serverItem) {
+        return item.name.trim() ? [item] : [];
+      }
+      return [
+        {
+          ...serverItem,
+          name: item.name,
+          checked: item.checked,
+          category: item.category,
+          position: item.position,
+        },
+      ];
+    }),
+  };
+}
+
+async function reconcileShoppingListSnapshot(
+  queryClient: QueryClient,
+  familyGroupId: number
+): Promise<boolean> {
+  const release = startShoppingListReconcileHold();
+  const epoch = getShoppingListDirtyEpoch(familyGroupId);
+
+  try {
+    await queryClient.cancelQueries({ queryKey: shoppingListKeys.family(familyGroupId) });
+    const cached = await loadShoppingListCache(familyGroupId);
+    if (!cached?.dirty) {
+      return true;
+    }
+
+    const baseline = cached.baseline ?? cached.shoppingList;
+    let local = cached.shoppingList;
+    let plan = planShoppingListReconcile(local, baseline);
+
+    try {
+      if (!isShoppingListReconcilePlanEmpty(plan)) {
+        if (plan.adds.length > 0) {
+          const created = await bulkAddShoppingListItems(
+            familyGroupId,
+            plan.adds.map((item) => ({ name: item.name, category: item.category }))
+          );
+          local = replaceTempItems(local, plan.adds, created);
+          await saveShoppingListCache(familyGroupId, local);
+          queryClient.setQueryData<ShoppingList>(shoppingListKeys.family(familyGroupId), local);
+          plan = planShoppingListReconcile(local, baseline);
+        }
+
+        if (plan.updates.length > 0) {
+          await bulkUpdateShoppingListItems(familyGroupId, plan.updates);
+        }
+        if (plan.deletes.length > 0) {
+          await bulkDeleteShoppingListItems(familyGroupId, plan.deletes);
+        }
+        if (plan.reorders.length > 0) {
+          await reorderShoppingListItems(familyGroupId, plan.reorders);
+        }
+      }
+
+      if (getShoppingListDirtyEpoch(familyGroupId) !== epoch) {
+        return true;
+      }
+
+      return await refreshShoppingListFromServer(queryClient, familyGroupId, epoch);
+    } catch (error) {
+      if (isNetworkError(error)) {
+        patchSyncStatus(familyGroupId, { isOnline: false });
+        return false;
+      }
+      const message = error instanceof Error ? error.message : 'Failed to sync shopping list';
+      patchSyncStatus(familyGroupId, { syncError: message });
+      return false;
+    }
+  } finally {
+    release();
+  }
 }
 
 export async function flushShoppingListPendingOps(
@@ -237,6 +364,7 @@ export async function flushShoppingListPendingOps(
   familyGroupId: number
 ): Promise<void> {
   if (flushLocks.has(familyGroupId)) {
+    flushAgain.add(familyGroupId);
     return;
   }
 
@@ -244,70 +372,112 @@ export async function flushShoppingListPendingOps(
   patchSyncStatus(familyGroupId, { isFlushing: true, syncError: null });
 
   try {
-    const loaded = await loadQueue(familyGroupId);
-    let queue = sanitizePendingOpsForCategories(loaded);
-    if (JSON.stringify(queue) !== JSON.stringify(loaded)) {
-      await replaceQueue(familyGroupId, queue);
-    }
-    patchSyncStatus(familyGroupId, { pendingCount: queue.length });
-
-    if (queue.length === 0) {
-      return;
-    }
-
-    let didFlushAny = false;
-
-    while (queue.length > 0) {
-      const [head, ...rest] = queue;
-
-      try {
-        const result = await executePendingOp(queryClient, head);
-        didFlushAny = true;
-
-        let nextRest = rest;
-        if (result.remappedTempId != null && result.serverId != null) {
-          nextRest = remapTempIdsInOps(rest, result.remappedTempId, result.serverId);
-        }
-
-        queue = nextRest;
-        await replaceQueue(familyGroupId, queue);
-        patchSyncStatus(familyGroupId, { pendingCount: queue.length, syncError: null });
-      } catch (error) {
-        if (isNetworkError(error)) {
-          patchSyncStatus(familyGroupId, { isOnline: false });
-          return;
-        }
-
-        if (isGoneError(error)) {
-          queue = rest;
-          await replaceQueue(familyGroupId, queue);
-          patchSyncStatus(familyGroupId, { pendingCount: queue.length });
-          continue;
-        }
-
-        const message =
-          error instanceof Error ? error.message : 'Failed to sync shopping list';
-        patchSyncStatus(familyGroupId, { syncError: message });
-        return;
+    do {
+      flushAgain.delete(familyGroupId);
+      const stopped = await flushShoppingListOnce(queryClient, familyGroupId);
+      if (stopped) {
+        break;
       }
+    } while (flushAgain.has(familyGroupId));
+  } finally {
+    flushLocks.delete(familyGroupId);
+    const cached = await loadShoppingListCache(familyGroupId);
+    const pendingCount = (await loadQueue(familyGroupId)).length;
+    patchSyncStatus(familyGroupId, {
+      isFlushing: false,
+      pendingCount,
+      isDirty: !!cached?.dirty,
+    });
+    if (flushAgain.has(familyGroupId)) {
+      flushAgain.delete(familyGroupId);
+      void flushShoppingListPendingOps(queryClient, familyGroupId);
     }
+  }
+}
 
-    if (didFlushAny) {
+/** @returns true when sync should stop (offline or a server error). */
+async function flushShoppingListOnce(
+  queryClient: QueryClient,
+  familyGroupId: number
+): Promise<boolean> {
+  const online = await isShoppingListDeviceOnline();
+  if (!online) {
+    patchSyncStatus(familyGroupId, { isOnline: false });
+    return true;
+  }
+
+  const loaded = await loadQueue(familyGroupId);
+  let queue = sanitizePendingOpsForCategories(loaded);
+  if (JSON.stringify(queue) !== JSON.stringify(loaded)) {
+    await replaceQueue(familyGroupId, queue);
+  }
+  patchSyncStatus(familyGroupId, { pendingCount: queue.length });
+
+  let didFlushAny = false;
+
+  while (queue.length > 0) {
+    const [head, ...rest] = queue;
+
+    try {
+      const result = await executePendingOp(queryClient, head);
+      didFlushAny = true;
+
+      let nextRest = rest;
+      if (result.remappedTempId != null && result.serverId != null) {
+        nextRest = remapTempIdsInOps(rest, result.remappedTempId, result.serverId);
+      }
+
+      queue = nextRest;
+      await replaceQueue(familyGroupId, queue);
+      patchSyncStatus(familyGroupId, { pendingCount: queue.length, syncError: null });
+    } catch (error) {
+      if (isNetworkError(error)) {
+        patchSyncStatus(familyGroupId, { isOnline: false });
+        return true;
+      }
+
+      if (isGoneError(error)) {
+        queue = rest;
+        await replaceQueue(familyGroupId, queue);
+        patchSyncStatus(familyGroupId, { pendingCount: queue.length });
+        continue;
+      }
+
+      const message = error instanceof Error ? error.message : 'Failed to sync shopping list';
+      patchSyncStatus(familyGroupId, { syncError: message });
+      return true;
+    }
+  }
+
+  const epoch = getShoppingListDirtyEpoch(familyGroupId);
+  if (didFlushAny) {
+    const cached = await loadShoppingListCache(familyGroupId);
+    if (!cached?.dirty) {
       try {
-        await refreshShoppingListFromServer(queryClient, familyGroupId);
+        const refreshed = await refreshShoppingListFromServer(queryClient, familyGroupId, epoch);
+        if (!refreshed && (await loadShoppingListCache(familyGroupId))?.dirty) {
+          const reconciled = await reconcileShoppingListSnapshot(queryClient, familyGroupId);
+          return !reconciled;
+        }
       } catch (error) {
         if (isNetworkError(error)) {
           patchSyncStatus(familyGroupId, { isOnline: false });
-          return;
+          return true;
         }
         const message =
           error instanceof Error ? error.message : 'Failed to refresh shopping list';
         patchSyncStatus(familyGroupId, { syncError: message });
+        return true;
       }
+      return false;
     }
-  } finally {
-    flushLocks.delete(familyGroupId);
-    const pendingCount = (await loadQueue(familyGroupId)).length;
-    patchSyncStatus(familyGroupId, { isFlushing: false, pendingCount });
   }
+
+  const cached = await loadShoppingListCache(familyGroupId);
+  if (!cached?.dirty) {
+    return false;
+  }
+
+  const reconciled = await reconcileShoppingListSnapshot(queryClient, familyGroupId);
+  return !reconciled;
 }

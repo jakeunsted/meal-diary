@@ -33,14 +33,16 @@ export function useShoppingListSyncStatus(
       return {
         isFlushing: false,
         isOnline: true,
+        isDirty: false,
         syncError: null,
         pendingCount: 0,
       };
     }
 
+    const syncStatus = getShoppingListSyncStatus(familyGroupId);
     return {
-      ...getShoppingListSyncStatus(familyGroupId),
-      pendingCount: getPendingOpsCount(familyGroupId),
+      ...syncStatus,
+      pendingCount: getPendingOpsCount(familyGroupId) + (syncStatus.isDirty ? 1 : 0),
     };
   }, [familyGroupId, pendingVersion, syncVersion]);
 }

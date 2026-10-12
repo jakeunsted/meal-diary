@@ -322,7 +322,7 @@ export const updateItem = async (
  * @param {{ id: number; name?: string; checked?: boolean; deleted?: boolean; category?: ShoppingCategory | string }[]} updates - Items to update
  * @param {number} [actorUserId] - The id of the user performing the update
  * @returns {Promise<ShoppingListItem[]>} Updated shopping list items
- * @throws {Error} If any item is not found or validation fails
+ * @throws {Error} If validation fails. Missing items are skipped.
  */
 export const bulkUpdateItems = async (
   familyGroupId: number,
@@ -381,7 +381,7 @@ export const bulkUpdateItems = async (
       });
 
       if (!item) {
-        throw new Error('Item not found');
+        continue;
       }
 
       const previousChecked = item.get('checked');
@@ -551,8 +551,7 @@ export const deleteItem = async (familyGroupId: number, itemId: number, actorUse
  * @param {number} familyGroupId - Family group ID
  * @param {number[]} ids - Item ids to delete
  * @param {number} [actorUserId] - The id of the user performing the delete
- * @returns {Promise<ShoppingListItem[]>} Deleted shopping list items
- * @throws {Error} If any item is not found
+ * @returns {Promise<ShoppingListItem[]>} Deleted shopping list items. Missing items are skipped.
  */
 export const bulkDeleteItems = async (
   familyGroupId: number,
@@ -579,7 +578,7 @@ export const bulkDeleteItems = async (
       });
 
       if (!item) {
-        throw new Error('Item not found');
+        continue;
       }
 
       await item.update({ deleted: true }, { transaction: t });

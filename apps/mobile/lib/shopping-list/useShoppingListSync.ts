@@ -3,33 +3,23 @@ import * as Network from 'expo-network';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { AppState, type AppStateStatus } from 'react-native';
 
+import { isNetworkStateOnline } from '@/lib/shopping-list/shoppingListNetwork';
 import {
   getPendingOpsCount,
   getShoppingListPendingSnapshotVersion,
   loadQueue,
   subscribeShoppingListPending,
 } from '@/lib/shopping-list/shoppingListPendingQueue';
+import { loadShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
 import {
   flushShoppingListPendingOps,
   getShoppingListSyncStatus,
   getShoppingListSyncStatusVersion,
+  setShoppingListDirtyStatus,
   setShoppingListOnlineStatus,
   subscribeShoppingListSyncStatus,
   type ShoppingListSyncStatus,
 } from '@/lib/shopping-list/shoppingListSync';
-
-function isNetworkOnline(state: {
-  isConnected?: boolean | null;
-  isInternetReachable?: boolean | null;
-}): boolean {
-  if (state.isConnected === false) {
-    return false;
-  }
-  if (state.isInternetReachable === false) {
-    return false;
-  }
-  return true;
-}
 
 export function useShoppingListSync(familyGroupId: number | undefined): ShoppingListSyncStatus {
   const queryClient = useQueryClient();
@@ -51,6 +41,7 @@ export function useShoppingListSync(familyGroupId: number | undefined): Shopping
       return {
         isFlushing: false,
         isOnline: true,
+        isDirty: false,
         syncError: null,
         pendingCount: 0,
       };
@@ -59,7 +50,7 @@ export function useShoppingListSync(familyGroupId: number | undefined): Shopping
     const syncStatus = getShoppingListSyncStatus(familyGroupId);
     return {
       ...syncStatus,
-      pendingCount: getPendingOpsCount(familyGroupId),
+      pendingCount: getPendingOpsCount(familyGroupId) + (syncStatus.isDirty ? 1 : 0),
     };
     // pendingVersion/syncVersion intentionally invalidate this snapshot
   }, [familyGroupId, pendingVersion, syncVersion]);
@@ -80,13 +71,15 @@ export function useShoppingListSync(familyGroupId: number | undefined): Shopping
 
     void (async () => {
       await loadQueue(familyGroupId);
+      const cached = await loadShoppingListCache(familyGroupId);
       if (cancelled) {
         return;
       }
+      setShoppingListDirtyStatus(familyGroupId, !!cached?.dirty);
 
       try {
         const networkState = await Network.getNetworkStateAsync();
-        const online = isNetworkOnline(networkState);
+        const online = isNetworkStateOnline(networkState);
         setShoppingListOnlineStatus(familyGroupId, online);
         if (online) {
           triggerFlush();
@@ -97,7 +90,7 @@ export function useShoppingListSync(familyGroupId: number | undefined): Shopping
     })();
 
     const networkSubscription = Network.addNetworkStateListener((state) => {
-      const online = isNetworkOnline(state);
+      const online = isNetworkStateOnline(state);
       setShoppingListOnlineStatus(familyGroupId, online);
       if (online) {
         triggerFlush();

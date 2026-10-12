@@ -119,6 +119,17 @@ describe('shouldRollbackShoppingListOptimistic', () => {
     expect(shouldRollbackShoppingListOptimistic(new Error('Network request failed'))).toBe(
       false
     );
+    expect(shouldRollbackShoppingListOptimistic(new TypeError(''))).toBe(false);
+    expect(
+      shouldRollbackShoppingListOptimistic(new Error('The request timed out.'))
+    ).toBe(false);
+    expect(
+      shouldRollbackShoppingListOptimistic(new Error('Could not connect to the server.'))
+    ).toBe(false);
+
+    const hermesQueuedError = new Error('Shopping list change queued offline');
+    hermesQueuedError.name = 'Error';
+    expect(shouldRollbackShoppingListOptimistic(hermesQueuedError)).toBe(false);
   });
 
   it('rolls back for real server errors', () => {

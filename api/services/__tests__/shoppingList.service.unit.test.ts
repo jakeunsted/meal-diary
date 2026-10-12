@@ -31,7 +31,7 @@ vi.mock('../../db/models/ShoppingListItem.model.ts', () => ({
 }));
 
 import { sendShoppingListItemWebhook } from '../../services/webhook.service.ts';
-import { addItem, reorderItems, updateItem } from '../shoppingList.service.ts';
+import { addItem, bulkDeleteItems, bulkUpdateItems, reorderItems, updateItem } from '../shoppingList.service.ts';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -148,6 +148,65 @@ describe('ShoppingList Service categories', () => {
           position: 2,
         }),
         expect.anything()
+      );
+    });
+  });
+
+  describe('bulkUpdateItems', () => {
+    it('updates the items that exist and skips missing ids', async () => {
+      const update = vi.fn().mockResolvedValue(undefined);
+      itemFindOne
+        .mockResolvedValueOnce({
+          get: (key: string) => {
+            if (key === 'checked') return false;
+            if (key === 'category') return 'meat';
+            if (key === 'shopping_list_id') return 10;
+            return null;
+          },
+          update,
+        })
+        .mockResolvedValueOnce(null);
+
+      const result = await bulkUpdateItems(
+        1,
+        [
+          { id: 1, checked: true },
+          { id: 2, checked: true },
+        ],
+        5
+      );
+
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(update).toHaveBeenCalledWith(
+        expect.objectContaining({ checked: true }),
+        expect.anything()
+      );
+      expect(result).toHaveLength(1);
+      expect(sendShoppingListItemWebhook).toHaveBeenCalledTimes(1);
+      expect(sendShoppingListItemWebhook).toHaveBeenCalledWith(
+        1,
+        'check-item',
+        expect.anything(),
+        5
+      );
+    });
+  });
+
+  describe('bulkDeleteItems', () => {
+    it('deletes the items that exist and skips missing ids', async () => {
+      const update = vi.fn().mockResolvedValue(undefined);
+      itemFindOne.mockResolvedValueOnce({ update }).mockResolvedValueOnce(null);
+
+      const result = await bulkDeleteItems(1, [1, 2], 5);
+
+      expect(update).toHaveBeenCalledTimes(1);
+      expect(update).toHaveBeenCalledWith({ deleted: true }, expect.anything());
+      expect(result).toHaveLength(1);
+      expect(sendShoppingListItemWebhook).toHaveBeenCalledWith(
+        1,
+        'delete-item',
+        expect.anything(),
+        5
       );
     });
   });

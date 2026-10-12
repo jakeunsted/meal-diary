@@ -117,6 +117,7 @@ const resources = {
         syncPending: 'Waiting for connection to sync changes…',
         syncing: 'Syncing shopping list…',
         syncFailed: 'Could not sync some shopping list changes',
+        offline: "You're offline",
       },
       recipesPage: {
         usageLabel: '{{count}} of {{max}} recipes',

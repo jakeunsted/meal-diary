@@ -4,53 +4,47 @@ import {
   type ShoppingCategory,
 } from '@meal-diary/shared';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { apiFetch, ApiError } from '@/lib/api/client';
 import { isNetworkError } from '@/lib/auth/httpError';
+import { commitShoppingListWrite } from '@/lib/shopping-list/shoppingListCommit';
+import { isShoppingListDeviceOnline } from '@/lib/shopping-list/shoppingListNetwork';
 import {
   ShoppingListOfflineQueuedError,
   isShoppingListOfflineQueuedError,
   shouldRollbackShoppingListOptimistic,
 } from '@/lib/shopping-list/shoppingListOfflineError';
 import {
-  createPendingOpId,
-  enqueuePendingOp,
-} from '@/lib/shopping-list/shoppingListPendingQueue';
-import {
   generateTempShoppingListItemId,
   resolveShoppingListItemCategory,
 } from '@/lib/shopping-list/shoppingListTree';
 import {
+  adoptShoppingListIfClean,
   loadShoppingListCache,
+  markShoppingListDirty,
   saveShoppingListCache,
+  saveShoppingListServerCopy,
+  waitForShoppingListReconcile,
 } from '@/lib/shopping-list/shoppingListStorage';
-import type {
-  ShoppingList,
-  ShoppingListItem,
-  ShoppingListPendingOp,
-} from '@/types/shoppingList';
-
-async function enqueueAndScheduleFlush(
-  queryClient: QueryClient,
-  op: ShoppingListPendingOp
-): Promise<void> {
-  await enqueuePendingOp(op);
-  // Dynamic import avoids a circular dependency with shoppingListSync.
-  void import('@/lib/shopping-list/shoppingListSync').then(({ flushShoppingListPendingOps }) =>
-    flushShoppingListPendingOps(queryClient, op.familyGroupId)
-  );
-}
+import type { ShoppingList, ShoppingListItem } from '@/types/shoppingList';
 
 const SHOPPING_LIST_STALE_MS = 5 * 60 * 1000;
+const SHOPPING_LIST_TIMEOUT_MS = 8_000;
 
 export const shoppingListKeys = {
   all: ['shoppingList'] as const,
   family: (familyGroupId: number) => ['shoppingList', familyGroupId] as const,
 };
 
-export async function fetchShoppingList(familyGroupId: number): Promise<ShoppingList> {
-  return apiFetch<ShoppingList>(`/shopping-list/${familyGroupId}`);
+export async function fetchShoppingList(
+  familyGroupId: number,
+  signal?: AbortSignal
+): Promise<ShoppingList> {
+  return apiFetch<ShoppingList>(`/shopping-list/${familyGroupId}`, {
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
+    signal,
+  });
 }
 
 export async function addShoppingListItem(
@@ -60,6 +54,7 @@ export async function addShoppingListItem(
   return apiFetch<ShoppingListItem>(`/shopping-list/${familyGroupId}/items`, {
     method: 'POST',
     body: payload,
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -75,6 +70,7 @@ export async function bulkAddShoppingListItems(
   return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/bulk`, {
     method: 'POST',
     body: { items },
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -84,6 +80,7 @@ export async function deleteShoppingListItem(
 ): Promise<void> {
   await apiFetch<void>(`/shopping-list/${familyGroupId}/items/${itemId}`, {
     method: 'DELETE',
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -95,6 +92,7 @@ export async function updateShoppingListItem(
   return apiFetch<ShoppingListItem>(`/shopping-list/${familyGroupId}/items/${itemId}`, {
     method: 'PUT',
     body: updates,
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -119,6 +117,7 @@ export async function bulkUpdateShoppingListItems(
   return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/bulk-update`, {
     method: 'PUT',
     body: { items },
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -129,6 +128,7 @@ export async function bulkDeleteShoppingListItems(
   await apiFetch<void>(`/shopping-list/${familyGroupId}/items/bulk-delete`, {
     method: 'POST',
     body: { ids },
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -151,6 +151,7 @@ export async function reorderShoppingListItems(
   return apiFetch<ShoppingListItem[]>(`/shopping-list/${familyGroupId}/items/reorder`, {
     method: 'PUT',
     body: { items },
+    timeoutMs: SHOPPING_LIST_TIMEOUT_MS,
   });
 }
 
@@ -233,6 +234,79 @@ function persistOptimisticList(
   }
 }
 
+function restoreShoppingListSnapshot(
+  queryClient: QueryClient,
+  familyGroupId: number,
+  previous: ShoppingList | undefined
+): void {
+  if (!previous) {
+    return;
+  }
+  queryClient.setQueryData(shoppingListKeys.family(familyGroupId), previous);
+  void saveShoppingListCache(familyGroupId, previous);
+}
+
+function localShoppingListItem(
+  shoppingList: ShoppingList,
+  tempId: string,
+  name: string,
+  category: ShoppingCategory
+): ShoppingListItem {
+  const categoryItems = shoppingList.items.filter(
+    (item) => resolveShoppingListItemCategory(item.category) === category
+  );
+  const nextPosition =
+    categoryItems.length === 0 ? 0 : Math.max(...categoryItems.map((item) => item.position)) + 1;
+  const now = new Date().toISOString();
+
+  return {
+    id: tempId,
+    shopping_list_id: shoppingList.id,
+    name,
+    checked: false,
+    deleted: false,
+    created_by: 0,
+    category,
+    position: nextPosition,
+    created_at: now,
+    updated_at: now,
+  };
+}
+
+async function rememberCleanServerCopy(
+  queryClient: QueryClient,
+  familyGroupId: number
+): Promise<void> {
+  const shoppingList = queryClient.getQueryData<ShoppingList>(
+    shoppingListKeys.family(familyGroupId)
+  );
+  if (!shoppingList) {
+    return;
+  }
+  await adoptShoppingListIfClean(familyGroupId, shoppingList);
+  const cached = await loadShoppingListCache(familyGroupId);
+  if (cached?.dirty) {
+    return;
+  }
+  const { setShoppingListDirtyStatus } = await import('@/lib/shopping-list/shoppingListSync');
+  setShoppingListDirtyStatus(familyGroupId, false);
+}
+
+async function keepLocalShoppingListChange(
+  queryClient: QueryClient,
+  familyGroupId: number
+): Promise<never> {
+  await markShoppingListDirty(familyGroupId);
+  const { setShoppingListDirtyStatus, flushShoppingListPendingOps } = await import(
+    '@/lib/shopping-list/shoppingListSync'
+  );
+  setShoppingListDirtyStatus(familyGroupId, true);
+  if (await isShoppingListDeviceOnline()) {
+    void flushShoppingListPendingOps(queryClient, familyGroupId);
+  }
+  throw new ShoppingListOfflineQueuedError();
+}
+
 function toNumericBulkUpdates(
   items: BulkShoppingListItemUpdateInput[]
 ): BulkShoppingListItemUpdate[] | null {
@@ -270,15 +344,35 @@ function toNumericIds(ids: Array<number | string>): number[] | null {
   return ids as number[];
 }
 
-async function fetchShoppingListWithCache(familyGroupId: number): Promise<ShoppingList> {
-  try {
-    const shoppingList = await fetchShoppingList(familyGroupId);
-    await saveShoppingListCache(familyGroupId, shoppingList);
-    return shoppingList;
-  } catch (error) {
-    const cached = await loadShoppingListCache(familyGroupId);
+async function fetchShoppingListWithCache(
+  familyGroupId: number,
+  signal?: AbortSignal
+): Promise<ShoppingList> {
+  await waitForShoppingListReconcile();
+
+  const cached = await loadShoppingListCache(familyGroupId);
+  const online = await isShoppingListDeviceOnline();
+  if (signal?.aborted || cached?.dirty || !online) {
     if (cached) {
       return cached.shoppingList;
+    }
+    throw new TypeError('Network request failed');
+  }
+
+  try {
+    const shoppingList = await fetchShoppingList(familyGroupId, signal);
+    const latest = await loadShoppingListCache(familyGroupId);
+    if (signal?.aborted || latest?.dirty) {
+      return latest?.shoppingList ?? shoppingList;
+    }
+    await saveShoppingListServerCopy(familyGroupId, shoppingList);
+    const { setShoppingListDirtyStatus } = await import('@/lib/shopping-list/shoppingListSync');
+    setShoppingListDirtyStatus(familyGroupId, false);
+    return shoppingList;
+  } catch (error) {
+    const latest = await loadShoppingListCache(familyGroupId);
+    if (latest) {
+      return latest.shoppingList;
     }
     throw error;
   }
@@ -286,32 +380,42 @@ async function fetchShoppingListWithCache(familyGroupId: number): Promise<Shoppi
 
 export function useShoppingListQuery(familyGroupId: number | undefined) {
   const queryClient = useQueryClient();
+  const [hydratedFamilyId, setHydratedFamilyId] = useState<number | null>(null);
 
   useEffect(() => {
     if (!familyGroupId) {
       return;
     }
 
-    const queryKey = shoppingListKeys.family(familyGroupId);
-    if (queryClient.getQueryData(queryKey)) {
-      return;
-    }
+    let cancelled = false;
 
     void (async () => {
       const cached = await loadShoppingListCache(familyGroupId);
-      if (!cached) {
+      if (cancelled) {
         return;
       }
 
-      queryClient.setQueryData(queryKey, cached.shoppingList);
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      if (cached && !queryClient.getQueryData(queryKey)) {
+        queryClient.setQueryData(queryKey, cached.shoppingList);
+      }
+      setHydratedFamilyId(familyGroupId);
     })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [familyGroupId, queryClient]);
+
+  const hydrated = hydratedFamilyId === familyGroupId;
 
   return useQuery({
     queryKey: shoppingListKeys.family(familyGroupId ?? 0),
-    queryFn: () => fetchShoppingListWithCache(familyGroupId!),
-    enabled: !!familyGroupId,
+    queryFn: ({ signal }) => fetchShoppingListWithCache(familyGroupId!, signal),
+    enabled: !!familyGroupId && hydrated,
     staleTime: SHOPPING_LIST_STALE_MS,
+    refetchOnReconnect: false,
+    retry: (failureCount, error) => !isNetworkError(error) && failureCount < 2,
   });
 }
 
@@ -336,7 +440,6 @@ export function useAddShoppingListItem() {
       familyGroupId,
       name,
       category,
-      replaceTempId,
     }: {
       familyGroupId: number;
       name: string;
@@ -348,97 +451,65 @@ export function useAddShoppingListItem() {
           ? resolveShoppingListItemCategory(category)
           : categorizeShoppingItemName(name);
 
-      try {
-        return await addShoppingListItem(familyGroupId, {
+      return commitShoppingListWrite(queryClient, familyGroupId, () =>
+        addShoppingListItem(familyGroupId, {
           name,
           category: resolvedCategory,
-        });
-      } catch (error) {
-        if (!isNetworkError(error)) {
-          throw error;
-        }
-      }
-
-      const tempId =
-        typeof replaceTempId === 'string'
-          ? replaceTempId
-          : generateTempShoppingListItemId();
-
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'add',
-        familyGroupId,
-        tempId,
-        name,
-        category: resolvedCategory,
-      });
-
-      throw new ShoppingListOfflineQueuedError(tempId);
-    },
-    onSuccess: (newItem, { familyGroupId, replaceTempId }) => {
-      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
-        updateShoppingListItems(shoppingList, (items) => {
-          if (replaceTempId !== undefined) {
-            const index = items.findIndex((item) => item.id === replaceTempId);
-            if (index === -1) {
-              return [...items, newItem];
-            }
-            const updated = [...items];
-            updated[index] = newItem;
-            return updated;
-          }
-          return [...items, newItem];
         })
       );
     },
-    onError: (error, { familyGroupId, name, category, replaceTempId }) => {
-      if (!isShoppingListOfflineQueuedError(error)) {
-        return;
-      }
-
-      if (replaceTempId !== undefined) {
-        persistOptimisticList(queryClient, familyGroupId);
-        return;
-      }
-
-      const tempId = error.tempId ?? generateTempShoppingListItemId();
-      const now = new Date().toISOString();
+    onMutate: async ({ familyGroupId, name, category, replaceTempId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
       const resolvedCategory =
         category !== undefined
           ? resolveShoppingListItemCategory(category)
           : categorizeShoppingItemName(name);
+      const tempId =
+        typeof replaceTempId === 'string' ? replaceTempId : generateTempShoppingListItemId();
 
-      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) => {
-        if (!shoppingList) {
-          return shoppingList;
-        }
+      if (replaceTempId === undefined) {
+        setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) => {
+          if (!shoppingList) {
+            return shoppingList;
+          }
+          return {
+            ...shoppingList,
+            items: [
+              ...shoppingList.items,
+              localShoppingListItem(shoppingList, tempId, name, resolvedCategory),
+            ],
+          };
+        });
+      }
 
-        const categoryItems = shoppingList.items.filter(
-          (item) => resolveShoppingListItemCategory(item.category) === resolvedCategory
-        );
-        const nextPosition =
-          categoryItems.length === 0
-            ? 0
-            : Math.max(...categoryItems.map((item) => item.position)) + 1;
-
-        const localItem: ShoppingListItem = {
-          id: tempId,
-          shopping_list_id: shoppingList.id,
-          name,
-          checked: false,
-          deleted: false,
-          created_by: 0,
-          category: resolvedCategory,
-          position: nextPosition,
-          created_at: now,
-          updated_at: now,
-        };
-
-        return {
-          ...shoppingList,
-          items: [...shoppingList.items, localItem],
-        };
-      });
+      return { previous, tempId };
+    },
+    onSuccess: (newItem, { familyGroupId, replaceTempId }, context) => {
+      const localId = replaceTempId ?? context?.tempId;
+      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
+        updateShoppingListItems(shoppingList, (items) => {
+          if (localId === undefined) {
+            return [...items, newItem];
+          }
+          const index = items.findIndex((item) => item.id === localId);
+          if (index === -1) {
+            return [...items, newItem];
+          }
+          const updated = [...items];
+          updated[index] = newItem;
+          return updated;
+        })
+      );
+      void rememberCleanServerCopy(queryClient, familyGroupId);
+    },
+    onError: (error, { familyGroupId }, context) => {
+      if (!shouldRollbackShoppingListOptimistic(error)) {
+        persistOptimisticList(queryClient, familyGroupId);
+        return;
+      }
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
   });
 }
@@ -454,26 +525,56 @@ export function useBulkAddShoppingListItems() {
       familyGroupId: number;
       items: BulkShoppingListItemPayload[];
     }) => {
-      try {
-        return await bulkAddShoppingListItems(familyGroupId, items);
-      } catch (error) {
-        if (!isNetworkError(error)) {
-          throw error;
+      return commitShoppingListWrite(queryClient, familyGroupId, () =>
+        bulkAddShoppingListItems(familyGroupId, items)
+      );
+    },
+    onMutate: async ({ familyGroupId, items }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+      const tempIds = items.map(() => generateTempShoppingListItemId());
+
+      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) => {
+        if (!shoppingList) {
+          return shoppingList;
         }
 
-        await enqueueAndScheduleFlush(queryClient, {
-          opId: createPendingOpId(),
-          type: 'bulkAdd',
-          familyGroupId,
-          items,
-        });
-        throw new ShoppingListOfflineQueuedError();
-      }
+        let draft = shoppingList;
+        for (let index = 0; index < items.length; index += 1) {
+          const item = items[index];
+          if (!item) {
+            continue;
+          }
+          const localItem = localShoppingListItem(
+            draft,
+            tempIds[index] ?? generateTempShoppingListItemId(),
+            item.name,
+            item.category ?? categorizeShoppingItemName(item.name)
+          );
+          draft = { ...draft, items: [...draft.items, localItem] };
+        }
+        return draft;
+      });
+
+      return { previous, tempIds };
     },
-    onSuccess: (createdItems, { familyGroupId }) => {
+    onSuccess: (createdItems, { familyGroupId }, context) => {
+      const tempIds = new Set(context?.tempIds ?? []);
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
-        updateShoppingListItems(shoppingList, (items) => [...items, ...createdItems])
+        updateShoppingListItems(shoppingList, (items) => [
+          ...items.filter((item) => !tempIds.has(String(item.id))),
+          ...createdItems,
+        ])
       );
+      void rememberCleanServerCopy(queryClient, familyGroupId);
+    },
+    onError: (error, { familyGroupId }, context) => {
+      if (!shouldRollbackShoppingListOptimistic(error)) {
+        persistOptimisticList(queryClient, familyGroupId);
+        return;
+      }
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
   });
 }
@@ -498,24 +599,32 @@ export function useUpdateShoppingListItem() {
           : {}),
       };
 
-      if (typeof itemId === 'number') {
-        try {
-          return await updateShoppingListItem(familyGroupId, itemId, resolvedUpdates);
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
-        }
+      if (typeof itemId !== 'number') {
+        return keepLocalShoppingListChange(queryClient, familyGroupId);
       }
 
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'update',
-        familyGroupId,
-        itemId,
-        updates: resolvedUpdates,
-      });
-      throw new ShoppingListOfflineQueuedError();
+      return commitShoppingListWrite(queryClient, familyGroupId, () =>
+        updateShoppingListItem(familyGroupId, itemId, resolvedUpdates)
+      );
+    },
+    onMutate: async ({ familyGroupId, itemId, updates }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+      const resolvedUpdates = {
+        ...updates,
+        ...(updates.category !== undefined
+          ? { category: resolveShoppingListItemCategory(updates.category) }
+          : {}),
+      };
+
+      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
+        updateShoppingListItems(shoppingList, (items) =>
+          applyLocalItemUpdates(items, [{ id: itemId, ...resolvedUpdates }])
+        )
+      );
+
+      return { previous };
     },
     onSuccess: (updatedItem, { familyGroupId }) => {
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
@@ -523,11 +632,14 @@ export function useUpdateShoppingListItem() {
           items.map((item) => (item.id === updatedItem.id ? updatedItem : item))
         )
       );
+      void rememberCleanServerCopy(queryClient, familyGroupId);
     },
-    onError: (error, { familyGroupId }) => {
-      if (isShoppingListOfflineQueuedError(error)) {
+    onError: (error, { familyGroupId }, context) => {
+      if (!shouldRollbackShoppingListOptimistic(error)) {
         persistOptimisticList(queryClient, familyGroupId);
+        return;
       }
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
   });
 }
@@ -543,42 +655,36 @@ export function useDeleteShoppingListItem() {
       familyGroupId: number;
       itemId: number | string;
     }) => {
-      if (typeof itemId === 'number') {
-        try {
-          await deleteShoppingListItem(familyGroupId, itemId);
-          return;
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
-        }
+      if (typeof itemId !== 'number') {
+        return keepLocalShoppingListChange(queryClient, familyGroupId);
       }
 
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'delete',
-        familyGroupId,
-        itemId,
+      return commitShoppingListWrite(queryClient, familyGroupId, async () => {
+        await deleteShoppingListItem(familyGroupId, itemId);
       });
-      throw new ShoppingListOfflineQueuedError();
     },
-    onSuccess: (_, { familyGroupId, itemId }) => {
+    onMutate: async ({ familyGroupId, itemId }) => {
+      const queryKey = shoppingListKeys.family(familyGroupId);
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ShoppingList>(queryKey);
+
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
         updateShoppingListItems(shoppingList, (items) =>
           items.filter((item) => item.id !== itemId)
         )
       );
+
+      return { previous };
     },
-    onError: (error, { familyGroupId, itemId }) => {
-      if (!isShoppingListOfflineQueuedError(error)) {
+    onSuccess: (_, { familyGroupId }) => {
+      void rememberCleanServerCopy(queryClient, familyGroupId);
+    },
+    onError: (error, { familyGroupId }, context) => {
+      if (!shouldRollbackShoppingListOptimistic(error)) {
+        persistOptimisticList(queryClient, familyGroupId);
         return;
       }
-
-      setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
-        updateShoppingListItems(shoppingList, (items) =>
-          items.filter((item) => item.id !== itemId)
-        )
-      );
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
   });
 }
@@ -595,23 +701,13 @@ export function useBulkUpdateShoppingListItems() {
       items: BulkShoppingListItemUpdateInput[];
     }) => {
       const numericItems = toNumericBulkUpdates(items);
-      if (numericItems) {
-        try {
-          return await bulkUpdateShoppingListItems(familyGroupId, numericItems);
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
-        }
+      if (!numericItems) {
+        return keepLocalShoppingListChange(queryClient, familyGroupId);
       }
 
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'bulkUpdate',
-        familyGroupId,
-        items,
-      });
-      throw new ShoppingListOfflineQueuedError();
+      return commitShoppingListWrite(queryClient, familyGroupId, () =>
+        bulkUpdateShoppingListItems(familyGroupId, numericItems)
+      );
     },
     onMutate: async ({ familyGroupId, items }) => {
       const queryKey = shoppingListKeys.family(familyGroupId);
@@ -634,9 +730,7 @@ export function useBulkUpdateShoppingListItems() {
         return;
       }
 
-      if (context?.previous) {
-        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
-      }
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
     onSuccess: (serverItems, { familyGroupId }) => {
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
@@ -644,6 +738,7 @@ export function useBulkUpdateShoppingListItems() {
           mergeServerItems(items, serverItems)
         )
       );
+      void rememberCleanServerCopy(queryClient, familyGroupId);
     },
   });
 }
@@ -660,24 +755,13 @@ export function useBulkDeleteShoppingListItems() {
       ids: Array<number | string>;
     }) => {
       const numericIds = toNumericIds(ids);
-      if (numericIds) {
-        try {
-          await bulkDeleteShoppingListItems(familyGroupId, numericIds);
-          return;
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
-        }
+      if (!numericIds) {
+        return keepLocalShoppingListChange(queryClient, familyGroupId);
       }
 
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'bulkDelete',
-        familyGroupId,
-        ids,
+      return commitShoppingListWrite(queryClient, familyGroupId, async () => {
+        await bulkDeleteShoppingListItems(familyGroupId, numericIds);
       });
-      throw new ShoppingListOfflineQueuedError();
     },
     onMutate: async ({ familyGroupId, ids }) => {
       const queryKey = shoppingListKeys.family(familyGroupId);
@@ -701,11 +785,11 @@ export function useBulkDeleteShoppingListItems() {
       }
 
       if (context?.previous) {
-        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
+        restoreShoppingListSnapshot(queryClient, familyGroupId, context.previous);
       }
     },
     onSuccess: (_, { familyGroupId }) => {
-      persistOptimisticList(queryClient, familyGroupId);
+      void rememberCleanServerCopy(queryClient, familyGroupId);
     },
   });
 }
@@ -723,23 +807,13 @@ export function useReorderShoppingListItems() {
       nextItems: ShoppingListItem[];
     }) => {
       const numericItems = toNumericReorderItems(items);
-      if (numericItems) {
-        try {
-          return await reorderShoppingListItems(familyGroupId, numericItems);
-        } catch (error) {
-          if (!isNetworkError(error)) {
-            throw error;
-          }
-        }
+      if (!numericItems) {
+        return keepLocalShoppingListChange(queryClient, familyGroupId);
       }
 
-      await enqueueAndScheduleFlush(queryClient, {
-        opId: createPendingOpId(),
-        type: 'reorder',
-        familyGroupId,
-        items,
-      });
-      throw new ShoppingListOfflineQueuedError();
+      return commitShoppingListWrite(queryClient, familyGroupId, () =>
+        reorderShoppingListItems(familyGroupId, numericItems)
+      );
     },
     onMutate: async ({ familyGroupId, nextItems }) => {
       const queryKey = shoppingListKeys.family(familyGroupId);
@@ -761,9 +835,7 @@ export function useReorderShoppingListItems() {
         return;
       }
 
-      if (context?.previous) {
-        queryClient.setQueryData(shoppingListKeys.family(familyGroupId), context.previous);
-      }
+      restoreShoppingListSnapshot(queryClient, familyGroupId, context?.previous);
     },
     onSuccess: (serverItems, { familyGroupId }) => {
       setShoppingListQueryData(queryClient, familyGroupId, (shoppingList) =>
@@ -771,6 +843,7 @@ export function useReorderShoppingListItems() {
           mergeServerItems(items, serverItems)
         )
       );
+      void rememberCleanServerCopy(queryClient, familyGroupId);
     },
   });
 }

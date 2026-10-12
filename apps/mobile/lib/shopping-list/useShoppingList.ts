@@ -62,13 +62,19 @@ export function useShoppingList(familyGroupId: number | undefined): UseShoppingL
     return shoppingListQuery.refetch();
   }, [shoppingListQuery]);
 
+  const waitingForStoredList =
+    familyGroupId != null &&
+    !shoppingListQuery.data &&
+    !shoppingListQuery.isError &&
+    shoppingListQuery.fetchStatus === 'idle';
+
   return {
     shoppingList,
     orderedItems,
     activeItems,
     checkedItems,
     itemsByCategory,
-    loading: shoppingListQuery.isLoading,
+    loading: shoppingListQuery.isLoading || waitingForStoredList,
     isFetching: shoppingListQuery.isFetching,
     lastFetchError: shoppingListQuery.error
       ? resolveShoppingListErrorMessage(shoppingListQuery.error)

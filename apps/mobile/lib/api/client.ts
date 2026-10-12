@@ -12,10 +12,13 @@ import type { AuthResponse } from '@/types/api';
 export { ApiError } from '@/lib/api/errors';
 export type { ApiErrorBody } from '@/lib/api/errors';
 
-interface ApiRequestOptions extends Omit<RequestInit, 'body'> {
+interface ApiRequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
   body?: unknown;
   /** Attach the bearer token and refresh on 401. Defaults to true. */
   auth?: boolean;
+  /** Abort the request after this many milliseconds. */
+  timeoutMs?: number;
+  signal?: AbortSignal;
 }
 
 let sessionExpiredHandler: (() => void) | null = null;
@@ -72,7 +75,7 @@ async function parseErrorBody(response: Response): Promise<ApiErrorBody> {
 }
 
 export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { body, headers, auth = true, ...rest } = options;
+  const { body, headers, auth = true, timeoutMs, signal, ...rest } = options;
   const url = `${env.apiUrl}${path.startsWith('/') ? path : `/${path}`}`;
 
   if (auth) {
@@ -80,15 +83,32 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
   }
 
   const performRequest = async (accessToken: string | null): Promise<Response> => {
-    return fetch(url, {
-      ...rest,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-        ...(headers ?? {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
+    const controller = new AbortController();
+    const timer =
+      timeoutMs != null ? setTimeout(() => controller.abort(), timeoutMs) : undefined;
+    const abortFromCaller = () => controller.abort();
+    signal?.addEventListener('abort', abortFromCaller);
+    if (signal?.aborted) {
+      controller.abort();
+    }
+
+    try {
+      return await fetch(url, {
+        ...rest,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+          ...(headers ?? {}),
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
+      });
+    } finally {
+      if (timer != null) {
+        clearTimeout(timer);
+      }
+      signal?.removeEventListener('abort', abortFromCaller);
+    }
   };
 
   let response = await performRequest(auth ? await getAccessToken() : null);

@@ -64,12 +64,12 @@ export default function ShoppingListScreen() {
   const viewSettings = useShoppingListViewSettings();
   const newItemInputRef = useRef<TextInput>(null);
   const itemInputRefs = useRef(new Map<string, TextInput>());
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<ShoppingListTab>('all');
   const [isDragging, setIsDragging] = useState(false);
 
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
-  const showListLoading = shoppingList.isFetching && hasListData;
   const listItems = shoppingList.shoppingList?.items ?? [];
 
   const tabCounts = useMemo(() => {
@@ -122,8 +122,10 @@ export default function ShoppingListScreen() {
   }, [editor.focusedItemId]);
 
   const handleRefresh = () => {
-    void userQuery.refetch();
-    void shoppingList.refresh();
+    setIsRefreshing(true);
+    void Promise.all([userQuery.refetch(), shoppingList.refresh()]).finally(() => {
+      setIsRefreshing(false);
+    });
   };
 
   const handleRetry = () => {
@@ -171,8 +173,7 @@ export default function ShoppingListScreen() {
     void editor.handleReorderWithinCategory(familyGroupId, category, orderedIds);
   };
 
-  const isItemBusy =
-    editor.isUpdatingItems || editor.isPersistingItem || editor.isReordering;
+  const isItemBusy = editor.isPersistingItem || editor.isReordering;
 
   const renderEditableItem = (
     item: ShoppingListItem,
@@ -225,7 +226,7 @@ export default function ShoppingListScreen() {
           refreshControl={
             isDragging ? undefined : (
               <RefreshControl
-                refreshing={shoppingList.isFetching && !shoppingList.loading}
+                refreshing={isRefreshing}
                 onRefresh={handleRefresh}
                 tintColor="#6366F1"
               />
@@ -242,7 +243,7 @@ export default function ShoppingListScreen() {
             />
           </Box>
 
-          {shoppingList.lastFetchError && !shoppingList.loading ? (
+          {shoppingList.lastFetchError && !hasListData ? (
             <Box
               className="mx-4 mb-4 flex-row items-center justify-between rounded-xl bg-red-500/15 px-4 py-3"
               testID="shopping-list-load-error"
@@ -259,7 +260,10 @@ export default function ShoppingListScreen() {
             </Box>
           ) : null}
 
-          {syncStatus.pendingCount > 0 || syncStatus.isFlushing || syncStatus.syncError ? (
+          {syncStatus.pendingCount > 0 ||
+          syncStatus.isFlushing ||
+          syncStatus.syncError ||
+          !syncStatus.isOnline ? (
             <Box
               className="mx-4 mb-4 rounded-xl bg-ice/10 px-4 py-3"
               testID="shopping-list-sync-banner"
@@ -267,9 +271,12 @@ export default function ShoppingListScreen() {
               <Text className="text-ice/80 text-sm">
                 {syncStatus.syncError
                   ? t('shoppingList.syncFailed')
-                  : syncStatus.isFlushing || syncStatus.isOnline
+                  : syncStatus.isFlushing ||
+                      (syncStatus.isOnline && syncStatus.pendingCount > 0)
                     ? t('shoppingList.syncing')
-                    : t('shoppingList.syncPending')}
+                    : syncStatus.pendingCount > 0
+                      ? t('shoppingList.syncPending')
+                      : t('shoppingList.offline')}
               </Text>
             </Box>
           ) : null}
@@ -287,7 +294,6 @@ export default function ShoppingListScreen() {
             <ShoppingListSkeleton />
           ) : (
             <Box className="relative mx-4">
-              <Box className={showListLoading ? 'opacity-50' : ''}>
                 <ShoppingListCategoryTabs
                   value={activeTab}
                   onChange={setActiveTab}
@@ -362,16 +368,6 @@ export default function ShoppingListScreen() {
                     renderItem={(item) => renderEditableItem(item)}
                   />
                 ) : null}
-              </Box>
-
-              {showListLoading ? (
-                <Box
-                  className="absolute inset-0 items-center justify-center"
-                  testID="shopping-list-loading"
-                >
-                  <ActivityIndicator size="large" color="#6366F1" />
-                </Box>
-              ) : null}
             </Box>
           )}
         </ShoppingListScrollContainer>

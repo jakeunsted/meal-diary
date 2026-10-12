@@ -8,6 +8,13 @@ function extractErrorMessage(error: unknown): string {
 
 export function isNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
+  if (
+    error instanceof TypeError ||
+    error.name === 'AbortError' ||
+    error.name === 'TimeoutError'
+  ) {
+    return true;
+  }
   const message = error.message.toLowerCase();
   return (
     message.includes('network request failed') ||
@@ -15,7 +22,15 @@ export function isNetworkError(error: unknown): boolean {
     message.includes('network error') ||
     message.includes('network connection was lost') ||
     message.includes('the internet connection appears to be offline') ||
-    message.includes('load failed')
+    message.includes('load failed') ||
+    message.includes('timed out') ||
+    message.includes('timeout') ||
+    message.includes('could not connect') ||
+    message.includes('unable to resolve') ||
+    message.includes('hostname') ||
+    message.includes('connection reset') ||
+    message.includes('connection abort') ||
+    message.includes('aborted')
   );
 }
 
