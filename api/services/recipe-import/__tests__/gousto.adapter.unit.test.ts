@@ -110,6 +110,22 @@ describe('recipe-import/gousto.adapter', () => {
     });
   });
 
+  it('unescapes instruction entities once', () => {
+    const draft = mapGoustoApiResponse({
+      data: [{
+        attributes: {
+          name: 'Entity recipe',
+          steps: [{
+            number: 1,
+            instruction: '<p>Salt &amp; pepper&nbsp;to taste. Keep &amp;nbsp; literal.</p>',
+          }],
+        },
+      }],
+    });
+
+    expect(draft.instructions).toBe('1. Salt & pepper to taste. Keep &nbsp; literal.');
+  });
+
   it('throws unsupported when the Gousto API request fails', async () => {
     const fetchImpl = vi.fn().mockResolvedValue({
       ok: false,
