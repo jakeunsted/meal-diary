@@ -133,6 +133,8 @@ const categoryLabel = (category) => {
       return t('Meat');
     case 'fruit_veg':
       return t('Fruit & Veg');
+    case 'dairy':
+      return t('Dairy');
     case 'bakery':
       return t('Bakery');
     case 'canned':

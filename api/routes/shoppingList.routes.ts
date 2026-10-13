@@ -53,7 +53,7 @@ router.use('/:family_group_id', requireFamilyMember);
  *           description: The id of the shopping list
  *         category:
  *           type: string
- *           enum: [meat, fruit_veg, bakery, canned, other]
+ *           enum: [meat, fruit_veg, dairy, bakery, canned, other]
  *           description: Fixed system category for the item
  *         position:
  *           type: integer
@@ -189,7 +189,7 @@ router.get('/:family_group_id', async (req, res, next) => {
  *                 description: The name of the new item
  *               category:
  *                 type: string
- *                 enum: [meat, fruit_veg, bakery, canned, other]
+ *                 enum: [meat, fruit_veg, dairy, bakery, canned, other]
  *                 description: Optional category; auto-categorized from name when omitted
  *     responses:
  *       200:
@@ -251,7 +251,7 @@ router.post('/:family_group_id/items', async (req, res, next) => {
  *                       description: The name of the new item
  *                     category:
  *                       type: string
- *                       enum: [meat, fruit_veg, bakery, canned, other]
+ *                       enum: [meat, fruit_veg, dairy, bakery, canned, other]
  *                       description: Optional category; auto-categorized from name when omitted
  *     responses:
  *       200:
@@ -307,7 +307,7 @@ router.post('/:family_group_id/items/bulk', requireEntitlement('recipe_to_shoppi
  *                       description: The id of the item to move
  *                     category:
  *                       type: string
- *                       enum: [meat, fruit_veg, bakery, canned, other]
+ *                       enum: [meat, fruit_veg, dairy, bakery, canned, other]
  *                       description: The category for the item
  *                     position:
  *                       type: integer
@@ -473,7 +473,7 @@ router.post('/:family_group_id/items/bulk-delete', async (req, res, next) => {
  *                 description: Whether the item is checked
  *               category:
  *                 type: string
- *                 enum: [meat, fruit_veg, bakery, canned, other]
+ *                 enum: [meat, fruit_veg, dairy, bakery, canned, other]
  *                 description: Move the item to this category
  *     responses:
  *       200:

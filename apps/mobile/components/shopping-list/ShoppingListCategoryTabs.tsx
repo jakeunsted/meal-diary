@@ -22,6 +22,8 @@ function tabLabelKey(tab: ShoppingListTab): string {
       return 'shoppingList.meat';
     case 'fruit_veg':
       return 'shoppingList.fruitVeg';
+    case 'dairy':
+      return 'shoppingList.dairy';
     case 'bakery':
       return 'shoppingList.bakery';
     case 'canned':

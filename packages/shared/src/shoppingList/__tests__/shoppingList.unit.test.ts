@@ -21,10 +21,11 @@ import {
 import type { ShoppingListItemLike } from '../types.ts';
 
 describe('categories', () => {
-  it('exposes five fixed categories ending with other', () => {
+  it('exposes six fixed categories ending with other', () => {
     expect(SHOPPING_CATEGORIES).toEqual([
       'meat',
       'fruit_veg',
+      'dairy',
       'bakery',
       'canned',
       'other',
@@ -34,7 +35,7 @@ describe('categories', () => {
 
   it('guards category and tab values', () => {
     expect(isShoppingCategory('meat')).toBe(true);
-    expect(isShoppingCategory('dairy')).toBe(false);
+    expect(isShoppingCategory('dairy')).toBe(true);
     expect(isShoppingListTab('all')).toBe(true);
     expect(isShoppingListTab('bakery')).toBe(true);
     expect(isShoppingListTab('unknown')).toBe(false);
@@ -65,6 +66,13 @@ describe('categorizeShoppingItemName', () => {
     expect(categorizeShoppingItemName('Bananas')).toBe('fruit_veg');
   });
 
+  it('categorizes dairy', () => {
+    expect(categorizeShoppingItemName('Milk')).toBe('dairy');
+    expect(categorizeShoppingItemName('Cheddar')).toBe('dairy');
+    expect(categorizeShoppingItemName('Greek yoghurt')).toBe('dairy');
+    expect(categorizeShoppingItemName('Eggs')).toBe('dairy');
+  });
+
   it('categorizes bakery', () => {
     expect(categorizeShoppingItemName('Sourdough')).toBe('bakery');
     expect(categorizeShoppingItemName('Bread rolls')).toBe('bakery');
@@ -89,6 +97,14 @@ describe('categorizeShoppingItemName', () => {
   it('prefers longer phrase matches', () => {
     // "tinned tomatoes" is canned, not fruit_veg via "tomatoes"
     expect(categorizeShoppingItemName('Tinned tomatoes')).toBe('canned');
+    // dairy words must not steal canned or non-dairy phrases
+    expect(categorizeShoppingItemName('Coconut milk')).toBe('canned');
+    expect(categorizeShoppingItemName('Condensed milk')).toBe('canned');
+    expect(categorizeShoppingItemName('Butter beans')).toBe('canned');
+    expect(categorizeShoppingItemName('Cream of mushroom soup')).toBe('canned');
+    expect(categorizeShoppingItemName('Peanut butter')).toBe('other');
+    expect(categorizeShoppingItemName('Milk chocolate')).toBe('other');
+    expect(categorizeShoppingItemName('Egg noodles')).toBe('other');
   });
 });
 
@@ -123,6 +139,7 @@ describe('groupShoppingListItemsByCategory', () => {
     expect(groups.meat).toHaveLength(1);
     expect(groups.bakery).toHaveLength(1);
     expect(groups.fruit_veg).toEqual([]);
+    expect(groups.dairy).toEqual([]);
     expect(groups.canned).toEqual([]);
     expect(groups.other).toEqual([]);
   });

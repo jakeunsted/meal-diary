@@ -24,6 +24,7 @@ export function ShoppingListScrollContainer({
   return (
     <KeyboardAwareScrollView
       bottomOffset={24}
+      mode="layout"
       contentContainerStyle={contentContainerStyle}
       keyboardShouldPersistTaps={keyboardShouldPersistTaps}
       refreshControl={refreshControl}

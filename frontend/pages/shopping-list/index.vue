@@ -318,6 +318,7 @@ const tabCounts = computed(() => {
     all: activeItems.value.length,
     meat: 0,
     fruit_veg: 0,
+    dairy: 0,
     bakery: 0,
     canned: 0,
     other: 0,
@@ -337,6 +338,8 @@ const categoryLabel = (category: ShoppingCategory): string => {
       return t('Meat');
     case 'fruit_veg':
       return t('Fruit & Veg');
+    case 'dairy':
+      return t('Dairy');
     case 'bakery':
       return t('Bakery');
     case 'canned':

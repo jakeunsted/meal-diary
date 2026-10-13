@@ -8,7 +8,7 @@ import {
  * "chicken breast" beats a generic "breast" if both existed.
  * Matching is whole-word / phrase against a normalized name.
  */
-const CATEGORY_KEYWORDS: Record<Exclude<ShoppingCategory, 'other'>, string[]> = {
+const CATEGORY_KEYWORDS: Record<ShoppingCategory, string[]> = {
   meat: [
     'minced beef',
     'ground beef',
@@ -173,6 +173,35 @@ const CATEGORY_KEYWORDS: Record<Exclude<ShoppingCategory, 'other'>, string[]> = 
     'vegetable',
     'vegetables',
   ],
+  dairy: [
+    'double cream',
+    'single cream',
+    'whipping cream',
+    'sour cream',
+    'cream cheese',
+    'ice cream',
+    'greek yogurt',
+    'greek yoghurt',
+    'creme fraiche',
+    'cheddar',
+    'mozzarella',
+    'parmesan',
+    'halloumi',
+    'feta',
+    'brie',
+    'gouda',
+    'buttermilk',
+    'cheese',
+    'butter',
+    'margarine',
+    'yoghurt',
+    'yogurt',
+    'cream',
+    'custard',
+    'milk',
+    'eggs',
+    'egg',
+  ],
   bakery: [
     'bread roll',
     'bread rolls',
@@ -235,6 +264,12 @@ const CATEGORY_KEYWORDS: Record<Exclude<ShoppingCategory, 'other'>, string[]> = 
     'plum tomatoes',
     'coconut milk',
     'coconut cream',
+    'condensed milk',
+    'evaporated milk',
+    'butter bean',
+    'butter beans',
+    'cream of mushroom',
+    'cream of',
     'baked bean',
     'baked beans',
     'kidney bean',
@@ -253,17 +288,25 @@ const CATEGORY_KEYWORDS: Record<Exclude<ShoppingCategory, 'other'>, string[]> = 
     'tomato puree',
     'tomato paste',
   ],
+  other: [
+    'peanut butter',
+    'almond butter',
+    'cocoa butter',
+    'milk chocolate',
+    'egg noodle',
+    'egg noodles',
+  ],
 };
 
 interface KeywordEntry {
   keyword: string;
-  category: Exclude<ShoppingCategory, 'other'>;
+  category: ShoppingCategory;
 }
 
 const KEYWORD_ENTRIES: KeywordEntry[] = (() => {
   const entries: KeywordEntry[] = [];
   for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as Array<
-    [Exclude<ShoppingCategory, 'other'>, string[]]
+    [ShoppingCategory, string[]]
   >) {
     for (const keyword of keywords) {
       entries.push({ keyword: keyword.toLowerCase(), category });

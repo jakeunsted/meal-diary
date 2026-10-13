@@ -105,6 +105,7 @@ const resources = {
         all: 'All',
         meat: 'Meat',
         fruitVeg: 'Fruit & Veg',
+        dairy: 'Dairy',
         bakery: 'Bakery',
         canned: 'Canned',
         other: 'Other',

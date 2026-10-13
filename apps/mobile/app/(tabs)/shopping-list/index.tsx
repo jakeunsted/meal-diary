@@ -41,6 +41,8 @@ function categoryLabelKey(category: ShoppingCategory): string {
       return 'shoppingList.meat';
     case 'fruit_veg':
       return 'shoppingList.fruitVeg';
+    case 'dairy':
+      return 'shoppingList.dairy';
     case 'bakery':
       return 'shoppingList.bakery';
     case 'canned':
@@ -77,6 +79,7 @@ export default function ShoppingListScreen() {
       all: shoppingList.activeItems.length,
       meat: 0,
       fruit_veg: 0,
+      dairy: 0,
       bakery: 0,
       canned: 0,
       other: 0,
