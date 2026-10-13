@@ -40,6 +40,15 @@ export const loginLimiter = createRateLimiter({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 }, 'login');
 
+// Rate limit for password reset requests
+export const passwordResetLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  limit: 5,
+  message: { message: 'Too many password reset attempts, please try again after 15 minutes' },
+  standardHeaders: true,
+  legacyHeaders: false,
+}, 'password_reset');
+
 // Rate limit for logout
 export const logoutLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes

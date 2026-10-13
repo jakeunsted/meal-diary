@@ -11,6 +11,13 @@ vi.mock('../../services/auth.service.ts', () => ({
   revokeRefreshToken: vi.fn(),
 }));
 
+vi.mock('../../services/passwordReset.service.ts', () => ({
+  requestPasswordReset: vi.fn(),
+  completePasswordReset: vi.fn(),
+  INVALID_RESET_LINK_MESSAGE: 'Reset link is invalid or has expired',
+  PASSWORD_REQUIREMENTS_MESSAGE: 'Password does not meet requirements',
+}));
+
 vi.mock('../../services/authResponse.service.ts', () => ({
   buildAuthResponse: vi.fn(async (user, tokens) => ({
     user: { ...user, has_password: true },
@@ -20,7 +27,8 @@ vi.mock('../../services/authResponse.service.ts', () => ({
 }));
 
 import * as AuthService from '../../services/auth.service.ts';
-import { login, refreshToken, logout } from '../auth/auth.controller.ts';
+import { completePasswordReset, requestPasswordReset } from '../../services/passwordReset.service.ts';
+import { forgotPassword, login, refreshToken, logout, resetPassword } from '../auth/auth.controller.ts';
 
 const mockRequest = (body: Record<string, unknown>, user?: unknown) =>
   ({ body, user, ip: '127.0.0.1' }) as unknown as Request;
@@ -212,6 +220,65 @@ describe('Auth Controller', () => {
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
         message: 'Server error during logout',
+      });
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('returns the same message for any email', async () => {
+      vi.mocked(requestPasswordReset).mockResolvedValue(undefined);
+
+      const req = mockRequest({ email: 'user@example.com' });
+      const res = mockResponse();
+
+      await forgotPassword(req, res);
+
+      expect(requestPasswordReset).toHaveBeenCalledWith('user@example.com');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'If an account exists for that email, we sent password reset instructions.',
+      });
+    });
+
+    it('returns 400 when email is missing', async () => {
+      const req = mockRequest({});
+      const res = mockResponse();
+
+      await forgotPassword(req, res);
+
+      expect(requestPasswordReset).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Email is required' });
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('updates the password when the token is accepted', async () => {
+      vi.mocked(completePasswordReset).mockResolvedValue(undefined);
+
+      const req = mockRequest({ token: 'raw-token', password: 'NewPassword1!' });
+      const res = mockResponse();
+
+      await resetPassword(req, res);
+
+      expect(completePasswordReset).toHaveBeenCalledWith('raw-token', 'NewPassword1!');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Password updated' });
+    });
+
+    it('returns 400 when the reset link is invalid', async () => {
+      vi.mocked(completePasswordReset).mockRejectedValue(
+        new Error('Reset link is invalid or has expired')
+      );
+
+      const req = mockRequest({ token: 'bad-token', password: 'NewPassword1!' });
+      const res = mockResponse();
+
+      await resetPassword(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: 'Reset link is invalid or has expired',
       });
     });
   });

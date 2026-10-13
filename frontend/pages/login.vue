@@ -9,6 +9,9 @@
         <div v-if="accountDeleted" class="alert alert-success" data-testid="account-deleted-alert">
           <span>{{ $t('Your account has been deleted.') }}</span>
         </div>
+        <div v-if="passwordReset" class="alert alert-success" data-testid="password-reset-alert">
+          <span>{{ $t('Password updated. You can sign in with your new password.') }}</span>
+        </div>
 
         <button
           type="button"
@@ -63,6 +66,15 @@
               required
             />
           </div>
+          <div class="text-right">
+            <NuxtLink
+              class="link link-hover link-primary text-sm"
+              to="/forgot-password"
+              data-testid="forgot-password-link"
+            >
+              {{ $t('Forgot password?') }}
+            </NuxtLink>
+          </div>
           <div v-if="error" class="alert alert-error" data-testid="login-error-alert">
             <span>{{ error }}</span>
           </div>
@@ -107,6 +119,7 @@ const route = useRoute();
 const email = ref('');
 const password = ref('');
 const accountDeleted = computed(() => route.query.deleted === '1');
+const passwordReset = computed(() => route.query.reset === '1');
 
 const resolvePostLoginRedirect = (defaultRedirect) => {
   const redirect = route.query.redirect;

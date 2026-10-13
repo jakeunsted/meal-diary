@@ -1,9 +1,9 @@
 import { Router, type RequestHandler } from 'express';
-import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback } from '../controllers/auth/auth.controller.ts';
+import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback, forgotPassword, resetPassword } from '../controllers/auth/auth.controller.ts';
 import { verifyGoogleToken } from '../controllers/auth/googleTokenVerification.controller.ts';
 import { verifyAppleToken } from '../controllers/auth/appleTokenVerification.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
-import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter } from '../middleware/rateLimit.middleware.ts';
+import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter, passwordResetLimiter } from '../middleware/rateLimit.middleware.ts';
 
 const router = Router();
 
@@ -101,6 +101,63 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                   example: Server error during login
  */
 router.post('/login', loginLimiter, wrapHandler(login));
+
+/**
+ * @swagger
+ * /forgot-password:
+ *   post:
+ *     summary: Request a password reset email.
+ *     description: Always returns the same message so the response does not reveal whether the email exists.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *     responses:
+ *       200:
+ *         description: Reset instructions were processed.
+ *       400:
+ *         description: Email is missing.
+ *       429:
+ *         description: Too many password reset attempts.
+ */
+router.post('/forgot-password', passwordResetLimiter, wrapHandler(forgotPassword));
+
+/**
+ * @swagger
+ * /reset-password:
+ *   post:
+ *     summary: Set a new password with a reset token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Password updated.
+ *       400:
+ *         description: Token is invalid or the password does not meet requirements.
+ *       429:
+ *         description: Too many password reset attempts.
+ */
+router.post('/reset-password', passwordResetLimiter, wrapHandler(resetPassword));
 
 /**
  * Refresh token route to issue new tokens.

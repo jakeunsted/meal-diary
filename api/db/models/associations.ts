@@ -6,6 +6,7 @@ import DailyMeal from './DailyMeal.model.ts';
 import MealSlot from './MealSlot.model.ts';
 import DailyMealEntry from './DailyMealEntry.model.ts';
 import RefreshToken from './RefreshToken.model.ts';
+import PasswordResetToken from './PasswordResetToken.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
@@ -200,6 +201,17 @@ User.hasMany(RefreshToken, {
   as: 'refreshTokens'
 });
 
+PasswordResetToken.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user',
+});
+User.hasMany(PasswordResetToken, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'passwordResetTokens',
+});
+
 // Export all models
 export {
   User,
@@ -210,6 +222,7 @@ export {
   MealSlot,
   DailyMealEntry,
   RefreshToken,
+  PasswordResetToken,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,

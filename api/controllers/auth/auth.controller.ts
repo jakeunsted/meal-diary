@@ -5,6 +5,14 @@ import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../util
 import { trackAuthLog, logAuth } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
+import {
+  completePasswordReset,
+  INVALID_RESET_LINK_MESSAGE,
+  PASSWORD_REQUIREMENTS_MESSAGE,
+  requestPasswordReset,
+} from '../../services/passwordReset.service.ts';
+
+const FORGOT_PASSWORD_MESSAGE = 'If an account exists for that email, we sent password reset instructions.';
 
 /**
  * Login controller
@@ -405,5 +413,53 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
       flow: 'web_oauth_callback',
     });
     res.redirect(`${FRONTEND_URL}/login?error=oauth_failed`);
+  }
+};
+
+/**
+ * Request a password reset email.
+ * Always returns the same success message so callers cannot tell whether the email exists.
+ */
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+  const email = req.body?.email;
+
+  if (typeof email !== 'string' || !email.trim()) {
+    res.status(400).json({ message: 'Email is required' });
+    return;
+  }
+
+  try {
+    await requestPasswordReset(email);
+    res.status(200).json({ message: FORGOT_PASSWORD_MESSAGE });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({ message: 'Server error during password reset' });
+  }
+};
+
+/**
+ * Set a new password from a one-time reset token.
+ */
+export const resetPassword = async (req: Request, res: Response): Promise<void> => {
+  const token = req.body?.token;
+  const password = req.body?.password;
+
+  if (typeof token !== 'string' || !token || typeof password !== 'string' || !password) {
+    res.status(400).json({ message: 'Token and password are required' });
+    return;
+  }
+
+  try {
+    await completePasswordReset(token, password);
+    res.status(200).json({ message: 'Password updated' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unable to reset password';
+    if (message === INVALID_RESET_LINK_MESSAGE || message === PASSWORD_REQUIREMENTS_MESSAGE) {
+      res.status(400).json({ message });
+      return;
+    }
+
+    console.error('Reset password error:', error);
+    res.status(500).json({ message: 'Server error during password reset' });
   }
 };
