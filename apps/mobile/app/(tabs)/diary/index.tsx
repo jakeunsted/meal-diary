@@ -247,6 +247,7 @@ export default function DiaryScreen() {
         familyGroupId={familyGroupId}
         mealName={mealEditor.selectedMeal.name}
         recipeId={mealEditor.selectedMeal.recipeId}
+        openedWithMeal={mealEditor.openedWithMeal}
         isLoading={mealEditor.isSaving}
         error={mealEditor.saveError}
         onMealNameChange={mealEditor.updateMealName}

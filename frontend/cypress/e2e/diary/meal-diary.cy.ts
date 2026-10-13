@@ -45,6 +45,22 @@ describe('Meal diary', () => {
     cy.get('[data-testid="set-meal-breakfast-button"]').first().should('be.visible');
   });
 
+  it('clears a breakfast meal entry by saving a blank name', () => {
+    cy.wait('@apiGetMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().click();
+    cy.get('[data-testid="set-meal-name-input"]').type('Omelette');
+    cy.get('[data-testid="set-meal-save-button"]').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="breakfast-custom-badge"]').first().should('contain.text', 'Omelette');
+
+    cy.get('[data-testid="breakfast-custom-badge"]').first().click();
+    cy.get('[data-testid="set-meal-name-input"]').clear();
+    cy.get('[data-testid="set-meal-clear-button"]').should('be.visible');
+    cy.get('[data-testid="set-meal-save-button"]').should('not.be.disabled').click();
+    cy.wait('@apiPatchMealDiary');
+    cy.get('[data-testid="set-meal-breakfast-button"]').first().should('be.visible');
+  });
+
   it('returns to this week via shortcut', () => {
     cy.wait('@apiGetMealDiary');
     cy.location('search').then((search) => {

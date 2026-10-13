@@ -20,6 +20,7 @@ interface SetMealModalProps {
   familyGroupId?: number;
   mealName: string;
   recipeId: number | null;
+  openedWithMeal?: boolean;
   isLoading?: boolean;
   error?: string | null;
   onMealNameChange: (name: string) => void;
@@ -34,6 +35,7 @@ export function SetMealModal({
   familyGroupId,
   mealName,
   recipeId,
+  openedWithMeal = false,
   isLoading = false,
   error = null,
   onMealNameChange,
@@ -49,9 +51,8 @@ export function SetMealModal({
   const recipes = recipesQuery.data ?? [];
   const hasRecipes = recipes.length > 0;
 
-  const hasExistingMeal = !!(mealName && mealName.trim()) || !!recipeId;
   const canSave =
-    !!(mealName && mealName.trim()) || !!recipeId || hasExistingMeal;
+    !!(mealName && mealName.trim()) || !!recipeId || openedWithMeal;
 
   const handleClose = () => {
     if (isLoading) {
@@ -124,7 +125,7 @@ export function SetMealModal({
                 placeholderTextColor="rgba(241, 245, 249, 0.4)"
                 value={mealName}
                 onChangeText={onMealNameChange}
-                onSubmitEditing={onSave}
+                onSubmitEditing={canSave ? onSave : undefined}
                 editable={!isLoading}
                 testID="set-meal-name-input"
               />
@@ -138,7 +139,7 @@ export function SetMealModal({
           ) : null}
 
           <Box className="items-center gap-2">
-            {hasExistingMeal ? (
+            {openedWithMeal ? (
               <Button
                 variant="ghost"
                 size="sm"

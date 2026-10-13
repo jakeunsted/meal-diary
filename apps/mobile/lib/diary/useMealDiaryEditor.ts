@@ -46,6 +46,7 @@ function getExistingMealValues(
 
 export function useMealDiaryEditor() {
   const [selectedMeal, setSelectedMeal] = useState<SelectedMeal>(emptySelectedMeal);
+  const [openedWithMeal, setOpenedWithMeal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const saveDailyMealMutation = useSaveDailyMeal();
 
@@ -70,6 +71,7 @@ export function useMealDiaryEditor() {
         name: existing.name,
         recipeId: existing.recipeId,
       });
+      setOpenedWithMeal(!!(existing.name.trim() || existing.recipeId));
       setSaveError(null);
     },
     []
@@ -185,6 +187,7 @@ export function useMealDiaryEditor() {
 
   return {
     selectedMeal,
+    openedWithMeal,
     isModalVisible,
     isSaving: saveDailyMealMutation.isPending,
     saveError,

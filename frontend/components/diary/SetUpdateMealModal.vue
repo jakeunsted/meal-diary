@@ -40,7 +40,6 @@
       type="text"
       class="input input-bordered w-full mb-4"
       data-testid="set-meal-name-input"
-      required
       :value="meal"
       @input="handleMealInput($event.target.value)"
       @keydown.enter.prevent="saveMeal"
@@ -61,7 +60,7 @@
 
     <div class="flex flex-col items-center gap-2">
       <button
-        v-if="hasExistingMeal"
+        v-if="openedWithMeal"
         type="button"
         class="btn btn-ghost btn-sm"
         data-testid="set-meal-clear-button"
@@ -113,12 +112,10 @@ const selectedRecipeName = ref('');
 
 const recipes = computed(() => recipeStore.recipes);
 
-const hasExistingMeal = computed(
-  () => !!(props.meal && props.meal.trim()) || !!props.recipeId
-);
+const openedWithMeal = ref(!!(props.meal && props.meal.trim()) || !!props.recipeId);
 
 const canSave = computed(
-  () => !!(props.meal && props.meal.trim()) || !!selectedRecipeId.value || hasExistingMeal.value
+  () => !!(props.meal && props.meal.trim()) || !!selectedRecipeId.value || openedWithMeal.value
 );
 
 // Load recipes on mount
@@ -160,6 +157,11 @@ const handleMealInput = (value) => {
 };
 
 const saveMeal = () => {
+  if (!(props.meal && props.meal.trim()) && !selectedRecipeId.value) {
+    if (!openedWithMeal.value) return;
+    handleClearMeal();
+    return;
+  }
   emit('saveMeal', props.meal);
 };
 
@@ -169,6 +171,6 @@ const handleClearMeal = async () => {
   emit('update:meal', '');
   emit('update:recipeId', null);
   await nextTick();
-  saveMeal();
+  emit('saveMeal', '');
 };
 </script>
