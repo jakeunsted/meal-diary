@@ -67,6 +67,7 @@ function RootLayoutNav() {
       <Stack.Screen name="privacy" />
       <Stack.Screen name="terms" />
       <Stack.Screen name="support" />
+      <Stack.Screen name="apple-callback" />
     </Stack>
   );
 }

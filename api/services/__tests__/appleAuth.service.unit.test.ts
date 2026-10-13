@@ -109,6 +109,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   clearApplePublicKeyCache();
   process.env.APPLE_BUNDLE_ID = 'uk.co.mealdiary.app';
+  delete process.env.APPLE_SERVICES_ID;
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => ({
@@ -130,6 +131,16 @@ describe('verifyAppleIdToken', () => {
     const idToken = signAppleToken();
 
     await expect(verifyAppleIdToken(idToken, 'different-nonce')).rejects.toThrow('Invalid nonce');
+  });
+
+  it('accepts a token issued for the website Services ID', async () => {
+    process.env.APPLE_SERVICES_ID = 'uk.co.mealdiary.web';
+    const idToken = signAppleToken({}, 'uk.co.mealdiary.web');
+
+    const profile = await verifyAppleIdToken(idToken, RAW_NONCE);
+
+    expect(profile.id).toBe('apple-user-1');
+    expect(profile.email).toBe('ada@example.com');
   });
 
   it('rejects an unverified email', async () => {

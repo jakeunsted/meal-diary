@@ -129,17 +129,33 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 
 Flow: Google ID token → `POST /auth/google/verify-token` on the Express API.
 
-### Sign in with Apple (iOS)
+### Sign in with Apple
 
-The iOS login and registration screens show Sign in with Apple above Google. Android and web keep Google only. There is no mobile env var for Apple.
+iOS login and registration show the system Apple button above Google. The website and Expo web show Apple as well, once a Services ID is configured. Android stays Google only.
 
-On the API (local and production), set the JWT audience to the iOS bundle ID. This is not a secret:
+On the API (local and production):
 
 ```
 APPLE_BUNDLE_ID=uk.co.mealdiary.app
+APPLE_SERVICES_ID=uk.co.mealdiary.web
 ```
 
-In Apple Developer → Identifiers, open the App ID `uk.co.mealdiary.app` and enable **Sign in with Apple**. No Services ID or `.p8` key is required for this native identity-token flow.
+`APPLE_BUNDLE_ID` is the audience for the iOS app. `APPLE_SERVICES_ID` is the audience for the website. Neither is a secret. No `.p8` key is required.
+
+**App ID (iOS).** In Apple Developer → Identifiers, open the App ID `uk.co.mealdiary.app` and enable **Sign in with Apple**.
+
+**Services ID (website).** Identifiers → add a Services ID, for example `uk.co.mealdiary.web`. Enable Sign in with Apple and configure it:
+
+- Primary App ID: `uk.co.mealdiary.app`
+- Domains: `app.mealdiary.co.uk`, plus `localhost` and `dev-app.mealdiary.co.uk` if you sign in there
+- Return URLs:
+  - `https://app.mealdiary.co.uk/auth/apple/callback`
+  - `http://localhost:3000/auth/apple/callback`
+  - `https://dev-app.mealdiary.co.uk/apple-callback` and `http://localhost:3002/apple-callback` for Expo web
+
+Download Apple’s domain verification file and deploy it at `https://app.mealdiary.co.uk/.well-known/apple-developer-domain-association.txt` (put the file in `frontend/public/.well-known/`). Verify the domain, then save the Services ID.
+
+Set `APPLE_SERVICES_ID` on the API and the Nuxt app. For Expo web, set `EXPO_PUBLIC_APPLE_SERVICES_ID` to the same value. The website button stays hidden until that variable is set.
 
 The `expo-apple-authentication` config plugin adds the Sign in with Apple entitlement. Expo Go cannot present the sheet — use an iOS dev build or EAS build, signed into an Apple ID:
 

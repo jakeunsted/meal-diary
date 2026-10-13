@@ -9,6 +9,19 @@
           <hr />
 
           <button
+            v-if="isAppleConfigured"
+            type="button"
+            class="btn w-full bg-black text-white border-black hover:bg-neutral-800"
+            data-testid="apple-signup-button"
+            :disabled="isLoading"
+            @click="handleAppleSignup"
+          >
+            <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M16.365 1.43c0 1.14-.417 2.2-1.246 3.18-.96 1.14-2.12 1.8-3.39 1.7-.12-1.1.42-2.26 1.2-3.18.86-1.02 2.34-1.78 3.436-1.7zM20.7 17.1c-.54 1.24-.8 1.8-1.5 2.9-.98 1.54-2.36 3.46-4.07 3.48-1.52.02-1.91-.99-3.97-1-2.06 0-2.5 1.02-4.02.98-1.71-.04-3.02-1.76-4-3.3-2.74-4.28-3.03-9.3-1.34-11.96 1.2-1.88 3.1-2.98 4.88-2.98 1.82 0 2.96 1 4.47 1 1.47 0 2.36-1 4.46-1 1.58 0 3.26.86 4.46 2.35-3.92 2.15-3.28 7.74.63 9.53z"/>
+            </svg>
+            {{ $t('Sign up with Apple') }}
+          </button>
+          <button
             type="button"
             class="btn btn-outline w-full"
             :disabled="isLoading"
@@ -22,6 +35,12 @@
             </svg>
             {{ $t('Sign up with Google') }}
           </button>
+          <p class="text-xs text-center opacity-70">
+            {{ $t('By continuing, you agree to our') }}
+            <NuxtLink class="link" to="/terms">{{ $t('Terms of Service') }}</NuxtLink>
+            {{ $t('and') }}
+            <NuxtLink class="link" to="/privacy">{{ $t('Privacy Policy') }}</NuxtLink>
+          </p>
 
           <div class="divider">{{ $t('OR') }}</div>
 
@@ -152,6 +171,7 @@ import LegalLinks from '~/components/LegalLinks.vue';
 
 const { performRegistration, storeRegisterString, deleteRegisterString } = useRegister();
 const { signInWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth();
+const { signInWithApple, isLoading: isAppleLoading, isConfigured: isAppleConfigured } = useAppleAuth();
 const { track } = useAnalytics();
 const { t } = useI18n();
 
@@ -162,7 +182,7 @@ const email = ref('');
 const terms_accepted = ref(false);
 const isSubmitting = ref(false);
 
-const isLoading = computed(() => isSubmitting.value || isGoogleLoading.value);
+const isLoading = computed(() => isSubmitting.value || isGoogleLoading.value || isAppleLoading.value);
 
 const passwordRequirementResults = computed(() => evaluatePassword(password.value));
 
@@ -223,6 +243,20 @@ const handleRegistration = async () => {
     errors.value.general = t('registration.errors.failed');
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const handleAppleSignup = async () => {
+  clearErrors();
+  try {
+    const result = await signInWithApple();
+    if (result === 'cancelled') {
+      return;
+    }
+    track('sign_up', { method: 'apple' });
+  } catch (error) {
+    console.error('Apple signup error:', error);
+    errors.value.general = t('registration.errors.appleFailed');
   }
 };
 

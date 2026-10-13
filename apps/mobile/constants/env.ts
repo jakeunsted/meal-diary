@@ -57,6 +57,8 @@ const { apiUrl, webUrl } = resolvePublicUrls({
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
 const googleRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI ?? '';
+const appleServicesId = process.env.EXPO_PUBLIC_APPLE_SERVICES_ID ?? '';
+const appleRedirectUri = process.env.EXPO_PUBLIC_APPLE_REDIRECT_URI ?? '';
 const posthogKey = process.env.EXPO_PUBLIC_POSTHOG_KEY ?? '';
 const posthogHost =
   process.env.EXPO_PUBLIC_POSTHOG_HOST ?? 'https://prxhg.mealdiary.co.uk';
@@ -69,11 +71,14 @@ export const env = {
   googleWebClientId,
   googleAndroidClientId,
   googleRedirectUri,
+  appleServicesId,
+  appleRedirectUri,
   posthogKey,
   posthogHost,
   revenueCatAndroidApiKey,
   revenueCatIosApiKey,
   isGoogleConfigured: googleWebClientId.length > 0,
+  isAppleWebConfigured: appleServicesId.length > 0,
   isRevenueCatConfigured:
     revenueCatAndroidApiKey.length > 0 || revenueCatIosApiKey.length > 0,
 } as const;

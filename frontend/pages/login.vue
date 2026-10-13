@@ -14,6 +14,19 @@
         </div>
 
         <button
+          v-if="isAppleConfigured"
+          type="button"
+          class="btn w-full bg-black text-white border-black hover:bg-neutral-800"
+          data-testid="apple-login-button"
+          :disabled="isLoading"
+          @click="handleAppleLogin"
+        >
+          <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M16.365 1.43c0 1.14-.417 2.2-1.246 3.18-.96 1.14-2.12 1.8-3.39 1.7-.12-1.1.42-2.26 1.2-3.18.86-1.02 2.34-1.78 3.436-1.7zM20.7 17.1c-.54 1.24-.8 1.8-1.5 2.9-.98 1.54-2.36 3.46-4.07 3.48-1.52.02-1.91-.99-3.97-1-2.06 0-2.5 1.02-4.02.98-1.71-.04-3.02-1.76-4-3.3-2.74-4.28-3.03-9.3-1.34-11.96 1.2-1.88 3.1-2.98 4.88-2.98 1.82 0 2.96 1 4.47 1 1.47 0 2.36-1 4.46-1 1.58 0 3.26.86 4.46 2.35-3.92 2.15-3.28 7.74.63 9.53z"/>
+          </svg>
+          {{ $t('Sign in with Apple') }}
+        </button>
+        <button
           type="button"
           class="btn btn-outline w-full"
           data-testid="google-login-button"
@@ -29,7 +42,7 @@
           {{ $t('Sign in with Google') }}
         </button>
         <p class="text-xs text-center opacity-70">
-          {{ $t('By continuing with Google, you agree to our') }}
+          {{ $t('By continuing, you agree to our') }}
           <NuxtLink class="link" to="/terms">{{ $t('Terms of Service') }}</NuxtLink>
           {{ $t('and') }}
           <NuxtLink class="link" to="/privacy">{{ $t('Privacy Policy') }}</NuxtLink>
@@ -113,6 +126,7 @@ import LegalLinks from '~/components/LegalLinks.vue';
 
 const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
 const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
+const { signInWithApple, isLoading: isAppleLoginLoading, error: appleLoginError, isConfigured: isAppleConfigured } = useAppleAuth();
 const { track } = useAnalytics();
 const { reportAuthError } = useAuthAnalytics();
 const route = useRoute();
@@ -129,8 +143,8 @@ const resolvePostLoginRedirect = (defaultRedirect) => {
   return defaultRedirect;
 };
 
-const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value);
-const error = computed(() => emailLoginError.value || googleLoginError.value);
+const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value || isAppleLoginLoading.value);
+const error = computed(() => emailLoginError.value || googleLoginError.value || appleLoginError.value);
 
 onMounted(() => {
   const errorCode = String(route.query.error || '');
@@ -153,6 +167,19 @@ const handleLogin = async () => {
   } catch (err) {
     track('login_failed', { method: 'email' });
     console.error('Login error:', err);
+  }
+};
+
+const handleAppleLogin = async () => {
+  try {
+    const result = await signInWithApple();
+    if (result === 'cancelled') {
+      return;
+    }
+    track('login', { method: 'apple' });
+  } catch (err) {
+    track('login_failed', { method: 'apple' });
+    console.error('Apple login error:', err);
   }
 };
 

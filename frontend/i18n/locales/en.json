@@ -68,7 +68,10 @@
   "Register": "Register",
   "OR": "OR",
   "Sign in with Google": "Sign in with Google",
+  "Sign in with Apple": "Sign in with Apple",
   "Sign up with Google": "Sign up with Google",
+  "Sign up with Apple": "Sign up with Apple",
+  "By continuing, you agree to our": "By continuing, you agree to our",
   "Please enter a valid email address": "Please enter a valid email address",
   "profilePage": {
     "familyMemberLimitOwner": "Your plan allows up to {max} family members.",
@@ -112,7 +115,8 @@
       "termsRequired": "You must accept the terms of service and privacy policy",
       "duplicateAccount": "An account with these details already exists. Try logging in instead.",
       "failed": "Registration failed. Please try again.",
-      "googleFailed": "Google sign-up failed. Please try again."
+      "googleFailed": "Google sign-up failed. Please try again.",
+      "appleFailed": "Apple sign-up failed. Please try again."
     },
     "passwordRequirements": {
       "minLength": "At least 8 characters",
@@ -202,7 +206,6 @@
   "and": "and",
   "You must be at least 13 years old to use Meal Diary.": "You must be at least 13 years old to use Meal Diary.",
   "You must accept the terms of service and privacy policy": "You must accept the terms of service and privacy policy",
-  "By continuing with Google, you agree to our": "By continuing with Google, you agree to our",
   "Last updated": "Last updated",
   "Contact us": "Contact us",
   "Owner": "Owner",
