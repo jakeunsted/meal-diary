@@ -9,6 +9,7 @@ api/dist
 .nuxt
 .output
 .turbo
+.build
 apps/mobile/.expo
 apps/mobile/dist
 apps/mobile/android
