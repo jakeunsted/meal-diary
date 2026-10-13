@@ -4,12 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 
+import { AppleSignInSection } from '@/components/auth/AppleSignInSection';
 import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
+import { env } from '@/constants/env';
 import { ApiError } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { getPostAuthRoute } from '@/lib/auth/helpers';
@@ -68,6 +70,19 @@ export default function LoginScreen() {
         <Text className="text-ice/60 mb-8 text-center">{t('login.subtitle')}</Text>
 
         <Box className="gap-4">
+          <AppleSignInSection
+            label={t('login.signInWithApple')}
+            buttonType="sign-in"
+            showLegal={!env.isGoogleConfigured}
+            dividerPosition={env.isGoogleConfigured ? 'none' : 'below'}
+            disabled={isSubmitting}
+            testID="apple-login-button"
+            onSuccess={() => {
+              const currentUser = useAuthStore.getState().user ?? user;
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
+
           <GoogleSignInSection
             label={t('login.signInWithGoogle')}
             showLegal

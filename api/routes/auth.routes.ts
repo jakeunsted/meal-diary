@@ -1,6 +1,7 @@
 import { Router, type RequestHandler } from 'express';
 import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback } from '../controllers/auth/auth.controller.ts';
 import { verifyGoogleToken } from '../controllers/auth/googleTokenVerification.controller.ts';
+import { verifyAppleToken } from '../controllers/auth/appleTokenVerification.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
 import { loginLimiter, refreshTokenLimiter, validateTokenLimiter, logoutLimiter } from '../middleware/rateLimit.middleware.ts';
 
@@ -86,6 +87,8 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                   examples:
  *                     - Invalid credentials
  *                     - Invalid credentials. Please sign in with Google.
+ *                     - Invalid credentials. Please sign in with Apple.
+ *                     - Invalid credentials. Please sign in with Apple or Google.
  *       500:
  *         description: Server error
  *         content:
@@ -384,5 +387,57 @@ router.get('/google/callback', loginLimiter, wrapHandler(handleGoogleCallback));
  *                   example: Server error during token verification
  */
 router.post('/google/verify-token', loginLimiter, wrapHandler(verifyGoogleToken));
+
+/**
+ * Sign in with Apple identity token verification (native iOS)
+ * @swagger
+ * /apple/verify-token:
+ *   post:
+ *     summary: Verify an Apple identity token and authenticate the user
+ *     description: Verifies a Sign in with Apple identity token from the iOS app and authenticates the user
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - idToken
+ *               - nonce
+ *             properties:
+ *               idToken:
+ *                 type: string
+ *                 description: Apple identity token
+ *               nonce:
+ *                 type: string
+ *                 description: Raw nonce whose SHA-256 hex digest was sent to Apple
+ *               givenName:
+ *                 type: string
+ *                 description: Given name from the first Apple authorization
+ *               familyName:
+ *                 type: string
+ *                 description: Family name from the first Apple authorization
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 user:
+ *                   type: object
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       400:
+ *         description: Missing token, nonce, or email
+ *       401:
+ *         description: Invalid token or nonce
+ *       500:
+ *         description: Server error or Sign in with Apple not configured
+ */
+router.post('/apple/verify-token', loginLimiter, wrapHandler(verifyAppleToken));
 
 export default router; 

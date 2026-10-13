@@ -1,7 +1,8 @@
-import { Linking, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
 
 import { GoogleIcon } from '@/components/auth/GoogleIcon';
+import { AuthOrDivider, SocialAuthLegal } from '@/components/auth/SocialAuthLegal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
@@ -20,17 +21,6 @@ interface GoogleSignInSectionProps {
   testID?: string;
 }
 
-function OrDivider() {
-  const { t } = useTranslation();
-  return (
-    <Box className="flex-row items-center gap-3">
-      <Box className="h-px flex-1 bg-white/10" />
-      <Text className="text-ice/60 text-sm">{t('login.or')}</Text>
-      <Box className="h-px flex-1 bg-white/10" />
-    </Box>
-  );
-}
-
 function GoogleSignInSectionContent({
   label,
   showLegal = false,
@@ -39,7 +29,6 @@ function GoogleSignInSectionContent({
   onSuccess,
   testID = 'google-sign-in-button',
 }: GoogleSignInSectionProps) {
-  const { t } = useTranslation();
   const { signInWithGoogle, isLoading, error } = useGoogleAuth();
 
   const handleGoogleSignIn = async () => {
@@ -51,19 +40,11 @@ function GoogleSignInSectionContent({
     }
   };
 
-  const handleOpenTerms = () => {
-    void Linking.openURL(`${env.webUrl}/terms`);
-  };
-
-  const handleOpenPrivacy = () => {
-    void Linking.openURL(`${env.webUrl}/privacy`);
-  };
-
   const isDisabled = disabled || isLoading;
 
   return (
     <Box className="gap-4">
-      {dividerPosition === 'above' ? <OrDivider /> : null}
+      {dividerPosition === 'above' ? <AuthOrDivider /> : null}
 
       <Button
         variant="outline"
@@ -82,20 +63,9 @@ function GoogleSignInSectionContent({
         </Box>
       ) : null}
 
-      {showLegal ? (
-        <Text className="text-center text-sm leading-5 text-ice/60">
-          {t('login.googleLegalPrefix')}{' '}
-          <Text className="text-primary underline" onPress={handleOpenTerms}>
-            {t('registration.termsOfService')}
-          </Text>{' '}
-          {t('registration.and')}{' '}
-          <Text className="text-primary underline" onPress={handleOpenPrivacy}>
-            {t('registration.privacyPolicy')}
-          </Text>
-        </Text>
-      ) : null}
+      {showLegal ? <SocialAuthLegal /> : null}
 
-      {dividerPosition === 'below' ? <OrDivider /> : null}
+      {dividerPosition === 'below' ? <AuthOrDivider /> : null}
     </Box>
   );
 }

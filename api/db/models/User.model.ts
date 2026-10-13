@@ -9,6 +9,7 @@ export interface UserAttributes {
   normalized_email?: string | null;
   password_hash?: string;
   google_id?: string;
+  apple_id?: string;
   first_name?: string;
   last_name?: string;
   family_group_id?: number | null;
@@ -46,6 +47,10 @@ User.init(
       allowNull: true,
     },
     google_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+    },
+    apple_id: {
       type: DataTypes.STRING(255),
       allowNull: true,
     },
@@ -108,6 +113,11 @@ User.init(
         unique: true,
         name: 'users_google_id_unique',
         fields: ['google_id'],
+      },
+      {
+        unique: true,
+        name: 'users_apple_id_unique',
+        fields: ['apple_id'],
       },
     ],
   }

@@ -35,7 +35,7 @@ describe('User Model', () => {
     await expect(user.validate()).rejects.toThrow(ValidationError);
   });
 
-  it('should declare unique indexes on username, email and google_id', () => {
+  it('should declare unique indexes on username, email, google_id and apple_id', () => {
     const indexes = User.options.indexes ?? [];
 
     expect(indexes).toEqual(
@@ -43,6 +43,7 @@ describe('User Model', () => {
         expect.objectContaining({ unique: true, fields: ['username'] }),
         expect.objectContaining({ unique: true, fields: ['email'] }),
         expect.objectContaining({ unique: true, fields: ['google_id'] }),
+        expect.objectContaining({ unique: true, fields: ['apple_id'] }),
       ])
     );
   });

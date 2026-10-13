@@ -305,7 +305,9 @@ const resources = {
         signIn: 'Sign in',
         or: 'OR',
         signInWithGoogle: 'Sign in with Google',
-        googleLegalPrefix: 'By continuing with Google, you agree to our',
+        signInWithApple: 'Sign in with Apple',
+        socialLegalPrefix: 'By continuing, you agree to our',
+        appleFailed: 'Apple sign-in failed. Please try again.',
         googleFailed: 'Google sign-in failed. Please try again.',
         googleRequiresSecureOrigin:
           'Google Sign-In on web requires HTTPS or localhost. Use https://dev-app.mealdiary.co.uk or http://localhost:3002.',
@@ -338,6 +340,7 @@ const resources = {
         privacyPolicy: 'Privacy Policy',
         register: 'Register',
         signUpWithGoogle: 'Sign up with Google',
+        signUpWithApple: 'Sign up with Apple',
         alreadyHaveAccount: 'Already have an account?',
         signIn: 'Sign in',
         passwordRequirements: {

@@ -11,6 +11,7 @@ import { evaluatePassword } from '@meal-diary/shared';
 
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
+import { AppleSignInSection } from '@/components/auth/AppleSignInSection';
 import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
@@ -155,6 +156,22 @@ export default function RegistrationStep1Screen() {
         </Heading>
 
         <Box className="gap-4">
+          <AppleSignInSection
+            label={t('registration.signUpWithApple')}
+            buttonType="sign-up"
+            showLegal={!env.isGoogleConfigured}
+            dividerPosition={env.isGoogleConfigured ? 'none' : 'below'}
+            disabled={isSubmitting}
+            testID="apple-signup-button"
+            onSuccess={async () => {
+              let currentUser = useAuthStore.getState().user;
+              if (currentUser) {
+                currentUser = await applyPendingFamilyInvite(currentUser);
+              }
+              router.replace(getPostAuthRoute(currentUser));
+            }}
+          />
+
           <GoogleSignInSection
             label={t('registration.signUpWithGoogle')}
             showLegal

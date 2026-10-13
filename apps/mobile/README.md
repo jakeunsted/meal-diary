@@ -129,6 +129,28 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 
 Flow: Google ID token → `POST /auth/google/verify-token` on the Express API.
 
+### Sign in with Apple (iOS)
+
+The iOS login and registration screens show Sign in with Apple above Google. Android and web keep Google only. There is no mobile env var for Apple.
+
+On the API (local and production), set the JWT audience to the iOS bundle ID. This is not a secret:
+
+```
+APPLE_BUNDLE_ID=com.mealdiary.app
+```
+
+In Apple Developer → Identifiers, open the App ID `com.mealdiary.app` and enable **Sign in with Apple**. No Services ID or `.p8` key is required for this native identity-token flow.
+
+The `expo-apple-authentication` config plugin adds the Sign in with Apple entitlement. Expo Go cannot present the sheet — use an iOS dev build or EAS build, signed into an Apple ID:
+
+```bash
+cd apps/mobile
+npx expo prebuild --platform ios
+npx expo run:ios
+```
+
+Flow: Apple identity token → `POST /auth/apple/verify-token` on the Express API.
+
 After changing Google native config, re-run prebuild so the config plugin is applied:
 
 ```bash
@@ -156,7 +178,7 @@ npx expo prebuild --platform android
 npx expo run:android
 ```
 
-EAS Build profiles are in [`eas.json`](./eas.json). iOS builds require an Apple Developer Program membership and a physical device or simulator setup — identifiers are pre-configured in `app.json` but iOS is deferred for now.
+EAS Build profiles are in [`eas.json`](./eas.json). iOS builds require an Apple Developer Program membership and a physical device or simulator setup. Identifiers are in `app.json`. Sign in with Apple setup is in the section above.
 
 ## Stack
 
