@@ -136,10 +136,10 @@ The iOS login and registration screens show Sign in with Apple above Google. And
 On the API (local and production), set the JWT audience to the iOS bundle ID. This is not a secret:
 
 ```
-APPLE_BUNDLE_ID=com.mealdiary.app
+APPLE_BUNDLE_ID=uk.co.mealdiary.app
 ```
 
-In Apple Developer → Identifiers, open the App ID `com.mealdiary.app` and enable **Sign in with Apple**. No Services ID or `.p8` key is required for this native identity-token flow.
+In Apple Developer → Identifiers, open the App ID `uk.co.mealdiary.app` and enable **Sign in with Apple**. No Services ID or `.p8` key is required for this native identity-token flow.
 
 The `expo-apple-authentication` config plugin adds the Sign in with Apple entitlement. Expo Go cannot present the sheet — use an iOS dev build or EAS build, signed into an Apple ID:
 

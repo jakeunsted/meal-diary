@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 process.env.JWT_ACCESS_SECRET = 'unit-test-access-secret';
 process.env.JWT_REFRESH_SECRET = 'unit-test-refresh-secret';
-process.env.APPLE_BUNDLE_ID = 'com.mealdiary.app';
+process.env.APPLE_BUNDLE_ID = 'uk.co.mealdiary.app';
 
 vi.mock('bcrypt', () => ({
   default: {
@@ -48,7 +48,7 @@ const NONCE_HASH = createHash('sha256').update(RAW_NONCE).digest('hex');
 
 function signAppleToken(
   claims: Record<string, unknown> = {},
-  audience = 'com.mealdiary.app'
+  audience = 'uk.co.mealdiary.app'
 ): string {
   const payload: Record<string, unknown> = {
     nonce: NONCE_HASH,
@@ -108,7 +108,7 @@ function userRow(overrides: Partial<FakeUser> = {}): FakeUser {
 beforeEach(() => {
   vi.clearAllMocks();
   clearApplePublicKeyCache();
-  process.env.APPLE_BUNDLE_ID = 'com.mealdiary.app';
+  process.env.APPLE_BUNDLE_ID = 'uk.co.mealdiary.app';
   vi.stubGlobal(
     'fetch',
     vi.fn(async () => ({

@@ -33,7 +33,7 @@ console.log('🔧 CAPACITOR_SERVER_URL:', process.env.CAPACITOR_SERVER_URL || 'n
 console.log('🔧 CAPACITOR_DEV:', process.env.CAPACITOR_DEV || 'not set');
 
 const config: CapacitorConfig = {
-  appId: 'com.mealdiary.app',
+  appId: 'uk.co.mealdiary.app',
   appName: 'meal-diary',
   webDir: '.output/public',
   server: serverUrl

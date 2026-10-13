@@ -25,7 +25,7 @@ describe('bump-mobile-version', () => {
       appJson: {
         expo: {
           version: '1.1.1',
-          ios: { bundleIdentifier: 'com.mealdiary.app' },
+          ios: { bundleIdentifier: 'uk.co.mealdiary.app' },
           android: { versionCode: 5 },
         },
       },
