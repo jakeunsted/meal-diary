@@ -383,6 +383,11 @@
     "askOwnerToUpgrade": "Ask {name} to upgrade for more recipes.",
     "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for more recipes."
   },
+  "workspace": {
+    "profile": "Profile",
+    "switchView": "Choose what this tile shows",
+    "resize": "Resize panes"
+  },
   "recipeDetail": {
     "shoppingListPremium": "Add recipe ingredients to your shopping list with Family Plus.",
     "shoppingListUpgrade": "View plans",

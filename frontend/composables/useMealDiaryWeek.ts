@@ -51,6 +51,11 @@ export const useMealDiaryWeek = () => {
   const lastFetchError = computed(() => mealDiaryStore.lastFetchError);
 
   const syncWeekToRoute = async (weekKey: string) => {
+    // The diary tile is also mounted on /recipes and /shopping-list in the
+    // desktop workspace. Only the diary route should carry the week query.
+    if (route.path !== '/diary') {
+      return;
+    }
     const currentQueryWeek = parseWeekQueryParam(route.query.week);
     if (weekKeysEqual(currentQueryWeek, weekKey)) {
       return;
@@ -92,6 +97,10 @@ export const useMealDiaryWeek = () => {
   const setWeek = async (weekStartDate: Date) => {
     const weekKey = normalizeMealDiaryWeekKey(weekStartDate);
     if (!weekKey) {
+      return;
+    }
+    if (route.path !== '/diary') {
+      await mealDiaryStore.fetchWeeklyMeals(weekStartKeyToLocalDate(weekKey), true);
       return;
     }
     const currentQueryWeek = parseWeekQueryParam(route.query.week);

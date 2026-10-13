@@ -1,56 +1,50 @@
 <template>
-  <div class="p-4">
-    <div class="flex flex-col md:flex-row gap-4">
-      <div class="form-control w-full max-w-lg mx-auto text-center">
-        <label class="label">
-          <span class="label-text">{{ $t('Week Selection') }}</span>
-        </label>
-        <div
-          v-if="!isCurrentWeek"
-          class="mb-3 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 rounded-box border border-primary/20 bg-primary/5 px-4 py-2.5"
-        >
-          <span class="text-sm text-base-content/70">{{ $t(viewingWeekMessageKey) }}</span>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm gap-1.5 w-full sm:w-auto"
-            data-testid="week-this-week-button"
-            @click="emit('goToThisWeek')"
-          >
-            <fa icon="calendar-day" />
-            {{ $t('This week') }}
-          </button>
-        </div>
-        <div class="flex flex-row flex-nowrap items-center gap-2 w-full">
-          <button
-            type="button"
-            class="btn btn-primary shrink-0"
-            data-testid="week-previous-button"
-            @click="handlePreviousWeek"
-            :disabled="!canGoBack"
-          >
-            <fa icon="chevron-left" />
-          </button>
-          <select
-            :value="selectedWeekKey"
-            class="select select-bordered min-w-0 flex-1"
-            data-testid="week-select"
-            @change="handleWeekSelect"
-          >
-            <option v-for="week in filteredWeeks" :key="`${week.year}-${week.number}`" :value="`${week.year}-${week.number}`">
-              {{ $t('Week') }} {{ week.number }}{{ week.year !== selectedYear ? ' ' + week.year : '' }} ({{ week.startDate.toLocaleDateString() }} - {{ week.endDate.toLocaleDateString() }})
-            </option>
-          </select>
-          <button
-            type="button"
-            class="btn btn-primary shrink-0"
-            data-testid="week-next-button"
-            @click="handleNextWeek"
-            :disabled="!canGoForward"
-          >
-            <fa icon="chevron-right" />
-          </button>
-        </div>
-      </div>
+  <div class="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 px-3 py-1.5">
+    <div class="flex min-w-[16rem] max-w-xl flex-1 items-center gap-2">
+      <button
+        type="button"
+        class="btn btn-primary btn-sm shrink-0"
+        data-testid="week-previous-button"
+        @click="handlePreviousWeek"
+        :disabled="!canGoBack"
+      >
+        <fa icon="chevron-left" />
+      </button>
+      <select
+        :value="selectedWeekKey"
+        class="select select-bordered select-sm min-w-0 flex-1"
+        data-testid="week-select"
+        :aria-label="$t('Week Selection')"
+        @change="handleWeekSelect"
+      >
+        <option v-for="week in filteredWeeks" :key="`${week.year}-${week.number}`" :value="`${week.year}-${week.number}`">
+          {{ $t('Week') }} {{ week.number }}{{ week.year !== selectedYear ? ' ' + week.year : '' }} ({{ week.startDate.toLocaleDateString() }} - {{ week.endDate.toLocaleDateString() }})
+        </option>
+      </select>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm shrink-0"
+        data-testid="week-next-button"
+        @click="handleNextWeek"
+        :disabled="!canGoForward"
+      >
+        <fa icon="chevron-right" />
+      </button>
+    </div>
+    <div
+      v-if="!isCurrentWeek"
+      class="flex items-center gap-2"
+    >
+      <span class="text-sm text-base-content/70">{{ $t(viewingWeekMessageKey) }}</span>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm gap-1.5"
+        data-testid="week-this-week-button"
+        @click="emit('goToThisWeek')"
+      >
+        <fa icon="calendar-day" />
+        {{ $t('This week') }}
+      </button>
     </div>
   </div>
 </template>
