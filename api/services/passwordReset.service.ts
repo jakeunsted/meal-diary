@@ -74,11 +74,21 @@ const resetLinkMessage = (resetUrl: string): Omit<MailMessage, 'to'> => {
   };
 };
 
+const resetUrlFor = (rawToken: string, client?: string): string => {
+  const url = new URL(`${frontendBaseUrl()}/reset-password`);
+  url.searchParams.set('token', rawToken);
+  if (client === 'app') {
+    url.searchParams.set('client', 'app');
+  }
+  return url.toString();
+};
+
 /**
  * Email reset instructions when the address belongs to an account.
  * Unknown addresses are ignored so callers can return a generic response.
+ * client "app" adds a flag so the website can hand the link to the mobile app.
  */
-export const requestPasswordReset = async (email: string): Promise<void> => {
+export const requestPasswordReset = async (email: string, client?: string): Promise<void> => {
   const normalizedEmail = email.trim().toLowerCase();
   if (!isValidEmail(normalizedEmail)) {
     return;
@@ -113,7 +123,7 @@ export const requestPasswordReset = async (email: string): Promise<void> => {
     expires_at: expiresAt,
   });
 
-  const resetUrl = `${frontendBaseUrl()}/reset-password?token=${encodeURIComponent(rawToken)}`;
+  const resetUrl = resetUrlFor(rawToken, client);
   await sendMailSafely({
     to: user.email,
     ...resetLinkMessage(resetUrl),

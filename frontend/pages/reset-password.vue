@@ -10,6 +10,15 @@
           {{ $t('Choose a new password for your account.') }}
         </p>
 
+        <a
+          v-if="openInApp"
+          class="btn btn-outline w-full"
+          data-testid="open-in-app-link"
+          :href="appResetUrl"
+        >
+          {{ $t('Open in the Meal Diary app') }}
+        </a>
+
         <form class="space-y-4" data-testid="reset-password-form" @submit.prevent="handleResetPassword">
           <div class="form-control">
             <label class="label">
@@ -89,6 +98,16 @@ const token = computed(() => {
   return typeof value === 'string' ? value : '';
 });
 
+const openInApp = computed(() => route.query.client === 'app' && token.value.length > 0);
+const appResetUrl = computed(() => `mealdiary://reset-password?token=${encodeURIComponent(token.value)}`);
+
+const isPhoneClient = (): boolean => {
+  if (!import.meta.client) {
+    return false;
+  }
+  return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+};
+
 const password = ref('');
 const confirmPassword = ref('');
 const error = ref('');
@@ -135,6 +154,12 @@ const handleResetPassword = async () => {
     isLoading.value = false;
   }
 };
+
+onMounted(() => {
+  if (openInApp.value && isPhoneClient()) {
+    window.location.href = appResetUrl.value;
+  }
+});
 
 watch(token, (value) => {
   if (!value) {

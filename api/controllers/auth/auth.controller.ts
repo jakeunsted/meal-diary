@@ -428,8 +428,10 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     return;
   }
 
+  const client = typeof req.body?.client === 'string' ? req.body.client : undefined;
+
   try {
-    await requestPasswordReset(email);
+    await requestPasswordReset(email, client);
     res.status(200).json({ message: FORGOT_PASSWORD_MESSAGE });
   } catch (error) {
     console.error('Forgot password error:', error);

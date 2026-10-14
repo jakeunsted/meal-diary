@@ -89,6 +89,7 @@ describe('requestPasswordReset', () => {
     expect(message.to).toBe('user@example.com');
     expect(message.subject).toBe('Reset your Meal Diary password');
     expect(message.text).toContain('http://localhost:3000/reset-password?token=');
+    expect(message.text).not.toContain('client=app');
 
     const tokenMatch = message.text.match(/token=(\S+)/);
     expect(tokenMatch).toBeTruthy();
@@ -99,6 +100,27 @@ describe('requestPasswordReset', () => {
       user_id: 4,
       token_hash: tokenHash,
     }));
+  });
+
+  it('adds client=app to the reset link only when the request asks for the app', async () => {
+    vi.mocked(User.findOne).mockResolvedValue({
+      id: 4,
+      email: 'user@example.com',
+      password_hash: 'existing-hash',
+    } as never);
+    vi.mocked(PasswordResetToken.destroy).mockResolvedValue(1 as never);
+    vi.mocked(PasswordResetToken.create).mockResolvedValue({} as never);
+
+    await requestPasswordReset('user@example.com', 'app');
+
+    const appMessage = sendMailMock.mock.calls[0][0] as { text: string };
+    expect(appMessage.text).toContain('client=app');
+
+    sendMailMock.mockClear();
+    await requestPasswordReset('user@example.com', 'web');
+
+    const webMessage = sendMailMock.mock.calls[0][0] as { text: string };
+    expect(webMessage.text).not.toContain('client=app');
   });
 
   it('emails Google-only accounts without a reset link or token', async () => {

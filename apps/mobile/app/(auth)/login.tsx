@@ -1,4 +1,4 @@
-import { Link, useRouter } from 'expo-router';
+import { Link, useRouter, type Href } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput } from 'react-native';
@@ -124,6 +124,12 @@ export default function LoginScreen() {
               testID="login-password-input"
             />
           </Box>
+
+          <Link href={'/(auth)/forgot-password' as Href} asChild>
+            <Pressable testID="forgot-password-link" className="self-end">
+              <Text className="text-sm text-primary">{t('login.forgotPassword')}</Text>
+            </Pressable>
+          </Link>
 
           {errorMessage && (
             <Box className="rounded-lg bg-red-500/15 px-4 py-3">
