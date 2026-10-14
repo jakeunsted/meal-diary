@@ -155,7 +155,7 @@ APPLE_SERVICES_ID=uk.co.mealdiary.web
 
 Download Apple’s domain verification file and deploy it at `https://app.mealdiary.co.uk/.well-known/apple-developer-domain-association.txt` (put the file in `frontend/public/.well-known/`). Verify the domain, then save the Services ID.
 
-Set `APPLE_SERVICES_ID` on the API and the Nuxt app. For Expo web, set `EXPO_PUBLIC_APPLE_SERVICES_ID` to the same value. The website button stays hidden until that variable is set.
+Set `APPLE_SERVICES_ID` on the API and the Nuxt app. Nuxt also accepts `NUXT_PUBLIC_APPLE_SERVICES_ID` if the value is injected when the server starts rather than when the image is built. For Expo web, set `EXPO_PUBLIC_APPLE_SERVICES_ID` to the same value. The website button stays hidden until that variable is set.
 
 The `expo-apple-authentication` config plugin adds the Sign in with Apple entitlement. Expo Go cannot present the sheet — use an iOS dev build or EAS build, signed into an Apple ID:
 
