@@ -2,7 +2,7 @@
   "expo": {
     "name": "Meal Diary",
     "slug": "meal-diary",
-    "version": "1.5.0",
+    "version": "1.5.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mealdiary",
@@ -15,11 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "uk.co.mealdiary.app",
-      "buildNumber": "14"
+      "buildNumber": "15"
     },
     "android": {
       "package": "uk.co.mealdiary.app",
-      "versionCode": 14,
+      "versionCode": 15,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -69,6 +69,9 @@
       [
         "expo-build-properties",
         {
+          "ios": {
+            "enableSceneSupport": true
+          },
           "android": {
             "enableMinifyInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true
