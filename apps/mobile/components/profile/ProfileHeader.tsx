@@ -77,7 +77,7 @@ export function ProfileHeader({ user, isLoading, error }: ProfileHeaderProps) {
   };
 
   return (
-    <Box className="mb-8 items-center">
+    <Box className="mb-8 items-center px-4">
       <Box className="mb-4">
         <MemberAvatar avatarUrl={user.avatar_url} size={128} />
       </Box>

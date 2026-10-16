@@ -114,7 +114,7 @@ export default function ProfileScreen() {
 
         <AccountCard />
 
-        <LegalLinks className="mt-8" />
+        <LegalLinks className="my-8" />
       </ScrollView>
 
       <InviteModal
