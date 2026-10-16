@@ -4,10 +4,12 @@ import {
   ActivityIndicator,
   Pressable,
   ScrollView,
+  StyleSheet,
   TextInput,
+  View,
 } from 'react-native';
 
-import { DialogModal, DialogPanel } from '@/components/ui/DialogModal';
+import { DialogModal, DialogPanel, dialogBackdropStyle } from '@/components/ui/DialogModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
@@ -72,12 +74,11 @@ export function SetMealModal({
     : `— ${t('diary.orTypeMealName')} —`;
 
   return (
-    <>
-      <DialogModal
-        visible={visible}
-        onClose={handleClose}
-        testID="set-meal-modal"
-      >
+    <DialogModal
+      visible={visible}
+      onClose={handleClose}
+      testID="set-meal-modal"
+    >
         <DialogPanel>
           <Heading size="lg" className="text-ice mb-4">
             {t('diary.setMealTitle')}
@@ -163,51 +164,62 @@ export function SetMealModal({
             </Button>
           </Box>
         </DialogPanel>
-      </DialogModal>
 
-      <DialogModal
-        visible={recipePickerVisible}
-        onClose={() => setRecipePickerVisible(false)}
-        placement="bottom"
-      >
-        <DialogPanel className="w-full max-h-[70%] rounded-t-2xl bg-surface p-4">
-          <Text className="text-ice mb-3 text-center text-base font-semibold">
-            {t('diary.selectRecipe')}
-          </Text>
-          <ScrollView keyboardShouldPersistTaps="handled">
+        {recipePickerVisible ? (
+          <View style={[StyleSheet.absoluteFill, styles.recipePicker]}>
             <Pressable
-              onPress={() => handleSelectRecipe(null, '')}
-              className={`mb-2 rounded-lg px-4 py-3 ${!recipeId ? 'bg-primary/20' : 'bg-base'}`}
-              testID="set-meal-recipe-option-custom"
-            >
-              <Text className={`text-sm ${!recipeId ? 'text-primary' : 'text-ice'}`}>
-                — {t('diary.orTypeMealName')} —
+              style={[StyleSheet.absoluteFill, dialogBackdropStyle]}
+              onPress={() => setRecipePickerVisible(false)}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.close')}
+            />
+            <DialogPanel className="w-full max-h-[70%] rounded-t-2xl bg-surface p-4">
+              <Text className="text-ice mb-3 text-center text-base font-semibold">
+                {t('diary.selectRecipe')}
               </Text>
-            </Pressable>
-            {recipes.map((recipe) => {
-              const isSelected = recipeId === recipe.id;
-              return (
+              <ScrollView keyboardShouldPersistTaps="handled">
                 <Pressable
-                  key={recipe.id}
-                  onPress={() => handleSelectRecipe(recipe.id, recipe.name)}
-                  className={`mb-2 rounded-lg px-4 py-3 ${isSelected ? 'bg-primary/20' : 'bg-base'}`}
-                  testID={`set-meal-recipe-option-${recipe.id}`}
+                  onPress={() => handleSelectRecipe(null, '')}
+                  className={`mb-2 rounded-lg px-4 py-3 ${!recipeId ? 'bg-primary/20' : 'bg-base'}`}
+                  testID="set-meal-recipe-option-custom"
                 >
-                  <Text
-                    className={`text-sm ${isSelected ? 'text-primary' : 'text-ice'}`}
-                    numberOfLines={2}
-                  >
-                    {recipe.name}
+                  <Text className={`text-sm ${!recipeId ? 'text-primary' : 'text-ice'}`}>
+                    — {t('diary.orTypeMealName')} —
                   </Text>
                 </Pressable>
-              );
-            })}
-          </ScrollView>
-          <Button variant="outline" onPress={() => setRecipePickerVisible(false)} className="mt-2">
-            <ButtonText>{t('common.close')}</ButtonText>
-          </Button>
-        </DialogPanel>
-      </DialogModal>
-    </>
+                {recipes.map((recipe) => {
+                  const isSelected = recipeId === recipe.id;
+                  return (
+                    <Pressable
+                      key={recipe.id}
+                      onPress={() => handleSelectRecipe(recipe.id, recipe.name)}
+                      className={`mb-2 rounded-lg px-4 py-3 ${isSelected ? 'bg-primary/20' : 'bg-base'}`}
+                      testID={`set-meal-recipe-option-${recipe.id}`}
+                    >
+                      <Text
+                        className={`text-sm ${isSelected ? 'text-primary' : 'text-ice'}`}
+                        numberOfLines={2}
+                      >
+                        {recipe.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+              <Button variant="outline" onPress={() => setRecipePickerVisible(false)} className="mt-2">
+                <ButtonText>{t('common.close')}</ButtonText>
+              </Button>
+            </DialogPanel>
+          </View>
+        ) : null}
+    </DialogModal>
   );
 }
+
+const styles = StyleSheet.create({
+  recipePicker: {
+    zIndex: 2,
+    elevation: 25,
+    justifyContent: 'flex-end',
+  },
+});
