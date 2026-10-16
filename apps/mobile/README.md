@@ -97,6 +97,7 @@ Set the same **Web application** OAuth client ID as the API `GOOGLE_CLIENT_ID`. 
 |----------|---------|
 | `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Web client ID (required — used as `webClientId` for native ID tokens + API audience check) |
 | `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | Android OAuth client for `uk.co.mealdiary.app` (Console setup; native SDK picks it via package + SHA-1) |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Optional iOS OAuth client. When unset, the app sends the web client ID. That value must be the reverse of `iosUrlScheme` in `app.json`. |
 
 **Android uses the native Google Sign-In SDK** (`@react-native-google-signin/google-signin`), not browser/`expo-auth-session` redirects. Web still uses `expo-auth-session`.
 

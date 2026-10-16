@@ -56,6 +56,10 @@ const { apiUrl, webUrl } = resolvePublicUrls({
 });
 const googleWebClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID ?? '';
+// iOS needs its own client ID. The app URL scheme is the reverse of the web client,
+// so that ID is the fallback until a dedicated iOS OAuth client is set.
+const googleIosClientId =
+  process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() || googleWebClientId;
 const googleRedirectUri = process.env.EXPO_PUBLIC_GOOGLE_REDIRECT_URI ?? '';
 const appleServicesId = process.env.EXPO_PUBLIC_APPLE_SERVICES_ID ?? '';
 const appleRedirectUri = process.env.EXPO_PUBLIC_APPLE_REDIRECT_URI ?? '';
@@ -70,6 +74,7 @@ export const env = {
   webUrl,
   googleWebClientId,
   googleAndroidClientId,
+  googleIosClientId,
   googleRedirectUri,
   appleServicesId,
   appleRedirectUri,

@@ -9,7 +9,11 @@ import type { User } from '@/types/api';
 
 interface GoogleSignInModule {
   GoogleSignin: {
-    configure: (options: { webClientId: string; offlineAccess: boolean }) => void;
+    configure: (options: {
+      webClientId: string;
+      iosClientId?: string;
+      offlineAccess: boolean;
+    }) => void;
     hasPlayServices: (options: { showPlayServicesUpdateDialog: boolean }) => Promise<void>;
     signIn: () => Promise<{ type: string; data: { idToken: string | null } }>;
   };
@@ -51,8 +55,10 @@ function ensureGoogleSignInConfigured() {
   const { GoogleSignin } = getGoogleSignInModule();
 
   // webClientId is required so the native SDK returns an idToken the API can verify.
+  // iOS also requires iosClientId; without it sign-in throws before the account sheet opens.
   GoogleSignin.configure({
     webClientId: env.googleWebClientId,
+    iosClientId: env.googleIosClientId,
     offlineAccess: false,
   });
   isConfigured = true;
