@@ -146,7 +146,7 @@ export default function RecipeDetailScreen() {
   };
 
   return (
-    <Box className="flex-1 bg-base">
+    <Box className="flex-1 bg-base px-4">
       <ScrollView
         className="flex-1"
         contentContainerClassName="px-4 pb-8"
