@@ -165,7 +165,7 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
   const accessToken = jwt.sign(
     { userId },
     accessSecret,
-    { expiresIn: '2m' } // Short-lived access token
+    { expiresIn: '10m' } // Short-lived access token
   );
   
   // Generate a unique identifier for the refresh token
