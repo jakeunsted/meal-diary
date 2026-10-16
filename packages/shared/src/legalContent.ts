@@ -37,7 +37,7 @@ export interface SupportPage {
 export const privacyPage: PrivacyPage = {
   intro:
     'This policy explains what personal data Meal Diary collects, why we collect it, and the rights you have over it. It applies to the Meal Diary apps and the website at mealdiary.co.uk.',
-  lastUpdated: 'July 2026',
+  lastUpdated: 'October 2026',
   sections: [
     {
       title: 'Who we are',
@@ -86,7 +86,7 @@ export const privacyPage: PrivacyPage = {
     {
       title: 'Analytics and consent',
       body: [
-        'We do not load analytics until you choose to allow them. You can change your mind at any time in your profile settings, and we will stop collecting analytics data and delete your analytics profile.',
+        'We do not load analytics until you choose to allow them. You can change your mind at any time in your profile settings, and we will stop collecting analytics data immediately. Your analytics profile is removed when you delete your account, or when you ask us to remove it.',
       ],
     },
     {

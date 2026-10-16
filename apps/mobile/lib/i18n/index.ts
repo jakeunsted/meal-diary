@@ -475,6 +475,16 @@ const resources = {
           yourDataTitle: 'Your Meal Diary data',
         },
       },
+      analyticsConsent: {
+        title: 'Analytics',
+        body: 'Allow optional analytics so we can see how Meal Diary is used, including screens and error reports, and improve it. Meal Diary works either way. You can change this later in Profile.',
+        allow: 'Allow',
+        deny: 'No thanks',
+        privacyPolicy: 'Privacy Policy',
+        profileLabel: 'Analytics',
+        profileDescription:
+          'Share how you use Meal Diary, including screens and error reports, so we can improve it.',
+      },
       privacyPage,
       termsPage,
       supportPage,

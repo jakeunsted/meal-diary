@@ -10,11 +10,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AnalyticsConsentModal } from '@/components/analytics/AnalyticsConsentModal';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
 import { colors } from '@/constants/theme';
 import '@/global.css';
 import '@/lib/i18n';
-import { posthogClient } from '@/lib/analytics/posthog';
+import { useAnalyticsConsent } from '@/lib/analytics/consent';
+import { isAnalyticsDevBuild, posthogClient } from '@/lib/analytics/posthog';
 import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -74,6 +76,9 @@ function RootLayoutNav() {
 }
 
 function OptionalPostHogProvider({ children }: { children: ReactNode }) {
+  const { loaded, choice } = useAnalyticsConsent();
+  const captureScreens = loaded && choice === 'granted' && !isAnalyticsDevBuild;
+
   if (!posthogClient) {
     return children;
   }
@@ -83,7 +88,7 @@ function OptionalPostHogProvider({ children }: { children: ReactNode }) {
       client={posthogClient}
       autocapture={{
         captureTouches: false,
-        captureScreens: true,
+        captureScreens,
       }}
     >
       {children}
@@ -124,6 +129,7 @@ export default function RootLayout() {
                 preserveEdgeToEdge
               >
                 <RootLayoutNav />
+                <AnalyticsConsentModal />
               </KeyboardProvider>
             </GestureHandlerRootView>
           </SafeAreaProvider>

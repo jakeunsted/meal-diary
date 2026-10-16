@@ -51,7 +51,7 @@ Docker requires these workarounds in the Cloud Agent environment:
 
 - The API uses `tsx` for TypeScript execution in dev/start scripts.
 - Google OAuth is optional; the app functions without `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`.
-- PostHog analytics is optional; warnings about missing `POSTHOG_KEY` are harmless. Feature flag keys live in `packages/shared` (`FEATURE_FLAGS`); create matching flags in the PostHog UI. Nuxt loads PostHog for flags even without analytics consent / on localhost (capture stays opted out). Mobile: set `EXPO_PUBLIC_POSTHOG_KEY` (see `apps/mobile/.env.example`); capture is opted out in `__DEV__`. Mobile has no analytics consent UI yet.
+- PostHog analytics is optional; warnings about missing `POSTHOG_KEY` are harmless. Feature flag keys live in `packages/shared` (`FEATURE_FLAGS`); create matching flags in the PostHog UI. Nuxt loads PostHog for flags even without analytics consent / on localhost (capture stays opted out). Mobile: set `EXPO_PUBLIC_POSTHOG_KEY` (see `apps/mobile/.env.example`); capture stays off until the person allows analytics, and stays off in `__DEV__` even after that. Flags still evaluate.
 - After login, new users are redirected to `/registration/step-2` to create or join a family group before accessing the diary.
 - Some API tests have pre-existing failures related to `FamilyGroup.random_identifier` validation and `RefreshToken` unique constraint; these are not environment issues.
 - New deployable services should be added under `apps/` and will be picked up automatically by npm workspaces and Turborepo.

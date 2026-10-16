@@ -1,6 +1,7 @@
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Pressable, Switch } from 'react-native';
 
 import { DeleteAccountModal } from '@/components/profile/DeleteAccountModal';
 import { ProfileCard } from '@/components/profile/ProfileCard';
@@ -9,6 +10,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { saveDataExport } from '@/lib/account/saveDataExport';
 import { ApiError } from '@/lib/api/client';
+import { useAnalyticsConsent } from '@/lib/analytics/consent';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { exportUserData } from '@/lib/queries/account';
 
@@ -21,6 +23,9 @@ export function AccountCard() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [isUpdatingConsent, setIsUpdatingConsent] = useState(false);
+  const { loaded: consentLoaded, choice, grant, deny } = useAnalyticsConsent();
+  const analyticsEnabled = choice === 'granted';
 
   const handleLogout = async () => {
     if (isLoggingOut) return;
@@ -31,6 +36,14 @@ export function AccountCard() {
     } finally {
       setIsLoggingOut(false);
     }
+  };
+
+  const handleAnalyticsChange = (enabled: boolean) => {
+    if (!consentLoaded || isUpdatingConsent || enabled === analyticsEnabled) {
+      return;
+    }
+    setIsUpdatingConsent(true);
+    void (enabled ? grant() : deny()).finally(() => setIsUpdatingConsent(false));
   };
 
   const handleDownloadData = async () => {
@@ -59,6 +72,29 @@ export function AccountCard() {
     <>
       <ProfileCard title={t('profile.accountTitle')}>
         <Text className="text-ice/70 mb-4 text-sm">{t('profile.accountDescription')}</Text>
+
+        <Box className="mb-4 flex-row items-start justify-between gap-3">
+          <Box className="flex-1">
+            <Text className="text-ice text-sm">{t('analyticsConsent.profileLabel')}</Text>
+            <Text className="text-ice/70 mt-1 text-sm">{t('analyticsConsent.profileDescription')}</Text>
+            <Link href="/privacy" asChild>
+              <Pressable accessibilityRole="link" testID="analytics-consent-privacy-link">
+                <Text className="text-primary mt-1 text-sm underline">
+                  {t('analyticsConsent.privacyPolicy')}
+                </Text>
+              </Pressable>
+            </Link>
+          </Box>
+          <Switch
+            value={analyticsEnabled}
+            onValueChange={handleAnalyticsChange}
+            disabled={!consentLoaded || isUpdatingConsent}
+            trackColor={{ false: 'rgba(241, 245, 249, 0.2)', true: '#6366F1' }}
+            thumbColor="#F1F5F9"
+            accessibilityLabel={t('analyticsConsent.profileLabel')}
+            testID="analytics-consent-switch"
+          />
+        </Box>
 
         <Box className="w-full gap-3">
           <Button

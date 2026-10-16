@@ -216,7 +216,7 @@ import { useFeatureFlag } from '@/lib/feature-flags/useFeatureFlag';
 const enabled = useFeatureFlag(FEATURE_FLAGS.featureFlagsEnabled);
 ```
 
-Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env`. Leave the key empty to disable PostHog. In `__DEV__`, analytics capture is opted out while flags still evaluate. Mobile has no analytics consent UI yet (Nuxt gates capture via Silktide separately).
+Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env`. Leave the key empty to disable PostHog. In `__DEV__`, analytics capture stays off while flags still evaluate. Release builds stay opted out until the person allows analytics. They can change that choice in Profile.
 
 ## Gotchas
 
