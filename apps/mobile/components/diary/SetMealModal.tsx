@@ -153,7 +153,7 @@ export function SetMealModal({
             ) : null}
 
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               disabled={isLoading || !canSave}
               onPress={onSave}
