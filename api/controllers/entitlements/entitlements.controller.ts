@@ -2,10 +2,11 @@ import type { Request, Response } from 'express';
 import { User } from '../../db/models/associations.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 export const getFamilyEntitlements = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id ?? '', 10);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     const user = req.user as User | undefined;
 
     if (Number.isNaN(familyGroupId)) {
@@ -30,7 +31,7 @@ export const getFamilyEntitlements = async (req: Request, res: Response) => {
 
 export const dismissEntitlementPrompt = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id ?? '', 10);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     const user = req.user as User | undefined;
     const { prompt } = req.body as { prompt?: string };
 

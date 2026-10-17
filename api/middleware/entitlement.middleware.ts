@@ -6,6 +6,7 @@ import {
   type ResolvedEntitlements,
 } from '../services/entitlements.service.ts';
 import type User from '../db/models/User.model.ts';
+import { routeParamInt } from '../utils/routeParam.ts';
 
 declare global {
   namespace Express {
@@ -16,8 +17,9 @@ declare global {
 }
 
 const parseFamilyGroupId = (req: Request): number | null => {
-  const raw = req.params.family_group_id ?? req.params.id;
-  const familyGroupId = parseInt(raw ?? '', 10);
+  const familyGroupId = routeParamInt(
+    req.params.family_group_id ?? req.params.id
+  );
   return Number.isNaN(familyGroupId) ? null : familyGroupId;
 };
 

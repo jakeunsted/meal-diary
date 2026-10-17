@@ -8,6 +8,7 @@ import {
   InvalidRecipeImportUrlError,
   RecipeImportParseError,
 } from '../../services/recipe-import/errors.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 /**
  * Get all recipes for a family group
@@ -22,7 +23,7 @@ export const getRecipes = async (req: Request, res: Response) => {
     }
 
     const recipes = await recipeService.getRecipesByFamilyGroup(
-      parseInt(family_group_id),
+      routeParamInt(family_group_id),
       search as string | undefined
     );
 
@@ -44,7 +45,7 @@ export const getRecipeById = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Recipe ID is required' });
     }
 
-    const recipe = await recipeService.getRecipeById(parseInt(id));
+    const recipe = await recipeService.getRecipeById(routeParamInt(id));
 
     if (!recipe) {
       return res.status(404).json({ message: 'Recipe not found' });
@@ -168,7 +169,7 @@ export const updateRecipe = async (req: Request, res: Response) => {
     }
 
     // Verify recipe exists and belongs to the user's family
-    const existingRecipe = await recipeService.getRecipeById(parseInt(id));
+    const existingRecipe = await recipeService.getRecipeById(routeParamInt(id));
     if (!existingRecipe) {
       return res.status(404).json({ message: 'Recipe not found' });
     }
@@ -177,7 +178,7 @@ export const updateRecipe = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const recipe = await recipeService.updateRecipe(parseInt(id), {
+    const recipe = await recipeService.updateRecipe(routeParamInt(id), {
       name,
       description,
       instructions,
@@ -203,7 +204,7 @@ export const deleteRecipe = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Recipe ID is required' });
     }
 
-    const existingRecipe = await recipeService.getRecipeById(parseInt(id));
+    const existingRecipe = await recipeService.getRecipeById(routeParamInt(id));
     if (!existingRecipe) {
       return res.status(404).json({ message: 'Recipe not found' });
     }
@@ -212,7 +213,7 @@ export const deleteRecipe = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    await recipeService.deleteRecipe(parseInt(id));
+    await recipeService.deleteRecipe(routeParamInt(id));
 
     return res.status(200).json({ message: 'Recipe deleted successfully' });
   } catch (error) {

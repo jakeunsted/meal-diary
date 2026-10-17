@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
+import { routeParamInt } from '../utils/routeParam.ts';
 
 // Extend Express Request type to include user
 declare global {
@@ -64,7 +65,7 @@ export const requireSelf = (
   res: Response,
   next: NextFunction
 ): void => {
-  const targetId = parseInt(req.params.id);
+  const targetId = routeParamInt(req.params.id);
   const user = req.user as User | undefined;
 
   if (!user || isNaN(targetId) || user.dataValues.id !== targetId) {
@@ -85,7 +86,7 @@ export const requireFamilyMember = (
   res: Response,
   next: NextFunction
 ): void => {
-  const familyGroupId = parseInt(req.params.family_group_id);
+  const familyGroupId = routeParamInt(req.params.family_group_id);
   const user = req.user as User | undefined;
 
   if (isNaN(familyGroupId)) {

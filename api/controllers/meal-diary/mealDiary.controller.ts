@@ -11,6 +11,7 @@ import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { trackEvent } from '../../utils/posthog.ts';
 import { User } from '../../db/models/associations.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 // Create a new meal diary
 export const createMealDiary = async (req: Request, res: Response) => {
@@ -51,7 +52,7 @@ export const getMealDiaryByFamilyGroupId = async (req: Request, res: Response) =
 
     // Find meal diary by family group ID
     let mealDiary = await MealDiary.findOne({
-      where: { family_group_id: parseInt(family_group_id) }
+      where: { family_group_id: routeParamInt(family_group_id) }
     });
 
     // if no meal diary, create a new one
@@ -60,7 +61,7 @@ export const getMealDiaryByFamilyGroupId = async (req: Request, res: Response) =
       const monday = new Date();
       monday.setDate(monday.getDate() - (monday.getDay() || 7) + 1);
       mealDiary = await MealDiary.create({
-        family_group_id: parseInt(family_group_id),
+        family_group_id: routeParamInt(family_group_id),
         week_start_date: monday
       });
     }
@@ -83,7 +84,9 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       return res.status(400).json({ message: 'Family group ID and week start date are required' });
     }
 
-    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+    const familyGroupId = routeParamInt(family_group_id);
+
+    if (user?.dataValues.family_group_id !== familyGroupId) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -94,7 +97,7 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
 
     try {
       await EntitlementsService.assertCanNavigateWeek(
-        parseInt(family_group_id),
+        familyGroupId,
         user.dataValues.id,
         parsedDate
       );
@@ -106,13 +109,13 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
     }
 
     let weeklyMeals = await getWeeklyMeals(
-      parseInt(family_group_id),
+      familyGroupId,
       parsedDate
     );
 
     // if no weekly meals yet, create the diary and return empty meals
     if (!weeklyMeals) {
-      weeklyMeals = await createNewWeeklyMeals(parseInt(family_group_id), parsedDate);
+      weeklyMeals = await createNewWeeklyMeals(familyGroupId, parsedDate);
     }
 
     if (user) {
@@ -121,7 +124,7 @@ export const getWeeklyMealsForFamilyGroup = async (req: Request, res: Response) 
       ).length;
       
       trackEvent(user.dataValues.id.toString(), 'diary_loaded', {
-        family_group_id: parseInt(family_group_id),
+        family_group_id: familyGroupId,
         week_start_date: week_start_date as string,
         meals_with_content: mealsWithContent,
         total_days: weeklyMeals.length,
@@ -160,7 +163,9 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
       });
     }
 
-    if (user?.dataValues.family_group_id !== parseInt(family_group_id)) {
+    const familyGroupId = routeParamInt(family_group_id);
+
+    if (user?.dataValues.family_group_id !== familyGroupId) {
       return res.status(403).json({ message: 'Access denied' });
     }
 
@@ -176,7 +181,7 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
 
     try {
       await EntitlementsService.assertCanUpdateMealWeek(
-        parseInt(family_group_id),
+        familyGroupId,
         user.dataValues.id,
         parsedDate
       );
@@ -204,7 +209,6 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     if (lunch_recipe_id !== undefined) legacyUpdates.lunch_recipe_id = lunch_recipe_id;
     if (dinner_recipe_id !== undefined) legacyUpdates.dinner_recipe_id = dinner_recipe_id;
 
-    const familyGroupId = parseInt(family_group_id);
     const weekStartDateStr =
       typeof week_start_date === 'string' ? week_start_date : undefined;
     const { meal: updatedMeal, response: responseBody } = await updateDailyMealWithSlots(

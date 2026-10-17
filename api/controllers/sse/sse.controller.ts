@@ -3,12 +3,13 @@ import {
   getLatestFamilyEvents,
   subscribeFamilyEvents,
 } from '../../services/sse.service.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 /**
  * Opens a family-scoped SSE stream for shopping list and meal diary events.
  */
 export const subscribeFamilySse = (req: Request, res: Response): void => {
-  const familyGroupId = parseInt(req.params.family_group_id, 10);
+  const familyGroupId = routeParamInt(req.params.family_group_id);
 
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
