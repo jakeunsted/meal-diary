@@ -11,6 +11,40 @@ import { HttpError } from '../utils/httpError.ts';
 const REFRESH_TOKEN_TTL_DAYS = 28;
 const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 
+const hashRefreshToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+const activeRefreshTokenWhere = (tokenValue: string) => ({
+  token: tokenValue,
+  is_revoked: false,
+  expires_at: { [Op.gt]: new Date() },
+});
+
+/**
+ * Look up a stored refresh session by SHA-256 hash, with a one-time upgrade path
+ * for rows that still store the raw JWT from before hashing was introduced.
+ */
+const findActiveRefreshToken = async (refreshToken: string): Promise<RefreshToken | null> => {
+  const tokenHash = hashRefreshToken(refreshToken);
+  const byHash = await RefreshToken.findOne({
+    where: activeRefreshTokenWhere(tokenHash),
+  });
+  if (byHash) {
+    return byHash;
+  }
+
+  const byPlaintext = await RefreshToken.findOne({
+    where: activeRefreshTokenWhere(refreshToken),
+  });
+  if (byPlaintext) {
+    await byPlaintext.update({ token: tokenHash });
+    return byPlaintext;
+  }
+
+  return null;
+};
+
 export interface GoogleProfile {
   id: string;
   email?: string;
@@ -193,12 +227,12 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
     { expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` }
   );
   
-  // Store refresh token in database (multi-session: do not delete other sessions)
+  // Store only the hash (multi-session: do not delete other sessions)
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
 
   await RefreshToken.create({
-    token: refreshToken,
+    token: hashRefreshToken(refreshToken),
     user_id: userId,
     expires_at: expiresAt,
     is_revoked: false
@@ -261,24 +295,16 @@ export const verifyRefreshToken = async (
     throw new Error('JWT_REFRESH_SECRET not configured');
   }
   
-  // Verify refresh token
+  // Verify refresh token signature/expiry
   let decoded: { userId: number; tokenId?: string };
   try {
     decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number; tokenId?: string };
   } catch {
     throw new Error('Invalid or expired refresh token');
   }
-  
-  const storedToken = await RefreshToken.findOne({
-    where: {
-      token: refreshToken,
-      is_revoked: false,
-      expires_at: {
-        [Op.gt]: new Date() // Token hasn't expired
-      }
-    }
-  });
-  
+
+  const storedToken = await findActiveRefreshToken(refreshToken);
+
   if (!storedToken) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -295,7 +321,7 @@ export const verifyRefreshToken = async (
 export const refreshUserTokens = async (
   refreshToken: string
 ): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
-  const { userId } = await verifyRefreshToken(refreshToken);
+  const { userId, storedToken } = await verifyRefreshToken(refreshToken);
   
   // Find user
   const user = await User.findByPk(userId) as User & UserAttributes;
@@ -305,9 +331,7 @@ export const refreshUserTokens = async (
   
   // Rotate only this session's refresh token; leave other sessions intact
   const tokens = await generateTokens(user.id);
-  await RefreshToken.destroy({
-    where: { token: refreshToken }
-  });
+  await storedToken.destroy();
   
   return { user, tokens };
 };
@@ -318,9 +342,19 @@ export const refreshUserTokens = async (
  * @returns {Promise<void>}
  */
 export const revokeRefreshToken = async (refreshToken: string): Promise<void> => {
-  if (refreshToken) {
+  if (!refreshToken) {
+    return;
+  }
+
+  const tokenHash = hashRefreshToken(refreshToken);
+  const destroyed = await RefreshToken.destroy({
+    where: { token: tokenHash },
+  });
+
+  // Legacy plaintext rows (pre-hashing) until they are refreshed once
+  if (destroyed === 0) {
     await RefreshToken.destroy({
-      where: { token: refreshToken }
+      where: { token: refreshToken },
     });
   }
 };

@@ -26,6 +26,7 @@ RefreshToken.init(
       autoIncrement: true,
       primaryKey: true,
     },
+    // SHA-256 hex of the refresh JWT (legacy plaintext rows may exist until rotated)
     token: {
       type: DataTypes.STRING(500),
       allowNull: false,
