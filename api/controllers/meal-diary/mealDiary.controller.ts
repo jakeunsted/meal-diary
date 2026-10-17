@@ -5,6 +5,7 @@ import {
   getWeeklyMeals,
   updateDailyMealWithSlots,
 } from '../../services/mealDiary.service.ts';
+import { RECIPE_NOT_IN_FAMILY_MESSAGE } from '../../services/mealSlots.service.ts';
 import { sendDailyMealWebhook } from '../../services/webhook.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
@@ -244,6 +245,13 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
 
     return res.status(200).json(responseBody);
   } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message === RECIPE_NOT_IN_FAMILY_MESSAGE) {
+      return res.status(400).json({ message });
+    }
+    if (message === 'Meal diary not found for this week') {
+      return res.status(404).json({ message });
+    }
     console.error('Error updating daily meal:', error);
     return res.status(500).json({ message: 'Failed to update daily meal' });
   }

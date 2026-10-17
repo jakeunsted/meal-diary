@@ -1,19 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { Op } from 'sequelize';
 import {
   FamilyGroup,
   MealSlot,
   MealDiary,
   DailyMeal,
   DailyMealEntry,
+  Recipe,
 } from '../../db/models/associations.ts';
 import sequelize from '../../db/models/index.ts';
 import {
+  assertRecipesBelongToFamily,
   assertTodayWithinSkew,
   backfillMealSlots,
   calendarDateForDiaryDay,
   countFutureContentBySlotId,
   ensureDefaultMealSlots,
   MealSlotsConfirmationRequiredError,
+  RECIPE_NOT_IN_FAMILY_MESSAGE,
   replaceMealSlots,
   syncLegacyColumnsToEntries,
 } from '../mealSlots.service.ts';
@@ -26,6 +30,39 @@ const fakeSlot = (values: Record<string, unknown>) =>
 
 beforeEach(() => {
   vi.restoreAllMocks();
+});
+
+describe('assertRecipesBelongToFamily', () => {
+  it('allows null and undefined recipe ids without querying', async () => {
+    const count = vi.spyOn(Recipe, 'count');
+
+    await assertRecipesBelongToFamily(1, [null, undefined]);
+
+    expect(count).not.toHaveBeenCalled();
+  });
+
+  it('allows recipes that all belong to the family', async () => {
+    vi.spyOn(Recipe, 'count').mockResolvedValue(2 as never);
+
+    await expect(
+      assertRecipesBelongToFamily(7, [10, 11, 10])
+    ).resolves.toBeUndefined();
+
+    expect(Recipe.count).toHaveBeenCalledWith({
+      where: {
+        id: { [Op.in]: [10, 11] },
+        family_group_id: 7,
+      },
+    });
+  });
+
+  it('rejects when any recipe is missing or from another family', async () => {
+    vi.spyOn(Recipe, 'count').mockResolvedValue(1 as never);
+
+    await expect(assertRecipesBelongToFamily(7, [10, 99])).rejects.toThrow(
+      RECIPE_NOT_IN_FAMILY_MESSAGE
+    );
+  });
 });
 
 describe('calendarDateForDiaryDay', () => {

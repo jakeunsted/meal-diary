@@ -1,6 +1,7 @@
 import { MealDiary, DailyMeal } from '../db/models/associations.ts';
 import {
   applySlotDishUpdates,
+  assertRecipesBelongToFamily,
   buildDaySlotsForWeek,
   ensureDefaultMealSlots,
   syncLegacyColumnsToEntries,
@@ -222,6 +223,12 @@ export const updateDailyMeal = async (
   if (!mealDiary) {
     throw new Error('Meal diary not found for this week');
   }
+
+  await assertRecipesBelongToFamily(familyGroupId, [
+    updates.breakfast_recipe_id,
+    updates.lunch_recipe_id,
+    updates.dinner_recipe_id,
+  ]);
 
   const [dailyMeal] = await DailyMeal.findOrCreate({
     where: {

@@ -17,7 +17,44 @@ import {
   FamilyGroup,
   MealDiary,
   MealSlot,
+  Recipe,
 } from '../db/models/associations.ts';
+
+export const RECIPE_NOT_IN_FAMILY_MESSAGE =
+  'Recipe does not belong to this family group';
+
+/**
+ * Ensure every non-null recipe id belongs to the given family.
+ * Null/undefined clears a recipe and are allowed.
+ */
+export const assertRecipesBelongToFamily = async (
+  familyGroupId: number,
+  recipeIds: Array<number | null | undefined>
+): Promise<void> => {
+  const ids = [
+    ...new Set(
+      recipeIds.filter(
+        (id): id is number =>
+          typeof id === 'number' && Number.isInteger(id) && id > 0
+      )
+    ),
+  ];
+
+  if (ids.length === 0) {
+    return;
+  }
+
+  const matchingCount = await Recipe.count({
+    where: {
+      id: { [Op.in]: ids },
+      family_group_id: familyGroupId,
+    },
+  });
+
+  if (matchingCount !== ids.length) {
+    throw new Error(RECIPE_NOT_IN_FAMILY_MESSAGE);
+  }
+};
 
 export interface MealSlotDto {
   id: number;
@@ -660,6 +697,11 @@ export const applySlotDishUpdates = async (
   }>,
   transaction?: Transaction
 ): Promise<void> => {
+  await assertRecipesBelongToFamily(
+    familyGroupId,
+    slotUpdates.map((update) => update.recipe_id)
+  );
+
   const activeSlots = await getActiveMealSlots(familyGroupId, transaction);
   const activeById = new Map(activeSlots.map((s) => [s.id, s]));
 
