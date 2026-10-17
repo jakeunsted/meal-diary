@@ -1,0 +1,14 @@
+FROM node:26.3.0-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+COPY apps/marketing/package.json apps/marketing/
+COPY scripts/docker-install-marketing.sh scripts/
+COPY scripts/linux-platform.sh scripts/
+
+RUN sh scripts/docker-install-marketing.sh
+
+EXPOSE 3010
+
+CMD ["npm", "run", "dev", "--workspace=meal-diary-marketing"]

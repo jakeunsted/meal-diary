@@ -1,0 +1,99 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Fraunces", ui-serif, Georgia, serif;
+
+  /* Indigo primary — matches product web app (daisyUI primary / Login CTA) */
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-200: #c7d2fe;
+  --color-brand-300: #a5b4fc;
+  --color-brand-400: #818cf8;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-brand-800: #3730a3;
+  --color-brand-900: #312e81;
+
+  /* Surfaces — match app.mealdiary.co.uk dark chrome (~#12151c / #1a1e26 / #242933) */
+  --color-ink-50: #f1f5f9;
+  --color-ink-100: #e2e8f0;
+  --color-ink-200: #cbd5e1;
+  --color-ink-300: #94a3b8;
+  --color-ink-400: #64748b;
+  --color-ink-500: #475569;
+  --color-ink-600: #3a4254;
+  --color-ink-700: #2e3440;
+  --color-ink-800: #242933;
+  --color-ink-900: #1a1e26;
+  --color-ink-950: #12151c;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    color-scheme: dark;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+
+  body {
+    @apply bg-ink-950 text-ink-100 antialiased;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 10% -10%, rgb(99 102 241 / 0.18), transparent),
+      radial-gradient(ellipse 55% 40% at 95% 5%, rgb(79 70 229 / 0.12), transparent),
+      linear-gradient(180deg, #12151c 0%, #1a1e26 45%, #12151c 100%);
+    background-attachment: fixed;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display);
+  }
+
+  .marketing-grid {
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.04) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+
+  .marketing-surface {
+    @apply border border-white/10 bg-ink-900/80 backdrop-blur;
+  }
+}
+
+/* Silktide Consent Manager — match product dark theme */
+html #stcm-wrapper {
+  --primaryColor: #6366f1;
+  --backgroundColor: #1a1e26;
+  --textColor: #e2e8f0;
+  --iconBackgroundColor: #6366f1;
+  --iconColor: #ffffff;
+  --backdropBackgroundColor: oklch(0% 0 0 / 0.6);
+  --boxShadow: 0 10px 25px -5px oklch(0% 0 0 / 0.45);
+  --fontFamily: inherit;
+}
+
+html #stcm-wrapper .stcm-button-primary {
+  color: #ffffff;
+}
+
+#stcm-icon {
+  display: none !important;
+}
