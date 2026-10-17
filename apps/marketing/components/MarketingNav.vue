@@ -39,6 +39,7 @@ const handleToggleMenu = () => {
       <NuxtLink
         to="/"
         class="flex items-center gap-2.5 font-display text-xl font-semibold tracking-tight text-white sm:text-2xl"
+        :aria-label="t('a11y.homeLogo')"
         @click="handleNavClick('brand')"
       >
         <img
@@ -48,8 +49,9 @@ const handleToggleMenu = () => {
           height="36"
           class="size-9 rounded-xl shadow-sm shadow-black/30"
           decoding="async"
+          aria-hidden="true"
         >
-        <span>{{ t('brand.name') }}</span>
+        <span aria-hidden="true">{{ t('brand.name') }}</span>
       </NuxtLink>
 
       <nav class="hidden items-center gap-1 md:flex" aria-label="Primary">

@@ -5,12 +5,13 @@ import { useAnalyticsConsent } from '~/composables/useAnalyticsConsent';
  * consent type to marketing analytics consent state.
  *
  * Fail-closed: if the script can't load, analytics simply never gets consent.
- * Essential (necessary) remains required; PostHog error tracking is allowed
- * under Essential via the analytics plugin (not gated on Analytics accept).
+ * Essential (necessary) is required for the site to work. PostHog and GA4
+ * only initialize after Analytics consent (see analytics.client.ts).
  */
 
 const CSS_HREF = '/silktide/silktide-consent-manager.css';
 const JS_SRC = '/silktide/silktide-consent-manager.js';
+const CLOSE_BUTTON_LABEL = 'Close cookie preferences';
 
 function loadCss(href: string) {
   if (document.querySelector(`link[href="${href}"]`)) return;
@@ -30,6 +31,21 @@ function loadScript(src: string): Promise<void> {
     s.onerror = () => reject(new Error(`Failed to load ${src}`));
     document.head.appendChild(s);
   });
+}
+
+/** Silktide reuses preferencesAccessibleLabel for the modal close control; set a clear name. */
+function patchSilktideCloseLabels() {
+  document.querySelectorAll<HTMLButtonElement>('.stcm-modal-close').forEach((btn) => {
+    if (btn.getAttribute('aria-label') !== CLOSE_BUTTON_LABEL) {
+      btn.setAttribute('aria-label', CLOSE_BUTTON_LABEL);
+    }
+  });
+}
+
+function watchSilktideCloseLabels() {
+  patchSilktideCloseLabels();
+  const observer = new MutationObserver(() => patchSilktideCloseLabels());
+  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 export default defineNuxtPlugin(async (nuxtApp) => {
@@ -58,11 +74,12 @@ export default defineNuxtPlugin(async (nuxtApp) => {
 
   manager.init({
     autoShow: true,
-    position: { banner: 'bottomLeft' },
+    // Silktide v2 reads prompt.position / text.prompt (not position.banner / text.banner)
+    prompt: { position: 'bottomLeft' },
     text: {
-      banner: {
+      prompt: {
         description:
-          `<p>We use essential cookies to run this website (including error reporting so we can fix problems), and optional analytics to understand how the site is used. You can change your choice any time via Cookie preferences in the footer. See our <a href="${privacyUrl}" target="_blank" rel="noopener">Privacy Policy</a>.</p>`,
+          `<p>We use essential cookies to run this website, and optional analytics (Google Analytics and PostHog) to understand how the site is used. Analytics cookies are off until you choose Accept analytics. You can change your choice any time via Cookie preferences in the footer. See our <a href="${privacyUrl}" target="_blank" rel="noopener">Privacy Policy</a>.</p>`,
         acceptAllButtonText: 'Accept analytics',
         rejectNonEssentialButtonText: 'Essential only',
         preferencesButtonText: 'Manage preferences',
@@ -70,7 +87,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
       preferences: {
         title: 'Cookie preferences',
         description:
-          `<p>Choose which optional cookies this website may use. Essential cookies are always on. See our <a href="${privacyUrl}" target="_blank" rel="noopener">Privacy Policy</a>.</p>`,
+          `<p>Choose which optional cookies this website may use. Essential cookies are always on. Analytics (including error and usage reporting) stay off until you allow them. See our <a href="${privacyUrl}" target="_blank" rel="noopener">Privacy Policy</a>.</p>`,
       },
     },
     consentTypes: [
@@ -78,7 +95,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         id: 'necessary',
         label: 'Essential',
         description:
-          'Required for the website to work securely, and to report errors so we can keep Meal Diary reliable. Essential does not include marketing analytics or pageview tracking.',
+          'Required for the website to work securely (for example remembering your cookie choice). Essential does not include Google Analytics, PostHog, or pageview tracking.',
         required: true,
         defaultValue: true,
       },
@@ -86,7 +103,7 @@ export default defineNuxtPlugin(async (nuxtApp) => {
         id: 'analytics',
         label: 'Analytics',
         description:
-          'Helps us understand how the marketing site is used (pageviews and marketing events via Google Analytics and PostHog). No analytics run until you allow them.',
+          'Helps us understand how the marketing site is used and report errors (pageviews and marketing events via Google Analytics and PostHog). Nothing in this category runs until you allow it.',
         defaultValue: false,
         onAccept: () => { grantConsent(); },
         onReject: () => { revokeConsent(); },
@@ -94,10 +111,13 @@ export default defineNuxtPlugin(async (nuxtApp) => {
     ],
   });
 
+  watchSilktideCloseLabels();
+
   nuxtApp.provide('openCookiePreferences', () => {
     try {
       const instance = manager.getInstance?.();
       instance?.toggleModal?.(true);
+      patchSilktideCloseLabels();
     } catch (err) {
       console.warn('[silktide] could not open preferences modal', err);
     }

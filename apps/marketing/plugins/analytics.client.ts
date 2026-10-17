@@ -2,13 +2,12 @@ import posthog from 'posthog-js';
 import { useAnalyticsConsent } from '~/composables/useAnalyticsConsent';
 
 /**
- * Marketing analytics:
- * - Essential: PostHog may initialize for error reporting (logger.error) even
- *   when Analytics is declined or undecided. Product pageviews / marketing_*
- *   events / GA4 stay off until Analytics consent.
- * - Analytics: opt_in_capturing + GA4 + track/capture.
+ * Marketing analytics (fail-closed):
+ * - PostHog and GA4 only initialize after Analytics consent is granted.
+ * - No PostHog cookies, config, or network calls before that choice.
+ * - On revoke: opt out and reset PostHog; deny GA storage.
  *
- * Fail-closed for product analytics. Capture disabled on local/dev hosts.
+ * Capture stays disabled on local/dev hosts even after consent.
  */
 
 const POSTHOG_CAPTURE_DISABLED_HOSTS = new Set([
@@ -93,10 +92,8 @@ export default defineNuxtPlugin((nuxtApp) => {
     });
     posthogReady = true;
 
-    try { posthog.opt_out_capturing(); } catch { /* ignore */ }
-
     if (import.meta.dev) {
-      console.log('[analytics] PostHog ready for Essential error reporting; product capture gated on consent');
+      console.log('[analytics] PostHog initialized after Analytics consent');
     }
   };
 
@@ -120,8 +117,8 @@ export default defineNuxtPlugin((nuxtApp) => {
   };
 
   const enableAnalyticsCapture = () => {
-    initPostHog();
     if (captureDisabledHost) return;
+    initPostHog();
     if (posthogReady) {
       try { posthog.opt_in_capturing(); } catch { /* ignore */ }
     }
@@ -136,6 +133,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const disableAnalyticsCapture = () => {
     if (posthogReady) {
       try { posthog.opt_out_capturing(); } catch { /* ignore */ }
+      try { posthog.reset(); } catch { /* ignore */ }
     }
     if (gaReady) {
       try {
@@ -143,9 +141,6 @@ export default defineNuxtPlugin((nuxtApp) => {
       } catch { /* ignore */ }
     }
   };
-
-  // Essential: init PostHog early so logger.error can work without Analytics
-  initPostHog();
 
   const { analyticsConsent, hasAnalyticsConsent, loadConsent } = useAnalyticsConsent();
 
@@ -167,15 +162,12 @@ export default defineNuxtPlugin((nuxtApp) => {
     try { (window as any).gtag?.('event', event, properties || {}); } catch { /* ignore */ }
   };
 
-  const canCaptureProduct = () =>
+  const canCapture = () =>
     hasAnalyticsConsent.value && posthogReady && !captureDisabledHost;
-
-  /** Essential error path — not gated on Analytics consent */
-  const canReportErrors = () => posthogReady && !captureDisabledHost;
 
   const api: AnalyticsApi = {
     capture: (event, properties) => {
-      if (!canCaptureProduct()) return;
+      if (!canCapture()) return;
       try { posthog.capture(event, properties); } catch { /* ignore */ }
     },
     track: (event, properties) => {
@@ -187,16 +179,15 @@ export default defineNuxtPlugin((nuxtApp) => {
     },
     logger: {
       info: (body, attributes) => {
-        if (!canCaptureProduct()) return;
+        if (!canCapture()) return;
         try { posthog.logger.info(body, attributes); } catch { /* ignore */ }
       },
       warn: (body, attributes) => {
-        if (!canCaptureProduct()) return;
+        if (!canCapture()) return;
         try { posthog.logger.warn(body, attributes); } catch { /* ignore */ }
       },
       error: (body, attributes) => {
-        // Essential: allow error reporting without Analytics consent
-        if (!canReportErrors()) return;
+        if (!canCapture()) return;
         try { posthog.logger.error(body, attributes); } catch { /* ignore */ }
       },
     },
