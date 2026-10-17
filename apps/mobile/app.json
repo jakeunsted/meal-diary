@@ -2,7 +2,7 @@
   "expo": {
     "name": "Meal Diary",
     "slug": "meal-diary",
-    "version": "1.6.1",
+    "version": "1.6.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "mealdiary",
@@ -15,11 +15,11 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "uk.co.mealdiary.app",
-      "buildNumber": "18"
+      "buildNumber": "19"
     },
     "android": {
       "package": "uk.co.mealdiary.app",
-      "versionCode": 18,
+      "versionCode": 19,
       "intentFilters": [
         {
           "action": "VIEW",
@@ -57,7 +57,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.801654137636-ofu9en7n1iqrt3m3unq1kb9qluakurme"
+          "iosUrlScheme": "com.googleusercontent.apps.801654137636-35uovt5s62nm5caj1o1pfu8t1otflo9c"
         }
       ],
       "expo-localization",
