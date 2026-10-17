@@ -22,6 +22,7 @@ ENV NUXT_PUBLIC_SITE_URL=${SITE_URL}
 ENV NUXT_PUBLIC_APP_URL=${APP_URL}
 
 COPY scripts/docker-install-marketing.sh scripts/
+COPY scripts/install-marketing-native-deps.sh scripts/
 COPY scripts/linux-platform.sh scripts/
 
 RUN sh scripts/docker-install-marketing.sh
