@@ -96,20 +96,15 @@ export const clearApplePublicKeyCache = (): void => {
   cachedAppleKeys = null;
 };
 
-const socialOnlyLoginMessage = (user: UserAttributes): string => {
-  const hasApple = Boolean(user.apple_id);
-  const hasGoogle = Boolean(user.google_id);
+const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials';
 
-  if (hasApple && hasGoogle) {
-    return 'Invalid credentials. Please sign in with Apple or Google.';
-  }
-
-  if (hasApple) {
-    return 'Invalid credentials. Please sign in with Apple.';
-  }
-
-  return 'Invalid credentials. Please sign in with Google.';
-};
+/**
+ * Precomputed bcrypt hash used only when the account is missing or passwordless,
+ * so login failures always pay a compare cost (timing / enumeration mitigation).
+ * Value is bcrypt of an arbitrary constant — never a real user password.
+ */
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 const optionalName = (value: string | undefined): string | undefined => {
   if (!value) {
@@ -254,24 +249,18 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<L
     throw new Error('Email and password are required');
   }
   
-  // Find user by email
-  const user = await User.findOne({ where: { email: email.toLowerCase() } }) as User & UserAttributes;
-  if (!user) {
-    throw new Error('Invalid credentials');
+  const user = await User.findOne({
+    where: { email: email.toLowerCase() },
+  }) as User & UserAttributes | null;
+
+  // Always bcrypt-compare so missing / social-only / wrong-password paths share similar timing
+  const hashToCompare = user?.password_hash ?? DUMMY_PASSWORD_HASH;
+  const passwordOk = await bcrypt.compare(password, hashToCompare);
+
+  if (!user || !user.password_hash || !passwordOk) {
+    throw new Error(INVALID_CREDENTIALS_MESSAGE);
   }
   
-  // Passwordless accounts must use the provider that created them
-  if (!user.password_hash) {
-    throw new Error(socialOnlyLoginMessage(user));
-  }
-  
-  // Verify password
-  const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-  if (!isPasswordValid) {
-    throw new Error('Invalid credentials');
-  }
-  
-  // Generate tokens
   const tokens = await generateTokens(user.id);
   
   return { user, tokens };

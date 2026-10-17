@@ -84,11 +84,7 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                 message:
  *                   type: string
  *                   description: Error message.
- *                   examples:
- *                     - Invalid credentials
- *                     - Invalid credentials. Please sign in with Google.
- *                     - Invalid credentials. Please sign in with Apple.
- *                     - Invalid credentials. Please sign in with Apple or Google.
+ *                   example: Invalid credentials
  *       500:
  *         description: Server error
  *         content:
