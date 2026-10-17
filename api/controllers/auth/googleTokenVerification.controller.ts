@@ -84,6 +84,9 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
       } else if (errorMessage.includes('No email')) {
         reason = 'no_email';
         statusCode = 400;
+      } else if (errorMessage.includes('not verified')) {
+        reason = 'email_not_verified';
+        statusCode = 400;
       }
 
       console.error('[Google Token Verification] Service error:', {

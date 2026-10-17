@@ -14,11 +14,16 @@ const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 export interface GoogleProfile {
   id: string;
   email?: string;
+  emailVerified?: boolean;
   given_name?: string;
   family_name?: string;
   picture?: string;
   name?: string;
 }
+
+const isGoogleEmailVerified = (value: unknown): boolean => {
+  return value === true || value === 'true';
+};
 
 export interface TokenPair {
   accessToken: string;
@@ -101,16 +106,25 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
     throw new Error('No email in Google profile');
   }
 
-  // Find or create user
-  let user = await User.findOne({ where: { email } }) as User & UserAttributes;
+  if (!googleProfile.emailVerified) {
+    throw new Error('Google email is not verified');
+  }
+
+  // Prefer stable Google subject over email linking
+  let user = await User.findOne({ where: { google_id: googleId } }) as User & UserAttributes | null;
+
+  if (!user) {
+    user = await User.findOne({ where: { email } }) as User & UserAttributes | null;
+    if (user?.google_id && user.google_id !== googleId) {
+      throw new Error('Email already linked to a different Google account');
+    }
+  }
 
   if (user) {
-    // User exists - update Google ID if not set
     const updates: Partial<UserAttributes> = {};
     if (!user.google_id) {
       updates.google_id = googleId;
     }
-    // Update avatar if available
     if (avatarUrl && !user.avatar_url) {
       updates.avatar_url = avatarUrl;
     }
@@ -121,13 +135,10 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
       await user.update(updates);
     }
   } else {
-    // Create new user
-    // Generate username from email (before @)
     const usernameBase = email.split('@')[0];
     let username = usernameBase;
     let counter = 1;
 
-    // Ensure username is unique
     while (await User.findOne({ where: { username } })) {
       username = `${usernameBase}${counter}`;
       counter++;
@@ -141,7 +152,7 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
       first_name: firstName,
       last_name: lastName,
       avatar_url: avatarUrl,
-      password_hash: undefined, // Google-only account
+      password_hash: undefined,
       // OAuth sign-up: the login screen states that continuing with Google
       // constitutes acceptance of the terms and privacy policy
       terms_accepted_at: new Date(),
@@ -423,7 +434,11 @@ export const exchangeGoogleCode = async (code: string): Promise<{ accessToken: s
     );
   }
 
-  const profile = await profileResponse.json() as GoogleProfile;
+  const profileJson = await profileResponse.json() as GoogleProfile & { verified_email?: boolean };
+  const profile: GoogleProfile = {
+    ...profileJson,
+    emailVerified: isGoogleEmailVerified(profileJson.verified_email ?? profileJson.emailVerified),
+  };
 
   return { accessToken: access_token, profile };
 };
@@ -467,10 +482,16 @@ export const verifyGoogleIdToken = async (idToken: string): Promise<GoogleProfil
     throw new Error('Invalid token');
   }
 
+  if (!isGoogleEmailVerified(tokenInfo.email_verified)) {
+    console.error('[verifyGoogleIdToken] Email not verified');
+    throw new Error('Google email is not verified');
+  }
+
   // Extract user information from token
   const googleProfile: GoogleProfile = {
     id: tokenInfo.sub,
     email: tokenInfo.email,
+    emailVerified: true,
     given_name: tokenInfo.given_name,
     family_name: tokenInfo.family_name,
     picture: tokenInfo.picture,
