@@ -4,10 +4,12 @@ import crypto from 'crypto';
 import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
+import OAuthExchangeCode from '../db/models/OAuthExchangeCode.model.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
 import { HttpError } from '../utils/httpError.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
+const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
 
 export interface GoogleProfile {
   id: string;
@@ -310,6 +312,60 @@ export const revokeRefreshToken = async (refreshToken: string): Promise<void> =>
       where: { token: refreshToken }
     });
   }
+};
+
+/**
+ * Create a short-lived one-time code for completing a web OAuth login on the frontend.
+ * Avoids putting JWTs in redirect query strings (history, Referer, proxy logs).
+ */
+export const createOAuthExchangeCode = async (userId: number): Promise<string> => {
+  const rawCode = crypto.randomBytes(32).toString('hex');
+  const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+  const expiresAt = new Date(Date.now() + OAUTH_EXCHANGE_TTL_MS);
+
+  await OAuthExchangeCode.create({
+    user_id: userId,
+    code_hash: codeHash,
+    expires_at: expiresAt,
+    used_at: null,
+  });
+
+  return rawCode;
+};
+
+/**
+ * Consume an OAuth exchange code and issue session tokens.
+ */
+export const exchangeOAuthCode = async (
+  rawCode: string
+): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
+  if (!rawCode) {
+    throw new Error('Exchange code is required');
+  }
+
+  const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+  const row = await OAuthExchangeCode.findOne({
+    where: {
+      code_hash: codeHash,
+      used_at: null,
+      expires_at: { [Op.gt]: new Date() },
+    },
+  });
+
+  if (!row) {
+    throw new Error('Invalid or expired exchange code');
+  }
+
+  row.used_at = new Date();
+  await row.save();
+
+  const user = await User.findByPk(row.user_id) as User & UserAttributes | null;
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const tokens = await generateTokens(user.id);
+  return { user, tokens };
 };
 
 /**
