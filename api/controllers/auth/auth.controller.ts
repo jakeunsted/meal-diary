@@ -42,16 +42,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       await trackEvent(user.id.toString(), 'login_success', {
         auth_method: 'email',
       });
-      
-      // Log user data for debugging
-      console.log('[Login] User data:', {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        family_group_id: user.family_group_id,
-        hasFamilyGroup: !!user.family_group_id
-      });
-      
+
       const response = await buildAuthResponse(user as User & UserAttributes, tokens);
       res.status(200).json(response);
     } catch (authError) {
@@ -361,12 +352,6 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
       // Also track as login success
       await trackEvent(user.id.toString(), 'login_success', {
         auth_method: 'google',
-      });
-
-      console.log('[Google OAuth] User authenticated:', {
-        id: user.id,
-        family_group_id: user.family_group_id,
-        hasFamilyGroup: !!user.family_group_id
       });
 
       const redirectUrl =
