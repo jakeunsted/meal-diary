@@ -1,0 +1,241 @@
+{
+  "brand": {
+    "name": "Meal Diary",
+    "tagline": "Plan the week. Cook from your recipes. Shop once."
+  },
+  "nav": {
+    "home": "Home",
+    "features": "Features",
+    "featuresDiary": "Meal diary",
+    "featuresRecipes": "Recipes",
+    "featuresShopping": "Shopping list",
+    "pricing": "Pricing",
+    "about": "About",
+    "openApp": "Open web app",
+    "menu": "Menu",
+    "closeMenu": "Close menu"
+  },
+  "footer": {
+    "tagline": "A shared meal diary for UK households.",
+    "product": "Product",
+    "company": "Company",
+    "legal": "Legal",
+    "privacy": "Privacy policy",
+    "terms": "Terms of use",
+    "cookiePreferences": "Cookie preferences",
+    "copyright": "© {year} Meal Diary. All rights reserved."
+  },
+  "cta": {
+    "openWebApp": "Open web app",
+    "seePricing": "See pricing",
+    "viewPlans": "View plans in the app",
+    "exploreFeatures": "Explore features",
+    "iosComingSoon": "iOS — coming soon",
+    "androidComingSoon": "Android — coming soon",
+    "comingSoonHint": "Store listings are on the way. Use the web app today."
+  },
+  "home": {
+    "seo": {
+      "title": "Meal Diary — shared weekly meal planner for households",
+      "description": "Plan the week together, keep recipes in one place (including import from URL), and shop from an aisle-sorted list. Free for small households; Family Plus when you need more."
+    },
+    "hero": {
+      "brand": "Meal Diary",
+      "title": "The shared meal diary your household actually uses",
+      "subtitle": "Plan breakfast, lunch and dinner for the week, cook from your recipe book, and tick off shopping by aisle — all in one place.",
+      "primaryCta": "Open web app"
+    },
+    "story": {
+      "title": "Plan → recipes → shop",
+      "body": "Meal Diary is built for households who share one kitchen. Put the week on the diary, keep favourite recipes ready (or import them from a website), then generate a shopping list you can sort by aisle."
+    },
+    "sections": {
+      "diary": {
+        "title": "See the week at a glance",
+        "body": "Navigate weeks, expand a day, and set breakfast, lunch and dinner together. Everyone in the family group sees the same plan.",
+        "alt": "Meal Diary mobile screenshot showing a weekly meal plan with Saturday expanded"
+      },
+      "recipes": {
+        "title": "A recipe book that grows with you",
+        "body": "Save family favourites with portions and ingredients, or import a recipe from a URL when you find something you want to cook.",
+        "alt": "Meal Diary recipe book screenshot listing saved recipes"
+      },
+      "import": {
+        "title": "Create by hand or import from a link",
+        "body": "Start with an empty recipe form, or paste a recipe website URL and pull in what we can — then tidy it up for your household.",
+        "alt": "Meal Diary new recipe dialog offering create manually or import from URL"
+      },
+      "shopping": {
+        "title": "Shop by aisle, not by chaos",
+        "body": "Your shared shopping list groups items by category — meat, fruit & veg, dairy and more — so the supermarket trip stays calm.",
+        "alt": "Meal Diary shopping list screenshot with aisle category filters"
+      }
+    },
+    "sharing": {
+      "title": "Built for family groups",
+      "body": "Create or join a household, share one diary and one shopping list, and stop chasing messages about what’s for dinner."
+    },
+    "trust": {
+      "title": "Privacy-minded by design",
+      "body": "Optional analytics only run after you accept them. Essential cookies keep the site working and help us report errors so we can fix problems — even if you choose Essential only."
+    },
+    "finalCta": {
+      "title": "Ready to plan this week?",
+      "body": "Open the web app to create your household diary. Native apps are coming soon."
+    }
+  },
+  "features": {
+    "hub": {
+      "seo": {
+        "title": "Features — Meal Diary",
+        "description": "Weekly meal diary, recipe book with URL import, and an aisle-sorted shopping list — shared with your household."
+      },
+      "title": "Everything you need to plan the week",
+      "subtitle": "Three pillars that work together: diary, recipes, and shopping.",
+      "cards": {
+        "diary": {
+          "title": "Meal diary",
+          "body": "Weekly planning with breakfast, lunch and dinner for the household."
+        },
+        "recipes": {
+          "title": "Recipes",
+          "body": "Save favourites and import recipes from the web when you find them."
+        },
+        "shopping": {
+          "title": "Shopping list",
+          "body": "A shared list sorted by aisle so shopping stays organised."
+        }
+      }
+    },
+    "diary": {
+      "seo": {
+        "title": "Weekly meal diary — Meal Diary",
+        "description": "Plan breakfast, lunch and dinner for each day of the week. Share one diary with your household and navigate weeks together."
+      },
+      "title": "Weekly meal diary",
+      "subtitle": "Put the week on one shared plan — clear days, clear meals, less “what’s for dinner?”",
+      "body": "Meal Diary’s week view lets you move between weeks, expand a day, and set meals for breakfast, lunch and dinner. Family group members see the same diary, so planning stays in sync.",
+      "points": {
+        "one": "Week navigation with a clear date range",
+        "two": "Day-by-day breakfast, lunch and dinner",
+        "three": "Shared with your household family group"
+      },
+      "alt": "Screenshot of the Meal Diary week view on a phone"
+    },
+    "recipes": {
+      "seo": {
+        "title": "Recipe book & URL import — Meal Diary",
+        "description": "Keep household recipes in one book. Create recipes manually or import from a recipe website URL."
+      },
+      "title": "Recipe book with URL import",
+      "subtitle": "Favourites in one place — typed by hand or pulled in from a recipe link.",
+      "body": "Search your recipe book, see portions and ingredient counts at a glance, and add new recipes when inspiration strikes. Choose create manually or import from URL — we’ll pull in what we can from the page.",
+      "points": {
+        "one": "Searchable household recipe book",
+        "two": "Portions and ingredient counts on each card",
+        "three": "Import from a recipe website URL"
+      },
+      "alt": "Screenshot of the Meal Diary recipe book",
+      "importAlt": "Screenshot of the import-from-URL recipe chooser"
+    },
+    "shopping": {
+      "seo": {
+        "title": "Aisle-sorted shopping list — Meal Diary",
+        "description": "Share a shopping list with your household, filter by category, and tick items off as you shop."
+      },
+      "title": "Aisle-sorted shopping list",
+      "subtitle": "One shared list, grouped the way you walk the store.",
+      "body": "Filter by category, reorder items, and check them off as you go. Everyone in the family group can add to the same list — no more parallel notes in different apps.",
+      "points": {
+        "one": "Category filters such as meat, fruit & veg, and dairy",
+        "two": "Shared with your household",
+        "three": "Quick add for anything you still need"
+      },
+      "alt": "Screenshot of the Meal Diary shopping list with aisle categories"
+    }
+  },
+  "pricing": {
+    "seo": {
+      "title": "Pricing — Meal Diary",
+      "description": "Compare Free and Family Plus at a high level. Current prices and checkout live in the Meal Diary web app."
+    },
+    "title": "Simple plans for households",
+    "subtitle": "Start free. Upgrade to Family Plus when your household needs more room to plan ahead.",
+    "note": "Prices and checkout live in the web app — we don’t hardcode amounts here so you always see what’s current.",
+    "free": {
+      "name": "Free",
+      "summary": "Enough for a small household getting started."
+    },
+    "familyPlus": {
+      "name": "Family Plus",
+      "summary": "More members, more recipes, and planning further ahead.",
+      "trial": "Includes a 7-day trial when you upgrade in the app."
+    },
+    "rows": {
+      "feature": "What’s included",
+      "familyMembers": "Family members",
+      "weeksAhead": "Weeks you can plan ahead",
+      "editPastWeeks": "Edit past weeks",
+      "recipes": "Recipes",
+      "recipeToShopping": "Add recipe ingredients to shopping list",
+      "customSlots": "Custom meal slots"
+    },
+    "values": {
+      "freeMembers": "2",
+      "plusMembers": "8",
+      "freeWeeks": "1",
+      "plusWeeks": "Unlimited",
+      "freeRecipes": "10",
+      "plusRecipes": "Unlimited",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "cta": "View plans in the app"
+  },
+  "about": {
+    "seo": {
+      "title": "About & FAQ — Meal Diary",
+      "description": "Meal Diary is a UK household meal planner: shared weekly diary, recipes with URL import, and an aisle-sorted shopping list."
+    },
+    "title": "About Meal Diary",
+    "subtitle": "A calm planner for UK households who cook together.",
+    "body": "Meal Diary helps families plan the week’s meals, keep recipes in one book, and shop from a shared list. We’re not a calorie tracker, delivery service, or AI meal robot — just a practical diary for the kitchen you already have.",
+    "faqTitle": "Frequently asked questions",
+    "faq": {
+      "what": {
+        "q": "What is Meal Diary?",
+        "a": "Meal Diary is a shared weekly meal planner with a recipe book (including import from URL) and an aisle-sorted shopping list for your household."
+      },
+      "who": {
+        "q": "Who is it for?",
+        "a": "UK households and family groups who want one place to plan meals, save recipes, and shop together."
+      },
+      "stores": {
+        "q": "Is there an iOS or Android app?",
+        "a": "Native apps are coming soon. Today you can use the full web app in your browser."
+      },
+      "pricing": {
+        "q": "How does pricing work?",
+        "a": "There’s a Free plan and Family Plus with higher limits. See the pricing page for a summary, then open the web app for current prices and checkout."
+      },
+      "cookies": {
+        "q": "What cookies do you use?",
+        "a": "Essential cookies keep the site working and allow error reporting. Optional Analytics cookies (Google Analytics and PostHog product analytics) only run after you accept them. You can reopen Cookie preferences any time from the footer."
+      },
+      "privacy": {
+        "q": "Where can I read the privacy policy?",
+        "a": "Open the privacy policy from the footer — it explains how we handle data for Meal Diary."
+      }
+    }
+  },
+  "error": {
+    "title": "Page not found",
+    "body": "That page doesn’t exist on the Meal Diary website.",
+    "home": "Back to home",
+    "openApp": "Open web app"
+  },
+  "screenshot": {
+    "placeholder": "Screenshot unavailable",
+    "loading": "Loading screenshot"
+  }
+}

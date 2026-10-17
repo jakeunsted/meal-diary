@@ -22,6 +22,7 @@ npm install
 - **API** — copy `api/.env.example` to `api/.env`. DB can be the local Postgres from `docker-compose.yml`. Set `WEBHOOK_BASE_URL` to the Nuxt server address with path `/api/webhook`.
 - **Frontend** — copy `frontend/.env.example` to `frontend/.env`. Set `BASE_URL` to the API URL (e.g. `http://localhost:3001`).
 - **Mobile** — copy `apps/mobile/.env.example` to `apps/mobile/.env`. Set `EXPO_PUBLIC_API_URL` to the API URL (`http://10.0.2.2:3001` for Android emulator).
+- **Marketing** (optional) — copy `apps/marketing/.env.example` to `apps/marketing/.env`. Public site for `mealdiary.co.uk` (separate from the logged-in app at `app.mealdiary.co.uk`). Uses the same Silktide Consent Manager pattern as product web; Essential includes PostHog error tracking; Analytics gates GA4 + PostHog product analytics.
 
 ### Run locally (host)
 
@@ -31,6 +32,9 @@ npm run dev --workspace=meal-diary-api
 
 # Frontend (port 3000)
 npm run dev --workspace=nuxt-app
+
+# Marketing site (port 3010) — SEO landing at mealdiary.co.uk
+npm run dev:marketing
 
 # Mobile (Expo)
 npm run dev:mobile
@@ -45,6 +49,12 @@ Starts Postgres, API, and frontend with a single root install:
 
 ```bash
 docker compose up
+```
+
+Optional marketing service (profile `marketing`, port 3010):
+
+```bash
+docker compose --profile marketing up marketing
 ```
 
 ### Tests
@@ -62,7 +72,8 @@ npm run test:e2e
 ```
 meal-diary/
   api/                  # Express API
-  frontend/             # Nuxt app
+  frontend/             # Nuxt product app (app.mealdiary.co.uk)
+  apps/marketing/       # Nuxt marketing site (mealdiary.co.uk)
   apps/mobile/          # Expo React Native app (iOS + Android)
   packages/shared/      # Shared types and constants
 ```
@@ -74,3 +85,6 @@ The postgres database is currently deployed on Railway.
 
 ### API & Frontend
 Deployed on Railway
+
+### Marketing
+Deploy `apps/marketing` (Dockerfile) to Railway (or similar) and point `mealdiary.co.uk` at that service. Keep `app.mealdiary.co.uk` on the product Nuxt app.

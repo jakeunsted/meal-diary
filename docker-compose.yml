@@ -52,6 +52,25 @@ services:
       - ./frontend/.env
     command: sh -c "sh scripts/docker-install-frontend.sh && npm run dev --workspace=nuxt-app"
 
+  # Optional SEO marketing site (mealdiary.co.uk). Not required for product app work.
+  marketing:
+    build:
+      context: .
+      dockerfile: apps/marketing/Dockerfile.dev
+    container_name: meal-diary-marketing
+    ports:
+      - "3010:3010"
+    volumes:
+      - .:/app
+      - root_node_modules:/app/node_modules
+    working_dir: /app
+    environment:
+      SITE_URL: http://localhost:3010
+      APP_URL: http://localhost:3000
+    command: sh -c "sh scripts/docker-install-marketing.sh && npm run dev --workspace=meal-diary-marketing"
+    profiles:
+      - marketing
+
 volumes:
   postgres_data:
   root_node_modules:
