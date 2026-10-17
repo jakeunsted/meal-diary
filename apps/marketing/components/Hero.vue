@@ -20,6 +20,7 @@ const handleOpenApp = () => {
           height="72"
           class="size-14 rounded-2xl shadow-lg shadow-brand-500/20 sm:size-[4.5rem]"
           decoding="async"
+          aria-hidden="true"
         >
         <p class="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
           {{ t('home.hero.brand') }}

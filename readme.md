@@ -22,7 +22,7 @@ npm install
 - **API** — copy `api/.env.example` to `api/.env`. DB can be the local Postgres from `docker-compose.yml`. Set `WEBHOOK_BASE_URL` to the Nuxt server address with path `/api/webhook`.
 - **Frontend** — copy `frontend/.env.example` to `frontend/.env`. Set `BASE_URL` to the API URL (e.g. `http://localhost:3001`).
 - **Mobile** — copy `apps/mobile/.env.example` to `apps/mobile/.env`. Set `EXPO_PUBLIC_API_URL` to the API URL (`http://10.0.2.2:3001` for Android emulator).
-- **Marketing** (optional) — copy `apps/marketing/.env.example` to `apps/marketing/.env`. Public site for `mealdiary.co.uk` (separate from the logged-in app at `app.mealdiary.co.uk`). Uses the same Silktide Consent Manager pattern as product web; Essential includes PostHog error tracking; Analytics gates GA4 + PostHog product analytics.
+- **Marketing** (optional) — copy `apps/marketing/.env.example` to `apps/marketing/.env`. Public site for `mealdiary.co.uk` (separate from the logged-in app at `app.mealdiary.co.uk`). Uses the same Silktide Consent Manager pattern as product web; Essential is site-only; Analytics consent gates GA4 + PostHog (no analytics SDKs until accept).
 
 ### Run locally (host)
 

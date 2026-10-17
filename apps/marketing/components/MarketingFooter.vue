@@ -35,6 +35,7 @@ const handleCookiePreferences = () => {
             height="36"
             class="size-9 rounded-xl"
             decoding="async"
+            aria-hidden="true"
           >
           <span>{{ t('brand.name') }}</span>
         </p>

@@ -3,6 +3,10 @@
     "name": "Meal Diary",
     "tagline": "Plan the week. Cook from your recipes. Shop once."
   },
+  "a11y": {
+    "skipToContent": "Skip to content",
+    "homeLogo": "Meal Diary home"
+  },
   "nav": {
     "home": "Home",
     "features": "Features",
@@ -77,7 +81,7 @@
     },
     "trust": {
       "title": "Privacy-minded by design",
-      "body": "Optional analytics only run after you accept them. Essential cookies keep the site working and help us report errors so we can fix problems — even if you choose Essential only."
+      "body": "Optional analytics (Google Analytics and PostHog) only run after you accept them. Essential cookies keep the site working and remember your cookie choice — nothing analytics-related loads until you allow it."
     },
     "finalCta": {
       "title": "Ready to plan this week?",
@@ -220,7 +224,7 @@
       },
       "cookies": {
         "q": "What cookies do you use?",
-        "a": "Essential cookies keep the site working and allow error reporting. Optional Analytics cookies (Google Analytics and PostHog product analytics) only run after you accept them. You can reopen Cookie preferences any time from the footer."
+        "a": "Essential cookies keep the site working and remember your cookie choice. Optional Analytics cookies (Google Analytics and PostHog, including usage and error reporting) only load after you accept them. You can reopen Cookie preferences any time from the footer."
       },
       "privacy": {
         "q": "Where can I read the privacy policy?",
