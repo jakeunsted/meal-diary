@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
@@ -14,6 +15,7 @@ import * as billingController from './controllers/billing/billing.controller.ts'
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { devCorsMiddleware } from './middleware/cors.middleware.ts';
+import { swaggerBasicAuth } from './middleware/docsAuth.middleware.ts';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 import { initializeOtelLogs, shutdownOtelLogs, emitLog } from './utils/otelLogs.ts';
@@ -24,6 +26,21 @@ import { serverErrorLogMiddleware } from './middleware/serverErrorLog.middleware
 const __dirname = path.resolve('./api');
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+app.disable('x-powered-by');
+app.use(
+  helmet({
+    // JSON API + Swagger UI (swagger-ui-express needs inline script/style)
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'img-src': ["'self'", 'data:', 'https:'],
+      },
+    },
+  })
+);
 
 // Initialise PostHog analytics events
 const posthog = getPostHog();
@@ -87,11 +104,13 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ message: 'OK' });
 });
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+// Swagger UI — Basic Auth via SWAGGER_USER / SWAGGER_PASSWORD (404 if unset)
+app.use('/api-docs', swaggerBasicAuth, swaggerUi.serve, swaggerUi.setup(specs));
 
-// server api test coverage
-app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
+// server api test coverage (dev-only; do not ship coverage artifacts in production images)
+if (process.env.NODE_ENV === 'development') {
+  app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
+}
 
 // Error tracking middleware (must be after routes)
 app.use(errorTrackingMiddleware);

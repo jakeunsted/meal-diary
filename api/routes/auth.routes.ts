@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback, forgotPassword, resetPassword } from '../controllers/auth/auth.controller.ts';
+import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback, exchangeGoogleOAuthCode, forgotPassword, resetPassword } from '../controllers/auth/auth.controller.ts';
 import { verifyGoogleToken } from '../controllers/auth/googleTokenVerification.controller.ts';
 import { verifyAppleToken } from '../controllers/auth/appleTokenVerification.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
@@ -84,11 +84,7 @@ const wrapHandler = (handler: RequestHandler): RequestHandler => {
  *                 message:
  *                   type: string
  *                   description: Error message.
- *                   examples:
- *                     - Invalid credentials
- *                     - Invalid credentials. Please sign in with Google.
- *                     - Invalid credentials. Please sign in with Apple.
- *                     - Invalid credentials. Please sign in with Apple or Google.
+ *                   example: Invalid credentials
  *       500:
  *         description: Server error
  *         content:
@@ -366,12 +362,37 @@ router.get('/google', loginLimiter, wrapHandler(initiateGoogleAuth));
  *             schema:
  *               type: string
  *               examples:
- *                 success: /auth/google/callback?accessToken=...&refreshToken=...&user=...
+ *                 success: /auth/google/callback?exchangeCode=...
  *                 error: /login?error=invalid_state
  *       500:
  *         description: Server error
  */
 router.get('/google/callback', loginLimiter, wrapHandler(handleGoogleCallback));
+
+/**
+ * Exchange a one-time OAuth code from the web Google callback redirect for session tokens.
+ * @swagger
+ * /google/exchange:
+ *   post:
+ *     summary: Exchange OAuth one-time code for tokens
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - code
+ *             properties:
+ *               code:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Authentication successful
+ *       400:
+ *         description: Invalid or expired exchange code
+ */
+router.post('/google/exchange', loginLimiter, wrapHandler(exchangeGoogleOAuthCode));
 
 /**
  * Google OAuth ID token verification route (for native apps)

@@ -4,19 +4,60 @@ import crypto from 'crypto';
 import { Op } from 'sequelize';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
+import OAuthExchangeCode from '../db/models/OAuthExchangeCode.model.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
 import { HttpError } from '../utils/httpError.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
+const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
+
+const hashRefreshToken = (token: string): string => {
+  return crypto.createHash('sha256').update(token).digest('hex');
+};
+
+const activeRefreshTokenWhere = (tokenValue: string) => ({
+  token: tokenValue,
+  is_revoked: false,
+  expires_at: { [Op.gt]: new Date() },
+});
+
+/**
+ * Look up a stored refresh session by SHA-256 hash, with a one-time upgrade path
+ * for rows that still store the raw JWT from before hashing was introduced.
+ */
+const findActiveRefreshToken = async (refreshToken: string): Promise<RefreshToken | null> => {
+  const tokenHash = hashRefreshToken(refreshToken);
+  const byHash = await RefreshToken.findOne({
+    where: activeRefreshTokenWhere(tokenHash),
+  });
+  if (byHash) {
+    return byHash;
+  }
+
+  const byPlaintext = await RefreshToken.findOne({
+    where: activeRefreshTokenWhere(refreshToken),
+  });
+  if (byPlaintext) {
+    await byPlaintext.update({ token: tokenHash });
+    return byPlaintext;
+  }
+
+  return null;
+};
 
 export interface GoogleProfile {
   id: string;
   email?: string;
+  emailVerified?: boolean;
   given_name?: string;
   family_name?: string;
   picture?: string;
   name?: string;
 }
+
+const isGoogleEmailVerified = (value: unknown): boolean => {
+  return value === true || value === 'true';
+};
 
 export interface TokenPair {
   accessToken: string;
@@ -55,20 +96,15 @@ export const clearApplePublicKeyCache = (): void => {
   cachedAppleKeys = null;
 };
 
-const socialOnlyLoginMessage = (user: UserAttributes): string => {
-  const hasApple = Boolean(user.apple_id);
-  const hasGoogle = Boolean(user.google_id);
+const INVALID_CREDENTIALS_MESSAGE = 'Invalid credentials';
 
-  if (hasApple && hasGoogle) {
-    return 'Invalid credentials. Please sign in with Apple or Google.';
-  }
-
-  if (hasApple) {
-    return 'Invalid credentials. Please sign in with Apple.';
-  }
-
-  return 'Invalid credentials. Please sign in with Google.';
-};
+/**
+ * Precomputed bcrypt hash used only when the account is missing or passwordless,
+ * so login failures always pay a compare cost (timing / enumeration mitigation).
+ * Value is bcrypt of an arbitrary constant — never a real user password.
+ */
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 const optionalName = (value: string | undefined): string | undefined => {
   if (!value) {
@@ -99,16 +135,25 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
     throw new Error('No email in Google profile');
   }
 
-  // Find or create user
-  let user = await User.findOne({ where: { email } }) as User & UserAttributes;
+  if (!googleProfile.emailVerified) {
+    throw new Error('Google email is not verified');
+  }
+
+  // Prefer stable Google subject over email linking
+  let user = await User.findOne({ where: { google_id: googleId } }) as User & UserAttributes | null;
+
+  if (!user) {
+    user = await User.findOne({ where: { email } }) as User & UserAttributes | null;
+    if (user?.google_id && user.google_id !== googleId) {
+      throw new Error('Email already linked to a different Google account');
+    }
+  }
 
   if (user) {
-    // User exists - update Google ID if not set
     const updates: Partial<UserAttributes> = {};
     if (!user.google_id) {
       updates.google_id = googleId;
     }
-    // Update avatar if available
     if (avatarUrl && !user.avatar_url) {
       updates.avatar_url = avatarUrl;
     }
@@ -119,13 +164,10 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
       await user.update(updates);
     }
   } else {
-    // Create new user
-    // Generate username from email (before @)
     const usernameBase = email.split('@')[0];
     let username = usernameBase;
     let counter = 1;
 
-    // Ensure username is unique
     while (await User.findOne({ where: { username } })) {
       username = `${usernameBase}${counter}`;
       counter++;
@@ -139,7 +181,7 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
       first_name: firstName,
       last_name: lastName,
       avatar_url: avatarUrl,
-      password_hash: undefined, // Google-only account
+      password_hash: undefined,
       // OAuth sign-up: the login screen states that continuing with Google
       // constitutes acceptance of the terms and privacy policy
       terms_accepted_at: new Date(),
@@ -180,12 +222,12 @@ export const generateTokens = async (userId: number): Promise<TokenPair> => {
     { expiresIn: `${REFRESH_TOKEN_TTL_DAYS}d` }
   );
   
-  // Store refresh token in database (multi-session: do not delete other sessions)
+  // Store only the hash (multi-session: do not delete other sessions)
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + REFRESH_TOKEN_TTL_DAYS);
 
   await RefreshToken.create({
-    token: refreshToken,
+    token: hashRefreshToken(refreshToken),
     user_id: userId,
     expires_at: expiresAt,
     is_revoked: false
@@ -207,24 +249,18 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<L
     throw new Error('Email and password are required');
   }
   
-  // Find user by email
-  const user = await User.findOne({ where: { email: email.toLowerCase() } }) as User & UserAttributes;
-  if (!user) {
-    throw new Error('Invalid credentials');
+  const user = await User.findOne({
+    where: { email: email.toLowerCase() },
+  }) as User & UserAttributes | null;
+
+  // Always bcrypt-compare so missing / social-only / wrong-password paths share similar timing
+  const hashToCompare = user?.password_hash ?? DUMMY_PASSWORD_HASH;
+  const passwordOk = await bcrypt.compare(password, hashToCompare);
+
+  if (!user || !user.password_hash || !passwordOk) {
+    throw new Error(INVALID_CREDENTIALS_MESSAGE);
   }
   
-  // Passwordless accounts must use the provider that created them
-  if (!user.password_hash) {
-    throw new Error(socialOnlyLoginMessage(user));
-  }
-  
-  // Verify password
-  const isPasswordValid = await bcrypt.compare(password, user.password_hash);
-  if (!isPasswordValid) {
-    throw new Error('Invalid credentials');
-  }
-  
-  // Generate tokens
   const tokens = await generateTokens(user.id);
   
   return { user, tokens };
@@ -248,24 +284,16 @@ export const verifyRefreshToken = async (
     throw new Error('JWT_REFRESH_SECRET not configured');
   }
   
-  // Verify refresh token
+  // Verify refresh token signature/expiry
   let decoded: { userId: number; tokenId?: string };
   try {
     decoded = jwt.verify(refreshToken, refreshSecret) as { userId: number; tokenId?: string };
   } catch {
     throw new Error('Invalid or expired refresh token');
   }
-  
-  const storedToken = await RefreshToken.findOne({
-    where: {
-      token: refreshToken,
-      is_revoked: false,
-      expires_at: {
-        [Op.gt]: new Date() // Token hasn't expired
-      }
-    }
-  });
-  
+
+  const storedToken = await findActiveRefreshToken(refreshToken);
+
   if (!storedToken) {
     throw new Error('Invalid or expired refresh token');
   }
@@ -282,7 +310,7 @@ export const verifyRefreshToken = async (
 export const refreshUserTokens = async (
   refreshToken: string
 ): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
-  const { userId } = await verifyRefreshToken(refreshToken);
+  const { userId, storedToken } = await verifyRefreshToken(refreshToken);
   
   // Find user
   const user = await User.findByPk(userId) as User & UserAttributes;
@@ -292,9 +320,7 @@ export const refreshUserTokens = async (
   
   // Rotate only this session's refresh token; leave other sessions intact
   const tokens = await generateTokens(user.id);
-  await RefreshToken.destroy({
-    where: { token: refreshToken }
-  });
+  await storedToken.destroy();
   
   return { user, tokens };
 };
@@ -305,11 +331,75 @@ export const refreshUserTokens = async (
  * @returns {Promise<void>}
  */
 export const revokeRefreshToken = async (refreshToken: string): Promise<void> => {
-  if (refreshToken) {
+  if (!refreshToken) {
+    return;
+  }
+
+  const tokenHash = hashRefreshToken(refreshToken);
+  const destroyed = await RefreshToken.destroy({
+    where: { token: tokenHash },
+  });
+
+  // Legacy plaintext rows (pre-hashing) until they are refreshed once
+  if (destroyed === 0) {
     await RefreshToken.destroy({
-      where: { token: refreshToken }
+      where: { token: refreshToken },
     });
   }
+};
+
+/**
+ * Create a short-lived one-time code for completing a web OAuth login on the frontend.
+ * Avoids putting JWTs in redirect query strings (history, Referer, proxy logs).
+ */
+export const createOAuthExchangeCode = async (userId: number): Promise<string> => {
+  const rawCode = crypto.randomBytes(32).toString('hex');
+  const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+  const expiresAt = new Date(Date.now() + OAUTH_EXCHANGE_TTL_MS);
+
+  await OAuthExchangeCode.create({
+    user_id: userId,
+    code_hash: codeHash,
+    expires_at: expiresAt,
+    used_at: null,
+  });
+
+  return rawCode;
+};
+
+/**
+ * Consume an OAuth exchange code and issue session tokens.
+ */
+export const exchangeOAuthCode = async (
+  rawCode: string
+): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
+  if (!rawCode) {
+    throw new Error('Exchange code is required');
+  }
+
+  const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
+  const row = await OAuthExchangeCode.findOne({
+    where: {
+      code_hash: codeHash,
+      used_at: null,
+      expires_at: { [Op.gt]: new Date() },
+    },
+  });
+
+  if (!row) {
+    throw new Error('Invalid or expired exchange code');
+  }
+
+  row.used_at = new Date();
+  await row.save();
+
+  const user = await User.findByPk(row.user_id) as User & UserAttributes | null;
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  const tokens = await generateTokens(user.id);
+  return { user, tokens };
 };
 
 /**
@@ -367,7 +457,11 @@ export const exchangeGoogleCode = async (code: string): Promise<{ accessToken: s
     );
   }
 
-  const profile = await profileResponse.json() as GoogleProfile;
+  const profileJson = await profileResponse.json() as GoogleProfile & { verified_email?: boolean };
+  const profile: GoogleProfile = {
+    ...profileJson,
+    emailVerified: isGoogleEmailVerified(profileJson.verified_email ?? profileJson.emailVerified),
+  };
 
   return { accessToken: access_token, profile };
 };
@@ -411,10 +505,16 @@ export const verifyGoogleIdToken = async (idToken: string): Promise<GoogleProfil
     throw new Error('Invalid token');
   }
 
+  if (!isGoogleEmailVerified(tokenInfo.email_verified)) {
+    console.error('[verifyGoogleIdToken] Email not verified');
+    throw new Error('Google email is not verified');
+  }
+
   // Extract user information from token
   const googleProfile: GoogleProfile = {
     id: tokenInfo.sub,
     email: tokenInfo.email,
+    emailVerified: true,
     given_name: tokenInfo.given_name,
     family_name: tokenInfo.family_name,
     picture: tokenInfo.picture,

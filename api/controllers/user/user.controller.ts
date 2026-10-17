@@ -3,11 +3,12 @@ import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 import * as UserService from '../../services/user.service.ts';
 import * as DataExportService from '../../services/dataExport.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, email, password, first_name, last_name, family_group_code, family_group_id, terms_accepted } = req.body;
+    const { username, email, password, first_name, last_name, family_group_code, terms_accepted } = req.body;
 
     try {
       const { user, familyGroupId } = await UserService.createUser({
@@ -17,7 +18,6 @@ export const createUser = async (req: Request, res: Response) => {
         first_name,
         last_name,
         family_group_code,
-        family_group_id,
         terms_accepted
       });
 
@@ -74,7 +74,7 @@ export const createUser = async (req: Request, res: Response) => {
 // Get user by ID
 export const getUserById = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.id);
+    const userId = routeParamInt(req.params.id);
 
     try {
       const user = await UserService.getUserById(userId);
@@ -95,8 +95,8 @@ export const getUserById = async (req: Request, res: Response) => {
 // Update user
 export const updateUser = async (req: Request, res: Response) => {
   try {
-    const userId = parseInt(req.params.id);
-    const { username, email, first_name, last_name, family_group_id, avatar_url } = req.body;
+    const userId = routeParamInt(req.params.id);
+    const { username, email, first_name, last_name, avatar_url } = req.body;
 
     try {
       const updatedUser = await UserService.updateUser(userId, {
@@ -104,7 +104,6 @@ export const updateUser = async (req: Request, res: Response) => {
         email,
         first_name,
         last_name,
-        family_group_id,
         avatar_url
       });
 

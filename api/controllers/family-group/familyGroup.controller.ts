@@ -8,6 +8,7 @@ import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 // Map family lifecycle service errors onto HTTP statuses
 const familyLifecycleErrorStatus = (message: string): number => {
@@ -143,7 +144,7 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
 
 export const getFamilyGroupById = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     if (isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group ID' });
     }
@@ -166,7 +167,7 @@ export const getFamilyGroupById = async (req: Request, res: Response) => {
 
 export const leaveFamilyGroup = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     const userId = (req.user as User).dataValues.id;
 
     try {
@@ -193,7 +194,7 @@ export const leaveFamilyGroup = async (req: Request, res: Response) => {
 
 export const transferFamilyGroupOwnership = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     const userId = (req.user as User).dataValues.id;
     const newOwnerId = parseInt(req.body?.new_owner_id);
 
@@ -226,7 +227,7 @@ export const transferFamilyGroupOwnership = async (req: Request, res: Response) 
 
 export const deleteFamilyGroup = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     const userId = (req.user as User).dataValues.id;
 
     try {
@@ -253,7 +254,7 @@ export const deleteFamilyGroup = async (req: Request, res: Response) => {
 
 export const getFamilyGroupMembers = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id ?? req.params.id);
+    const familyGroupId = routeParamInt(req.params.family_group_id ?? req.params.id);
     if (isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group ID' });
     }

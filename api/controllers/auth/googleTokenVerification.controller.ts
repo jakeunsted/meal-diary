@@ -50,15 +50,6 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
         updated_at: user.updated_at
       };
 
-      // Log user data for debugging
-      console.log('[Google Token Verification] User authenticated:', {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        family_group_id: user.family_group_id,
-        hasFamilyGroup: !!user.family_group_id
-      });
-
       // Return tokens and user data
       res.status(200).json({
         user: userData,
@@ -83,6 +74,9 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
         statusCode = 401;
       } else if (errorMessage.includes('No email')) {
         reason = 'no_email';
+        statusCode = 400;
+      } else if (errorMessage.includes('not verified')) {
+        reason = 'email_not_verified';
         statusCode = 400;
       }
 

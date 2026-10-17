@@ -78,7 +78,7 @@ describe('recipe-import/schemaOrg.parser', () => {
   });
 
   it('rejects internal, link-local, and metadata targets before fetching', async () => {
-    const fetchImpl = vi.fn();
+    const pinnedFetch = vi.fn();
     const blockedUrls = [
       'http://127.0.0.1/recipe',
       'http://localhost/recipe',
@@ -93,30 +93,30 @@ describe('recipe-import/schemaOrg.parser', () => {
 
     for (const blockedUrl of blockedUrls) {
       await expect(
-        fetchAndParseSchemaOrgRecipe(new URL(blockedUrl), fetchImpl as unknown as typeof fetch)
+        fetchAndParseSchemaOrgRecipe(new URL(blockedUrl), pinnedFetch)
       ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
     }
 
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(pinnedFetch).not.toHaveBeenCalled();
   });
 
   it('rejects a hostname that resolves to a loopback address', async () => {
-    const fetchImpl = vi.fn();
+    const pinnedFetch = vi.fn();
     const lookupImpl = vi.fn().mockResolvedValue([{ address: '127.0.0.1', family: 4 }]);
 
     await expect(
       fetchAndParseSchemaOrgRecipe(
         new URL('https://rebind.example/recipe'),
-        fetchImpl as unknown as typeof fetch,
+        pinnedFetch,
         lookupImpl
       )
     ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
 
-    expect(fetchImpl).not.toHaveBeenCalled();
+    expect(pinnedFetch).not.toHaveBeenCalled();
   });
 
   it('rejects a redirect to a loopback address', async () => {
-    const fetchImpl = vi.fn().mockResolvedValue({
+    const pinnedFetch = vi.fn().mockResolvedValue({
       status: 302,
       ok: false,
       headers: {
@@ -128,15 +128,16 @@ describe('recipe-import/schemaOrg.parser', () => {
     await expect(
       fetchAndParseSchemaOrgRecipe(
         new URL('https://example.com/recipe'),
-        fetchImpl as unknown as typeof fetch,
+        pinnedFetch,
         lookupImpl
       )
     ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
 
-    expect(fetchImpl).toHaveBeenCalledTimes(1);
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://example.com/recipe',
-      expect.objectContaining({ redirect: 'manual' })
+    expect(pinnedFetch).toHaveBeenCalledTimes(1);
+    expect(pinnedFetch).toHaveBeenCalledWith(
+      new URL('https://example.com/recipe'),
+      { address: '93.184.216.34', family: 4 },
+      expect.any(Object)
     );
   });
 
@@ -146,7 +147,7 @@ describe('recipe-import/schemaOrg.parser', () => {
         { "@type": "Recipe", "name": "Soup" }
       </script>
     `;
-    const fetchImpl = vi.fn().mockResolvedValue({
+    const pinnedFetch = vi.fn().mockResolvedValue({
       status: 200,
       ok: true,
       headers: { get: () => null },
@@ -156,14 +157,15 @@ describe('recipe-import/schemaOrg.parser', () => {
 
     const draft = await fetchAndParseSchemaOrgRecipe(
       new URL('https://example.com/soup'),
-      fetchImpl as unknown as typeof fetch,
+      pinnedFetch,
       lookupImpl
     );
 
     expect(draft.name).toBe('Soup');
-    expect(fetchImpl).toHaveBeenCalledWith(
-      'https://example.com/soup',
-      expect.objectContaining({ redirect: 'manual' })
+    expect(pinnedFetch).toHaveBeenCalledWith(
+      new URL('https://example.com/soup'),
+      { address: '93.184.216.34', family: 4 },
+      expect.any(Object)
     );
   });
 });

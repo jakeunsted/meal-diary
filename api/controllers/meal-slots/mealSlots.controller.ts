@@ -12,10 +12,11 @@ import {
 import { emitFamilyEvent } from '../../services/sse.service.ts';
 import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import { emitLog } from '../../utils/otelLogs.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 export const getMealSlots = async (req: Request, res: Response) => {
   try {
-    const familyGroupId = parseInt(req.params.family_group_id, 10);
+    const familyGroupId = routeParamInt(req.params.family_group_id);
 
     if (!familyGroupId || Number.isNaN(familyGroupId)) {
       return res.status(400).json({ message: 'Invalid family group id' });
@@ -31,7 +32,7 @@ export const getMealSlots = async (req: Request, res: Response) => {
 
 export const updateMealSlots = async (req: Request, res: Response) => {
   const user = req.user as User;
-  const familyGroupId = parseInt(req.params.family_group_id, 10);
+  const familyGroupId = routeParamInt(req.params.family_group_id);
 
   try {
     if (!familyGroupId || Number.isNaN(familyGroupId)) {

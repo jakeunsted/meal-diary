@@ -34,6 +34,8 @@ vi.mock('../mealSlots.service.ts', () => ({
   ]),
   buildDaySlotsForWeek: vi.fn().mockResolvedValue(new Map()),
   syncLegacyColumnsToEntries: vi.fn().mockResolvedValue(undefined),
+  assertRecipesBelongToFamily: vi.fn().mockResolvedValue(undefined),
+  RECIPE_NOT_IN_FAMILY_MESSAGE: 'Recipe does not belong to this family group',
 }));
 
 const fakeDiary = (id: number) =>
@@ -262,6 +264,23 @@ describe('MealDiary Service', () => {
       expect(dailyMeal.update).toHaveBeenCalledWith(
         expect.objectContaining({ dinner: 'Pizza', dinner_recipe_id: null })
       );
+    });
+
+    it('should reject recipe ids that do not belong to the family', async () => {
+      const { assertRecipesBelongToFamily, RECIPE_NOT_IN_FAMILY_MESSAGE } =
+        await import('../mealSlots.service.ts');
+      vi.mocked(assertRecipesBelongToFamily).mockRejectedValueOnce(
+        new Error(RECIPE_NOT_IN_FAMILY_MESSAGE)
+      );
+      vi.spyOn(MealDiary, 'findOne').mockResolvedValue(fakeDiary(1));
+      const findOrCreate = vi.spyOn(DailyMeal, 'findOrCreate');
+
+      await expect(
+        updateDailyMeal(1, new Date('2024-01-01'), 1, {
+          dinner_recipe_id: 999,
+        })
+      ).rejects.toThrow(RECIPE_NOT_IN_FAMILY_MESSAGE);
+      expect(findOrCreate).not.toHaveBeenCalled();
     });
   });
 });

@@ -5,6 +5,7 @@ import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../util
 import { trackAuthLog, logAuth } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
+import { sanitizeUser } from '../../services/user.service.ts';
 import {
   completePasswordReset,
   INVALID_RESET_LINK_MESSAGE,
@@ -41,16 +42,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       await trackEvent(user.id.toString(), 'login_success', {
         auth_method: 'email',
       });
-      
-      // Log user data for debugging
-      console.log('[Login] User data:', {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        family_group_id: user.family_group_id,
-        hasFamilyGroup: !!user.family_group_id
-      });
-      
+
       const response = await buildAuthResponse(user as User & UserAttributes, tokens);
       res.status(200).json(response);
     } catch (authError) {
@@ -233,7 +225,7 @@ export const validateToken = async (req: Request, res: Response): Promise<void> 
 
     res.status(200).json({
       valid: true,
-      user
+      user: sanitizeUser(user),
     });
   } catch (error) {
     console.error('Token validation error:', error);
@@ -349,8 +341,8 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
       // Find or create user using service
       const user = await AuthService.findOrCreateGoogleUser(profile);
 
-      // Generate JWT tokens
-      const tokens = await AuthService.generateTokens(user.id);
+      // One-time exchange code — never put JWTs in the redirect URL
+      const exchangeCode = await AuthService.createOAuthExchangeCode(user.id);
 
       // Track successful Google OAuth callback
       await trackEvent(user.id.toString(), 'google_oauth_callback_success', {
@@ -362,33 +354,8 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
         auth_method: 'google',
       });
 
-      // Prepare user data (exclude password_hash)
-      const userData = {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        family_group_id: user.family_group_id,
-        avatar_url: user.avatar_url,
-        created_at: user.created_at,
-        updated_at: user.updated_at
-      };
-
-      // Log user data for debugging
-      console.log('[Google OAuth] User authenticated:', {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        family_group_id: user.family_group_id,
-        hasFamilyGroup: !!user.family_group_id
-      });
-
-      // Redirect to frontend callback page with tokens and user data
-      const redirectUrl = `${FRONTEND_URL}/auth/google/callback?` +
-        `accessToken=${encodeURIComponent(tokens.accessToken)}&` +
-        `refreshToken=${encodeURIComponent(tokens.refreshToken)}&` +
-        `user=${encodeURIComponent(JSON.stringify(userData))}`;
+      const redirectUrl =
+        `${FRONTEND_URL}/auth/google/callback?exchangeCode=${encodeURIComponent(exchangeCode)}`;
 
       res.redirect(redirectUrl);
     } catch (serviceError) {
@@ -436,6 +403,36 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
   } catch (error) {
     console.error('Forgot password error:', error);
     res.status(500).json({ message: 'Server error during password reset' });
+  }
+};
+
+/**
+ * Exchange a one-time OAuth code (from the Google web callback redirect) for session tokens.
+ */
+export const exchangeGoogleOAuthCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const code = typeof req.body?.code === 'string' ? req.body.code : '';
+    if (!code) {
+      res.status(400).json({ message: 'Exchange code is required' });
+      return;
+    }
+
+    const { user, tokens } = await AuthService.exchangeOAuthCode(code);
+    const response = await buildAuthResponse(user, tokens);
+    res.status(200).json(response);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid or expired exchange code';
+    if (
+      message === 'Exchange code is required' ||
+      message === 'Invalid or expired exchange code' ||
+      message === 'User not found'
+    ) {
+      res.status(400).json({ message: 'Invalid or expired exchange code' });
+      return;
+    }
+
+    console.error('OAuth exchange error:', error);
+    res.status(500).json({ message: 'Server error during OAuth exchange' });
   }
 };
 

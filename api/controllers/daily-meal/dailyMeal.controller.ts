@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { User, MealDiary, DailyMeal } from '../../db/models/associations.ts';
 import * as DailyMealService from '../../services/dailyMeal.service.ts';
+import { routeParamInt } from '../../utils/routeParam.ts';
 
 // A meal diary is only accessible to members of its family group
 const userOwnsMealDiary = async (mealDiaryId: number, user?: User): Promise<boolean> => {
@@ -51,12 +52,12 @@ export const getDailyMealsByMealDiaryId = async (req: Request, res: Response) =>
       return res.status(400).json({ message: 'Meal diary ID is required' });
     }
 
-    if (!(await userOwnsMealDiary(parseInt(meal_diary_id), req.user as User | undefined))) {
+    if (!(await userOwnsMealDiary(routeParamInt(meal_diary_id), req.user as User | undefined))) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
     // Get daily meals by meal diary ID
-    const dailyMeals = await DailyMealService.getDailyMealsByMealDiaryId(parseInt(meal_diary_id));
+    const dailyMeals = await DailyMealService.getDailyMealsByMealDiaryId(routeParamInt(meal_diary_id));
     return res.status(200).json(dailyMeals);
   } catch (error) {
     console.error('Error getting daily meals:', error);
@@ -70,7 +71,7 @@ export const updateDailyMealById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { breakfast = null, lunch = null, dinner = null } = req.body;
 
-    const existingMeal = await DailyMeal.findByPk(parseInt(id));
+    const existingMeal = await DailyMeal.findByPk(routeParamInt(id));
     if (!existingMeal) {
       return res.status(404).json({ message: 'Daily meal not found' });
     }
@@ -79,7 +80,7 @@ export const updateDailyMealById = async (req: Request, res: Response) => {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
-    const dailyMeal = await DailyMealService.updateDailyMealById(parseInt(id), breakfast, lunch, dinner, req.user as User);
+    const dailyMeal = await DailyMealService.updateDailyMealById(routeParamInt(id), breakfast, lunch, dinner, req.user as User);
 
     return res.status(200).json(dailyMeal);
   } catch (error) {

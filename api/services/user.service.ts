@@ -19,7 +19,6 @@ export interface CreateUserData {
   password: string;
   first_name?: string;
   last_name?: string;
-  family_group_id?: number;
   family_group_code?: string;
   terms_accepted?: boolean;
 }
@@ -29,7 +28,6 @@ export interface UpdateUserData {
   email?: string;
   first_name?: string;
   last_name?: string;
-  family_group_id?: number;
   avatar_url?: string;
 }
 
@@ -109,7 +107,7 @@ export const createUser = async (userData: CreateUserData): Promise<{
   user: SanitizedUser;
   familyGroupId: number | null;
 }> => {
-  const { username, email, password, first_name, last_name, family_group_id, family_group_code, terms_accepted } = userData;
+  const { username, email, password, first_name, last_name, family_group_code, terms_accepted } = userData;
 
   if (!username || !email || !password) {
     throw new Error('Username, email, and password are required');
@@ -127,11 +125,8 @@ export const createUser = async (userData: CreateUserData): Promise<{
     throw new Error('Acceptance of the terms of service and privacy policy is required');
   }
 
-  // Resolve family group ID from code if provided
-  let resolvedFamilyGroupId = family_group_id;
-  if (family_group_code) {
-    resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
-  }
+  // Invite code only — never trust a numeric family_group_id from the client
+  const resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
 
   if (resolvedFamilyGroupId) {
     const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId);
@@ -196,7 +191,7 @@ export const getUserById = async (userId: number): Promise<SanitizedUser> => {
  * @throws {Error} If user not found or validation fails
  */
 export const updateUser = async (userId: number, userData: UpdateUserData): Promise<SanitizedUser> => {
-  const { username, email, first_name, last_name, family_group_id, avatar_url } = userData;
+  const { username, email, first_name, last_name, avatar_url } = userData;
 
   const user = await User.findByPk(userId) as User & UserAttributes | null;
 
@@ -224,14 +219,13 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     }
   }
 
-  // Update user
+  // Membership changes only via family-group join/leave/create/transfer — never via mass assignment
   await user.update({
     username,
     email: email?.toLowerCase(),
     normalized_email: email ? normalizeEmail(email) : undefined,
     first_name,
     last_name,
-    family_group_id,
     avatar_url
   });
 

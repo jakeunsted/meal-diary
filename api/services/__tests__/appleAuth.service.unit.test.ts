@@ -286,33 +286,51 @@ describe('authenticateWithAppleToken', () => {
 });
 
 describe('authenticateUser passwordless accounts', () => {
-  it('tells Apple-only accounts to sign in with Apple', async () => {
+  it('returns a generic failure for Apple-only accounts (no IdP enumeration)', async () => {
+    const bcrypt = await import('bcrypt');
+    vi.mocked(bcrypt.default.compare).mockResolvedValue(false as never);
     vi.mocked(User.findOne).mockResolvedValue(
       userRow({ password_hash: undefined, apple_id: 'apple-1', google_id: undefined }) as never
     );
 
     await expect(
       authenticateUser({ email: 'ada@example.com', password: 'secret' })
-    ).rejects.toThrow('Invalid credentials. Please sign in with Apple.');
+    ).rejects.toThrow('Invalid credentials');
+    expect(bcrypt.default.compare).toHaveBeenCalled();
   });
 
-  it('tells Google-only accounts to sign in with Google', async () => {
+  it('returns a generic failure for Google-only accounts (no IdP enumeration)', async () => {
+    const bcrypt = await import('bcrypt');
+    vi.mocked(bcrypt.default.compare).mockResolvedValue(false as never);
     vi.mocked(User.findOne).mockResolvedValue(
       userRow({ password_hash: undefined, apple_id: undefined, google_id: 'google-1' }) as never
     );
 
     await expect(
       authenticateUser({ email: 'ada@example.com', password: 'secret' })
-    ).rejects.toThrow('Invalid credentials. Please sign in with Google.');
+    ).rejects.toThrow('Invalid credentials');
   });
 
-  it('mentions both providers when the account has Apple and Google', async () => {
+  it('returns a generic failure for Apple+Google accounts (no IdP enumeration)', async () => {
+    const bcrypt = await import('bcrypt');
+    vi.mocked(bcrypt.default.compare).mockResolvedValue(false as never);
     vi.mocked(User.findOne).mockResolvedValue(
       userRow({ password_hash: undefined, apple_id: 'apple-1', google_id: 'google-1' }) as never
     );
 
     await expect(
       authenticateUser({ email: 'ada@example.com', password: 'secret' })
-    ).rejects.toThrow('Invalid credentials. Please sign in with Apple or Google.');
+    ).rejects.toThrow('Invalid credentials');
+  });
+
+  it('still runs bcrypt when the email is unknown', async () => {
+    const bcrypt = await import('bcrypt');
+    vi.mocked(bcrypt.default.compare).mockResolvedValue(false as never);
+    vi.mocked(User.findOne).mockResolvedValue(null);
+
+    await expect(
+      authenticateUser({ email: 'missing@example.com', password: 'secret' })
+    ).rejects.toThrow('Invalid credentials');
+    expect(bcrypt.default.compare).toHaveBeenCalled();
   });
 });

@@ -21,17 +21,16 @@ import { useAuthStore } from '../../../stores/auth';
 
 /**
  * Google OAuth Callback Page
- * 
+ *
  * NOTE: This page is only used for web OAuth flow (browser-based authentication).
- * Native apps (Android/iOS) use the Capacitor Social Login plugin which handles
- * authentication in-app and doesn't redirect to this callback page.
- * 
+ * Native apps use Google ID token verification and do not redirect here.
+ *
  * Flow:
- * 1. Web: User clicks "Sign in with Google" → Redirects to Google → Google redirects here
- * 2. Native: User clicks "Sign in with Google" → Native SDK opens → Tokens handled directly in useGoogleAuth composable
+ * 1. User signs in with Google → API callback stores a one-time exchange code
+ * 2. API redirects here with ?exchangeCode=...
+ * 3. This page POSTs the code to exchange for session tokens (never in the URL)
  */
 
-// Nuxt auto-imports: definePageMeta, useRoute, useRouter, ref, onMounted
 definePageMeta({
   layout: false,
   middleware: []
@@ -46,29 +45,20 @@ const error = ref('');
 
 onMounted(async () => {
   try {
-    // Check if this is a direct callback from Google (with code and state)
-    // or a redirect from the API (with accessToken, refreshToken, and user)
-    const code = String(route.query.code || '');
+    const googleCode = String(route.query.code || '');
     const state = String(route.query.state || '');
-    const accessToken = String(route.query.accessToken || '');
-    const refreshToken = String(route.query.refreshToken || '');
-    const userParam = String(route.query.user || '');
+    const exchangeCode = String(route.query.exchangeCode || '');
 
-    // If we have code and state, this is a direct callback from Google
-    // Forward it to the API backend
-    if (code && state) {
+    // Direct callback from Google — forward to API (which redirects back with exchangeCode)
+    if (googleCode && state) {
       const config = useRuntimeConfig();
       const baseUrl = config.public.baseUrl;
-      
-      // Forward to API backend callback endpoint
-      // The API will process the OAuth callback and redirect back to /auth/google/callback with tokens
-      window.location.href = `${baseUrl}/auth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
+
+      window.location.href = `${baseUrl}/auth/google/callback?code=${encodeURIComponent(googleCode)}&state=${encodeURIComponent(state)}`;
       return;
     }
 
-    // Otherwise, this should be a redirect from the API with tokens
-    if (!accessToken || !refreshToken || !userParam) {
-      // Check if there's an error in the query
+    if (!exchangeCode) {
       const errorParam = String(route.query.error || '');
       if (errorParam) {
         error.value = getErrorMessage(errorParam);
@@ -79,10 +69,10 @@ onMounted(async () => {
           flow: 'web_oauth_callback',
         });
       } else {
-        error.value = 'Authentication failed. Missing tokens.';
+        error.value = 'Authentication failed. Missing exchange code.';
         reportAuthError('oauth_callback_client_error', {
-          error_type: 'missing_tokens',
-          error_message: 'Authentication failed. Missing tokens.',
+          error_type: 'missing_exchange_code',
+          error_message: error.value,
           path: route.path,
           flow: 'web_oauth_callback',
         });
@@ -93,29 +83,25 @@ onMounted(async () => {
       return;
     }
 
-    // Parse user data
-    let userData;
-    try {
-      userData = JSON.parse(decodeURIComponent(userParam));
-    } catch (parseError) {
-      reportAuthError('oauth_callback_client_error', {
-        error_type: 'parse_user_data',
-        error_message: 'Failed to parse user data',
-        path: route.path,
-        flow: 'web_oauth_callback',
-      });
-      throw new Error('Failed to parse user data');
-    }
-
-    // Store auth data
-    await authStore.setAuth({
-      user: userData,
-      accessToken: decodeURIComponent(accessToken),
-      refreshToken: decodeURIComponent(refreshToken)
+    const authResponse = await $fetch<{
+      user: { family_group_id?: number | null };
+      accessToken: string;
+      refreshToken: string;
+    }>('/api/auth/google/exchange', {
+      method: 'POST',
+      body: { code: exchangeCode },
     });
 
-    // Determine redirect based on family group status
-    if (!userData.family_group_id) {
+    await authStore.setAuth({
+      user: authResponse.user,
+      accessToken: authResponse.accessToken,
+      refreshToken: authResponse.refreshToken,
+    });
+
+    // Clear sensitive query params from the address bar
+    await router.replace({ path: route.path, query: {} });
+
+    if (!authResponse.user.family_group_id) {
       router.push('/registration/step-2');
     } else {
       router.push('/diary');
