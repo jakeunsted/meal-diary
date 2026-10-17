@@ -5,6 +5,7 @@ import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../util
 import { trackAuthLog, logAuth } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
+import { sanitizeUser } from '../../services/user.service.ts';
 import {
   completePasswordReset,
   INVALID_RESET_LINK_MESSAGE,
@@ -233,7 +234,7 @@ export const validateToken = async (req: Request, res: Response): Promise<void> 
 
     res.status(200).json({
       valid: true,
-      user
+      user: sanitizeUser(user),
     });
   } catch (error) {
     console.error('Token validation error:', error);
