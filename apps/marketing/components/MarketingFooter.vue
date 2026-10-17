@@ -29,12 +29,13 @@ const handleCookiePreferences = () => {
       <div class="md:col-span-1">
         <p class="flex items-center gap-2.5 font-display text-2xl font-semibold text-white">
           <img
-            src="/logo.png"
+            src="/logo-72.png"
             alt=""
             width="36"
             height="36"
             class="size-9 rounded-xl"
             decoding="async"
+            loading="lazy"
             aria-hidden="true"
           >
           <span>{{ t('brand.name') }}</span>
@@ -53,7 +54,7 @@ const handleCookiePreferences = () => {
       </div>
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wider text-ink-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-ink-300">
           {{ t('footer.product') }}
         </p>
         <ul class="mt-3 space-y-2 text-sm">
@@ -76,7 +77,7 @@ const handleCookiePreferences = () => {
       </div>
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wider text-ink-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-ink-300">
           {{ t('footer.company') }}
         </p>
         <ul class="mt-3 space-y-2 text-sm">
@@ -89,7 +90,7 @@ const handleCookiePreferences = () => {
       </div>
 
       <div>
-        <p class="text-xs font-semibold uppercase tracking-wider text-ink-400">
+        <p class="text-xs font-semibold uppercase tracking-wider text-ink-300">
           {{ t('footer.legal') }}
         </p>
         <ul class="mt-3 space-y-2 text-sm">
@@ -116,7 +117,7 @@ const handleCookiePreferences = () => {
       </div>
     </div>
 
-    <div class="border-t border-white/10 px-4 py-4 text-center text-xs text-ink-400 sm:px-6">
+    <div class="border-t border-white/10 px-4 py-4 text-center text-xs text-ink-300 sm:px-6">
       {{ t('footer.copyright', { year }) }}
     </div>
   </footer>

@@ -37,7 +37,8 @@ onMounted(() => {
         }
       }
     },
-    { threshold: 0.18, rootMargin: '0px 0px -8% 0px' },
+    // Prefetch slightly before enter so scroll feels instant, but stay off the initial critical path.
+    { threshold: 0.01, rootMargin: '180px 0px' },
   );
 
   if (rootEl.value) observer.observe(rootEl.value);
@@ -77,8 +78,9 @@ const handleImgError = () => {
     >
       <div class="absolute -inset-4 rounded-[2rem] bg-gradient-to-br from-brand-500/30 via-ink-800/40 to-transparent blur-2xl" aria-hidden="true" />
       <figure class="relative mx-auto max-w-sm overflow-hidden rounded-[1.75rem] border border-white/10 bg-ink-950 shadow-2xl shadow-black/40">
+        <!-- Defer network until near viewport so below-fold PNGs stay off the critical path. -->
         <img
-          v-if="!imgError"
+          v-if="!imgError && isVisible"
           :src="src"
           :alt="alt"
           class="block h-auto w-full"
@@ -89,13 +91,18 @@ const handleImgError = () => {
           @error="handleImgError"
         >
         <div
-          v-else
+          v-else-if="imgError"
           class="flex aspect-[9/19] items-center justify-center bg-ink-900 px-6 text-center text-sm text-ink-300"
           role="img"
           :aria-label="alt"
         >
           {{ t('screenshot.placeholder') }}
         </div>
+        <div
+          v-else
+          class="aspect-[9/19] w-full bg-ink-900"
+          aria-hidden="true"
+        />
       </figure>
     </div>
   </section>

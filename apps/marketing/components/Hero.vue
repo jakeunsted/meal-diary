@@ -14,12 +14,13 @@ const handleOpenApp = () => {
     <div class="relative mx-auto flex min-h-[78vh] max-w-6xl flex-col justify-center px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
       <div class="flex items-center gap-4 sm:gap-5">
         <img
-          src="/logo.png"
+          src="/logo-144.png"
           alt=""
           width="72"
           height="72"
           class="size-14 rounded-2xl shadow-lg shadow-brand-500/20 sm:size-[4.5rem]"
           decoding="async"
+          fetchpriority="high"
           aria-hidden="true"
         >
         <p class="font-display text-4xl font-semibold tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">

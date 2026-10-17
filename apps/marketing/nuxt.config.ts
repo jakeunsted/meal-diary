@@ -54,9 +54,32 @@ export default defineNuxtConfig({
   },
   fonts: {
     families: [
-      { name: 'DM Sans', provider: 'google', weights: [400, 500, 600, 700] },
-      { name: 'Fraunces', provider: 'google', weights: [500, 600, 700] },
+      // Keep weights tight: each file is ~25–40 KiB on mobile.
+      { name: 'DM Sans', provider: 'google', weights: [400, 500, 600] },
+      { name: 'Fraunces', provider: 'google', weights: [600] },
     ],
+  },
+  nitro: {
+    routeRules: {
+      '/logo*.png': {
+        headers: { 'cache-control': 'public, max-age=31536000, immutable' },
+      },
+      '/screenshots/**': {
+        headers: { 'cache-control': 'public, max-age=2592000' },
+      },
+      '/silktide/**': {
+        headers: { 'cache-control': 'public, max-age=604800' },
+      },
+      '/favicon.png': {
+        headers: { 'cache-control': 'public, max-age=604800' },
+      },
+      '/apple-touch-icon.png': {
+        headers: { 'cache-control': 'public, max-age=604800' },
+      },
+      '/og-image.png': {
+        headers: { 'cache-control': 'public, max-age=604800' },
+      },
+    },
   },
   i18n: {
     locales: [

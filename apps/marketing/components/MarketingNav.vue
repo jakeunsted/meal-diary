@@ -43,7 +43,7 @@ const handleToggleMenu = () => {
         @click="handleNavClick('brand')"
       >
         <img
-          src="/logo.png"
+          src="/logo-72.png"
           alt=""
           width="36"
           height="36"
