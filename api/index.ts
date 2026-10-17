@@ -14,6 +14,7 @@ import * as billingController from './controllers/billing/billing.controller.ts'
 import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { devCorsMiddleware } from './middleware/cors.middleware.ts';
+import { swaggerBasicAuth } from './middleware/docsAuth.middleware.ts';
 import { apiLimiter } from './middleware/rateLimit.middleware.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 import { initializeOtelLogs, shutdownOtelLogs, emitLog } from './utils/otelLogs.ts';
@@ -87,11 +88,13 @@ app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ message: 'OK' });
 });
 
-// Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+// Swagger UI — Basic Auth via SWAGGER_USER / SWAGGER_PASSWORD (404 if unset)
+app.use('/api-docs', swaggerBasicAuth, swaggerUi.serve, swaggerUi.setup(specs));
 
-// server api test coverage
-app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
+// server api test coverage (dev-only; do not ship coverage artifacts in production images)
+if (process.env.NODE_ENV === 'development') {
+  app.use('/coverage', express.static(path.join(__dirname, '../coverage')));
+}
 
 // Error tracking middleware (must be after routes)
 app.use(errorTrackingMiddleware);
