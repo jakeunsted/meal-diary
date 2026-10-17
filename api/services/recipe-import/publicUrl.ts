@@ -1,4 +1,6 @@
 import { lookup } from 'node:dns/promises';
+import http from 'node:http';
+import https from 'node:https';
 import { BlockList, isIP } from 'node:net';
 
 import { InvalidRecipeImportUrlError } from './errors.ts';
@@ -81,10 +83,18 @@ const isBlockedAddress = (address: string): boolean => {
   return true;
 };
 
-export const assertPublicHttpUrl = async (
+const pickPinnedAddress = (addresses: ResolvedAddress[]): ResolvedAddress => {
+  return addresses.find((entry) => entry.family === 4) ?? addresses[0];
+};
+
+/**
+ * Validate the URL and return DNS addresses that are all public.
+ * Callers must connect only to one of these addresses (DNS pinning).
+ */
+export const resolvePublicHttpUrl = async (
   url: URL,
   lookupImpl: DnsLookup = lookupPublicHost
-): Promise<void> => {
+): Promise<ResolvedAddress[]> => {
   if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
     throw new InvalidRecipeImportUrlError();
   }
@@ -102,7 +112,7 @@ export const assertPublicHttpUrl = async (
       throw new InvalidRecipeImportUrlError();
     }
 
-    return;
+    return [{ address, family: isIP(address) }];
   }
 
   let addresses: ResolvedAddress[];
@@ -116,6 +126,15 @@ export const assertPublicHttpUrl = async (
   if (addresses.length === 0 || addresses.some((entry) => isBlockedAddress(entry.address))) {
     throw new InvalidRecipeImportUrlError();
   }
+
+  return addresses;
+};
+
+export const assertPublicHttpUrl = async (
+  url: URL,
+  lookupImpl: DnsLookup = lookupPublicHost
+): Promise<void> => {
+  await resolvePublicHttpUrl(url, lookupImpl);
 };
 
 const discardBody = async (response: Response): Promise<void> => {
@@ -124,6 +143,69 @@ const discardBody = async (response: Response): Promise<void> => {
   } catch {
     // The redirect body is unused.
   }
+};
+
+/**
+ * Connect to a pre-validated IP while sending the original Host / SNI name.
+ * Prevents DNS rebinding between the public-IP check and the TCP connect.
+ */
+export const fetchPinnedHttpUrl = (
+  url: URL,
+  pinned: ResolvedAddress,
+  headers: Record<string, string>
+): Promise<Response> => {
+  return new Promise((resolve, reject) => {
+    const isHttps = url.protocol === 'https:';
+    const transport = isHttps ? https : http;
+    const port = url.port ? Number(url.port) : isHttps ? 443 : 80;
+
+    const request = transport.request(
+      {
+        protocol: url.protocol,
+        hostname: pinned.address,
+        port,
+        path: `${url.pathname}${url.search}`,
+        method: 'GET',
+        headers: {
+          ...headers,
+          Host: url.host,
+        },
+        servername: isHttps ? url.hostname : undefined,
+        family: pinned.family === 6 ? 6 : 4,
+      },
+      (incoming) => {
+        const chunks: Buffer[] = [];
+        incoming.on('data', (chunk: Buffer) => {
+          chunks.push(chunk);
+        });
+        incoming.on('end', () => {
+          const headerInit: Record<string, string> = {};
+          for (const [key, value] of Object.entries(incoming.headers)) {
+            if (value === undefined) {
+              continue;
+            }
+            headerInit[key] = Array.isArray(value) ? value.join(', ') : value;
+          }
+
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: incoming.statusCode ?? 0,
+              statusText: incoming.statusMessage,
+              headers: headerInit,
+            })
+          );
+        });
+      }
+    );
+
+    request.on('error', reject);
+    request.end();
+  });
+};
+
+const defaultImportHeaders = {
+  'User-Agent': 'MealDiaryRecipeImporter/1.0',
+  Accept: 'text/html,application/xhtml+xml',
 };
 
 export const fetchPublicHtml = async (
@@ -135,12 +217,19 @@ export const fetchPublicHtml = async (
   let current = url;
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
-    await assertPublicHttpUrl(current, resolveHost);
+    const addresses = await resolvePublicHttpUrl(current, resolveHost);
+    const pinned = pickPinnedAddress(addresses);
 
-    // Public http(s) only. Non-public addresses are rejected, and each redirect is checked again.
-    // An allow-list is not used so any public recipe site can be imported.
+    // Pin the validated address on the default path. Custom fetchImpl (tests)
+    // still goes through resolvePublicHttpUrl first so blocked hosts fail closed.
     // codeql[js/request-forgery]
-    const response = await fetchImpl(current.toString(), { redirect: 'manual', headers: { 'User-Agent': 'MealDiaryRecipeImporter/1.0', 'Accept': 'text/html,application/xhtml+xml' } });
+    const response =
+      fetchImpl === fetch
+        ? await fetchPinnedHttpUrl(current, pinned, defaultImportHeaders)
+        : await fetchImpl(current.toString(), {
+            redirect: 'manual',
+            headers: defaultImportHeaders,
+          });
 
     if (!redirectStatuses.has(response.status)) {
       return response;
