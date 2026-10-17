@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { initializeDatabase } from './db/db.ts';
 import userRoutes from './routes/userRoutes.routes.ts';
 import mealDiaryRoutes from './routes/mealDiary.routes.ts';
@@ -25,6 +26,14 @@ import { serverErrorLogMiddleware } from './middleware/serverErrorLog.middleware
 const __dirname = path.resolve('./api');
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+app.disable('x-powered-by');
+app.use(
+  helmet({
+    // JSON API + Swagger UI; CSP is handled at the edge for product apps
+    contentSecurityPolicy: false,
+  })
+);
 
 // Initialise PostHog analytics events
 const posthog = getPostHog();
