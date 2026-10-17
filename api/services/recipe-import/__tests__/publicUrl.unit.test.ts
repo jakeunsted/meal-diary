@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { InvalidRecipeImportUrlError } from '../errors.ts';
+import { InvalidRecipeImportUrlError, RecipeImportParseError } from '../errors.ts';
 import {
   assertPublicHttpUrl,
   resolvePublicHttpUrl,
   fetchPublicHtml,
+  RECIPE_IMPORT_FETCH_TIMEOUT_MS,
 } from '../publicUrl.ts';
 
 describe('resolvePublicHttpUrl / assertPublicHttpUrl', () => {
@@ -63,5 +64,38 @@ describe('fetchPublicHtml', () => {
     ).rejects.toBeInstanceOf(InvalidRecipeImportUrlError);
 
     expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes an abort signal with the import timeout to custom fetch', async () => {
+    const lookup = vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    const fetchImpl = vi.fn().mockResolvedValue(new Response('<html></html>', { status: 200 }));
+
+    await fetchPublicHtml(new URL('https://example.com/recipe'), fetchImpl as typeof fetch, lookup);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      'https://example.com/recipe',
+      expect.objectContaining({
+        redirect: 'manual',
+        signal: expect.any(AbortSignal),
+      })
+    );
+
+    const options = fetchImpl.mock.calls[0][1] as { signal: AbortSignal };
+    expect(options.signal.aborted).toBe(false);
+    expect(RECIPE_IMPORT_FETCH_TIMEOUT_MS).toBe(10_000);
+  });
+
+  it('maps fetch timeout errors to RecipeImportParseError', async () => {
+    const lookup = vi.fn().mockResolvedValue([{ address: '93.184.216.34', family: 4 }]);
+    const timeoutError = new Error('The operation was aborted due to timeout');
+    timeoutError.name = 'TimeoutError';
+    const fetchImpl = vi.fn().mockRejectedValue(timeoutError);
+
+    await expect(
+      fetchPublicHtml(new URL('https://example.com/recipe'), fetchImpl as typeof fetch, lookup)
+    ).rejects.toSatisfy(
+      (error: unknown) =>
+        error instanceof RecipeImportParseError && error.message === 'Recipe import timed out'
+    );
   });
 });

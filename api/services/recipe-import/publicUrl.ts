@@ -3,9 +3,11 @@ import http from 'node:http';
 import https from 'node:https';
 import { BlockList, isIP } from 'node:net';
 
-import { InvalidRecipeImportUrlError } from './errors.ts';
+import { InvalidRecipeImportUrlError, RecipeImportParseError } from './errors.ts';
 
 const MAX_REDIRECTS = 5;
+/** Per-hop deadline for recipe HTML fetch (connect + response body). */
+export const RECIPE_IMPORT_FETCH_TIMEOUT_MS = 10_000;
 
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 
@@ -145,6 +147,18 @@ const discardBody = async (response: Response): Promise<void> => {
   }
 };
 
+const isFetchTimeoutError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return (
+    error.name === 'TimeoutError' ||
+    error.name === 'AbortError' ||
+    /timed out/i.test(error.message)
+  );
+};
+
 /**
  * Connect to a pre-validated IP while sending the original Host / SNI name.
  * Prevents DNS rebinding between the public-IP check and the TCP connect.
@@ -152,12 +166,22 @@ const discardBody = async (response: Response): Promise<void> => {
 export const fetchPinnedHttpUrl = (
   url: URL,
   pinned: ResolvedAddress,
-  headers: Record<string, string>
+  headers: Record<string, string>,
+  timeoutMs: number = RECIPE_IMPORT_FETCH_TIMEOUT_MS
 ): Promise<Response> => {
   return new Promise((resolve, reject) => {
     const isHttps = url.protocol === 'https:';
     const transport = isHttps ? https : http;
     const port = url.port ? Number(url.port) : isHttps ? 443 : 80;
+    let settled = false;
+
+    const fail = (error: Error): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      reject(error);
+    };
 
     const request = transport.request(
       {
@@ -179,6 +203,12 @@ export const fetchPinnedHttpUrl = (
           chunks.push(chunk);
         });
         incoming.on('end', () => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          clearTimeout(timer);
+
           const headerInit: Record<string, string> = {};
           for (const [key, value] of Object.entries(incoming.headers)) {
             if (value === undefined) {
@@ -195,10 +225,22 @@ export const fetchPinnedHttpUrl = (
             })
           );
         });
+        incoming.on('error', (error) => {
+          clearTimeout(timer);
+          fail(error);
+        });
       }
     );
 
-    request.on('error', reject);
+    const timer = setTimeout(() => {
+      request.destroy();
+      fail(new Error('Recipe import fetch timed out'));
+    }, timeoutMs);
+
+    request.on('error', (error) => {
+      clearTimeout(timer);
+      fail(error);
+    });
     request.end();
   });
 };
@@ -220,37 +262,50 @@ export const fetchPublicHtml = async (
     const addresses = await resolvePublicHttpUrl(current, resolveHost);
     const pinned = pickPinnedAddress(addresses);
 
-    // Pin the validated address on the default path. Custom fetchImpl (tests)
-    // still goes through resolvePublicHttpUrl first so blocked hosts fail closed.
-    // codeql[js/request-forgery]
-    const response =
-      fetchImpl === fetch
-        ? await fetchPinnedHttpUrl(current, pinned, defaultImportHeaders)
-        : await fetchImpl(current.toString(), {
-            redirect: 'manual',
-            headers: defaultImportHeaders,
-          });
-
-    if (!redirectStatuses.has(response.status)) {
-      return response;
-    }
-
-    await discardBody(response);
-
-    if (redirectCount === MAX_REDIRECTS) {
-      throw new InvalidRecipeImportUrlError();
-    }
-
-    const location = response.headers.get('location');
-
-    if (!location) {
-      throw new InvalidRecipeImportUrlError();
-    }
-
     try {
-      current = new URL(location, current);
-    } catch {
-      throw new InvalidRecipeImportUrlError();
+      // Pin the validated address on the default path. Custom fetchImpl (tests)
+      // still goes through resolvePublicHttpUrl first so blocked hosts fail closed.
+      // codeql[js/request-forgery]
+      const response =
+        fetchImpl === fetch
+          ? await fetchPinnedHttpUrl(current, pinned, defaultImportHeaders)
+          : await fetchImpl(current.toString(), {
+              redirect: 'manual',
+              headers: defaultImportHeaders,
+              signal: AbortSignal.timeout(RECIPE_IMPORT_FETCH_TIMEOUT_MS),
+            });
+
+      if (!redirectStatuses.has(response.status)) {
+        return response;
+      }
+
+      await discardBody(response);
+
+      if (redirectCount === MAX_REDIRECTS) {
+        throw new InvalidRecipeImportUrlError();
+      }
+
+      const location = response.headers.get('location');
+
+      if (!location) {
+        throw new InvalidRecipeImportUrlError();
+      }
+
+      try {
+        current = new URL(location, current);
+      } catch {
+        throw new InvalidRecipeImportUrlError();
+      }
+    } catch (error) {
+      if (error instanceof InvalidRecipeImportUrlError || error instanceof RecipeImportParseError) {
+        throw error;
+      }
+
+      if (isFetchTimeoutError(error)) {
+        throw new RecipeImportParseError('Recipe import timed out');
+      }
+
+      throw error;
     }
   }
 
