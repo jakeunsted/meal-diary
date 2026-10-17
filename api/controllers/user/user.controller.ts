@@ -96,7 +96,7 @@ export const getUserById = async (req: Request, res: Response) => {
 export const updateUser = async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.id);
-    const { username, email, first_name, last_name, family_group_id, avatar_url } = req.body;
+    const { username, email, first_name, last_name, avatar_url } = req.body;
 
     try {
       const updatedUser = await UserService.updateUser(userId, {
@@ -104,7 +104,6 @@ export const updateUser = async (req: Request, res: Response) => {
         email,
         first_name,
         last_name,
-        family_group_id,
         avatar_url
       });
 

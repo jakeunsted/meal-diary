@@ -29,7 +29,6 @@ export interface UpdateUserData {
   email?: string;
   first_name?: string;
   last_name?: string;
-  family_group_id?: number;
   avatar_url?: string;
 }
 
@@ -196,7 +195,7 @@ export const getUserById = async (userId: number): Promise<SanitizedUser> => {
  * @throws {Error} If user not found or validation fails
  */
 export const updateUser = async (userId: number, userData: UpdateUserData): Promise<SanitizedUser> => {
-  const { username, email, first_name, last_name, family_group_id, avatar_url } = userData;
+  const { username, email, first_name, last_name, avatar_url } = userData;
 
   const user = await User.findByPk(userId) as User & UserAttributes | null;
 
@@ -224,14 +223,13 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     }
   }
 
-  // Update user
+  // Membership changes only via family-group join/leave/create/transfer — never via mass assignment
   await user.update({
     username,
     email: email?.toLowerCase(),
     normalized_email: email ? normalizeEmail(email) : undefined,
     first_name,
     last_name,
-    family_group_id,
     avatar_url
   });
 

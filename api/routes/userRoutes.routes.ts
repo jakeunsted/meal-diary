@@ -334,10 +334,6 @@ router.get('/:id', authenticateToken, requireSelf, async (req, res, next) => {
  *                 maxLength: 50
  *                 nullable: true
  *                 description: The last name of the user
- *               family_group_id:
- *                 type: integer
- *                 nullable: true
- *                 description: The id of the family group the user belongs to
  *               avatar_url:
  *                 type: string
  *                 nullable: true
