@@ -250,9 +250,21 @@ const defaultImportHeaders = {
   Accept: 'text/html,application/xhtml+xml',
 };
 
+/** Injectable fetch that must connect only to the pre-validated pinned address. */
+export type PinnedHttpFetch = (
+  url: URL,
+  pinned: ResolvedAddress,
+  headers: Record<string, string>,
+  timeoutMs?: number
+) => Promise<Response>;
+
+/**
+ * Fetch HTML after resolving every hop to a public IP and connecting only to
+ * that pinned address (never re-resolve the hostname via global fetch).
+ */
 export const fetchPublicHtml = async (
   url: URL,
-  fetchImpl: typeof fetch = fetch,
+  pinnedFetch: PinnedHttpFetch = fetchPinnedHttpUrl,
   lookupImpl?: DnsLookup
 ): Promise<Response> => {
   const resolveHost = lookupImpl ?? lookupPublicHost;
@@ -263,17 +275,7 @@ export const fetchPublicHtml = async (
     const pinned = pickPinnedAddress(addresses);
 
     try {
-      // Pin the validated address on the default path. Custom fetchImpl (tests)
-      // still goes through resolvePublicHttpUrl first so blocked hosts fail closed.
-      // codeql[js/request-forgery]
-      const response =
-        fetchImpl === fetch
-          ? await fetchPinnedHttpUrl(current, pinned, defaultImportHeaders)
-          : await fetchImpl(current.toString(), {
-              redirect: 'manual',
-              headers: defaultImportHeaders,
-              signal: AbortSignal.timeout(RECIPE_IMPORT_FETCH_TIMEOUT_MS),
-            });
+      const response = await pinnedFetch(current, pinned, defaultImportHeaders);
 
       if (!redirectStatuses.has(response.status)) {
         return response;

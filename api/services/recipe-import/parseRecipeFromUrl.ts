@@ -42,5 +42,6 @@ export const parseRecipeFromUrl = async (
     return parseGoustoRecipeFromUrl(url, fetchImpl);
   }
 
-  return fetchAndParseSchemaOrgRecipe(url, fetchImpl);
+  // Schema.org import always uses DNS-pinned HTTP (no hostname re-resolve).
+  return fetchAndParseSchemaOrgRecipe(url);
 };

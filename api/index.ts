@@ -30,8 +30,15 @@ const PORT = process.env.PORT || 3001;
 app.disable('x-powered-by');
 app.use(
   helmet({
-    // JSON API + Swagger UI; CSP is handled at the edge for product apps
-    contentSecurityPolicy: false,
+    // JSON API + Swagger UI (swagger-ui-express needs inline script/style)
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        'script-src': ["'self'", "'unsafe-inline'"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'img-src': ["'self'", 'data:', 'https:'],
+      },
+    },
   })
 );
 
