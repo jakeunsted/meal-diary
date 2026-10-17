@@ -19,7 +19,6 @@ export interface CreateUserData {
   password: string;
   first_name?: string;
   last_name?: string;
-  family_group_id?: number;
   family_group_code?: string;
   terms_accepted?: boolean;
 }
@@ -108,7 +107,7 @@ export const createUser = async (userData: CreateUserData): Promise<{
   user: SanitizedUser;
   familyGroupId: number | null;
 }> => {
-  const { username, email, password, first_name, last_name, family_group_id, family_group_code, terms_accepted } = userData;
+  const { username, email, password, first_name, last_name, family_group_code, terms_accepted } = userData;
 
   if (!username || !email || !password) {
     throw new Error('Username, email, and password are required');
@@ -126,11 +125,8 @@ export const createUser = async (userData: CreateUserData): Promise<{
     throw new Error('Acceptance of the terms of service and privacy policy is required');
   }
 
-  // Resolve family group ID from code if provided
-  let resolvedFamilyGroupId = family_group_id;
-  if (family_group_code) {
-    resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
-  }
+  // Invite code only — never trust a numeric family_group_id from the client
+  const resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
 
   if (resolvedFamilyGroupId) {
     const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId);

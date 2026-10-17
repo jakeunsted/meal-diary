@@ -82,14 +82,10 @@ const router = express.Router();
  *           maxLength: 50
  *           nullable: true
  *           description: The last name of the user
- *         family_group_id:
- *           type: integer
- *           nullable: true
- *           description: The id of the family group the user belongs to
  *         family_group_code:
  *           type: string
  *           nullable: true
- *           description: The code of the family group the user belongs to
+ *           description: Invite code for joining a family group at registration
  *         avatar_url:
  *           type: string
  *           nullable: true
