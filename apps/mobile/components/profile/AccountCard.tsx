@@ -12,6 +12,7 @@ import { saveDataExport } from '@/lib/account/saveDataExport';
 import { ApiError } from '@/lib/api/client';
 import { useAnalyticsConsent } from '@/lib/analytics/consent';
 import { useAuthStore } from '@/lib/auth/authStore';
+import { requestProductTourReplay } from '@/lib/onboarding/productTour';
 import { exportUserData } from '@/lib/queries/account';
 
 export function AccountCard() {
@@ -44,6 +45,10 @@ export function AccountCard() {
     }
     setIsUpdatingConsent(true);
     void (enabled ? grant() : deny()).finally(() => setIsUpdatingConsent(false));
+  };
+
+  const handleReplayTour = () => {
+    requestProductTourReplay();
   };
 
   const handleDownloadData = async () => {
@@ -94,6 +99,21 @@ export function AccountCard() {
             accessibilityLabel={t('analyticsConsent.profileLabel')}
             testID="analytics-consent-switch"
           />
+        </Box>
+
+        <Box className="mb-4">
+          <Text className="text-ice text-sm">{t('productTour.profileLabel')}</Text>
+          <Text className="text-ice/70 mt-1 mb-3 text-sm">
+            {t('productTour.profileDescription')}
+          </Text>
+          <Button
+            variant="outline"
+            className="w-full"
+            onPress={handleReplayTour}
+            testID="product-tour-replay-button"
+          >
+            <ButtonText>{t('productTour.profileLabel')}</ButtonText>
+          </Button>
         </Box>
 
         <Box className="w-full gap-3">

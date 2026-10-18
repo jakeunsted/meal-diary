@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { TabBar } from '@/components/navigation/TabBar';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { tabConfig } from '@/components/navigation/tabConfig';
+import { ProductTourOverlay } from '@/components/onboarding/ProductTourOverlay';
 import { PaywallModal } from '@/components/subscription/PaywallModal';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { hasFamilyGroup } from '@/lib/auth/helpers';
@@ -31,11 +32,16 @@ export default function TabLayout() {
   }
 
   return (
-    <>
+    <View className="flex-1">
       <Tabs
+        // Keep inactive tab scenes attached so tour targets stay laid out.
+        detachInactiveScreens={false}
         tabBar={(props) => <TabBar {...props} />}
         screenOptions={{
           headerShown: false,
+          // Mount every tab on first entry so diary → recipes → profile is warm.
+          lazy: false,
+          freezeOnBlur: false,
         }}
       >
         {tabConfig.map((tab) => (
@@ -52,6 +58,7 @@ export default function TabLayout() {
         ))}
       </Tabs>
       <PaywallModal />
-    </>
+      <ProductTourOverlay />
+    </View>
   );
 }

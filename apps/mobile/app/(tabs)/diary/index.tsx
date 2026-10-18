@@ -10,6 +10,7 @@ import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
 import { MealSlotsSettingsModal } from '@/components/diary/MealSlotsSettingsModal';
 import { SetMealModal } from '@/components/diary/SetMealModal';
 import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { WarningAlert } from '@/components/profile/WarningAlert';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -200,18 +201,18 @@ export default function DiaryScreen() {
         {showSkeleton ? (
           <DiarySkeleton />
         ) : (
-          <>
-            <WeekCalendarPicker
-              key={diary.resolvedWeekKey}
-              initialWeekStartDate={diary.displayWeekStartDate}
-              isCurrentWeek={diary.isCurrentWeek}
-              canSelectWeek={diaryEntitlements.canNavigateToWeek}
-              onWeekChange={diary.setWeek}
-              onGoToThisWeek={diary.goToCurrentWeek}
-              onWeekBlocked={handleWeekBlocked}
-            />
-            <Box className="relative">
-              <Box className={showWeekLoading ? 'opacity-50' : ''}>
+          <Box className="relative">
+            <Box className={showWeekLoading ? 'opacity-50' : ''}>
+              <TourTarget id="diary-plan">
+                <WeekCalendarPicker
+                  key={diary.resolvedWeekKey}
+                  initialWeekStartDate={diary.displayWeekStartDate}
+                  isCurrentWeek={diary.isCurrentWeek}
+                  canSelectWeek={diaryEntitlements.canNavigateToWeek}
+                  onWeekChange={diary.setWeek}
+                  onGoToThisWeek={diary.goToCurrentWeek}
+                  onWeekBlocked={handleWeekBlocked}
+                />
                 {weekMeals.map((dayMeal) => (
                   <DayFoodPlanCard
                     key={`${diary.resolvedWeekKey}-${dayMeal.day_of_week}`}
@@ -227,18 +228,18 @@ export default function DiaryScreen() {
                     onRecipePress={handleRecipePress}
                   />
                 ))}
-              </Box>
-
-              {showWeekLoading ? (
-                <Box
-                  className="absolute inset-0 items-center justify-center"
-                  testID="diary-week-loading"
-                >
-                  <ActivityIndicator size="large" color="#6366F1" />
-                </Box>
-              ) : null}
+              </TourTarget>
             </Box>
-          </>
+
+            {showWeekLoading ? (
+              <Box
+                className="absolute inset-0 items-center justify-center"
+                testID="diary-week-loading"
+              >
+                <ActivityIndicator size="large" color="#6366F1" />
+              </Box>
+            ) : null}
+          </Box>
         )}
       </ScrollView>
 
