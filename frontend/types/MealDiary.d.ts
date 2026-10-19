@@ -1,3 +1,27 @@
+import type { MealDiarySlotValue } from '@meal-diary/shared';
+
+export interface MealDiaryPendingSlot {
+  family_group_id: number;
+  week_start_date: string;
+  day_of_week: number;
+  meal_slot_id: number;
+  baseline: MealDiarySlotValue;
+  dish: string | null;
+  recipe_id: number | null;
+}
+
+export interface MealDiarySyncConflict {
+  week_start_date: string;
+  day_of_week: number;
+  meal_slot_id: number;
+  slot_name: string;
+  yours: MealDiarySlotValue;
+  theirs: MealDiarySlotValue;
+  baseline: MealDiarySlotValue;
+}
+
+export type MealDiarySyncEntitlement = 'edit_past_weeks' | 'weeks_ahead';
+
 export interface DayMealSlot {
   id: number;
   meal_slot_id: number;
@@ -41,4 +65,10 @@ export interface MealDiaryState {
   currentWeekStart: string | null;
   lastFetchTime: number | null;
   lastFetchError: string | null;
+  pendingSlots: MealDiaryPendingSlot[];
+  syncFailed: boolean;
+  syncEntitlementByWeek: Record<string, MealDiarySyncEntitlement>;
+  conflicts: MealDiarySyncConflict[];
+  reviewWeekStart: string | null;
+  syncing: boolean;
 }

@@ -12,6 +12,14 @@ import { handleEntitlementError } from '../../middleware/entitlement.middleware.
 import { trackEvent } from '../../utils/posthog.ts';
 import { User } from '../../db/models/associations.ts';
 import { routeParamInt } from '../../utils/routeParam.ts';
+import {
+  MealDiarySyncValidationError,
+  parseMealDiaryResolveSlots,
+  parseMealDiarySyncSlots,
+  resolveMealDiarySync,
+  syncMealDiarySlots,
+  type MealDiarySyncServiceResult,
+} from '../../services/mealDiarySync.service.ts';
 
 // Create a new meal diary
 export const createMealDiary = async (req: Request, res: Response) => {
@@ -260,3 +268,166 @@ export const updateDailyMealForFamilyGroup = async (req: Request, res: Response)
     return res.status(500).json({ message: 'Failed to update daily meal' });
   }
 };
+
+interface MealDiaryWriteContext {
+  familyGroupId: number;
+  user: User;
+  weekStartDate: Date;
+  weekStartDateStr: string;
+}
+
+const readMealDiaryWriteContext = (
+  req: Request,
+  res: Response
+): MealDiaryWriteContext | null => {
+  const familyGroupParam = req.params.family_group_id;
+  const weekStartDate = (req.body ?? {}).week_start_date;
+
+  if (!familyGroupParam || weekStartDate == null || weekStartDate === '') {
+    res.status(400).json({
+      message: 'Family group ID and week start date are required',
+    });
+    return null;
+  }
+
+  const familyGroupId = routeParamInt(familyGroupParam);
+  const user = req.user as User;
+
+  if (user?.dataValues.family_group_id !== familyGroupId) {
+    res.status(403).json({ message: 'Access denied' });
+    return null;
+  }
+
+  if (typeof weekStartDate !== 'string') {
+    res.status(400).json({ message: 'Invalid week_start_date format' });
+    return null;
+  }
+
+  const parsedDate = new Date(weekStartDate);
+  if (isNaN(parsedDate.getTime())) {
+    res.status(400).json({ message: 'Invalid week_start_date format' });
+    return null;
+  }
+
+  return {
+    familyGroupId,
+    user,
+    weekStartDate: parsedDate,
+    weekStartDateStr: weekStartDate,
+  };
+};
+
+const publishAppliedDailyMeals = async (
+  familyGroupId: number,
+  user: User,
+  weekStartDateStr: string,
+  result: MealDiarySyncServiceResult
+): Promise<void> => {
+  for (const applied of result.appliedDays) {
+    const day = result.dailyMeals.find(
+      (meal) => meal.day_of_week === applied.day_of_week
+    );
+    if (day) {
+      sendDailyMealWebhook(
+        familyGroupId,
+        'update-daily-meal',
+        {
+          dataValues: {
+            day_of_week: day.day_of_week,
+            breakfast: day.breakfast,
+            lunch: day.lunch,
+            dinner: day.dinner,
+            breakfast_recipe_id: day.breakfast_recipe_id,
+            lunch_recipe_id: day.lunch_recipe_id,
+            dinner_recipe_id: day.dinner_recipe_id,
+          },
+        },
+        weekStartDateStr,
+        day.slots
+      );
+    }
+
+    await trackEvent(user.dataValues.id.toString(), 'meal_updated', {
+      family_group_id: familyGroupId,
+      week_start_date: weekStartDateStr,
+      day_of_week: applied.day_of_week,
+      meal_types: applied.mealTypes,
+    });
+  }
+};
+
+const handleMealDiarySyncError = (
+  error: unknown,
+  res: Response,
+  logLabel: string,
+  fallbackMessage: string
+): Response => {
+  if (error instanceof MealDiarySyncValidationError) {
+    return res.status(400).json({ message: error.message });
+  }
+  if (handleEntitlementError(error, res)) {
+    return res;
+  }
+  console.error(logLabel, error);
+  return res.status(500).json({ message: fallbackMessage });
+};
+
+const respondMealDiarySync = async (
+  req: Request,
+  res: Response,
+  run: (context: MealDiaryWriteContext) => Promise<MealDiarySyncServiceResult>,
+  logLabel: string,
+  fallbackMessage: string
+) => {
+  try {
+    const context = readMealDiaryWriteContext(req, res);
+    if (!context) {
+      return;
+    }
+
+    const result = await run(context);
+    await publishAppliedDailyMeals(
+      context.familyGroupId,
+      context.user,
+      context.weekStartDateStr,
+      result
+    );
+
+    return res.status(200).json({
+      dailyMeals: result.dailyMeals,
+      results: result.results,
+    });
+  } catch (error) {
+    return handleMealDiarySyncError(error, res, logLabel, fallbackMessage);
+  }
+};
+
+export const syncDailyMealsForFamilyGroup = (req: Request, res: Response) =>
+  respondMealDiarySync(
+    req,
+    res,
+    (context) =>
+      syncMealDiarySlots({
+        familyGroupId: context.familyGroupId,
+        userId: context.user.dataValues.id,
+        weekStartDate: context.weekStartDate,
+        slots: parseMealDiarySyncSlots((req.body ?? {}).slots),
+      }),
+    'Error syncing daily meals:',
+    'Failed to sync daily meals'
+  );
+
+export const resolveDailyMealSyncForFamilyGroup = (req: Request, res: Response) =>
+  respondMealDiarySync(
+    req,
+    res,
+    (context) =>
+      resolveMealDiarySync({
+        familyGroupId: context.familyGroupId,
+        userId: context.user.dataValues.id,
+        weekStartDate: context.weekStartDate,
+        keepMine: parseMealDiaryResolveSlots((req.body ?? {}).keep_mine),
+      }),
+    'Error resolving daily meal sync:',
+    'Failed to resolve daily meal sync'
+  );

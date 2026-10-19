@@ -1,5 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
+import { getMealDiaryPendingSlots } from '@/lib/diary/mealDiaryPendingQueue';
+import { mergeRealtimeDailyMeal } from '@/lib/diary/mealDiarySlotState';
 import { normalizeMealDiaryWeekKey } from '@/lib/diary/mealDiaryWeekKey';
 import { saveWeeklyMealsCache } from '@/lib/diary/mealDiaryStorage';
 import { mealDiaryKeys } from '@/lib/queries/mealDiary';
@@ -128,43 +130,35 @@ function applyDailyMealEvent(
     return;
   }
 
-  const merged: DailyMeal = {
-    day_of_week: dailyMeal.day_of_week,
-    breakfast: dailyMeal.breakfast ?? null,
-    lunch: dailyMeal.lunch ?? null,
-    dinner: dailyMeal.dinner ?? null,
-    breakfast_recipe_id: dailyMeal.breakfast_recipe_id ?? null,
-    lunch_recipe_id: dailyMeal.lunch_recipe_id ?? null,
-    dinner_recipe_id: dailyMeal.dinner_recipe_id ?? null,
-    week_start_date: weekKey,
-  };
+  const pendingSlots = getMealDiaryPendingSlots(familyGroupId);
 
   queryClient.setQueryData<DailyMeal[]>(queryKey, (weeklyMeals) => {
     if (!weeklyMeals) {
       return weeklyMeals;
     }
 
-    const index = weeklyMeals.findIndex((meal) => meal.day_of_week === merged.day_of_week);
+    const index = weeklyMeals.findIndex((meal) => meal.day_of_week === dailyMeal.day_of_week);
     const next = [...weeklyMeals];
     if (index === -1) {
-      next.push(merged);
+      next.push(
+        mergeRealtimeDailyMeal(
+          {
+            day_of_week: dailyMeal.day_of_week,
+            breakfast: null,
+            lunch: null,
+            dinner: null,
+            breakfast_recipe_id: null,
+            lunch_recipe_id: null,
+            dinner_recipe_id: null,
+            week_start_date: weekKey,
+          },
+          dailyMeal,
+          pendingSlots,
+          weekKey
+        )
+      );
     } else {
-      const prev = next[index];
-      next[index] = {
-        ...prev,
-        breakfast: merged.breakfast,
-        lunch: merged.lunch,
-        dinner: merged.dinner,
-        breakfast_recipe_id:
-          'breakfast_recipe_id' in dailyMeal
-            ? merged.breakfast_recipe_id
-            : prev.breakfast_recipe_id,
-        lunch_recipe_id:
-          'lunch_recipe_id' in dailyMeal ? merged.lunch_recipe_id : prev.lunch_recipe_id,
-        dinner_recipe_id:
-          'dinner_recipe_id' in dailyMeal ? merged.dinner_recipe_id : prev.dinner_recipe_id,
-        week_start_date: weekKey,
-      };
+      next[index] = mergeRealtimeDailyMeal(next[index], dailyMeal, pendingSlots, weekKey);
     }
 
     void saveWeeklyMealsCache(familyGroupId, weekKey, next);

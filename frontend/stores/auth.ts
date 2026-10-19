@@ -258,8 +258,27 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
   
+  let logoutInProgress = false;
+
   const logout = async () => {
-    await clearAuth();
+    if (logoutInProgress) {
+      await clearAuth();
+      return;
+    }
+    logoutInProgress = true;
+    try {
+      if (import.meta.client) {
+        try {
+          const { useMealDiaryStore } = await import('~/stores/mealDiary');
+          await useMealDiaryStore().flushPending();
+        } catch (error) {
+          console.error('[Auth Store] Failed to flush meal diary before logout:', error);
+        }
+      }
+      await clearAuth();
+    } finally {
+      logoutInProgress = false;
+    }
   };
 
   /**

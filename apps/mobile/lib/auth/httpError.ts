@@ -6,6 +6,11 @@ function extractErrorMessage(error: unknown): string {
   return '';
 }
 
+function networkErrorText(error: Error): string {
+  const cause = error.cause instanceof Error ? error.cause.message : '';
+  return `${error.message} ${cause}`.toLowerCase();
+}
+
 export function isNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   if (
@@ -15,10 +20,11 @@ export function isNetworkError(error: unknown): boolean {
   ) {
     return true;
   }
-  const message = error.message.toLowerCase();
+  const message = networkErrorText(error);
   return (
     message.includes('network request failed') ||
     message.includes('failed to fetch') ||
+    message.includes('fetch failed') ||
     message.includes('network error') ||
     message.includes('network connection was lost') ||
     message.includes('the internet connection appears to be offline') ||
@@ -26,6 +32,10 @@ export function isNetworkError(error: unknown): boolean {
     message.includes('timed out') ||
     message.includes('timeout') ||
     message.includes('could not connect') ||
+    message.includes('failed to connect') ||
+    message.includes('connectexception') ||
+    message.includes('connection refused') ||
+    message.includes('econnrefused') ||
     message.includes('unable to resolve') ||
     message.includes('hostname') ||
     message.includes('connection reset') ||

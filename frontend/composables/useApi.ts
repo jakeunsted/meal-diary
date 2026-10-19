@@ -19,6 +19,8 @@ import type { ApiResponse } from '~/types/Api';
 interface ApiOptions extends FetchOptions {
   /** When true, errors are thrown without showing a global toast */
   silent?: boolean;
+  /** When true, entitlement failures are thrown without opening the paywall */
+  suppressPaywall?: boolean;
 }
 
 /**
@@ -132,7 +134,7 @@ export const useApi = () => {
   };
 
   const api = async <T = any>(url: string, options?: ApiOptions): Promise<T> => {
-    const { silent = false, ...fetchOptions } = options ?? {};
+    const { silent = false, suppressPaywall = false, ...fetchOptions } = options ?? {};
 
     try {
       await ensureFreshTokens(url);
@@ -174,10 +176,10 @@ export const useApi = () => {
         }
       } else {
         const entitlementError = extractEntitlementError(error);
-        if (entitlementError && import.meta.client) {
+        if (entitlementError && import.meta.client && !suppressPaywall) {
           const { openPaywall } = usePaywall();
           openPaywall(entitlementError.feature as EntitlementFeature);
-        } else if (!silent) {
+        } else if (!silent && !(entitlementError && suppressPaywall)) {
           showError(errorMessage);
         }
       }

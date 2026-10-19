@@ -1,9 +1,12 @@
+import { Platform } from 'react-native';
 import { create } from 'zustand';
 
 import { identifyUser, resetAnalytics } from '@/lib/analytics/posthog';
 import { apiFetch } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { logOutPurchases } from '@/lib/billing/purchases';
+import { clearAllMealDiaryPendingQueues } from '@/lib/diary/mealDiaryPendingQueue';
+import { flushMealDiaryPending, resetMealDiarySyncState } from '@/lib/diary/mealDiarySync';
 import { clearMealDiaryCache } from '@/lib/diary/mealDiaryStorage';
 import { clearPendingQueue } from '@/lib/shopping-list/shoppingListPendingQueue';
 import { clearShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
@@ -73,6 +76,18 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    const familyGroupId = get().user?.family_group_id;
+    if (familyGroupId && Platform.OS === 'android') {
+      try {
+        await flushMealDiaryPending(queryClient, familyGroupId, {
+          presentReview: false,
+          openPaywall: false,
+        });
+      } catch {
+        // Session clear still drops a queue that no longer matches the account.
+      }
+    }
+
     try {
       // Refresh first if the access token is expired so Authorization and the
       // refresh token we revoke both match the active DB session.
@@ -204,6 +219,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearSession: async () => {
     await clearMealDiaryCache();
+    await clearAllMealDiaryPendingQueues();
+    resetMealDiarySyncState();
     await clearShoppingListCache();
     await clearPendingQueue();
     await clearAuthState();

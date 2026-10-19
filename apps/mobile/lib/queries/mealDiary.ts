@@ -1,10 +1,12 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { loadMealDiaryPendingQueue } from '@/lib/diary/mealDiaryPendingQueue';
 import {
   loadWeeklyMealsCache,
   saveWeeklyMealsCache,
 } from '@/lib/diary/mealDiaryStorage';
+import { overlayPendingSlots } from '@/lib/diary/mealDiarySlotState';
 import { apiFetch, ApiError } from '@/lib/api/client';
 import type { DailyMeal, SaveDailyMealPayload } from '@/types/mealDiary';
 
@@ -37,11 +39,13 @@ async function fetchWeeklyMealsWithCache(
   try {
     const meals = await fetchWeeklyMeals(familyGroupId, weekKey);
     await saveWeeklyMealsCache(familyGroupId, weekKey, meals);
-    return meals;
+    const pending = await loadMealDiaryPendingQueue(familyGroupId);
+    return overlayPendingSlots(meals, weekKey, pending);
   } catch (error) {
     const cached = await loadWeeklyMealsCache(familyGroupId, weekKey);
     if (cached) {
-      return cached.meals;
+      const pending = await loadMealDiaryPendingQueue(familyGroupId);
+      return overlayPendingSlots(cached.meals, weekKey, pending);
     }
     throw error;
   }
@@ -81,7 +85,8 @@ export function useWeeklyMeals(familyGroupId: number | undefined, weekKey: strin
         return;
       }
 
-      queryClient.setQueryData(queryKey, cached.meals);
+      const pending = await loadMealDiaryPendingQueue(familyGroupId);
+      queryClient.setQueryData(queryKey, overlayPendingSlots(cached.meals, weekKey, pending));
     })();
   }, [familyGroupId, queryClient, weekKey]);
 
