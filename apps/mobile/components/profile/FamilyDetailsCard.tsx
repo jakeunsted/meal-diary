@@ -8,6 +8,7 @@ import { ProfileCard } from '@/components/profile/ProfileCard';
 import { WarningAlert } from '@/components/profile/WarningAlert';
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
+import { captureEvent } from '@/lib/analytics/posthog';
 import type { FamilyGroup } from '@/types/api';
 
 interface FamilyDetailsCardProps {
@@ -43,6 +44,7 @@ export function FamilyDetailsCard({
   const handleCopyCode = async () => {
     if (!familyGroup?.random_identifier) return;
     await Clipboard.setStringAsync(familyGroup.random_identifier);
+    captureEvent('family_invite_copied');
     setHasCopied(true);
     setTimeout(() => setHasCopied(false), 2000);
   };

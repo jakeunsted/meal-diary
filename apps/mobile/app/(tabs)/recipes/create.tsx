@@ -16,6 +16,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
+import { captureEvent, captureException } from '@/lib/analytics/posthog';
 import { openPlans } from '@/lib/billing/openPlans';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
@@ -94,6 +95,7 @@ export default function CreateRecipeScreen() {
         familyGroupId,
         payload: formData as CreateRecipePayload,
       });
+      captureEvent('recipe_created');
       void entitlementsQuery.refetch();
       router.replace(`/(tabs)/recipes/${recipe.id}` as Href);
     } catch (error) {
@@ -124,6 +126,7 @@ export default function CreateRecipeScreen() {
         familyGroupId,
         payload: { url: importUrl.trim() } as ImportRecipeFromUrlPayload,
       });
+      captureEvent('recipe_imported');
       void entitlementsQuery.refetch();
       router.replace(`/(tabs)/recipes/${recipe.id}/edit` as Href);
     } catch (error) {
@@ -133,6 +136,7 @@ export default function CreateRecipeScreen() {
         return;
       }
 
+      captureException(error, { category: 'recipe_import' });
       setImportError(error instanceof Error ? error.message : t('recipeImport.genericError'));
     }
   };

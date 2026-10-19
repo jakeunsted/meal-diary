@@ -1,5 +1,5 @@
 import { env } from '@/constants/env';
-import { logError } from '@/lib/analytics/posthog';
+import { captureException, logError } from '@/lib/analytics/posthog';
 import type { ApiErrorBody } from '@/lib/api/errors';
 import { ApiError } from '@/lib/api/errors';
 import { isSessionExpiredError } from '@/lib/auth/httpError';
@@ -60,6 +60,7 @@ async function ensureFreshTokens(path: string): Promise<void> {
   } catch (error) {
     if (isSessionExpiredError(error)) {
       logError('Token refresh failed', { category: 'api', path });
+      captureException(error, { category: 'api', path });
       await handleSessionExpired();
     }
     throw error;
@@ -120,23 +121,30 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
         await syncAuthStoreFromRefresh(refreshed);
       });
       response = await performRequest(await getAccessToken());
-    } catch {
+    } catch (error) {
       logError('Token refresh failed', { category: 'api', path, status: 401 });
+      captureException(error, { category: 'api', path, status: 401 });
       await handleSessionExpired();
     }
   }
 
   if (!response.ok) {
+    const errorBody = await parseErrorBody(response);
+    const message = errorBody.message ?? `API request failed: ${response.status}`;
+    const apiError = new ApiError(response.status, message, errorBody);
     if (response.status >= 500) {
       logError('API request failed', {
         category: 'api',
         path,
         status: response.status,
       });
+      captureException(apiError, {
+        category: 'api',
+        path,
+        status: response.status,
+      });
     }
-    const errorBody = await parseErrorBody(response);
-    const message = errorBody.message ?? `API request failed: ${response.status}`;
-    throw new ApiError(response.status, message, errorBody);
+    throw apiError;
   }
 
   return response.json() as Promise<T>;

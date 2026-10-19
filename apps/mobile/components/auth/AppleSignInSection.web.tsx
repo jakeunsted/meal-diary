@@ -25,6 +25,7 @@ export function AppleSignInSection({
   disabled = false,
   dividerPosition = 'none',
   onSuccess,
+  onError,
   testID = 'apple-sign-in-button',
 }: AppleSignInSectionProps) {
   const { t } = useTranslation();
@@ -46,6 +47,7 @@ export function AppleSignInSection({
       if (isAppleWebCancel(err)) {
         return;
       }
+      onError?.();
     }
   };
 

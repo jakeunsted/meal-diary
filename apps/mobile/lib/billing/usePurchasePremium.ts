@@ -13,7 +13,7 @@ import {
   type BillingInterval,
   type OfferingPackages,
 } from '@/lib/billing/purchases';
-import { logWarn } from '@/lib/analytics/posthog';
+import { captureException, logWarn } from '@/lib/analytics/posthog';
 import { entitlementKeys, fetchEntitlements } from '@/lib/queries/profile';
 import type { ResolvedEntitlements } from '@/types/api';
 
@@ -154,6 +154,7 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
       } catch (err) {
         const message = formatPurchasesError(err);
         logWarn('RevenueCat purchase failed', { category: 'billing', message });
+        captureException(err, { category: 'billing' });
         setError(message);
         return 'failed';
       } finally {
@@ -186,6 +187,7 @@ export function usePurchasePremium(familyGroupId: number | undefined) {
     } catch (err) {
       const message = formatPurchasesError(err);
       logWarn('RevenueCat restore failed', { category: 'billing', message });
+      captureException(err, { category: 'billing' });
       setError(message);
       return 'failed';
     } finally {

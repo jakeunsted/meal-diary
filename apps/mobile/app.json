@@ -78,7 +78,15 @@
           }
         }
       ],
-      "./plugins/withR8Optimize"
+      "./plugins/withR8Optimize",
+      [
+        "posthog-react-native/expo",
+        {
+          "dotenvFile": ".env",
+          "uploadNativeSymbols": true,
+          "skipOnConflict": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

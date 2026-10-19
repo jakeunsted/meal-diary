@@ -3,6 +3,7 @@ import { normalizeMealDiaryDish } from '@meal-diary/shared';
 import { useCallback, useState } from 'react';
 import { Platform } from 'react-native';
 
+import { captureEvent, captureException } from '@/lib/analytics/posthog';
 import { isNetworkError } from '@/lib/auth/httpError';
 import { buildSaveDailyMealPayload } from '@/lib/diary/buildSaveDailyMealPayload';
 import {
@@ -197,7 +198,8 @@ export function useMealDiaryEditor() {
       dayOfWeek: number,
       mealName: string,
       recipeId: number | null,
-      mealSlotId: number | null
+      mealSlotId: number | null,
+      recordSavedEvent = false
     ) => {
       setSaveError(null);
       const resolvedMealSlotId = resolveMealSlotId(
@@ -221,6 +223,9 @@ export function useMealDiaryEditor() {
           recipeId,
           resolvedMealSlotId
         );
+        if (recordSavedEvent) {
+          captureEvent('diary_meal_saved');
+        }
         closeMealEditor();
         return;
       }
@@ -237,6 +242,9 @@ export function useMealDiaryEditor() {
         );
 
         await saveDailyMealMutation.mutateAsync({ familyGroupId, payload });
+        if (recordSavedEvent) {
+          captureEvent('diary_meal_saved');
+        }
         closeMealEditor();
       } catch (error) {
         if (Platform.OS === 'android' && resolvedMealSlotId != null && isNetworkError(error)) {
@@ -250,9 +258,13 @@ export function useMealDiaryEditor() {
             recipeId,
             resolvedMealSlotId
           );
+          if (recordSavedEvent) {
+            captureEvent('diary_meal_saved');
+          }
           closeMealEditor();
           return;
         }
+        captureException(error, { category: 'diary' });
         setSaveError(resolveMealDiaryErrorMessage(error));
       }
     },
@@ -277,7 +289,8 @@ export function useMealDiaryEditor() {
         selectedMeal.dayOfWeek,
         selectedMeal.name,
         selectedMeal.recipeId,
-        selectedMeal.mealSlotId
+        selectedMeal.mealSlotId,
+        true
       );
     },
     [performSave, selectedMeal]

@@ -18,6 +18,7 @@ interface GoogleSignInSectionProps {
   /** Where to place the OR divider relative to the Google button. Default: above (legacy). */
   dividerPosition?: 'above' | 'below' | 'none';
   onSuccess: () => void | Promise<void>;
+  onError?: () => void;
   testID?: string;
 }
 
@@ -27,6 +28,7 @@ function GoogleSignInSectionContent({
   disabled = false,
   dividerPosition = 'above',
   onSuccess,
+  onError,
   testID = 'google-sign-in-button',
 }: GoogleSignInSectionProps) {
   const { signInWithGoogle, isLoading, error } = useGoogleAuth();
@@ -35,8 +37,11 @@ function GoogleSignInSectionContent({
     try {
       await signInWithGoogle();
       await onSuccess();
-    } catch {
-      // Error state is handled in the hook
+    } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      if (!message.includes('cancel')) {
+        onError?.();
+      }
     }
   };
 

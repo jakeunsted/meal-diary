@@ -1,6 +1,8 @@
 import { useGlobalSearchParams, useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
+import { captureEvent } from '@/lib/analytics/posthog';
+
 import {
   getCurrentWeekStartDate,
   normalizeMealDiaryWeekKey,
@@ -104,6 +106,7 @@ export function useMealDiaryWeek(familyGroupId: number | undefined): UseMealDiar
       if (!key || weekKeysEqual(key, resolvedWeekKey)) {
         return;
       }
+      captureEvent('diary_week_changed');
       setWeekKeyState(key);
       syncWeekToRoute(key);
     },

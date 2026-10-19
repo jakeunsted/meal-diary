@@ -1,22 +1,27 @@
 import { Inter_400Regular, Inter_600SemiBold, useFonts } from '@expo-google-fonts/inter';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { QueryClientProvider } from '@tanstack/react-query';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, type ErrorBoundaryProps } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { PostHogProvider } from 'posthog-react-native';
+import { PostHogErrorBoundary, PostHogProvider, type PostHogErrorBoundaryFallbackProps } from 'posthog-react-native';
 import { useEffect, type ReactNode } from 'react';
 import { Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useTranslation } from 'react-i18next';
 
 import { AnalyticsConsentModal } from '@/components/analytics/AnalyticsConsentModal';
+import { Box } from '@/components/ui/box';
+import { Button, ButtonText } from '@/components/ui/button';
 import { GluestackUIProvider } from '@/components/ui/gluestack-ui-provider';
+import { Heading } from '@/components/ui/heading';
+import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import '@/global.css';
 import '@/lib/i18n';
 import { useAnalyticsConsent } from '@/lib/analytics/consent';
-import { isAnalyticsDevBuild, posthogClient } from '@/lib/analytics/posthog';
+import { captureException, isAnalyticsDevBuild, posthogClient } from '@/lib/analytics/posthog';
 import { setSessionExpiredHandler } from '@/lib/api/client';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -31,9 +36,39 @@ if (Platform.OS !== 'web') {
   require('react-native-reanimated');
 }
 
-export {
-  ErrorBoundary,
-} from 'expo-router';
+function AnalyticsErrorFallback({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
+
+  return (
+    <Box className="flex-1 items-center justify-center bg-base px-6">
+      <Heading size="md" className="text-ice mb-2 text-center">
+        {t('analyticsError.title')}
+      </Heading>
+      <Text className="text-ice/80 mb-6 text-center">{t('analyticsError.body')}</Text>
+      <Button onPress={onRetry}>
+        <ButtonText>{t('analyticsError.retry')}</ButtonText>
+      </Button>
+    </Box>
+  );
+}
+
+function PostHogAnalyticsErrorFallback({ resetError }: PostHogErrorBoundaryFallbackProps) {
+  return <AnalyticsErrorFallback onRetry={resetError} />;
+}
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    captureException(error);
+  }, [error]);
+
+  return (
+    <AnalyticsErrorFallback
+      onRetry={() => {
+        void retry();
+      }}
+    />
+  );
+}
 
 export const unstable_settings = {
   initialRouteName: '(tabs)',
@@ -93,7 +128,9 @@ function OptionalPostHogProvider({ children }: { children: ReactNode }) {
         captureScreens,
       }}
     >
-      {children}
+      <PostHogErrorBoundary fallback={PostHogAnalyticsErrorFallback}>
+        {children}
+      </PostHogErrorBoundary>
     </PostHogProvider>
   );
 }

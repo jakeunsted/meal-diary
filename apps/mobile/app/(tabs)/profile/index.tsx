@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -13,6 +14,7 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { LegalLinks } from '@/components/legal/LegalLinks';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { Box } from '@/components/ui/box';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { useProductTourVisible } from '@/lib/onboarding/productTour';
 import {
   measureTourTarget,
@@ -89,6 +91,12 @@ export default function ProfileScreen() {
     if (!canAddFamilyMember) return;
     setIsInviteModalVisible(true);
   };
+
+  useFocusEffect(
+    useCallback(() => {
+      captureEvent('profile_viewed');
+    }, [])
+  );
 
   useEffect(() => {
     return registerProfileTourScrollHandler(async (request) => {

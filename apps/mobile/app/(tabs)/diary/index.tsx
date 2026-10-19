@@ -1,10 +1,10 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { normalizeMealDiaryDish } from '@meal-diary/shared';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useIsFocused, useRouter, type Href } from 'expo-router';
+import { useFocusEffect, useIsFocused, useRouter, type Href } from 'expo-router';
 
 import { DayFoodPlanCard, type SetMealPayload } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
@@ -81,6 +81,12 @@ export default function DiaryScreen() {
 
     return `${t('diaryPage.weekReadOnly')} ${t('diaryPage.askOwnerToUpgradeGeneric')}`;
   }, [entitlementsQuery.data?.billing, isWeekReadOnly, t]);
+
+  useFocusEffect(
+    useCallback(() => {
+      captureEvent('diary_viewed');
+    }, [])
+  );
 
   useEffect(() => {
     if (familyGroupId) {
