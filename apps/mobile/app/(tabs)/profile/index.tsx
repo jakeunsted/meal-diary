@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { RefreshControl, ScrollView } from 'react-native';
+import { RefreshControl, ScrollView, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { AccountCard } from '@/components/profile/AccountCard';
 import { FamilyDetailsCard } from '@/components/profile/FamilyDetailsCard';
 import { FamilyMembersCard } from '@/components/profile/FamilyMembersCard';
@@ -12,6 +13,12 @@ import { ProfileHeader } from '@/components/profile/ProfileHeader';
 import { LegalLinks } from '@/components/legal/LegalLinks';
 import { SubscriptionCard } from '@/components/subscription/SubscriptionCard';
 import { Box } from '@/components/ui/box';
+import { useProductTourVisible } from '@/lib/onboarding/productTour';
+import {
+  measureTourTarget,
+  notifyTourTargetsChanged,
+  registerProfileTourScrollHandler,
+} from '@/lib/onboarding/tourTargets';
 import {
   useCurrentUser,
   useEntitlements,
@@ -19,10 +26,28 @@ import {
   useFamilyMembers,
 } from '@/lib/queries/profile';
 
+function waitForFrames(count: number): Promise<void> {
+  return new Promise((resolve) => {
+    let remaining = count;
+    const tick = () => {
+      remaining -= 1;
+      if (remaining <= 0) {
+        resolve();
+        return;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
 export default function ProfileScreen() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+  const scrollRef = useRef<ScrollView>(null);
   const [isInviteModalVisible, setIsInviteModalVisible] = useState(false);
+  const tourVisible = useProductTourVisible();
 
   const userQuery = useCurrentUser();
   const familyGroupId = userQuery.data?.family_group_id;
@@ -65,11 +90,50 @@ export default function ProfileScreen() {
     setIsInviteModalVisible(true);
   };
 
+  useEffect(() => {
+    return registerProfileTourScrollHandler(async (request) => {
+      if (request !== 'invite') {
+        return;
+      }
+
+      const scrollView = scrollRef.current;
+      if (!scrollView) {
+        return;
+      }
+
+      // Jump, do not animate — animated scroll remeasures the hole every frame.
+      scrollView.scrollTo({ y: 0, animated: false });
+      await waitForFrames(2);
+
+      const rect = await measureTourTarget('profile-add-family-member');
+      if (!rect || !scrollRef.current) {
+        notifyTourTargetsChanged({ immediate: true });
+        return;
+      }
+
+      const calloutReserve = 200;
+      const tabBarClearance = 56 + Math.max(insets.bottom, 8);
+      const maxBottom = windowHeight - tabBarClearance - calloutReserve;
+      const targetBottom = rect.y + rect.height;
+      if (targetBottom > maxBottom) {
+        scrollRef.current.scrollTo({
+          y: targetBottom - maxBottom,
+          animated: false,
+        });
+        await waitForFrames(2);
+      }
+
+      notifyTourTargetsChanged({ immediate: true });
+    });
+  }, [insets.bottom, windowHeight]);
+
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
+        ref={scrollRef}
         contentContainerClassName="pb-8"
         contentContainerStyle={{ paddingTop: insets.top + 24 }}
+        scrollEnabled={!tourVisible}
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
@@ -84,25 +148,27 @@ export default function ProfileScreen() {
           error={userQuery.error ? userQuery.error.message : null}
         />
 
-        <FamilyDetailsCard
-          familyGroup={familyGroupQuery.data}
-          isLoading={!!familyGroupId && familyGroupQuery.isLoading}
-          error={familyGroupQuery.error ? familyGroupQuery.error.message : null}
-          canAddFamilyMember={canAddFamilyMember}
-          memberLimitMessage={memberLimitMessage}
-          showUpgradeLink={showUpgradeLink}
-        />
+        <TourTarget id="profile-invite">
+          <FamilyDetailsCard
+            familyGroup={familyGroupQuery.data}
+            isLoading={!!familyGroupId && familyGroupQuery.isLoading}
+            error={familyGroupQuery.error ? familyGroupQuery.error.message : null}
+            canAddFamilyMember={canAddFamilyMember}
+            memberLimitMessage={memberLimitMessage}
+            showUpgradeLink={showUpgradeLink}
+          />
 
-        <FamilyMembersCard
-          members={membersQuery.data ?? []}
-          isLoading={!!familyGroupId && membersQuery.isLoading}
-          error={membersQuery.error ? membersQuery.error.message : null}
-          ownerId={familyGroupQuery.data?.created_by}
-          canAddFamilyMember={canAddFamilyMember}
-          memberLimitMessage={memberLimitMessage}
-          showUpgradeLink={showUpgradeLink}
-          onAddFamilyMember={handleAddFamilyMember}
-        />
+          <FamilyMembersCard
+            members={membersQuery.data ?? []}
+            isLoading={!!familyGroupId && membersQuery.isLoading}
+            error={membersQuery.error ? membersQuery.error.message : null}
+            ownerId={familyGroupQuery.data?.created_by}
+            canAddFamilyMember={canAddFamilyMember}
+            memberLimitMessage={memberLimitMessage}
+            showUpgradeLink={showUpgradeLink}
+            onAddFamilyMember={handleAddFamilyMember}
+          />
+        </TourTarget>
 
         <FamilySettingsCard
           familyGroup={familyGroupQuery.data}

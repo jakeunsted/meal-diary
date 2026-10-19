@@ -12,6 +12,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -144,71 +145,73 @@ export default function RecipesScreen() {
           </Box>
         ) : null}
 
-        <View className="mb-4 flex-row items-center gap-2">
-          <View className="min-w-0 flex-1 flex-row items-center rounded-lg border border-white/10 bg-surface">
-            <View className="pl-3">
-              <FontAwesome name="search" size={14} color="rgba(241, 245, 249, 0.5)" />
+        <TourTarget id="recipes-content">
+          <View className="mb-4 flex-row items-center gap-2">
+            <View className="min-w-0 flex-1 flex-row items-center rounded-lg border border-white/10 bg-surface">
+              <View className="pl-3">
+                <FontAwesome name="search" size={14} color="rgba(241, 245, 249, 0.5)" />
+              </View>
+              <TextInput
+                className="min-w-0 flex-1 py-3 pr-3 pl-2 text-base text-ice"
+                placeholder={t('recipeForm.searchPlaceholder')}
+                placeholderTextColor="rgba(241, 245, 249, 0.4)"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                testID="recipes-search-input"
+              />
             </View>
-            <TextInput
-              className="min-w-0 flex-1 py-3 pr-3 pl-2 text-base text-ice"
-              placeholder={t('recipeForm.searchPlaceholder')}
-              placeholderTextColor="rgba(241, 245, 249, 0.4)"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              testID="recipes-search-input"
-            />
-          </View>
-          <Button
-            size="sm"
-            className={recipeEntitlements.canCreateRecipe ? 'bg-primary' : 'bg-primary/40'}
-            disabled={!recipeEntitlements.canCreateRecipe}
-            onPress={handleCreateRecipe}
-            testID="recipes-new-button"
-          >
-            <ButtonText className="text-ice">{t('recipeForm.newRecipe')}</ButtonText>
-          </Button>
-        </View>
-
-        {showSkeleton ? (
-          <Box className="items-center py-8">
-            <ActivityIndicator size="large" color="#6366F1" />
-          </Box>
-        ) : allRecipes.length === 0 ? (
-          <Box className="items-center py-12">
-            <FontAwesome name="book" size={48} color="rgba(241, 245, 249, 0.3)" />
-            <Text className="mt-4 text-lg font-medium text-ice">
-              {t('recipeForm.emptyTitle')}
-            </Text>
-            <Text className="mt-2 text-center text-ice/60">
-              {t('recipeForm.emptyDescription')}
-            </Text>
             <Button
-              className={`mt-4 ${recipeEntitlements.canCreateRecipe ? 'bg-primary' : 'bg-primary/40'}`}
+              size="sm"
+              className={recipeEntitlements.canCreateRecipe ? 'bg-primary' : 'bg-primary/40'}
               disabled={!recipeEntitlements.canCreateRecipe}
               onPress={handleCreateRecipe}
+              testID="recipes-new-button"
             >
-              <FontAwesome name="plus" size={14} color="#F1F5F9" />
-              <ButtonText className="ml-2 text-ice">{t('recipeForm.newRecipe')}</ButtonText>
+              <ButtonText className="text-ice">{t('recipeForm.newRecipe')}</ButtonText>
             </Button>
-          </Box>
-        ) : filteredRecipes.length === 0 ? (
-          <Box className="items-center py-12">
-            <Text className="text-lg font-medium text-ice">
-              {t('recipeForm.noResultsTitle')}
-            </Text>
-            <Text className="mt-2 text-ice/60">{t('recipeForm.noResultsDescription')}</Text>
-          </Box>
-        ) : (
-          <View className="gap-3">
-            {filteredRecipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                recipe={recipe}
-                onPress={() => handleRecipePress(recipe.id)}
-              />
-            ))}
           </View>
-        )}
+
+          {showSkeleton ? (
+            <Box className="items-center py-8">
+              <ActivityIndicator size="large" color="#6366F1" />
+            </Box>
+          ) : allRecipes.length === 0 ? (
+            <Box className="items-center py-12">
+              <FontAwesome name="book" size={48} color="rgba(241, 245, 249, 0.3)" />
+              <Text className="mt-4 text-lg font-medium text-ice">
+                {t('recipeForm.emptyTitle')}
+              </Text>
+              <Text className="mt-2 text-center text-ice/60">
+                {t('recipeForm.emptyDescription')}
+              </Text>
+              <Button
+                className={`mt-4 ${recipeEntitlements.canCreateRecipe ? 'bg-primary' : 'bg-primary/40'}`}
+                disabled={!recipeEntitlements.canCreateRecipe}
+                onPress={handleCreateRecipe}
+              >
+                <FontAwesome name="plus" size={14} color="#F1F5F9" />
+                <ButtonText className="ml-2 text-ice">{t('recipeForm.newRecipe')}</ButtonText>
+              </Button>
+            </Box>
+          ) : filteredRecipes.length === 0 ? (
+            <Box className="items-center py-12">
+              <Text className="text-lg font-medium text-ice">
+                {t('recipeForm.noResultsTitle')}
+              </Text>
+              <Text className="mt-2 text-ice/60">{t('recipeForm.noResultsDescription')}</Text>
+            </Box>
+          ) : (
+            <View className="gap-3">
+              {filteredRecipes.map((recipe) => (
+                <RecipeCard
+                  key={recipe.id}
+                  recipe={recipe}
+                  onPress={() => handleRecipePress(recipe.id)}
+                />
+              ))}
+            </View>
+          )}
+        </TourTarget>
       </KeyboardAwareScrollView>
     </Box>
   );

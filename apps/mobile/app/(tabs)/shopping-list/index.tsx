@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { ShoppingListActiveList } from '@/components/shopping-list/ShoppingListActiveList';
 import { ShoppingListCategoryTabs } from '@/components/shopping-list/ShoppingListCategoryTabs';
 import { CheckedItemsSection } from '@/components/shopping-list/CheckedItemsSection';
@@ -297,6 +298,7 @@ export default function ShoppingListScreen() {
             <ShoppingListSkeleton />
           ) : (
             <Box className="relative mx-4">
+              <TourTarget id="shopping-list-content">
                 <ShoppingListCategoryTabs
                   value={activeTab}
                   onChange={setActiveTab}
@@ -356,21 +358,22 @@ export default function ShoppingListScreen() {
                     testID="shopping-list-new-item-input"
                   />
                 </Box>
+              </TourTarget>
 
-                {!viewSettings.hideCheckedItems ? (
-                  <CheckedItemsSection
-                    items={checkedItemsForTab}
-                    hideCheckboxes={viewSettings.hideCheckboxes}
-                    isUpdating={isItemBusy}
-                    isDeleting={editor.isDeletingChecked}
-                    onCheckedChange={handleCheckedChange}
-                    onRemove={handleRemoveItem}
-                    onUncheckAll={handleUncheckAll}
-                    onDeleteAll={handleDeleteAllChecked}
-                    removingItemId={editor.removingItemId}
-                    renderItem={(item) => renderEditableItem(item)}
-                  />
-                ) : null}
+              {!viewSettings.hideCheckedItems ? (
+                <CheckedItemsSection
+                  items={checkedItemsForTab}
+                  hideCheckboxes={viewSettings.hideCheckboxes}
+                  isUpdating={isItemBusy}
+                  isDeleting={editor.isDeletingChecked}
+                  onCheckedChange={handleCheckedChange}
+                  onRemove={handleRemoveItem}
+                  onUncheckAll={handleUncheckAll}
+                  onDeleteAll={handleDeleteAllChecked}
+                  removingItemId={editor.removingItemId}
+                  renderItem={(item) => renderEditableItem(item)}
+                />
+              ) : null}
             </Box>
           )}
         </ShoppingListScrollContainer>

@@ -57,6 +57,10 @@ describe('Recipes', () => {
 
     cy.get('[data-testid="recipe-add-to-shopping-list-modal"]').should('be.visible');
     cy.get('[data-testid="recipe-add-to-list-confirm-button"]').should('be.disabled');
+    cy.get('[data-testid="recipe-shopping-list-select-all"]').click();
+    cy.get('[data-testid="recipe-add-to-list-confirm-button"]').should('not.be.disabled');
+    cy.get('[data-testid="recipe-shopping-list-select-all"]').click();
+    cy.get('[data-testid="recipe-add-to-list-confirm-button"]').should('be.disabled');
     cy.get('[data-testid="recipe-shopping-list-ingredient-1"]').click();
     cy.get('[data-testid="recipe-add-to-list-confirm-button"]').should('not.be.disabled').click();
 

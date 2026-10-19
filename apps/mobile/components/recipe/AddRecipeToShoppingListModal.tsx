@@ -49,11 +49,27 @@ export function AddRecipeToShoppingListModal({
     [selectedByKey]
   );
 
+  const allSelected = useMemo(
+    () =>
+      ingredients.length > 0 &&
+      ingredients.every((ingredient, index) => selectedByKey[getIngredientKey(ingredient, index)]),
+    [ingredients, selectedByKey]
+  );
+
   const handleToggle = (key: string) => {
     setSelectedByKey((current) => ({
       ...current,
       [key]: !current[key],
     }));
+  };
+
+  const handleToggleAll = () => {
+    const nextValue = !allSelected;
+    const next: Record<string, boolean> = {};
+    ingredients.forEach((ingredient, index) => {
+      next[getIngredientKey(ingredient, index)] = nextValue;
+    });
+    setSelectedByKey(next);
   };
 
   const handleConfirm = () => {
@@ -76,6 +92,17 @@ export function AddRecipeToShoppingListModal({
         <Text className="mb-3 text-base font-semibold text-ice">
           {t('recipeDetail.addToShoppingListModalTitle')}
         </Text>
+
+        <Pressable
+          accessibilityRole="button"
+          className="mb-2 self-end px-2 py-1"
+          onPress={handleToggleAll}
+          testID="recipe-shopping-list-select-all"
+        >
+          <Text className="text-sm font-medium text-primary">
+            {allSelected ? t('recipeDetail.deselectAll') : t('recipeDetail.selectAll')}
+          </Text>
+        </Pressable>
 
         <ScrollView
           className="max-h-80"

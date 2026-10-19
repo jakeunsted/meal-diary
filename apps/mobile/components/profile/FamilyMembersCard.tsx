@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 
+import { TourTarget } from '@/components/onboarding/TourTarget';
 import { MemberAvatar } from '@/components/profile/MemberAvatar';
 import { ProfileCard } from '@/components/profile/ProfileCard';
 import { WarningAlert } from '@/components/profile/WarningAlert';
@@ -88,15 +89,16 @@ export function FamilyMembersCard({
             />
           ) : null}
 
-          <Button
-            size="lg"
-            className="mt-5 self-center"
-            disabled={!canAddFamilyMember}
-            onPress={onAddFamilyMember}
-            testID="profile-add-family-member-button"
-          >
-            <ButtonText>{t('profile.addFamilyMember')}</ButtonText>
-          </Button>
+          <TourTarget id="profile-add-family-member" className="mt-5 self-center">
+            <Button
+              size="lg"
+              disabled={!canAddFamilyMember}
+              onPress={onAddFamilyMember}
+              testID="profile-add-family-member-button"
+            >
+              <ButtonText>{t('profile.addFamilyMember')}</ButtonText>
+            </Button>
+          </TourTarget>
         </Box>
       )}
     </ProfileCard>

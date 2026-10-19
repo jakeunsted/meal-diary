@@ -135,6 +135,8 @@ const resources = {
         shoppingListUpgrade: 'View plans',
         addToShoppingList: 'Add to Shopping List',
         addToShoppingListModalTitle: 'Add ingredients to shopping list',
+        selectAll: 'Select all',
+        deselectAll: 'Deselect all',
         addToList: 'Add to list',
         addedToShoppingList: 'Ingredients added to shopping list!',
         addToShoppingListFailed: 'Failed to add ingredients to shopping list',
@@ -484,6 +486,31 @@ const resources = {
         profileLabel: 'Analytics',
         profileDescription:
           'Share how you use Meal Diary, including screens and error reports, so we can improve it.',
+      },
+      productTour: {
+        progress: '{{current}} of {{total}}',
+        diary: {
+          title: "Your family's week",
+          body: 'This is the shared week. Open a day and use Set Meal to name it or pick a recipe. Meals already here belong to the family.',
+        },
+        recipes: {
+          title: 'The recipe book',
+          body: 'Recipes belong to the family. Search here, or use New Recipe to write one or import a link. An empty book means nobody has added one yet.',
+        },
+        shoppingList: {
+          title: 'The shared shopping list',
+          body: 'Type an item and add it. The list groups it, for example meat or fruit and veg. Check it off when it is bought. The whole family shares this list.',
+        },
+        invite: {
+          title: 'Invite your family',
+          body: 'Copy the family code, or tap Add family member and copy the invite link. They join with that code and see this same diary, recipes, and shopping list.',
+        },
+        skip: 'Skip',
+        next: 'Next',
+        done: 'Done',
+        profileLabel: 'Take the tour',
+        profileDescription:
+          'A walk through the diary, recipes, shopping list, and how to invite someone. It does not change your family or your meals.',
       },
       privacyPage,
       termsPage,
