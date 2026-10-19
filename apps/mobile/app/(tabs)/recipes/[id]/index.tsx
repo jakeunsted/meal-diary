@@ -1,6 +1,6 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -18,6 +18,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { openPlans } from '@/lib/billing/openPlans';
 import { isNetworkError } from '@/lib/auth/httpError';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
@@ -66,6 +67,13 @@ export default function RecipeDetailScreen() {
 
   const recipe = recipeQuery.data;
   const isLoading = recipeQuery.isLoading && !recipe;
+
+  useEffect(() => {
+    if (!parsedRecipeId || recipe?.id == null) {
+      return;
+    }
+    captureEvent('recipe_viewed');
+  }, [parsedRecipeId, recipe?.id]);
   const isRefreshing = recipeQuery.isFetching && !!recipe;
 
   const handleEdit = () => {
@@ -108,10 +116,13 @@ export default function RecipeDetailScreen() {
     try {
       const items = buildShoppingListItemsFromRecipe(selectedIngredients);
       await bulkAddShoppingListItemsMutation.mutateAsync({ familyGroupId, items });
+      captureEvent('recipe_added_to_shopping_list', { item_count: items.length });
       setIsAddToShoppingListModalVisible(false);
       setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
     } catch (error) {
       if (isShoppingListOfflineQueuedError(error) || isNetworkError(error)) {
+        const items = buildShoppingListItemsFromRecipe(selectedIngredients);
+        captureEvent('recipe_added_to_shopping_list', { item_count: items.length });
         setIsAddToShoppingListModalVisible(false);
         setAddToShoppingListMessage(t('recipeDetail.addedToShoppingList'));
         return;
@@ -137,6 +148,7 @@ export default function RecipeDetailScreen() {
         recipeId: parsedRecipeId,
         familyGroupId,
       });
+      captureEvent('recipe_deleted');
       setIsDeleteModalVisible(false);
       router.replace('/(tabs)/recipes' as Href);
     } catch {

@@ -12,6 +12,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { ApiError } from '@/lib/api/client';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { getPostAuthRoute } from '@/lib/auth/helpers';
@@ -35,9 +36,11 @@ export default function LoginScreen() {
     setErrorMessage(null);
     try {
       await login(email.trim(), password);
+      captureEvent('login', { method: 'email' });
       const currentUser = useAuthStore.getState().user ?? user;
       router.replace(getPostAuthRoute(currentUser));
     } catch (error) {
+      captureEvent('login_failed', { method: 'email' });
       setErrorMessage(
         error instanceof ApiError
           ? error.message
@@ -78,9 +81,11 @@ export default function LoginScreen() {
             disabled={isSubmitting}
             testID="apple-login-button"
             onSuccess={() => {
+              captureEvent('login', { method: 'apple' });
               const currentUser = useAuthStore.getState().user ?? user;
               router.replace(getPostAuthRoute(currentUser));
             }}
+            onError={() => captureEvent('login_failed', { method: 'apple' })}
           />
 
           <GoogleSignInSection
@@ -90,9 +95,11 @@ export default function LoginScreen() {
             disabled={isSubmitting}
             testID="google-login-button"
             onSuccess={() => {
+              captureEvent('login', { method: 'google' });
               const currentUser = useAuthStore.getState().user ?? user;
               router.replace(getPostAuthRoute(currentUser));
             }}
+            onError={() => captureEvent('login_failed', { method: 'google' })}
           />
 
           <Box>

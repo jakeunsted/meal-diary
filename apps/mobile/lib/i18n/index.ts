@@ -494,13 +494,18 @@ const resources = {
       },
       analyticsConsent: {
         title: 'Analytics',
-        body: 'Allow optional analytics so we can see how Meal Diary is used, including screens and error reports, and improve it. Meal Diary works either way. You can change this later in Profile.',
+        body: 'Allow optional analytics so we can see how Meal Diary is used, including screens, error reports, and on this app a recording of the screens you visit. Text you type is masked. Meal Diary works either way. You can change this later in Profile.',
         allow: 'Allow',
         deny: 'No thanks',
         privacyPolicy: 'Privacy Policy',
         profileLabel: 'Analytics',
         profileDescription:
-          'Share how you use Meal Diary, including screens and error reports, so we can improve it.',
+          'Share how you use Meal Diary, including screens, error reports, and screen recordings, so we can improve it.',
+      },
+      analyticsError: {
+        title: 'Something went wrong',
+        body: 'Meal Diary hit an unexpected error. You can try again.',
+        retry: 'Try again',
       },
       productTour: {
         progress: '{{current}} of {{total}}',

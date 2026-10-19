@@ -16,6 +16,7 @@ import { GoogleSignInSection } from '@/components/auth/GoogleSignInSection';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { ApiError } from '@/lib/api/client';
 import { applyPendingFamilyInvite } from '@/lib/auth/applyPendingFamilyInvite';
 import { useAuthStore } from '@/lib/auth/authStore';
@@ -103,6 +104,10 @@ export default function RegistrationStep1Screen() {
 
       await clearRegisterCode();
       await login(email.trim(), password);
+      captureEvent('sign_up', {
+        method: 'email',
+        has_family_code: !!familyGroupCode,
+      });
 
       const user = useAuthStore.getState().user;
       router.replace(getPostAuthRoute(user));
@@ -164,6 +169,7 @@ export default function RegistrationStep1Screen() {
             disabled={isSubmitting}
             testID="apple-signup-button"
             onSuccess={async () => {
+              captureEvent('sign_up', { method: 'apple' });
               let currentUser = useAuthStore.getState().user;
               if (currentUser) {
                 currentUser = await applyPendingFamilyInvite(currentUser);
@@ -179,6 +185,7 @@ export default function RegistrationStep1Screen() {
             disabled={isSubmitting}
             testID="google-signup-button"
             onSuccess={async () => {
+              captureEvent('sign_up', { method: 'google' });
               let currentUser = useAuthStore.getState().user;
               if (currentUser) {
                 currentUser = await applyPendingFamilyInvite(currentUser);

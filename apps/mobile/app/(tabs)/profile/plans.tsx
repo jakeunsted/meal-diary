@@ -11,6 +11,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { openWebManageBilling, openWebPlans } from '@/lib/billing/openPlans';
 import {
   getStoreSubscriptionsUrl,
@@ -82,6 +83,7 @@ export default function PlansScreen() {
   const handlePurchase = async (interval: BillingInterval) => {
     const result = await purchaseInterval(interval);
     if (result === 'purchased') {
+      captureEvent('subscription_upgraded');
       void entitlementsQuery.refetch();
     }
   };

@@ -423,24 +423,26 @@ export function useShoppingListEditor() {
   const handleRemoveItem = useCallback(
     async (familyGroupId: number | undefined, itemId: number | string) => {
       if (!familyGroupId) {
-        return;
+        return false;
       }
 
       if (isTempShoppingListItemId(itemId)) {
         removeLocalItem(familyGroupId, itemId);
         void discardPendingOpsForItem(familyGroupId, itemId);
-        return;
+        return true;
       }
 
       setActionError(null);
 
       try {
         await deleteItemMutation.mutateAsync({ familyGroupId, itemId });
+        return true;
       } catch (error) {
         if (isIgnorableShoppingListMutationError(error)) {
-          return;
+          return true;
         }
         setActionError(resolveShoppingListErrorMessage(error));
+        return false;
       }
     },
     [deleteItemMutation, removeLocalItem]
@@ -454,28 +456,30 @@ export function useShoppingListEditor() {
       checked: boolean
     ) => {
       if (!familyGroupId) {
-        return;
+        return false;
       }
 
       const item = items.find((entry) => entry.id === itemId);
       if (!item) {
-        return;
+        return false;
       }
 
       setActionError(null);
 
       const persistable = toPersistableUpdates([{ id: itemId, checked }]);
       if (!persistable.length) {
-        return;
+        return false;
       }
 
       try {
         await bulkUpdateMutation.mutateAsync({ familyGroupId, items: persistable });
+        return true;
       } catch (error) {
         if (isIgnorableShoppingListMutationError(error)) {
-          return;
+          return true;
         }
         setActionError(resolveShoppingListErrorMessage(error));
+        return false;
       }
     },
     [bulkUpdateMutation]
@@ -512,23 +516,25 @@ export function useShoppingListEditor() {
   const handleDeleteAllChecked = useCallback(
     async (familyGroupId: number | undefined, items: ShoppingListItem[]) => {
       if (!familyGroupId) {
-        return;
+        return false;
       }
 
       const persistableIds = items.filter((item) => item.checked).map((item) => item.id);
       if (!persistableIds.length) {
-        return;
+        return false;
       }
 
       setActionError(null);
 
       try {
         await bulkDeleteMutation.mutateAsync({ familyGroupId, ids: persistableIds });
+        return true;
       } catch (error) {
         if (isIgnorableShoppingListMutationError(error)) {
-          return;
+          return true;
         }
         setActionError(resolveShoppingListErrorMessage(error));
+        return false;
       }
     },
     [bulkDeleteMutation]

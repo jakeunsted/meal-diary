@@ -10,6 +10,7 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
+import { captureEvent } from '@/lib/analytics/posthog';
 
 interface InviteModalProps {
   visible: boolean;
@@ -25,6 +26,7 @@ export function InviteModal({ visible, familyGroupCode, onClose }: InviteModalPr
 
   const handleCopyLink = async () => {
     await Clipboard.setStringAsync(inviteLink);
+    captureEvent('family_invite_copied');
     setHasCopied(true);
     setTimeout(() => setHasCopied(false), 2000);
   };

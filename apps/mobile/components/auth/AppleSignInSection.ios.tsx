@@ -15,6 +15,7 @@ function AppleSignInSectionContent({
   disabled = false,
   dividerPosition = 'none',
   onSuccess,
+  onError,
   testID = 'apple-sign-in-button',
 }: AppleSignInSectionProps) {
   const { t } = useTranslation();
@@ -28,8 +29,15 @@ function AppleSignInSectionContent({
     try {
       await signInWithApple();
       await onSuccess();
-    } catch {
-      // Cancel and error state are handled in the hook
+    } catch (error) {
+      const cancelled =
+        typeof error === 'object' &&
+        error !== null &&
+        'code' in error &&
+        (error as { code?: string }).code === 'ERR_REQUEST_CANCELED';
+      if (!cancelled) {
+        onError?.();
+      }
     }
   };
 

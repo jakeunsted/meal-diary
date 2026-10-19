@@ -53,7 +53,7 @@ export const privacyPage: PrivacyPage = {
         'If you sign in with Google, we receive your name, email address, and profile picture from Google instead of a password.',
         'Content you create: meal plans, recipes, shopping lists, and the family group you belong to.',
         'Subscription and billing data: plan type, subscription status, trial dates, and identifiers from our payment providers. We do not store full card numbers on our servers.',
-        'Usage data (only if you consent to analytics): pages viewed, features used, and a user identifier. See the Analytics section below.',
+        'Usage data (only if you consent to analytics): pages viewed, features used, and a user identifier. On the mobile app this can include a recording of the screens you visit. See the Analytics section below.',
       ],
     },
     {
@@ -78,7 +78,7 @@ export const privacyPage: PrivacyPage = {
         "Google — used for optional sign-in. Google's privacy policy applies to the data Google processes.",
         'Stripe — processes web payments for paid plans. Stripe acts as an independent controller or processor of payment data as described in its own policies.',
         'Apple App Store and Google Play / RevenueCat — process in-app purchases and subscriptions on mobile. Their privacy policies apply to payment data they handle.',
-        'PostHog (EU-hosted) — used for product analytics, only when you have consented. Data is processed within the EU.',
+        'PostHog (EU-hosted) — used for product analytics and, on the mobile app, screen recordings and error reports, only when you have consented. Data is processed within the EU.',
         'Our hosting providers store the application database and backups.',
         'Some meal diary and shopping list updates are sent to an integration service we operate to power notifications and automations.',
       ],
@@ -86,7 +86,7 @@ export const privacyPage: PrivacyPage = {
     {
       title: 'Analytics and consent',
       body: [
-        'We do not load analytics until you choose to allow them. You can change your mind at any time in your profile settings, and we will stop collecting analytics data immediately. Your analytics profile is removed when you delete your account, or when you ask us to remove it.',
+        'We do not load analytics until you choose to allow them. On the mobile app, that can include a recording of the screens you use. Text you type into fields and images are masked in those recordings. You can change your mind at any time in your profile settings, and we will stop collecting analytics data immediately. Your analytics profile is removed when you delete your account, or when you ask us to remove it.',
       ],
     },
     {

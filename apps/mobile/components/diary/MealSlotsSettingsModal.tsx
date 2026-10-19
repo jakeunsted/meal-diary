@@ -35,7 +35,7 @@ import { Heading } from '@/components/ui/heading';
 import { Text } from '@/components/ui/text';
 import { colors } from '@/constants/theme';
 import { ApiError } from '@/lib/api/client';
-import { captureEvent, logError, logInfo } from '@/lib/analytics/posthog';
+import { captureEvent, captureException, logError, logInfo } from '@/lib/analytics/posthog';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useUpdateMealSlots } from '@/lib/queries/mealSlots';
 import type { MealSlotTemplate } from '@/types/mealDiary';
@@ -292,6 +292,7 @@ export function MealSlotsSettingsModal({
       logError('meal_slots_save_failed', {
         family_group_id: familyGroupId,
       });
+      captureException(error, { category: 'diary' });
       setErrorMessage(t('diarySettings.saveFailed'));
     }
   };

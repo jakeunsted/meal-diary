@@ -5,6 +5,7 @@ import {
   type ShoppingCategory,
   type ShoppingListTab,
 } from '@meal-diary/shared';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -29,6 +30,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { useShoppingList } from '@/lib/shopping-list/useShoppingList';
 import { useShoppingListEditor } from '@/lib/shopping-list/useShoppingListEditor';
 import { useShoppingListSyncStatus } from '@/lib/shopping-list/useShoppingListSyncStatus';
@@ -70,6 +72,12 @@ export default function ShoppingListScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<ShoppingListTab>('all');
   const [isDragging, setIsDragging] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      captureEvent('shopping_list_viewed');
+    }, [])
+  );
 
   const hasListData = shoppingList.shoppingList !== null;
   const showSkeleton = shoppingList.loading && !hasListData;
@@ -149,16 +157,25 @@ export default function ShoppingListScreen() {
 
     const added = await editor.handleAddNewItem(familyGroupId, category);
     if (added) {
+      captureEvent('shopping_list_item_added');
       newItemInputRef.current?.focus();
     }
   };
 
   const handleRemoveItem = (itemId: number | string) => {
-    void editor.handleRemoveItem(familyGroupId, itemId);
+    void editor.handleRemoveItem(familyGroupId, itemId).then((removed) => {
+      if (removed) {
+        captureEvent('shopping_list_item_deleted');
+      }
+    });
   };
 
   const handleCheckedChange = (itemId: number | string, checked: boolean) => {
-    void editor.handleSetItemChecked(familyGroupId, listItems, itemId, checked);
+    void editor.handleSetItemChecked(familyGroupId, listItems, itemId, checked).then((updated) => {
+      if (updated && checked) {
+        captureEvent('shopping_list_item_checked');
+      }
+    });
   };
 
   const handleUncheckAll = () => {
@@ -166,7 +183,11 @@ export default function ShoppingListScreen() {
   };
 
   const handleDeleteAllChecked = () => {
-    void editor.handleDeleteAllChecked(familyGroupId, listItems);
+    void editor.handleDeleteAllChecked(familyGroupId, listItems).then((deleted) => {
+      if (deleted) {
+        captureEvent('shopping_list_item_deleted');
+      }
+    });
   };
 
   const handleMoveCategory = (itemId: number | string, category: ShoppingCategory) => {

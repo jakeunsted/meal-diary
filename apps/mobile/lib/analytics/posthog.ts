@@ -1,11 +1,15 @@
 import Constants from 'expo-constants';
 import PostHog from 'posthog-react-native';
+import { Platform } from 'react-native';
 
 import { env } from '@/constants/env';
 import type { AnalyticsConsentChoice } from '@/lib/analytics/consentChoice';
 import type { User } from '@/types/api';
 
 export const isAnalyticsDevBuild = typeof __DEV__ !== 'undefined' ? __DEV__ : false;
+
+const isReleaseBuild = !isAnalyticsDevBuild;
+const isNativeReleaseBuild = isReleaseBuild && Platform.OS !== 'web';
 
 export const posthogClient: PostHog | null = env.posthogKey
   ? new PostHog(env.posthogKey, {
@@ -14,7 +18,33 @@ export const posthogClient: PostHog | null = env.posthogKey
       defaultOptIn: false,
       // Dev never registers lifecycle capture. Release does, but those events
       // are dropped until analytics consent is granted.
-      captureAppLifecycleEvents: !isAnalyticsDevBuild,
+      captureAppLifecycleEvents: isReleaseBuild,
+      // Session replay and native crashes need a release build of the iOS or Android app.
+      enableSessionReplay: isNativeReleaseBuild,
+      ...(isNativeReleaseBuild
+        ? {
+            sessionReplayConfig: {
+              maskAllTextInputs: true,
+              maskAllImages: true,
+              screenshotScale: 0.5,
+              screenshotColorMode: 'RGB_565' as const,
+              screenshotCompressionQuality: 30,
+            },
+          }
+        : {}),
+      ...(isReleaseBuild
+        ? {
+            errorTracking: {
+              autocapture: {
+                uncaughtExceptions: true,
+                unhandledRejections: true,
+                // Native crashes are a no-op without the native plugin, including on web.
+                nativeCrashes: isNativeReleaseBuild,
+                androidNdkCrashes: isNativeReleaseBuild,
+              },
+            },
+          }
+        : {}),
       logs: {
         serviceName: 'meal-diary-mobile',
         environment: isAnalyticsDevBuild ? 'development' : 'production',
@@ -125,4 +155,11 @@ export function captureEvent(
   properties?: Record<string, string | number | boolean>
 ): void {
   withCapture(() => posthogClient?.capture(event, properties));
+}
+
+export function captureException(
+  error: unknown,
+  properties?: Record<string, string | number | boolean>
+): void {
+  withCapture(() => posthogClient?.captureException(error, properties));
 }

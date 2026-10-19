@@ -14,6 +14,7 @@ import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
+import { captureEvent } from '@/lib/analytics/posthog';
 import { useCurrentUser } from '@/lib/queries/profile';
 import { useRecipe, useUpdateRecipe } from '@/lib/queries/recipes';
 import type { UpdateRecipePayload } from '@/types/recipe';
@@ -48,6 +49,7 @@ export default function EditRecipeScreen() {
         familyGroupId,
         payload: formData as UpdateRecipePayload,
       });
+      captureEvent('recipe_edited');
       router.back();
     } catch {
       setSubmitError(t('recipeForm.updateFailed'));
