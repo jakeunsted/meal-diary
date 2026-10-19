@@ -3,6 +3,17 @@
     <div class="modal-box max-h-[80vh] flex flex-col">
       <h3 class="font-bold text-lg mb-4">{{ $t('recipeDetail.addToShoppingListModalTitle') }}</h3>
 
+      <div class="mb-2 flex justify-end">
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          data-testid="recipe-shopping-list-select-all"
+          @click="handleToggleAll"
+        >
+          {{ allSelected ? $t('recipeDetail.deselectAll') : $t('recipeDetail.selectAll') }}
+        </button>
+      </div>
+
       <div class="overflow-y-auto flex-1 min-h-0 -mx-2 px-2">
         <ul class="space-y-2">
           <li
@@ -85,6 +96,20 @@ const resetSelection = () => {
 const hasSelection = computed(() =>
   Object.values(selectedByKey.value).some((selected) => selected)
 );
+
+const allSelected = computed(() =>
+  props.ingredients.length > 0 &&
+  props.ingredients.every((ingredient, index) => selectedByKey.value[getIngredientKey(ingredient, index)])
+);
+
+const handleToggleAll = () => {
+  const nextValue = !allSelected.value;
+  const next: Record<string, boolean> = {};
+  props.ingredients.forEach((ingredient, index) => {
+    next[getIngredientKey(ingredient, index)] = nextValue;
+  });
+  selectedByKey.value = next;
+};
 
 const handleConfirm = () => {
   const selectedKeys = Object.entries(selectedByKey.value)

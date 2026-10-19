@@ -34,7 +34,8 @@ ShoppingListItem.init(
       allowNull: false,
     },
     name: {
-      type: DataTypes.STRING(100),
+      // Recipe ingredient names are up to 200 characters, and list copies append " (qty unit)".
+      type: DataTypes.STRING(300),
       allowNull: false,
     },
     checked: {

@@ -135,6 +135,8 @@ const resources = {
         shoppingListUpgrade: 'View plans',
         addToShoppingList: 'Add to Shopping List',
         addToShoppingListModalTitle: 'Add ingredients to shopping list',
+        selectAll: 'Select all',
+        deselectAll: 'Deselect all',
         addToList: 'Add to list',
         addedToShoppingList: 'Ingredients added to shopping list!',
         addToShoppingListFailed: 'Failed to add ingredients to shopping list',

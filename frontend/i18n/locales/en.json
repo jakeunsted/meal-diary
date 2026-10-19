@@ -405,6 +405,8 @@
     "shoppingListPremium": "Add recipe ingredients to your shopping list with Family Plus.",
     "shoppingListUpgrade": "View plans",
     "addToShoppingListModalTitle": "Add ingredients to shopping list",
+    "selectAll": "Select all",
+    "deselectAll": "Deselect all",
     "addToList": "Add to list",
     "addToShoppingListFailed": "Failed to add ingredients to shopping list"
   }
