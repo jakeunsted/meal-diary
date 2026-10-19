@@ -22,6 +22,7 @@ import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { useAuthResume } from '@/lib/auth/useAuthResume';
 import { useRevenueCatIdentity } from '@/lib/billing/useRevenueCatIdentity';
+import { useMealDiarySync } from '@/lib/diary/useMealDiarySync';
 import { useShoppingListSync } from '@/lib/shopping-list/useShoppingListSync';
 import { useFamilyRealtime } from '@/lib/realtime/useFamilyRealtime';
 
@@ -48,6 +49,7 @@ function RootLayoutNav() {
   useAuthResume();
   useFamilyRealtime();
   useShoppingListSync(familyGroupId ?? undefined);
+  useMealDiarySync(familyGroupId ?? undefined);
   useRevenueCatIdentity();
 
   useEffect(() => {

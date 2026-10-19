@@ -330,4 +330,104 @@ router.patch('/:family_group_id/daily-meals', authenticateToken, requireFamilyMe
   }
 });
 
+/**
+ * @openapi
+ * /meal-diaries/{family_group_id}/daily-meals/sync:
+ *   post:
+ *     summary: Apply offline diary edits for one week
+ *     tags: [MealDiaries]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - week_start_date
+ *               - slots
+ *             properties:
+ *               week_start_date:
+ *                 type: string
+ *                 format: date
+ *               slots:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - day_of_week
+ *                     - meal_slot_id
+ *                     - baseline
+ *                     - dish
+ *                     - recipe_id
+ *     responses:
+ *       200:
+ *         description: The week after applied writes, plus one result per slot
+ *       400:
+ *         description: Invalid family, week, or slot payload. Nothing is written.
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied, or the week is outside the current plan
+ */
+router.post('/:family_group_id/daily-meals/sync', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await mealDiaryController.syncDailyMealsForFamilyGroup(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /meal-diaries/{family_group_id}/daily-meals/sync/resolve:
+ *   post:
+ *     summary: Keep offline edits that still match the reviewed server value
+ *     tags: [MealDiaries]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - week_start_date
+ *               - keep_mine
+ *             properties:
+ *               week_start_date:
+ *                 type: string
+ *                 format: date
+ *               keep_mine:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *     responses:
+ *       200:
+ *         description: The week after applied writes, plus one result per slot
+ *       400:
+ *         description: Invalid family, week, or slot payload. Nothing is written.
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Access denied, or the week is outside the current plan
+ */
+router.post('/:family_group_id/daily-meals/sync/resolve', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await mealDiaryController.resolveDailyMealSyncForFamilyGroup(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

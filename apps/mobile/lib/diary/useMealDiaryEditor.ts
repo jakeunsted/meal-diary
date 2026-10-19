@@ -1,7 +1,17 @@
+import { useQueryClient } from '@tanstack/react-query';
+import { normalizeMealDiaryDish } from '@meal-diary/shared';
 import { useCallback, useState } from 'react';
+import { Platform } from 'react-native';
 
+import { isNetworkError } from '@/lib/auth/httpError';
 import { buildSaveDailyMealPayload } from '@/lib/diary/buildSaveDailyMealPayload';
-import { resolveMealDiaryErrorMessage, useSaveDailyMeal } from '@/lib/queries/mealDiary';
+import {
+  mealDiaryWeekHasPending,
+  recordMealDiaryPendingEdit,
+} from '@/lib/diary/mealDiaryPendingQueue';
+import { saveWeeklyMealsCache } from '@/lib/diary/mealDiaryStorage';
+import { applyLocalSlotValue } from '@/lib/diary/mealDiarySlotState';
+import { mealDiaryKeys, resolveMealDiaryErrorMessage, useSaveDailyMeal } from '@/lib/queries/mealDiary';
 import type { DailyMeal, MealType, SelectedMeal } from '@/types/mealDiary';
 
 const emptySelectedMeal: SelectedMeal = {
@@ -44,7 +54,51 @@ function getExistingMealValues(
   };
 }
 
+function resolveMealSlotId(
+  weeklyMeals: DailyMeal[],
+  dayOfWeek: number,
+  mealType: MealType | null,
+  mealSlotId: number | null
+): number | null {
+  if (mealSlotId != null) {
+    return mealSlotId;
+  }
+  if (!mealType) {
+    return null;
+  }
+  const dayMeal = weeklyMeals.find((meal) => meal.day_of_week === dayOfWeek);
+  return dayMeal?.slots?.find((slot) => slot.legacy_key === mealType)?.meal_slot_id ?? null;
+}
+
+function readDeviceSlotValue(
+  weeklyMeals: DailyMeal[],
+  dayOfWeek: number,
+  mealType: MealType | null,
+  mealSlotId: number
+): { dish: string | null; recipe_id: number | null } {
+  const dayMeal = weeklyMeals.find((meal) => meal.day_of_week === dayOfWeek);
+  const slot = dayMeal?.slots?.find((entry) => entry.meal_slot_id === mealSlotId);
+  if (slot) {
+    return {
+      dish: normalizeMealDiaryDish(slot.dish),
+      recipe_id: slot.recipe_id ?? null,
+    };
+  }
+  if (dayMeal && mealType) {
+    const recipeIdKey = `${mealType}_recipe_id` as
+      | 'breakfast_recipe_id'
+      | 'lunch_recipe_id'
+      | 'dinner_recipe_id';
+    return {
+      dish: normalizeMealDiaryDish(dayMeal[mealType]),
+      recipe_id: dayMeal[recipeIdKey] ?? null,
+    };
+  }
+  return { dish: null, recipe_id: null };
+}
+
 export function useMealDiaryEditor() {
+  const queryClient = useQueryClient();
   const [selectedMeal, setSelectedMeal] = useState<SelectedMeal>(emptySelectedMeal);
   const [openedWithMeal, setOpenedWithMeal] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -98,6 +152,42 @@ export function useMealDiaryEditor() {
     }));
   }, []);
 
+  const queueOfflineEdit = useCallback(
+    async (
+      familyGroupId: number,
+      weekKey: string,
+      weeklyMeals: DailyMeal[],
+      mealType: MealType | null,
+      dayOfWeek: number,
+      mealName: string,
+      recipeId: number | null,
+      mealSlotId: number
+    ) => {
+      const dish = normalizeMealDiaryDish(mealName);
+      const nextRecipeId = recipeId ?? null;
+      await recordMealDiaryPendingEdit(familyGroupId, {
+        week_start_date: weekKey,
+        day_of_week: dayOfWeek,
+        meal_slot_id: mealSlotId,
+        baseline: readDeviceSlotValue(weeklyMeals, dayOfWeek, mealType, mealSlotId),
+        dish,
+        recipe_id: nextRecipeId,
+      });
+      const nextMeals = applyLocalSlotValue(
+        weeklyMeals,
+        weekKey,
+        dayOfWeek,
+        mealSlotId,
+        mealType,
+        dish,
+        nextRecipeId
+      );
+      queryClient.setQueryData(mealDiaryKeys.weekly(familyGroupId, weekKey), nextMeals);
+      await saveWeeklyMealsCache(familyGroupId, weekKey, nextMeals);
+    },
+    [queryClient]
+  );
+
   const performSave = useCallback(
     async (
       familyGroupId: number,
@@ -110,6 +200,30 @@ export function useMealDiaryEditor() {
       mealSlotId: number | null
     ) => {
       setSaveError(null);
+      const resolvedMealSlotId = resolveMealSlotId(
+        weeklyMeals,
+        dayOfWeek,
+        mealType,
+        mealSlotId
+      );
+      if (
+        Platform.OS === 'android' &&
+        resolvedMealSlotId != null &&
+        (await mealDiaryWeekHasPending(familyGroupId, weekKey))
+      ) {
+        await queueOfflineEdit(
+          familyGroupId,
+          weekKey,
+          weeklyMeals,
+          mealType,
+          dayOfWeek,
+          mealName,
+          recipeId,
+          resolvedMealSlotId
+        );
+        closeMealEditor();
+        return;
+      }
 
       try {
         const payload = buildSaveDailyMealPayload(
@@ -125,10 +239,24 @@ export function useMealDiaryEditor() {
         await saveDailyMealMutation.mutateAsync({ familyGroupId, payload });
         closeMealEditor();
       } catch (error) {
+        if (Platform.OS === 'android' && resolvedMealSlotId != null && isNetworkError(error)) {
+          await queueOfflineEdit(
+            familyGroupId,
+            weekKey,
+            weeklyMeals,
+            mealType,
+            dayOfWeek,
+            mealName,
+            recipeId,
+            resolvedMealSlotId
+          );
+          closeMealEditor();
+          return;
+        }
         setSaveError(resolveMealDiaryErrorMessage(error));
       }
     },
-    [closeMealEditor, saveDailyMealMutation]
+    [closeMealEditor, queueOfflineEdit, saveDailyMealMutation]
   );
 
   const handleSave = useCallback(

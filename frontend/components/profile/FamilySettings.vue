@@ -158,11 +158,13 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { useFamilyStore } from '~/stores/family';
+import { useMealDiaryStore } from '~/stores/mealDiary';
 import { useUserStore } from '~/stores/user';
 
 const { t } = useI18n();
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
+const mealDiaryStore = useMealDiaryStore();
 const { familyGroup, members } = storeToRefs(familyStore);
 const { api } = useApi();
 
@@ -206,6 +208,7 @@ const handleLeave = async () => {
   error.value = '';
   isBusy.value = true;
   try {
+    await mealDiaryStore.flushPending().catch(() => {});
     await api(`/api/family-groups/${familyGroup.value!.id}/leave`, { method: 'POST' });
     await exitFamilyLocally();
   } catch (err: any) {
@@ -239,6 +242,7 @@ const handleDelete = async () => {
   error.value = '';
   isBusy.value = true;
   try {
+    await mealDiaryStore.flushPending().catch(() => {});
     await api(`/api/family-groups/${familyGroup.value!.id}`, { method: 'DELETE' });
     await exitFamilyLocally();
   } catch (err: any) {

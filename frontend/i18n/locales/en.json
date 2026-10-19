@@ -364,6 +364,21 @@
     "askOwnerToUpgrade": "Ask {name} to upgrade for past-week editing.",
     "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for past-week editing."
   },
+  "diarySync": {
+    "pending": "Changes on this week are saved on this device until they sync.",
+    "syncFailed": "Changes could not be synced.",
+    "retry": "Retry",
+    "title": "Meals changed in two places",
+    "body": "Someone else changed meals you also changed. Choose which dish to keep.",
+    "yours": "Yours",
+    "theirs": "Theirs",
+    "keepMine": "Keep mine",
+    "keepTheirs": "Keep theirs",
+    "keepAllMine": "Keep all mine",
+    "keepAllTheirs": "Keep all theirs",
+    "emptyDish": "Empty",
+    "close": "Close"
+  },
   "diarySettings": {
     "open": "Diary settings",
     "title": "Daily meals",

@@ -81,6 +81,21 @@ const resources = {
         removeEmpty:
           'Removed meals will disappear from today onwards. No planned meals will be deleted.',
       },
+      diarySync: {
+        pending: 'Meal changes are waiting to sync.',
+        syncFailed: 'Meal changes could not sync.',
+        retry: 'Retry',
+        title: 'Meals changed on another device',
+        body: 'Someone else saved these meals while you were offline. Choose which version to keep.',
+        yours: 'Yours',
+        theirs: 'Theirs',
+        keepMine: 'Keep mine',
+        keepTheirs: 'Keep theirs',
+        keepAllMine: 'Keep all mine',
+        keepAllTheirs: 'Keep all theirs',
+        emptyDish: 'Empty',
+        close: 'Close',
+      },
       diaryPage: {
         weekReadOnly: 'This week is view-only on your plan. Upgrade to edit past weeks.',
         upgradeLink: 'View plans to upgrade',

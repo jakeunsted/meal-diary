@@ -32,7 +32,33 @@
     </div>
 
     <div
-      v-if="isWeekReadOnly"
+      v-if="showSyncPending"
+      class="alert alert-info mx-4 mb-4"
+      role="status"
+      data-testid="diary-sync-pending"
+    >
+      <span>{{ $t('diarySync.pending') }}</span>
+    </div>
+
+    <div
+      v-if="mealDiaryStore.syncFailed"
+      class="alert alert-error mx-4 mb-4"
+      role="alert"
+      data-testid="diary-sync-failed"
+    >
+      <span>{{ $t('diarySync.syncFailed') }}</span>
+      <button
+        type="button"
+        class="btn btn-sm btn-ghost"
+        data-testid="diary-sync-retry"
+        @click="handleRetrySync"
+      >
+        {{ $t('diarySync.retry') }}
+      </button>
+    </div>
+
+    <div
+      v-if="showWeekReadOnlyAlert"
       class="alert alert-info mx-4 mb-4"
       role="status"
       data-testid="diary-week-read-only-alert"
@@ -51,6 +77,15 @@
           {{ $t('diaryPage.upgradeLink') }}
         </NuxtLink>
       </div>
+    </div>
+
+    <div
+      v-if="showWeekAheadAlert"
+      class="alert alert-info mx-4 mb-4"
+      role="status"
+      data-testid="diary-week-ahead-alert"
+    >
+      <span>{{ $t('diaryPage.weekAheadLimit') }}</span>
     </div>
 
     <MealDiarySkeleton v-if="showSkeleton" />
@@ -109,6 +144,27 @@
         @saved="handleMealSlotsSaved"
       />
     </dialog>
+
+    <dialog
+      ref="reviewDialog"
+      id="diary_sync_review"
+      class="modal"
+      data-testid="diary-sync-review"
+      @close="handleReviewDialogClose"
+    >
+      <DiarySyncReviewModal
+        v-if="reviewRows.length"
+        :conflicts="reviewRows"
+        :busy="mealDiaryStore.syncing"
+        @keep-mine="handleKeepMine"
+        @keep-theirs="handleKeepTheirs"
+        @keep-all-mine="handleKeepAllMine"
+        @keep-all-theirs="handleKeepAllTheirs"
+      />
+      <form method="dialog" class="modal-backdrop">
+        <button type="submit">{{ $t('diarySync.close') }}</button>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -123,8 +179,10 @@ import SetUpdateMealModal from '~/components/diary/SetUpdateMealModal.vue';
 import MealSlotsSettingsModal from '~/components/diary/MealSlotsSettingsModal.vue';
 import WeekCalendarPicker from '~/components/WeekCalendarPicker.vue';
 import MealDiarySkeleton from '~/components/diary/MealDiarySkeleton.vue';
+import DiarySyncReviewModal from '~/components/diary/DiarySyncReviewModal.vue';
 import PullToRefreshChrome from '~/components/PullToRefreshChrome.vue';
 import { useDateUtils } from '~/composables/useDateUtils.ts';
+import { weekKeysEqual } from '~/composables/mealDiaryWeekKey';
 import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useMealDiaryWeek } from '~/composables/useMealDiaryWeek';
 import { useToast } from '~/composables/useToast';
@@ -141,6 +199,20 @@ const { refreshEntitlements, canNavigateToWeek, isWeekReadOnly: checkWeekReadOnl
 const { openPaywall } = usePaywall();
 
 const mealSlots = ref([]);
+
+const reviewDialog = ref(null);
+let ignoreReviewClose = false;
+let leavingDiary = false;
+
+const handleOnline = () => {
+  void mealDiaryStore.flushPending();
+};
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    void mealDiaryStore.flushPending();
+  }
+};
 
 onMounted(() => {
   track('diary_viewed');
@@ -181,6 +253,45 @@ const weekReadOnlyHelperText = computed(() => {
   }
 
   return t('diaryPage.askOwnerToUpgradeGeneric');
+});
+
+const openWeekEntitlement = computed(() => {
+  const week = resolvedWeekKey.value;
+  if (!week) {
+    return null;
+  }
+  const match = Object.keys(mealDiaryStore.syncEntitlementByWeek).find((key) =>
+    weekKeysEqual(key, week)
+  );
+  return match ? mealDiaryStore.syncEntitlementByWeek[match] : null;
+});
+
+const showWeekReadOnlyAlert = computed(
+  () => isWeekReadOnly.value || openWeekEntitlement.value === 'edit_past_weeks'
+);
+
+const showWeekAheadAlert = computed(() => openWeekEntitlement.value === 'weeks_ahead');
+
+const showSyncPending = computed(() => {
+  if (mealDiaryStore.reviewWeekStart) {
+    return false;
+  }
+  const familyId = userStore.user?.family_group_id;
+  const week = resolvedWeekKey.value;
+  if (!familyId || !week) {
+    return false;
+  }
+  return mealDiaryStore.pendingSlots.some(
+    (slot) => slot.family_group_id === familyId && weekKeysEqual(slot.week_start_date, week)
+  );
+});
+
+const reviewRows = computed(() => {
+  const week = mealDiaryStore.reviewWeekStart;
+  if (!week) {
+    return [];
+  }
+  return mealDiaryStore.conflicts.filter((row) => weekKeysEqual(row.week_start_date, week));
 });
 
 const canSelectWeek = (weekStart) => canNavigateToWeek(weekStart);
@@ -246,4 +357,82 @@ const handleWeekBlocked = () => {
 const handleRetry = () => {
   void refreshWeek();
 };
+
+const handleRetrySync = () => {
+  void mealDiaryStore.flushPending();
+};
+
+const handleKeepMine = (conflict) => {
+  void mealDiaryStore.keepMine(conflict);
+};
+
+const handleKeepTheirs = (conflict) => {
+  void mealDiaryStore.keepTheirs(conflict);
+};
+
+const handleKeepAllMine = () => {
+  void mealDiaryStore.keepAllMine();
+};
+
+const handleKeepAllTheirs = () => {
+  void mealDiaryStore.keepAllTheirs();
+};
+
+const handleReviewDismiss = () => {
+  void mealDiaryStore.dismissOpenReview();
+};
+
+const handleReviewDialogClose = () => {
+  if (ignoreReviewClose || leavingDiary) {
+    ignoreReviewClose = false;
+    return;
+  }
+  handleReviewDismiss();
+};
+
+const dropReviewOnLeave = () => {
+  if (!mealDiaryStore.reviewWeekStart) {
+    return;
+  }
+  leavingDiary = true;
+  ignoreReviewClose = true;
+  void mealDiaryStore.dismissAllReviews();
+};
+
+watch(
+  () => mealDiaryStore.reviewWeekStart,
+  async (weekStart) => {
+    await nextTick();
+    const dialog = reviewDialog.value;
+    if (!dialog) {
+      return;
+    }
+    if (weekStart) {
+      if (!dialog.open) {
+        dialog.showModal();
+      }
+      return;
+    }
+    if (dialog.open) {
+      ignoreReviewClose = true;
+      dialog.close();
+    }
+  }
+);
+
+onMounted(() => {
+  window.addEventListener('online', handleOnline);
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  void mealDiaryStore.flushPending();
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', handleOnline);
+  document.removeEventListener('visibilitychange', handleVisibilityChange);
+  dropReviewOnLeave();
+});
+
+onBeforeRouteLeave(() => {
+  dropReviewOnLeave();
+});
 </script>

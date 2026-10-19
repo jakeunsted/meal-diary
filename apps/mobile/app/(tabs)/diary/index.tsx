@@ -1,12 +1,14 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useMemo, useState } from 'react';
+import { normalizeMealDiaryDish } from '@meal-diary/shared';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter, type Href } from 'expo-router';
+import { useIsFocused, useRouter, type Href } from 'expo-router';
 
 import { DayFoodPlanCard, type SetMealPayload } from '@/components/diary/DayFoodPlanCard';
 import { DiarySkeleton } from '@/components/diary/DiarySkeleton';
+import { DiarySyncReviewModal } from '@/components/diary/DiarySyncReviewModal';
 import { MealSlotsSettingsModal } from '@/components/diary/MealSlotsSettingsModal';
 import { SetMealModal } from '@/components/diary/SetMealModal';
 import { WeekCalendarPicker } from '@/components/diary/WeekCalendarPicker';
@@ -20,7 +22,14 @@ import { captureEvent } from '@/lib/analytics/posthog';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useDiaryEntitlements } from '@/lib/entitlements/useDiaryEntitlements';
 import { getDateForDay, getDayName, isDayInPast } from '@/lib/diary/dateUtils';
+import {
+  keepMealDiaryMine,
+  keepMealDiaryTheirs,
+  retryMealDiarySync,
+  skipMealDiaryReview,
+} from '@/lib/diary/mealDiarySync';
 import { useMealDiaryEditor } from '@/lib/diary/useMealDiaryEditor';
+import { useMealDiaryReview, useMealDiarySyncStatus } from '@/lib/diary/useMealDiarySync';
 import { useMealDiaryWeek } from '@/lib/diary/useMealDiaryWeek';
 import { buildWeekDayMeals, toMealSlot } from '@/lib/diary/weeklyMeals';
 import { useMealSlots } from '@/lib/queries/mealSlots';
@@ -39,6 +48,9 @@ export default function DiaryScreen() {
   const mealEditor = useMealDiaryEditor();
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const familyGroupId = userQuery.data?.family_group_id;
+  const diarySyncStatus = useMealDiarySyncStatus(familyGroupId);
+  const diaryReview = useMealDiaryReview();
+  const isDiaryFocused = useIsFocused();
   const diaryEntitlements = useDiaryEntitlements(entitlementsQuery.data);
   const mealSlotsQuery = useMealSlots(familyGroupId);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -146,6 +158,59 @@ export default function DiaryScreen() {
     }
   };
 
+  const handleRetrySync = () => {
+    if (!familyGroupId) {
+      return;
+    }
+    void retryMealDiarySync(queryClient, familyGroupId);
+  };
+
+  const handleKeepMine = (dayOfWeek: number, mealSlotId: number) => {
+    void keepMealDiaryMine(queryClient, [{ dayOfWeek, mealSlotId }]);
+  };
+
+  const handleKeepTheirs = (dayOfWeek: number, mealSlotId: number) => {
+    void keepMealDiaryTheirs(queryClient, dayOfWeek, mealSlotId);
+  };
+
+  const handleKeepAllMine = () => {
+    void keepMealDiaryMine(queryClient);
+  };
+
+  const handleReviewDismiss = () => {
+    void skipMealDiaryReview(queryClient);
+  };
+
+  const wasDiaryFocused = useRef(isDiaryFocused);
+  useEffect(() => {
+    if (wasDiaryFocused.current && !isDiaryFocused) {
+      void skipMealDiaryReview(queryClient);
+    }
+    wasDiaryFocused.current = isDiaryFocused;
+  }, [isDiaryFocused, queryClient]);
+
+  const reviewRows = useMemo(() => {
+    if (!diaryReview) {
+      return [];
+    }
+
+    const meals = diaryReview.serverMeals.length > 0 ? diaryReview.serverMeals : diary.weeklyMeals;
+    return diaryReview.rows.map((row) => {
+      const dayMeal = meals.find((meal) => meal.day_of_week === row.dayOfWeek);
+      const slot = dayMeal?.slots?.find((entry) => entry.meal_slot_id === row.mealSlotId);
+      const yours = normalizeMealDiaryDish(row.yours.dish);
+      const theirs = normalizeMealDiaryDish(row.theirs.dish);
+      return {
+        dayOfWeek: row.dayOfWeek,
+        mealSlotId: row.mealSlotId,
+        dayLabel: getDayName(row.dayOfWeek, diaryReview.weekStartDate, i18n.language),
+        slotName: slot?.name ?? '',
+        yoursLabel: yours ?? t('diarySync.emptyDish'),
+        theirsLabel: theirs ?? t('diarySync.emptyDish'),
+      };
+    });
+  }, [diary.weeklyMeals, diaryReview, i18n.language, t]);
+
   return (
     <Box className="flex-1 bg-base">
       <ScrollView
@@ -186,6 +251,27 @@ export default function DiaryScreen() {
             >
               <ButtonText>{t('diary.retry')}</ButtonText>
             </Button>
+          </Box>
+        ) : null}
+
+        {diarySyncStatus.syncError ? (
+          <Box
+            className="mx-4 mb-4 flex-row items-center justify-between rounded-xl bg-red-500/15 px-4 py-3"
+            testID="diary-sync-error"
+          >
+            <Text className="text-red-400 flex-1 text-sm">{t('diarySync.syncFailed')}</Text>
+            <Button
+              size="sm"
+              variant="outline"
+              onPress={handleRetrySync}
+              testID="diary-sync-retry"
+            >
+              <ButtonText>{t('diarySync.retry')}</ButtonText>
+            </Button>
+          </Box>
+        ) : diarySyncStatus.pendingCount > 0 ? (
+          <Box className="mx-4 mb-4 rounded-xl bg-ice/10 px-4 py-3" testID="diary-sync-pending">
+            <Text className="text-ice/80 text-sm">{t('diarySync.pending')}</Text>
           </Box>
         ) : null}
 
@@ -256,6 +342,17 @@ export default function DiaryScreen() {
         onSave={handleSaveMeal}
         onClear={handleClearMeal}
         onClose={mealEditor.closeMealEditor}
+      />
+
+      <DiarySyncReviewModal
+        visible={isDiaryFocused && diaryReview != null}
+        rows={reviewRows}
+        isResolving={diaryReview?.isResolving ?? false}
+        onKeepMine={handleKeepMine}
+        onKeepTheirs={handleKeepTheirs}
+        onKeepAllMine={handleKeepAllMine}
+        onKeepAllTheirs={handleReviewDismiss}
+        onDismiss={handleReviewDismiss}
       />
 
       <MealSlotsSettingsModal

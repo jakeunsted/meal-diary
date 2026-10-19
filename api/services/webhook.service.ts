@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
-import DailyMeal from '../db/models/DailyMeal.model.ts';
 import ShoppingListItem from '../db/models/ShoppingListItem.model.ts';
 import { emitFamilyEvent } from './sse.service.ts';
+import type { DayMealSlotDto } from './mealSlots.service.ts';
 
 dotenv.config({ quiet: true });
 
@@ -17,6 +17,18 @@ if (!WEBHOOK_BASE_URL) {
   throw new Error('WEBHOOK_BASE_URL is not defined');
 }
 
+interface DailyMealWebhookSource {
+  dataValues: {
+    day_of_week: number;
+    breakfast?: string | null;
+    lunch?: string | null;
+    dinner?: string | null;
+    breakfast_recipe_id?: number | null;
+    lunch_recipe_id?: number | null;
+    dinner_recipe_id?: number | null;
+  };
+}
+
 interface DailyMealPayload {
   day_of_week: number;
   breakfast: string | null;
@@ -26,6 +38,7 @@ interface DailyMealPayload {
   lunch_recipe_id: number | null;
   dinner_recipe_id: number | null;
   week_start_date?: string;
+  slots?: DayMealSlotDto[];
 }
 
 function toPlainItem(item: ShoppingListItem): Record<string, unknown> {
@@ -39,14 +52,16 @@ function toPlainItem(item: ShoppingListItem): Record<string, unknown> {
  * Sends a webhook for a meal diary event
  * @param {number} familyGroupId - The ID of the family group
  * @param {string} eventType - The type of the event
- * @param {DailyMeal} dailyMeal - The daily meal model instance
+ * @param {DailyMealWebhookSource} dailyMeal - The daily meal, or the same day fields
  * @param {string} [weekStartDate] - ISO week start date for clients that cache by week
+ * @param {DayMealSlotDto[]} [slots] - That day's slots. Omit to leave the existing payload unchanged.
  */
 export const sendDailyMealWebhook = async (
   familyGroupId: number,
   eventType: string,
-  dailyMeal: DailyMeal,
-  weekStartDate?: string
+  dailyMeal: DailyMealWebhookSource,
+  weekStartDate?: string,
+  slots?: DayMealSlotDto[]
 ) => {
   try {
     const webHookUrl = `${WEBHOOK_BASE_URL}/${familyGroupId}/daily-meal`;
@@ -60,6 +75,7 @@ export const sendDailyMealWebhook = async (
       lunch_recipe_id: dailyMeal.dataValues.lunch_recipe_id ?? null,
       dinner_recipe_id: dailyMeal.dataValues.dinner_recipe_id ?? null,
       ...(weekStartDate ? { week_start_date: weekStartDate } : {}),
+      ...(slots !== undefined ? { slots } : {}),
     };
 
     const eventData = { dailyMeal: payload };

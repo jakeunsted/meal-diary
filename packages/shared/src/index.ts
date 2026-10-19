@@ -88,3 +88,18 @@ export type {
   MealSlotsValidationResult,
   RemovedSlotImpact,
 } from './mealSlots/index.ts';
+
+export {
+  mealDiarySlotValuesMatch,
+  normalizeMealDiaryDish,
+} from './mealDiary/sync.ts';
+
+export type {
+  MealDiaryResolveRequest,
+  MealDiaryResolveSlot,
+  MealDiarySlotValue,
+  MealDiarySyncRequest,
+  MealDiarySyncResult,
+  MealDiarySyncSlot,
+  MealDiarySyncStatus,
+} from './mealDiary/sync.ts';

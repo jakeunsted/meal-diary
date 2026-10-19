@@ -4,6 +4,7 @@ import { AppState, Platform } from 'react-native';
 import { logError } from '@/lib/analytics/posthog';
 import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
+import { loadMealDiaryPendingQueue } from '@/lib/diary/mealDiaryPendingQueue';
 import { applyFamilyRealtimeEvent } from '@/lib/realtime/applyFamilyRealtimeEvent';
 import {
   connectFamilySse,
@@ -56,6 +57,7 @@ export function useFamilyRealtime(): void {
       }
 
       closeConnection();
+      await loadMealDiaryPendingQueue(familyGroupId);
 
       try {
         const connection = await connectFamilySse({

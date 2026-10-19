@@ -16,7 +16,7 @@ definePageMeta({
 const authStore = useAuthStore();
 
 onMounted(async () => {
-  await authStore.clearAuth();
+  await authStore.logout();
   await navigateTo('/login', { replace: true });
 });
 </script>
