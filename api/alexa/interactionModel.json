@@ -1,0 +1,100 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "meal diary",
+      "intents": [
+        {
+          "name": "GetDiaryIntent",
+          "slots": [
+            {
+              "name": "day",
+              "type": "DiaryDay"
+            }
+          ],
+          "samples": [
+            "what's in the meal diary {day}",
+            "what's planned {day}",
+            "what's for {day}",
+            "read the meal diary {day}",
+            "what's in the meal diary today",
+            "what's planned today",
+            "what's in the meal diary tomorrow",
+            "what's planned tomorrow"
+          ]
+        },
+        {
+          "name": "GetMealIntent",
+          "slots": [
+            {
+              "name": "meal",
+              "type": "MealName"
+            },
+            {
+              "name": "day",
+              "type": "DiaryDay"
+            }
+          ],
+          "samples": [
+            "what's for {meal}",
+            "what's for {meal} {day}",
+            "what's for {meal} today",
+            "what's for {meal} tomorrow",
+            "what are we having for {meal}",
+            "what are we having for {meal} {day}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent"
+        },
+        {
+          "name": "AMAZON.CancelIntent"
+        },
+        {
+          "name": "AMAZON.StopIntent"
+        },
+        {
+          "name": "AMAZON.FallbackIntent"
+        }
+      ],
+      "types": [
+        {
+          "name": "DiaryDay",
+          "values": [
+            {
+              "name": {
+                "value": "today",
+                "synonyms": ["tonight"]
+              }
+            },
+            {
+              "name": {
+                "value": "tomorrow"
+              }
+            }
+          ]
+        },
+        {
+          "name": "MealName",
+          "values": [
+            {
+              "name": {
+                "value": "breakfast"
+              }
+            },
+            {
+              "name": {
+                "value": "lunch"
+              }
+            },
+            {
+              "name": {
+                "value": "dinner",
+                "synonyms": ["supper"]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

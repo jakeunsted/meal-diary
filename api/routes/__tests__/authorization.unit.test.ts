@@ -57,7 +57,7 @@ vi.mock('../../services/entitlements.service.ts', () => ({
   assertCanUpdateMealWeek: vi.fn().mockResolvedValue({ plan: 'free' }),
   assertFeature: vi.fn().mockResolvedValue({
     plan: 'free',
-    features: { recipe_to_shopping_list: true, custom_meal_slots: true },
+    features: { recipe_to_shopping_list: true, custom_meal_slots: true, alexa: true },
   }),
   dismissEntitlementPrompt: vi.fn(),
 }));

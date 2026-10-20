@@ -6,6 +6,9 @@ import User, { type UserAttributes } from '../db/models/User.model.ts';
 import FamilyGroup from '../db/models/FamilyGroup.model.ts';
 import Recipe from '../db/models/Recipe.model.ts';
 import RefreshToken from '../db/models/RefreshToken.model.ts';
+import AlexaLink from '../db/models/AlexaLink.model.ts';
+import AlexaAccessToken from '../db/models/AlexaAccessToken.model.ts';
+import AlexaAuthorizationCode from '../db/models/AlexaAuthorizationCode.model.ts';
 import { deleteFamilyGroupData } from './familyGroup.service.ts';
 import { deletePersonData } from '../utils/posthog.ts';
 import { assertCanAddFamilyMember } from './entitlements.service.ts';
@@ -303,6 +306,17 @@ export const deleteUserAccount = async (
     );
 
     await RefreshToken.destroy({ where: { user_id: userId }, transaction });
+
+    const alexaLink = await AlexaLink.findOne({ where: { user_id: userId }, transaction });
+    if (alexaLink) {
+      await AlexaAccessToken.destroy({
+        where: { alexa_link_id: alexaLink.dataValues.id },
+        transaction,
+      });
+      await alexaLink.destroy({ transaction });
+    }
+    await AlexaAuthorizationCode.destroy({ where: { user_id: userId }, transaction });
+
     await user.destroy({ transaction });
   });
 

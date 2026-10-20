@@ -16,7 +16,10 @@ import { swaggerUi, specs } from './swagger.ts';
 import path from 'path';
 import { devCorsMiddleware } from './middleware/cors.middleware.ts';
 import { swaggerBasicAuth } from './middleware/docsAuth.middleware.ts';
-import { apiLimiter } from './middleware/rateLimit.middleware.ts';
+import { alexaSkillLimiter, apiLimiter } from './middleware/rateLimit.middleware.ts';
+import alexaRoutes, { alexaSkillJson, alexaTokenUrlencoded } from './routes/alexa.routes.ts';
+import { exchangeAlexaToken } from './controllers/alexa/alexaOAuth.controller.ts';
+import { handleAlexaSkill } from './controllers/alexa/alexaSkill.controller.ts';
 import { getPostHog, shutdownPostHog } from './utils/posthog.ts';
 import { initializeOtelLogs, shutdownOtelLogs, emitLog } from './utils/otelLogs.ts';
 import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
@@ -62,6 +65,8 @@ if (process.env.NODE_ENV === 'development') {
   app.use(devCorsMiddleware);
 }
 
+app.post('/alexa/skill', alexaSkillLimiter, alexaSkillJson, handleAlexaSkill);
+app.post('/alexa/oauth/token', alexaTokenUrlencoded, exchangeAlexaToken);
 app.post('/billing/webhook', express.raw({ type: 'application/json' }), billingController.stripeWebhook);
 app.post('/billing/revenuecat-webhook', express.json(), billingController.revenueCatWebhook);
 app.use(express.json());
@@ -90,6 +95,7 @@ if (process.env.NODE_ENV !== 'development') {
 app.use(serverErrorLogMiddleware);
 
 // Routes
+app.use('/alexa', alexaRoutes);
 app.use('/users', userRoutes);
 app.use('/meal-diaries', mealDiaryRoutes);
 app.use('/family-groups', familyGroupRoutes);

@@ -7,6 +7,8 @@ export type {
 export { FEATURE_FLAGS } from './featureFlags.ts';
 export type { FeatureFlagKey } from './featureFlags.ts';
 
+export type { AlexaLinkStatus } from './alexa.ts';
+
 export { toLogAttributes } from './logAttributes.ts';
 
 export {

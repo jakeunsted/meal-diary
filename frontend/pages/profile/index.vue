@@ -33,6 +33,21 @@
       <AccountSettings />
     </div>
 
+    <NuxtLink
+      v-if="alexaConnectionEnabled && familyGroup"
+      to="/profile/integrations"
+      class="card bg-base-200 mt-8 block hover:bg-base-300 transition-colors"
+      data-testid="integrations-link"
+    >
+      <div class="card-body flex-row items-center justify-between gap-4">
+        <div>
+          <h2 class="card-title">{{ $t('integrations.title') }}</h2>
+          <p class="text-sm opacity-70">{{ $t('integrations.description') }}</p>
+        </div>
+        <span class="btn btn-ghost btn-sm pointer-events-none">{{ $t('integrations.open') }}</span>
+      </div>
+    </NuxtLink>
+
     <SubscriptionCard class="mt-8" />
 
     <LegalLinks class="mt-8" />
@@ -79,6 +94,7 @@ import FamilySettings from '~/components/profile/FamilySettings.vue';
 import LegalLinks from '~/components/LegalLinks.vue';
 import SubscriptionCard from '~/components/subscription/SubscriptionCard.vue';
 import { copyToClipboard } from '~/utils/copyToClipboard';
+import { FEATURE_FLAGS } from '@meal-diary/shared';
 
 const userStore = useUserStore();
 const familyStore = useFamilyStore();
@@ -88,6 +104,7 @@ const route = useRoute();
 const router = useRouter();
 const { familyGroup, members: familyMembers, error } = storeToRefs(familyStore);
 const { track } = useAnalytics();
+const { enabled: alexaConnectionEnabled } = useFeatureFlag(FEATURE_FLAGS.alexaConnection);
 
 const inviteModal = ref(null);
 

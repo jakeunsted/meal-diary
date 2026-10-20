@@ -97,6 +97,7 @@ describe('entitlements.service', () => {
       expect(result.billing.trialAvailable).toBe(true);
       expect(result.billing.storePlatform).toBeNull();
       expect(result.features.edit_past_weeks).toBe(false);
+      expect(result.features.alexa).toBe(false);
     });
 
     it('returns premium limits for complimentary families', async () => {
@@ -131,6 +132,7 @@ describe('entitlements.service', () => {
       expect(result.plan).toBe('premium');
       expect(result.isComplimentary).toBe(true);
       expect(result.features.edit_past_weeks).toBe(true);
+      expect(result.features.alexa).toBe(true);
       expect(result.billing.isOwner).toBe(false);
       expect(result.billing.ownerDisplayName).toBe('owner');
     });

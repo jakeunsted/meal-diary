@@ -20,42 +20,59 @@
 </template>
 
 <script setup>
-const rows = [
-  {
-    key: 'family_members',
-    labelKey: 'plansPage.rows.familyMembers',
-    free: '2',
-    premium: '8',
-  },
-  {
-    key: 'weeks_ahead',
-    labelKey: 'plansPage.rows.weeksAhead',
-    free: '1',
-    premium: '∞',
-  },
-  {
-    key: 'edit_past_weeks',
-    labelKey: 'plansPage.rows.editPastWeeks',
-    free: '✗',
-    premium: '✓',
-  },
-  {
-    key: 'recipes',
-    labelKey: 'plansPage.rows.recipes',
-    free: '10',
-    premium: '∞',
-  },
-  {
-    key: 'recipe_to_shopping_list',
-    labelKey: 'plansPage.rows.recipeToShoppingList',
-    free: '✗',
-    premium: '✓',
-  },
-  {
-    key: 'custom_meal_slots',
-    labelKey: 'plansPage.rows.customMealSlots',
-    free: '✗',
-    premium: '✓',
-  },
-];
+import { FEATURE_FLAGS } from '@meal-diary/shared';
+
+const { enabled: alexaConnectionEnabled } = useFeatureFlag(FEATURE_FLAGS.alexaConnection);
+
+const rows = computed(() => {
+  const items = [
+    {
+      key: 'family_members',
+      labelKey: 'plansPage.rows.familyMembers',
+      free: '2',
+      premium: '8',
+    },
+    {
+      key: 'weeks_ahead',
+      labelKey: 'plansPage.rows.weeksAhead',
+      free: '1',
+      premium: '∞',
+    },
+    {
+      key: 'edit_past_weeks',
+      labelKey: 'plansPage.rows.editPastWeeks',
+      free: '✗',
+      premium: '✓',
+    },
+    {
+      key: 'recipes',
+      labelKey: 'plansPage.rows.recipes',
+      free: '10',
+      premium: '∞',
+    },
+    {
+      key: 'recipe_to_shopping_list',
+      labelKey: 'plansPage.rows.recipeToShoppingList',
+      free: '✗',
+      premium: '✓',
+    },
+    {
+      key: 'custom_meal_slots',
+      labelKey: 'plansPage.rows.customMealSlots',
+      free: '✗',
+      premium: '✓',
+    },
+  ];
+
+  if (alexaConnectionEnabled.value) {
+    items.push({
+      key: 'alexa',
+      labelKey: 'plansPage.rows.alexa',
+      free: '✗',
+      premium: '✓',
+    });
+  }
+
+  return items;
+});
 </script>

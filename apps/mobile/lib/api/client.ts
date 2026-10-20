@@ -147,5 +147,10 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     throw apiError;
   }
 
+  // Disconnect returns 204 with an empty body.
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 }

@@ -1,3 +1,4 @@
+import { FEATURE_FLAGS } from '@meal-diary/shared';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo } from 'react';
@@ -12,6 +13,7 @@ import { Heading } from '@/components/ui/heading';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { captureEvent } from '@/lib/analytics/posthog';
+import { useFeatureFlag } from '@/lib/feature-flags/useFeatureFlag';
 import { openWebManageBilling, openWebPlans } from '@/lib/billing/openPlans';
 import {
   getStoreSubscriptionsUrl,
@@ -29,6 +31,7 @@ export default function PlansScreen() {
   const familyGroupId = userQuery.data?.family_group_id;
   const entitlementsQuery = useEntitlements(familyGroupId);
   const entitlements = entitlementsQuery.data;
+  const alexaEnabled = useFeatureFlag(FEATURE_FLAGS.alexaConnection);
 
   const {
     offerings,
@@ -227,6 +230,7 @@ export default function PlansScreen() {
                   'recipes',
                   'recipeToShoppingList',
                   'customMealSlots',
+                  ...(alexaEnabled ? (['alexa'] as const) : []),
                 ] as const
               ).map((row) => (
                 <Text key={row} className="text-ice/70 text-sm">

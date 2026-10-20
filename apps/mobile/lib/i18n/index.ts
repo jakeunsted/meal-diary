@@ -254,6 +254,14 @@ const resources = {
           nonOwnerCta: 'Ask {{name}} to upgrade',
           nonOwnerCtaGeneric: 'Ask your family owner to upgrade',
         },
+        alexa: {
+          title: 'Hear the diary on Alexa',
+          description:
+            'Family Plus lets Alexa read this family diary. Anyone using an Echo hears those meals.',
+          ownerCta: 'View plans to upgrade',
+          nonOwnerCta: 'Ask {{name}} to upgrade',
+          nonOwnerCtaGeneric: 'Ask your family owner to upgrade',
+        },
       },
       plansPage: {
         title: 'Family Plus plans',
@@ -296,6 +304,7 @@ const resources = {
           recipes: 'Unlimited recipes',
           recipeToShoppingList: 'Add recipe ingredients to shopping list',
           customMealSlots: 'Custom daily meal names',
+          alexa: 'Ask Alexa about planned meals',
         },
       },
       common: {
@@ -421,6 +430,13 @@ const resources = {
         familyNotFound: 'Family group not found',
         genericError: 'An error occurred',
       },
+      integrations: {
+        title: 'Integrations',
+        description: 'Connect this family to other services.',
+        empty: 'No integrations are available yet.',
+        familyRequired: 'Join or create a family before connecting a service.',
+        familyPlus: 'Family Plus',
+      },
       familySettings: {
         title: 'Family settings',
         ownerDescription: 'You are the owner of this family group.',
@@ -446,6 +462,22 @@ const resources = {
           leaveFailed: 'Failed to leave family group',
           transferFailed: 'Failed to transfer ownership',
           deleteFailed: 'Failed to delete family group',
+        },
+        alexa: {
+          title: 'Alexa',
+          description: "Let an Echo read this family's meal diary.",
+          loading: 'Loading Alexa status',
+          connected: 'Alexa is connected',
+          notConnected: 'Alexa is not connected',
+          notConnectedHint:
+            'Enable Meal Diary in the Alexa app, then sign in on the page Alexa opens.',
+          disconnect: 'Disconnect',
+          disconnectConfirm:
+            'Disconnect Alexa from this diary? Echo devices will stop reading these meals.',
+          disconnectFailed: 'Failed to disconnect Alexa',
+          statusError: 'Failed to load Alexa status',
+          premiumDescription:
+            'Alexa is included with Family Plus. Anyone using an Echo hears this family diary.',
         },
       },
       profile: {

@@ -83,4 +83,13 @@ export const apiLimiter = createRateLimiter({
   message: { message: 'Too many requests, please try again later' },
   standardHeaders: true,
   legacyHeaders: false,
-}, 'api'); 
+}, 'api');
+
+// Alexa skill fulfillment. Mounted on that route only, ahead of the global limiter.
+export const alexaSkillLimiter = createRateLimiter({
+  windowMs: 60 * 1000,
+  limit: 60,
+  message: { message: 'Too many requests, please try again later' },
+  standardHeaders: true,
+  legacyHeaders: false,
+}, 'alexa_skill'); 

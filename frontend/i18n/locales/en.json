@@ -291,7 +291,8 @@
       "editPastWeeks": "Edit past weeks",
       "recipes": "Recipes",
       "recipeToShoppingList": "Add recipe ingredients to shopping list",
-      "customMealSlots": "Custom daily meal names"
+      "customMealSlots": "Custom daily meal names",
+      "alexa": "Alexa meal diary"
     }
   },
   "paywall": {
@@ -335,6 +336,13 @@
     "custom_meal_slots": {
       "title": "Custom meal layout",
       "description": "Rename, reorder, and choose how many daily meals you plan with Family Plus.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "alexa": {
+      "title": "Alexa is part of Family Plus",
+      "description": "Upgrade to let Alexa read this family's meal diary.",
       "ownerCta": "View plans to upgrade",
       "nonOwnerCta": "Ask {name} to upgrade",
       "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
@@ -424,5 +432,40 @@
     "deselectAll": "Deselect all",
     "addToList": "Add to list",
     "addToShoppingListFailed": "Failed to add ingredients to shopping list"
+  },
+  "integrations": {
+    "title": "Integrations",
+    "description": "Connect this family to other services.",
+    "open": "View",
+    "empty": "No integrations are available yet.",
+    "familyRequired": "Join or create a family before connecting a service.",
+    "familyPlus": "Family Plus"
+  },
+  "alexa": {
+    "settingsTitle": "Alexa",
+    "settingsDescription": "Let an Echo read this family's meal diary.",
+    "connected": "Connected to Alexa",
+    "notConnected": "Not connected",
+    "notConnectedHint": "Enable Meal Diary in the Alexa app and sign in on the page Alexa opens.",
+    "disconnect": "Disconnect",
+    "disconnectConfirm": "Disconnect Alexa from your account? Echo devices will stop reading this meal diary.",
+    "disconnectFailed": "Alexa could not be disconnected. Try again.",
+    "statusError": "Alexa status could not be loaded.",
+    "premiumDescription": "Reading the meal diary on Alexa is part of Family Plus.",
+    "link": {
+      "title": "Connect Alexa to Meal Diary",
+      "consent": "Allow Alexa to read the {family} meal diary. Anyone using this Echo can hear that diary.",
+      "allow": "Allow",
+      "familyRequired": "Join or create a family before connecting Alexa.",
+      "invalidRequest": "This link from Alexa is incomplete. Open Meal Diary in the Alexa app and try again.",
+      "premiumDescription": "Alexa can read this family's meal diary with Family Plus.",
+      "upgrade": "View plans",
+      "askOwner": "Ask {name} to upgrade this family to Family Plus.",
+      "error": "Alexa could not be connected. Try again.",
+      "email": "Email",
+      "password": "Password",
+      "signIn": "Sign in",
+      "unavailable": "Meal Diary on Alexa isn't available."
+    }
   }
 }

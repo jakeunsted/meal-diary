@@ -16,6 +16,9 @@ import {
   Subscription,
   TrialRedemption,
   SubscriptionEvent,
+  AlexaLink,
+  AlexaAccessToken,
+  AlexaAuthorizationCode,
 } from './models/associations.ts';
 
 const initializeDatabase = async (force = false) => {
@@ -52,5 +55,8 @@ export {
   RecipeIngredient,
   Subscription,
   TrialRedemption,
-  SubscriptionEvent
+  SubscriptionEvent,
+  AlexaLink,
+  AlexaAccessToken,
+  AlexaAuthorizationCode,
 };

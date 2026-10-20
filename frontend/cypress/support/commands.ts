@@ -1,9 +1,23 @@
 import { installMockApi } from './mockApi';
+import { applyFeatureFlagOverrides } from '../../utils/featureFlagOverrides';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
   entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed';
+  alexaConnected?: boolean;
 }
+
+const featureFlagOverrides: Record<string, boolean> = {};
+
+const resetFeatureFlagOverrides = () => {
+  Object.keys(featureFlagOverrides).forEach((key) => {
+    delete featureFlagOverrides[key];
+  });
+};
+
+beforeEach(() => {
+  resetFeatureFlagOverrides();
+});
 
 interface LoginViaUiOptions {
   email?: string;
@@ -58,6 +72,11 @@ Cypress.Commands.add('mockApi', (options: MockApiOptions = {}) => {
   installMockApi(options);
 });
 
+Cypress.Commands.add('setFeatureFlags', (flags: Record<string, boolean>) => {
+  resetFeatureFlagOverrides();
+  Object.assign(featureFlagOverrides, flags);
+});
+
 Cypress.Commands.add('visitApp', (url: string, options: Partial<Cypress.VisitOptions> = {}) => {
   const existingOnBeforeLoad = options.onBeforeLoad;
   cy.visit(url, {
@@ -65,6 +84,7 @@ Cypress.Commands.add('visitApp', (url: string, options: Partial<Cypress.VisitOpt
     onBeforeLoad(win) {
       stubEventSource(win);
       stubClipboard(win);
+      applyFeatureFlagOverrides(win, featureFlagOverrides);
       if (existingOnBeforeLoad) {
         existingOnBeforeLoad(win);
       }
@@ -84,6 +104,7 @@ declare global {
   namespace Cypress {
     interface Chainable {
       mockApi(options?: MockApiOptions): Chainable<void>;
+      setFeatureFlags(flags: Record<string, boolean>): Chainable<void>;
       visitApp(url: string, options?: Partial<VisitOptions>): Chainable<void>;
       loginViaUi(options?: LoginViaUiOptions): Chainable<void>;
     }

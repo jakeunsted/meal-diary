@@ -14,6 +14,9 @@ import RecipeIngredient from './RecipeIngredient.model.ts';
 import Subscription from './Subscription.model.ts';
 import TrialRedemption from './TrialRedemption.model.ts';
 import SubscriptionEvent from './SubscriptionEvent.model.ts';
+import AlexaLink from './AlexaLink.model.ts';
+import AlexaAccessToken from './AlexaAccessToken.model.ts';
+import AlexaAuthorizationCode from './AlexaAuthorizationCode.model.ts';
 
 // User <-> FamilyGroup associations
 User.belongsTo(FamilyGroup, { 
@@ -224,6 +227,42 @@ User.hasMany(OAuthExchangeCode, {
   as: 'oauthExchangeCodes',
 });
 
+User.hasOne(AlexaLink, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'alexaLink',
+  onDelete: 'CASCADE',
+});
+AlexaLink.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user',
+});
+
+AlexaLink.hasMany(AlexaAccessToken, {
+  foreignKey: 'alexa_link_id',
+  foreignKeyConstraint: true,
+  as: 'accessTokens',
+  onDelete: 'CASCADE',
+});
+AlexaAccessToken.belongsTo(AlexaLink, {
+  foreignKey: 'alexa_link_id',
+  foreignKeyConstraint: true,
+  as: 'link',
+});
+
+User.hasMany(AlexaAuthorizationCode, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'alexaAuthorizationCodes',
+  onDelete: 'CASCADE',
+});
+AlexaAuthorizationCode.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user',
+});
+
 // Export all models
 export {
   User,
@@ -242,4 +281,7 @@ export {
   Subscription,
   TrialRedemption,
   SubscriptionEvent,
+  AlexaLink,
+  AlexaAccessToken,
+  AlexaAuthorizationCode,
 };

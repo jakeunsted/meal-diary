@@ -9,6 +9,7 @@ export interface PlanLimits {
   canEditPastWeeks: boolean;
   canAddRecipeToShoppingList: boolean;
   canCustomizeMealSlots: boolean;
+  canUseAlexa: boolean;
 }
 
 export const PLANS = {
@@ -19,6 +20,7 @@ export const PLANS = {
     canEditPastWeeks: false,
     canAddRecipeToShoppingList: false,
     canCustomizeMealSlots: false,
+    canUseAlexa: false,
   },
   premium: {
     maxFamilyMembers: 8,
@@ -27,5 +29,6 @@ export const PLANS = {
     canEditPastWeeks: true,
     canAddRecipeToShoppingList: true,
     canCustomizeMealSlots: true,
+    canUseAlexa: true,
   },
 } as const satisfies Record<'free' | 'premium', PlanLimits>;

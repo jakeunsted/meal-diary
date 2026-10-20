@@ -4,6 +4,7 @@ import { SocialLogin } from '@capgo/capacitor-social-login';
 import { useAuthStore } from '~/stores/auth';
 import { useApi } from '~/composables/useApi';
 import { useRouter } from 'vue-router';
+import { isSafeInAppPath, rememberAuthReturnPath } from '~/utils/authReturnPath';
 
 interface GoogleAuthResponse {
   user: {
@@ -78,7 +79,7 @@ export const useGoogleAuth = () => {
    * Sign in with Google
    * Uses native plugin on mobile, web OAuth on browser
    */
-  const signInWithGoogle = async (): Promise<void> => {
+  const signInWithGoogle = async (options?: { returnPath?: string }): Promise<void> => {
     try {
       isLoading.value = true;
       error.value = null;
@@ -140,15 +141,18 @@ export const useGoogleAuth = () => {
           refreshToken: authResponse.refreshToken,
         });
 
-        // Determine redirect based on family group status
-        if (!authResponse.user.family_group_id) {
+        const returnPath = options?.returnPath;
+        if (returnPath && isSafeInAppPath(returnPath)) {
+          await router.push(returnPath);
+        } else if (!authResponse.user.family_group_id) {
           await router.push('/registration/step-2');
         } else {
           await router.push('/diary');
         }
       } else {
-        // Web platform - use existing OAuth redirect flow
-        // Navigate to Nuxt server route which will proxy to backend
+        // Web platform - use existing OAuth redirect flow.
+        // The callback reads this so Alexa linking returns to the same page.
+        rememberAuthReturnPath(options?.returnPath);
         window.location.href = '/api/auth/google';
       }
     } catch (err: any) {

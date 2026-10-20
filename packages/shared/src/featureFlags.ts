@@ -5,6 +5,8 @@
 export const FEATURE_FLAGS = {
   /** Plumbing check — not used to gate product UI */
   featureFlagsEnabled: 'feature_flags_enabled',
+  /** Alexa account linking and skill fulfillment */
+  alexaConnection: 'alexa-connection',
 } as const;
 
 export type FeatureFlagKey = (typeof FEATURE_FLAGS)[keyof typeof FEATURE_FLAGS];
