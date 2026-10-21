@@ -35,6 +35,7 @@ export default function RecipesScreen() {
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const recipeEntitlements = useRecipeEntitlements(entitlementsQuery.data);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const allRecipes = recipesQuery.data ?? [];
   const filteredRecipes = useMemo(() => {
@@ -48,7 +49,6 @@ export default function RecipesScreen() {
 
   const hasRecipeData = allRecipes.length > 0;
   const showSkeleton = recipesQuery.isLoading && !hasRecipeData;
-  const showListLoading = recipesQuery.isFetching && hasRecipeData;
 
   const handleOpenPlans = () => {
     openPlans(router);
@@ -67,9 +67,13 @@ export default function RecipesScreen() {
     router.push(`/(tabs)/recipes/${recipeId}` as Href);
   };
 
-  const handleRefresh = () => {
-    void recipesQuery.refetch();
-    void entitlementsQuery.refetch();
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([recipesQuery.refetch(), entitlementsQuery.refetch()]);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   useFocusEffect(
@@ -92,10 +96,12 @@ export default function RecipesScreen() {
           paddingHorizontal: 16,
           paddingBottom: 32,
         }}
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
+        mode="layout"
         refreshControl={
           <RefreshControl
-            refreshing={showListLoading}
+            refreshing={isRefreshing}
             onRefresh={handleRefresh}
             tintColor="#6366F1"
           />

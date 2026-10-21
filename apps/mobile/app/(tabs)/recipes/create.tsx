@@ -158,7 +158,9 @@ export default function CreateRecipeScreen() {
           paddingHorizontal: 16,
           paddingBottom: 32,
         }}
+        contentInsetAdjustmentBehavior="never"
         keyboardShouldPersistTaps="handled"
+        mode="layout"
         style={{ flex: 1 }}
       >
           <Pressable

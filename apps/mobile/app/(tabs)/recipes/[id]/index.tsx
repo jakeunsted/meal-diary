@@ -65,6 +65,7 @@ export default function RecipeDetailScreen() {
   const [isAddToShoppingListModalVisible, setIsAddToShoppingListModalVisible] = useState(false);
   const [addToShoppingListMessage, setAddToShoppingListMessage] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const recipe = recipeQuery.data;
   const isLoading = recipeQuery.isLoading && !recipe;
@@ -75,7 +76,15 @@ export default function RecipeDetailScreen() {
     }
     captureEvent('recipe_viewed');
   }, [parsedRecipeId, recipe?.id]);
-  const isRefreshing = recipeQuery.isFetching && !!recipe;
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([recipeQuery.refetch(), entitlementsQuery.refetch()]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const handleEdit = () => {
     if (!parsedRecipeId) {
@@ -168,12 +177,12 @@ export default function RecipeDetailScreen() {
         className="flex-1"
         contentContainerClassName="px-4 pb-8"
         contentContainerStyle={{ paddingTop: insets.top + 24 }}
+        contentInsetAdjustmentBehavior="never"
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={() => {
-              void recipeQuery.refetch();
-              void entitlementsQuery.refetch();
+              void handleRefresh();
             }}
             tintColor="#6366F1"
           />
