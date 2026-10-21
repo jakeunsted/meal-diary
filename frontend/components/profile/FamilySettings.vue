@@ -7,6 +7,7 @@
           ? $t('You are the owner of this family group.')
           : $t('Leaving removes your access to shared meal diaries, recipes, and shopping lists.') }}
       </p>
+
       <div class="card-actions mt-auto">
         <button
           class="btn btn-error btn-outline"
@@ -174,7 +175,6 @@ const newOwnerId = ref<number | null>(null);
 const deleteNameInput = ref('');
 const error = ref('');
 const isBusy = ref(false);
-
 const isOwner = computed(
   () => familyGroup.value?.created_by === userStore.user?.id
 );
