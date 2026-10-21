@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -48,10 +49,19 @@ export function SetMealModal({
 }: SetMealModalProps) {
   const { t } = useTranslation();
   const [recipePickerVisible, setRecipePickerVisible] = useState(false);
+  const [recipeSearchQuery, setRecipeSearchQuery] = useState('');
   const recipesQuery = useFamilyRecipes(familyGroupId, { enabled: visible });
 
   const recipes = recipesQuery.data ?? [];
   const hasRecipes = recipes.length > 0;
+  const filteredRecipes = useMemo(() => {
+    const query = recipeSearchQuery.trim().toLowerCase();
+    if (!query) {
+      return recipes;
+    }
+
+    return recipes.filter((recipe) => recipe.name.toLowerCase().includes(query));
+  }, [recipes, recipeSearchQuery]);
 
   const canSave =
     !!(mealName && mealName.trim()) || !!recipeId || openedWithMeal;
@@ -61,12 +71,18 @@ export function SetMealModal({
       return;
     }
     setRecipePickerVisible(false);
+    setRecipeSearchQuery('');
     onClose();
+  };
+
+  const handleCloseRecipePicker = () => {
+    setRecipePickerVisible(false);
+    setRecipeSearchQuery('');
   };
 
   const handleSelectRecipe = (selectedRecipeId: number | null, name: string) => {
     onRecipeSelect(selectedRecipeId, name);
-    setRecipePickerVisible(false);
+    handleCloseRecipePicker();
   };
 
   const recipeSelectLabel = recipeId
@@ -169,7 +185,7 @@ export function SetMealModal({
           <View style={[StyleSheet.absoluteFill, styles.recipePicker]}>
             <Pressable
               style={[StyleSheet.absoluteFill, dialogBackdropStyle]}
-              onPress={() => setRecipePickerVisible(false)}
+              onPress={handleCloseRecipePicker}
               accessibilityRole="button"
               accessibilityLabel={t('common.close')}
             />
@@ -177,6 +193,20 @@ export function SetMealModal({
               <Text className="text-ice mb-3 text-center text-base font-semibold">
                 {t('diary.selectRecipe')}
               </Text>
+              <View className="mb-3 flex-row items-center rounded-lg border border-white/10 bg-surface">
+                <View className="pl-3">
+                  <FontAwesome name="search" size={14} color="rgba(241, 245, 249, 0.5)" />
+                </View>
+                <TextInput
+                  className="min-w-0 flex-1 py-3 pr-3 pl-2 text-base text-ice"
+                  placeholder={t('recipeForm.searchPlaceholder')}
+                  placeholderTextColor="rgba(241, 245, 249, 0.4)"
+                  value={recipeSearchQuery}
+                  onChangeText={setRecipeSearchQuery}
+                  autoCorrect={false}
+                  testID="set-meal-recipe-search"
+                />
+              </View>
               <ScrollView keyboardShouldPersistTaps="handled">
                 <Pressable
                   onPress={() => handleSelectRecipe(null, '')}
@@ -187,7 +217,12 @@ export function SetMealModal({
                     — {t('diary.orTypeMealName')} —
                   </Text>
                 </Pressable>
-                {recipes.map((recipe) => {
+                {recipeSearchQuery.trim() && filteredRecipes.length === 0 ? (
+                  <Text className="text-ice/70 px-4 py-3 text-sm">
+                    {t('recipeForm.noResultsTitle')}
+                  </Text>
+                ) : null}
+                {filteredRecipes.map((recipe) => {
                   const isSelected = recipeId === recipe.id;
                   return (
                     <Pressable
@@ -206,7 +241,7 @@ export function SetMealModal({
                   );
                 })}
               </ScrollView>
-              <Button variant="outline" onPress={() => setRecipePickerVisible(false)} className="mt-2">
+              <Button variant="outline" onPress={handleCloseRecipePicker} className="mt-2">
                 <ButtonText>{t('common.close')}</ButtonText>
               </Button>
             </DialogPanel>
