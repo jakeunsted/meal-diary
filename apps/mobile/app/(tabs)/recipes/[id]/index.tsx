@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import { useLocalSearchParams, usePathname, useRouter, type Href } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -48,6 +48,7 @@ function filterIngredientsBySelectedKeys(
 export default function RecipeDetailScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const recipeId = id ? Number.parseInt(id, 10) : undefined;
@@ -80,7 +81,7 @@ export default function RecipeDetailScreen() {
     if (!parsedRecipeId) {
       return;
     }
-    router.push(`/(tabs)/recipes/${parsedRecipeId}/edit` as Href);
+    router.push(`${pathname}/edit` as Href);
   };
 
   const handleOpenPlans = () => {
@@ -150,6 +151,10 @@ export default function RecipeDetailScreen() {
       });
       captureEvent('recipe_deleted');
       setIsDeleteModalVisible(false);
+      if (pathname.startsWith('/diary')) {
+        router.dismissAll();
+        return;
+      }
       router.replace('/(tabs)/recipes' as Href);
     } catch {
       setIsDeleteModalVisible(false);

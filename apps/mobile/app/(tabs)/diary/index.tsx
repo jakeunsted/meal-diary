@@ -147,7 +147,7 @@ export default function DiaryScreen() {
   };
 
   const handleRecipePress = (recipeId: number) => {
-    router.push(`/(tabs)/recipes/${recipeId}` as Href);
+    router.push(`/(tabs)/diary/recipe/${recipeId}` as Href);
   };
 
   const handleOpenSettings = () => {

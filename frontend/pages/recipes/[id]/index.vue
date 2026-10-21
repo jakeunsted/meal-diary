@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto px-4 w-full overflow-x-hidden">
     <div class="flex items-center justify-between gap-2 my-4">
-      <button class="btn btn-ghost btn-sm shrink-0" @click="router.push('/recipes')">
+      <button class="btn btn-ghost btn-sm shrink-0" @click="handleBack">
         <fa icon="chevron-left" />
         <span class="hidden sm:inline">{{ $t('Back') }}</span>
       </button>
@@ -162,8 +162,19 @@ const filterIngredientsBySelectedKeys = (
   );
 };
 
+const cameFromDiary = computed(() => route.query.from === 'diary');
+
+const handleBack = () => {
+  if (cameFromDiary.value) {
+    router.push('/diary');
+    return;
+  }
+  router.push('/recipes');
+};
+
 const handleEdit = () => {
-  router.push(`/recipes/${route.params.id}/edit`);
+  const fromQuery = cameFromDiary.value ? '?from=diary' : '';
+  router.push(`/recipes/${route.params.id}/edit${fromQuery}`);
 };
 
 const handleShowDeleteConfirm = () => {

@@ -170,7 +170,7 @@ const toggleCard = () => {
 
 const handleNavigateToRecipe = (recipeId) => {
   if (recipeId) {
-    router.push(`/recipes/${recipeId}`);
+    router.push(`/recipes/${recipeId}?from=diary`);
   }
 };
 </script>

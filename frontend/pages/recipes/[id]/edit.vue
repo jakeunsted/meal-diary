@@ -1,7 +1,7 @@
 <template>
   <div class="max-w-4xl mx-auto px-4">
     <div class="flex items-center gap-2 my-4">
-      <button class="btn btn-ghost btn-sm" @click="router.push(`/recipes/${route.params.id}`)">
+      <button class="btn btn-ghost btn-sm" @click="router.push(recipePath)">
         <fa icon="chevron-left" />
         {{ $t('Back') }}
       </button>
@@ -19,7 +19,7 @@
       :submitLabel="$t('Save Changes')"
       :isLoading="recipeStore.loading"
       @submit="handleUpdate"
-      @cancel="router.push(`/recipes/${route.params.id}`)"
+      @cancel="router.push(recipePath)"
     />
   </div>
 </template>
@@ -41,11 +41,16 @@ const { track } = useAnalytics();
 
 const recipe = computed(() => recipeStore.currentRecipe);
 
+const recipePath = computed(() => {
+  const fromQuery = route.query.from === 'diary' ? '?from=diary' : '';
+  return `/recipes/${route.params.id}${fromQuery}`;
+});
+
 const handleUpdate = async (formData) => {
   try {
     await recipeStore.updateRecipe(parseInt(route.params.id), formData);
     track('recipe_edited');
-    router.push(`/recipes/${route.params.id}`);
+    router.push(recipePath.value);
   } catch (error) {
     console.error('Error updating recipe:', error);
   }
