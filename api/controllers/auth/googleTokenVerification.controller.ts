@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import * as AuthService from '../../services/auth.service.ts';
 import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import { trackAuthLog } from '../../utils/otelLogs.ts';
+import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../utils/clientError.ts';
 
 /**
  * Verify Google ID token and authenticate user
@@ -57,6 +58,11 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
         refreshToken: tokens.refreshToken
       });
     } catch (serviceError) {
+      if (isInfrastructureError(serviceError)) {
+        res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
+        return;
+      }
+
       const errorMessage = serviceError instanceof Error ? serviceError.message : 'Token verification failed';
       
       // Determine failure reason and status code

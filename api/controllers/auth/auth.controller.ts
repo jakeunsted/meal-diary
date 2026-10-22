@@ -12,6 +12,7 @@ import {
   PASSWORD_REQUIREMENTS_MESSAGE,
   requestPasswordReset,
 } from '../../services/passwordReset.service.ts';
+import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../utils/clientError.ts';
 
 const FORGOT_PASSWORD_MESSAGE = 'If an account exists for that email, we sent password reset instructions.';
 
@@ -46,6 +47,11 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       const response = await buildAuthResponse(user as User & UserAttributes, tokens);
       res.status(200).json(response);
     } catch (authError) {
+      if (isInfrastructureError(authError)) {
+        res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
+        return;
+      }
+
       const errorMessage = authError instanceof Error ? authError.message : 'Invalid credentials';
       const statusCode = errorMessage.includes('required') ? 400 : 401;
       
@@ -107,6 +113,11 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
       const response = await buildAuthResponse(user as User & UserAttributes, tokens);
       res.status(200).json(response);
     } catch (serviceError) {
+      if (isInfrastructureError(serviceError)) {
+        res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
+        return;
+      }
+
       const errorMessage = serviceError instanceof Error ? serviceError.message : 'Invalid or expired refresh token';
       
       // Determine failure reason for tracking
