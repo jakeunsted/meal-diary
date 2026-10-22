@@ -5,6 +5,9 @@ import User from '../../db/models/User.model.ts';
 import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
+import AlexaLink from '../../db/models/AlexaLink.model.ts';
+import AlexaAccessToken from '../../db/models/AlexaAccessToken.model.ts';
+import AlexaAuthorizationCode from '../../db/models/AlexaAuthorizationCode.model.ts';
 import Subscription from '../../db/models/Subscription.model.ts';
 import { createUser, deleteUserAccount, isValidEmail } from '../user.service.ts';
 import { EntitlementRequiredError } from '../entitlements.service.ts';
@@ -170,6 +173,8 @@ describe('deleteUserAccount', () => {
   beforeEach(() => {
     // No family groups created by the user unless a test says otherwise
     vi.spyOn(FamilyGroup, 'findAll').mockResolvedValue([]);
+    vi.spyOn(AlexaLink, 'findOne').mockResolvedValue(null);
+    vi.spyOn(AlexaAuthorizationCode, 'destroy').mockResolvedValue(0);
   });
 
   it('throws when the user does not exist', async () => {
@@ -249,6 +254,33 @@ describe('deleteUserAccount', () => {
     await deleteUserAccount(1, { password: 'correct-password' });
 
     expect(FamilyGroupService.deleteFamilyGroupData).toHaveBeenCalledWith(5, expect.anything());
+    expect(user.destroy).toHaveBeenCalled();
+  });
+
+  it('removes the Alexa link, access tokens, and authorization codes', async () => {
+    const user = fakeUserRow();
+    vi.spyOn(User, 'findByPk').mockResolvedValue(user as never);
+    mockTransaction();
+    vi.spyOn(Recipe, 'update').mockResolvedValue([0] as never);
+    vi.spyOn(RefreshToken, 'destroy').mockResolvedValue(0);
+
+    const link = {
+      dataValues: { id: 7 },
+      destroy: vi.fn().mockResolvedValue(undefined),
+    };
+    vi.spyOn(AlexaLink, 'findOne').mockResolvedValue(link as never);
+    const accessDestroy = vi.spyOn(AlexaAccessToken, 'destroy').mockResolvedValue(1);
+    const codeDestroy = vi.spyOn(AlexaAuthorizationCode, 'destroy').mockResolvedValue(1);
+
+    await deleteUserAccount(1, { password: 'correct-password' });
+
+    expect(accessDestroy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { alexa_link_id: 7 } })
+    );
+    expect(link.destroy).toHaveBeenCalled();
+    expect(codeDestroy).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { user_id: 1 } })
+    );
     expect(user.destroy).toHaveBeenCalled();
   });
 });

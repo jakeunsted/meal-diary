@@ -73,5 +73,14 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
     };
   }
 
-  return response.json();
+  if (response.status === 204 || response.status === 205) {
+    return undefined as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as T;
+  }
+
+  return JSON.parse(text) as T;
 }

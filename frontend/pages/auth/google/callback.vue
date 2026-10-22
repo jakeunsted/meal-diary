@@ -18,6 +18,7 @@
 
 <script setup lang="ts">
 import { useAuthStore } from '../../../stores/auth';
+import { consumeAuthReturnPath } from '~/utils/authReturnPath';
 
 /**
  * Google OAuth Callback Page
@@ -100,6 +101,12 @@ onMounted(async () => {
 
     // Clear sensitive query params from the address bar
     await router.replace({ path: route.path, query: {} });
+
+    const returnPath = consumeAuthReturnPath();
+    if (returnPath) {
+      await router.push(returnPath);
+      return;
+    }
 
     if (!authResponse.user.family_group_id) {
       router.push('/registration/step-2');

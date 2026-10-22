@@ -4,6 +4,7 @@ import { isWeekAheadAllowed } from '../../utils/weekEntitlements';
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
   entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted';
+  alexaConnected?: boolean;
 }
 
 export interface EntitlementsFixtureOptions {
@@ -35,6 +36,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       recipes: options.features?.recipes ?? true,
       recipe_to_shopping_list: options.features?.recipe_to_shopping_list ?? isPremium,
       custom_meal_slots: options.features?.custom_meal_slots ?? isPremium,
+      alexa: options.features?.alexa ?? isPremium,
     },
     limits: {
       maxFamilyMembers: isPremium ? 8 : 2,
@@ -239,6 +241,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
   const state = createMockApiState(options);
   let nextItemId = 2000;
   let nextRecipeId = 900;
+  let alexaConnected = options.alexaConnected === true;
 
   cy.intercept('GET', '/api/health', { statusCode: 200, body: { status: 'ok' } });
 
@@ -307,6 +310,46 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       body: state.entitlements,
     });
   }).as('apiGetEntitlements');
+
+  cy.intercept('GET', '/api/alexa/link', (req) => {
+    req.reply({
+      statusCode: 200,
+      body: {
+        connected: alexaConnected,
+        connectedAt: alexaConnected ? getIsoDate() : null,
+      },
+    });
+  }).as('apiGetAlexaLink');
+
+  cy.intercept('DELETE', '/api/alexa/link', (req) => {
+    alexaConnected = false;
+    req.reply({ statusCode: 204 });
+  }).as('apiDeleteAlexaLink');
+
+  cy.intercept('POST', '/api/alexa/oauth/authorize', (req) => {
+    if (!state.activeUser.family_group_id) {
+      req.reply({ statusCode: 403, body: { code: 'FAMILY_REQUIRED' } });
+      return;
+    }
+    if (!state.entitlements.features?.alexa) {
+      req.reply({
+        statusCode: 403,
+        body: {
+          code: 'ENTITLEMENT_REQUIRED',
+          feature: 'alexa',
+          plan: state.entitlements.plan ?? 'free',
+          upgradeUrl: '/plans',
+        },
+      });
+      return;
+    }
+    req.reply({
+      statusCode: 200,
+      body: {
+        redirectUrl: `https://pitangui.amazon.com/api/skill/link/redirect?code=test-code&state=${encodeURIComponent(req.body?.state || '')}`,
+      },
+    });
+  }).as('apiAuthorizeAlexa');
 
   cy.intercept('POST', '/api/billing/create-checkout-session', (req) => {
     req.reply({

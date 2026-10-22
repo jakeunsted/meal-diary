@@ -1,5 +1,6 @@
 import posthog from 'posthog-js';
 import type { FeatureFlagKey } from '@meal-diary/shared';
+import { readFeatureFlagOverride } from '~/utils/featureFlagOverrides';
 
 /**
  * Reactive PostHog feature flag for Nuxt.
@@ -15,6 +16,14 @@ export const useFeatureFlag = (key: FeatureFlagKey) => {
   }
 
   const sync = () => {
+    const override = readFeatureFlagOverride(key);
+    if (override !== undefined) {
+      value.value = override;
+      enabled.value = override;
+      ready.value = true;
+      return;
+    }
+
     try {
       const flagValue = posthog.getFeatureFlag(key) as boolean | string | undefined;
       value.value = flagValue;

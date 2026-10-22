@@ -3,6 +3,7 @@ import { useAuthStore } from '~/stores/auth';
 import { useApi } from '~/composables/useApi';
 import { useRouter } from 'vue-router';
 import { isAppleCancel, signInWithApplePopup } from '~/utils/appleSignIn';
+import { isSafeInAppPath } from '~/utils/authReturnPath';
 
 interface AppleAuthResponse {
   user: {
@@ -31,7 +32,7 @@ export const useAppleAuth = () => {
   const error = ref<string | null>(null);
   const isConfigured = computed(() => Boolean(config.public.appleServicesId));
 
-  const signInWithApple = async (): Promise<'cancelled' | 'success'> => {
+  const signInWithApple = async (options?: { returnPath?: string }): Promise<'cancelled' | 'success'> => {
     const clientId = config.public.appleServicesId;
     if (!clientId) {
       throw new Error('Sign in with Apple is not configured');
@@ -58,7 +59,10 @@ export const useAppleAuth = () => {
         refreshToken: authResponse.refreshToken,
       });
 
-      if (!authResponse.user.family_group_id) {
+      const returnPath = options?.returnPath;
+      if (returnPath && isSafeInAppPath(returnPath)) {
+        await router.push(returnPath);
+      } else if (!authResponse.user.family_group_id) {
         await router.push('/registration/step-2');
       } else {
         await router.push('/diary');

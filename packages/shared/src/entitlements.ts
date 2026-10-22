@@ -4,7 +4,8 @@ export type EntitlementFeature =
   | 'edit_past_weeks'
   | 'recipes'
   | 'recipe_to_shopping_list'
-  | 'custom_meal_slots';
+  | 'custom_meal_slots'
+  | 'alexa';
 
 export type SubscriptionPlan = 'free' | 'premium';
 

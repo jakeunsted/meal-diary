@@ -3,8 +3,8 @@ import { hasFamilyGroup } from '~/composables/useAuth';
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const authStore = useAuthStore();
-  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/google/callback', '/plans'];
-  const stayWhenAuthenticated = ['/plans'];
+  const publicRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/auth/google/callback', '/plans', '/alexa/link'];
+  const stayWhenAuthenticated = ['/plans', '/alexa/link'];
 
   // don't allow refresh on step-2 registration page
   if (to.path === '/registration/step-2' && from.path === '/registration/step-2') {

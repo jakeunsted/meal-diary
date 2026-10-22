@@ -78,6 +78,7 @@ describe('Entitlements diary clamping', () => {
             recipes: true,
             recipe_to_shopping_list: false,
             custom_meal_slots: false,
+            alexa: false,
           },
           limits: {
             maxFamilyMembers: 2,

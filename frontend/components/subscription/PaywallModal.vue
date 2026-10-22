@@ -1,5 +1,5 @@
 <template>
-  <dialog class="modal" :class="{ 'modal-open': isOpen }" data-testid="paywall-modal">
+  <dialog class="modal" :class="{ 'modal-open': isPaywallVisible }" data-testid="paywall-modal">
     <div class="modal-box">
       <button
         type="button"
@@ -9,7 +9,7 @@
       >
         ✕
       </button>
-      <template v-if="activePaywallCopy">
+      <template v-if="activePaywallCopy && isPaywallVisible">
         <h3 class="font-bold text-lg">{{ activePaywallCopy.title }}</h3>
         <p class="py-4">{{ activePaywallCopy.description }}</p>
         <div class="modal-action flex-col sm:flex-row gap-2">
@@ -44,7 +44,20 @@
 </template>
 
 <script setup>
-const { isOpen, activePaywallCopy, closePaywall } = usePaywall();
+import { FEATURE_FLAGS } from '@meal-diary/shared';
+
+const { isOpen, activeFeature, activePaywallCopy, closePaywall } = usePaywall();
+const { enabled: alexaConnectionEnabled } = useFeatureFlag(FEATURE_FLAGS.alexaConnection);
+
+const isPaywallVisible = computed(() => {
+  if (!isOpen.value) {
+    return false;
+  }
+  if (activeFeature.value === 'alexa' && !alexaConnectionEnabled.value) {
+    return false;
+  }
+  return true;
+});
 
 const handleClose = () => {
   closePaywall();
