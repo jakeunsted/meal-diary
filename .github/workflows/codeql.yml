@@ -34,7 +34,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 26.3.0
+          node-version: 26.12.1
           cache: npm
 
       - uses: github/codeql-action/init@v4

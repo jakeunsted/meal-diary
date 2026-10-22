@@ -4,7 +4,7 @@ React Native app for iOS and Android. Calls the Express API directly (no Nuxt BF
 
 ## Prerequisites
 
-- Node.js >= 26.3.0
+- Node.js >= 26.12.1
 - Android Studio + emulator (primary dev target for now)
 - API running on port 3001 (`npm run dev --workspace=meal-diary-api`)
 

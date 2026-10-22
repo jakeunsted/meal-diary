@@ -18,9 +18,33 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 26.3.0
+          node-version: 26.12.1
           cache: npm
 
       - run: sh scripts/ci-install.sh
 
       - run: npx turbo run build
+
+  api-test:
+    name: API tests
+    runs-on: ubuntu-latest
+    env:
+      NODE_ENV: test
+      DEV_DB_NAME: meal-diary-test
+      DEV_DB_USER: postgres
+      DEV_DB_PASSWORD: postgres
+      DEV_DB_HOST: localhost
+      DEV_DB_PORT: 5432
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26.12.1
+          cache: npm
+
+      - run: sh scripts/ci-install.sh
+
+      - run: npm test --workspace=meal-diary-api

@@ -1,4 +1,4 @@
-FROM node:26.3.0-bookworm-slim
+FROM node:26.12.1-bookworm-slim
 
 RUN apt-get update \
   && apt-get install -y --no-install-recommends python3 make g++ \

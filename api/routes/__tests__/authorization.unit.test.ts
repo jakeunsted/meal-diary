@@ -50,6 +50,10 @@ vi.mock('../../services/mealDiary.service.ts', () => ({
   updateDailyMeal: vi.fn(),
 }));
 
+vi.mock('../../services/mealSlots.service.ts', () => ({
+  ensureDefaultMealSlots: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../services/entitlements.service.ts', () => ({
   resolveEntitlements: vi.fn().mockResolvedValue({ plan: 'free' }),
   assertCanAddFamilyMember: vi.fn().mockResolvedValue({ plan: 'free' }),
