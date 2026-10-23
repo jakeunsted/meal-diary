@@ -138,8 +138,9 @@ describe('mealSlots.controller', () => {
     await updateMealSlots(mockRequest({ family_group_id: '9' }, {}), missingBody);
     expect(missingBody.status).toHaveBeenCalledWith(400);
 
+    const removed = [{ id: 3, name: 'Supper', futureMealsWithContent: 1 }];
     vi.mocked(replaceMealSlots).mockRejectedValueOnce(
-      new MealSlotsConfirmationRequiredError([{ meal_slot_id: 3 }])
+      new MealSlotsConfirmationRequiredError(removed)
     );
     const confirm = mockResponse();
     await updateMealSlots(mockRequest({ family_group_id: '9' }, {
@@ -149,7 +150,7 @@ describe('mealSlots.controller', () => {
     expect(confirm.status).toHaveBeenCalledWith(409);
     expect(confirm.json).toHaveBeenCalledWith({
       code: 'MEAL_SLOTS_CONFIRMATION_REQUIRED',
-      removed: [{ meal_slot_id: 3 }],
+      removed,
     });
 
     vi.mocked(replaceMealSlots).mockRejectedValueOnce(new MealSlotsValidationError('Name is required'));
