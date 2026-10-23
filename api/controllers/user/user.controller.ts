@@ -4,6 +4,7 @@ import * as UserService from '../../services/user.service.ts';
 import * as DataExportService from '../../services/dataExport.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { routeParamInt } from '../../utils/routeParam.ts';
+import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../utils/clientError.ts';
 
 // Create a new user
 export const createUser = async (req: Request, res: Response) => {
@@ -34,6 +35,11 @@ export const createUser = async (req: Request, res: Response) => {
         await trackEvent(distinctId, 'user_registration_failed', {
           reason: 'member_limit',
         });
+        return;
+      }
+
+      if (isInfrastructureError(serviceError)) {
+        res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
         return;
       }
 

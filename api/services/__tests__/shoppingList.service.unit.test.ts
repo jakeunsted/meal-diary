@@ -129,7 +129,7 @@ describe('ShoppingList Service categories', () => {
   describe('reorderItems', () => {
     it('rejects invalid categories', async () => {
       await expect(
-        reorderItems(1, [{ id: 1, category: 'dairy', position: 0 }])
+        reorderItems(1, [{ id: 1, category: 'freezer', position: 0 }])
       ).rejects.toThrow('Category must be a valid shopping category');
     });
 

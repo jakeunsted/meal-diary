@@ -119,6 +119,27 @@ describe('Auth Controller', () => {
         message: 'Invalid credentials',
       });
     });
+
+    it('hides database authentication failures from the client', async () => {
+      vi.mocked(AuthService.authenticateUser).mockRejectedValue(
+        new Error('password authentication failed for user "postgres"')
+      );
+
+      const req = mockRequest({
+        email: 'vitest_test_login@example.com',
+        password: 'testPassword123',
+      });
+      const res = mockResponse();
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      const body = vi.mocked(res.json).mock.calls[0][0] as { message: string };
+      expect(body.message).toBe(
+        'Internal server error. We are trying our best to restore the service.'
+      );
+      expect(body.message).not.toMatch(/postgres|password authentication/i);
+    });
   });
 
   describe('refreshToken', () => {

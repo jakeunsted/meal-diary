@@ -109,7 +109,8 @@ export const useAuth = () => {
         body: {
           email,
           password
-        }
+        },
+        silent: true,
       });
       
       // Only store auth data if we have a valid response with tokens
