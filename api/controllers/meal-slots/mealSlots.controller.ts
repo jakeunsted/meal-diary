@@ -4,10 +4,12 @@ import { User } from '../../db/models/associations.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import {
+  MealNamesResetForbiddenError,
   MealSlotsConfirmationRequiredError,
   MealSlotsValidationError,
   getActiveMealSlots,
   replaceMealSlots,
+  scheduleMealNamesReset,
 } from '../../services/mealSlots.service.ts';
 import { emitFamilyEvent } from '../../services/sse.service.ts';
 import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
@@ -107,5 +109,55 @@ export const updateMealSlots = async (req: Request, res: Response) => {
 
     console.error('Error updating meal slots:', error);
     return res.status(500).json({ message: 'Failed to update meal slots' });
+  }
+};
+
+export const resetMealNamesToDefaults = async (req: Request, res: Response) => {
+  const user = req.user as User;
+  const familyGroupId = routeParamInt(req.params.family_group_id);
+
+  try {
+    if (!familyGroupId || Number.isNaN(familyGroupId)) {
+      return res.status(400).json({ message: 'Invalid family group id' });
+    }
+
+    const { today } = req.body as { today?: string };
+    if (typeof today !== 'string' || today.length === 0) {
+      return res.status(400).json({ message: 'today is required' });
+    }
+
+    await scheduleMealNamesReset(familyGroupId, user.dataValues.id, today);
+    const entitlements = await EntitlementsService.resolveEntitlements(
+      familyGroupId,
+      user.dataValues.id
+    );
+
+    return res.status(200).json(entitlements);
+  } catch (error) {
+    if (error instanceof MealNamesResetForbiddenError) {
+      return res.status(403).json({ message: error.message });
+    }
+
+    if (error instanceof MealSlotsValidationError) {
+      return res.status(400).json({
+        code: error.code,
+        message: error.message,
+      });
+    }
+
+    const sanitized = sanitizeErrorForAnalytics(error);
+    emitLog({
+      severity: 'error',
+      body: 'meal_names_reset_failed',
+      attributes: {
+        category: 'meal_slots',
+        family_group_id: familyGroupId,
+        error_type: sanitized.error_type,
+        error_message: sanitized.error_message,
+      },
+    });
+
+    console.error('Error resetting meal names:', error);
+    return res.status(500).json({ message: 'Failed to reset meal names' });
   }
 };

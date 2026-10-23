@@ -1,4 +1,5 @@
 import { Redirect, Tabs } from 'expo-router';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, View } from 'react-native';
 
@@ -6,6 +7,7 @@ import { TabBar } from '@/components/navigation/TabBar';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { tabConfig } from '@/components/navigation/tabConfig';
 import { ProductTourOverlay } from '@/components/onboarding/ProductTourOverlay';
+import { CustomMealNamesLapseModal } from '@/components/subscription/CustomMealNamesLapseModal';
 import { PaywallModal } from '@/components/subscription/PaywallModal';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { hasFamilyGroup } from '@/lib/auth/helpers';
@@ -14,6 +16,7 @@ export default function TabLayout() {
   const { t } = useTranslation();
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
+  const [customMealNamesLapseDismissed, setCustomMealNamesLapseDismissed] = useState(false);
 
   if (status === 'loading') {
     return (
@@ -58,6 +61,10 @@ export default function TabLayout() {
         ))}
       </Tabs>
       <PaywallModal />
+      <CustomMealNamesLapseModal
+        dismissedThisVisit={customMealNamesLapseDismissed}
+        onDismissVisit={() => setCustomMealNamesLapseDismissed(true)}
+      />
       <ProductTourOverlay />
     </View>
   );

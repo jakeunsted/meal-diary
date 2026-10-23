@@ -447,4 +447,49 @@ router.put('/:family_group_id/meal-slots', authenticateToken, requireFamilyMembe
   }
 });
 
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/meal-slots/reset-to-defaults:
+ *   post:
+ *     summary: Schedule a reset of custom meal names to Breakfast, Lunch, and Dinner
+ *     description: Owner only. Takes effect the day after today. Does not require the custom meal slots entitlement.
+ *     tags: [MealSlots]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - today
+ *             properties:
+ *               today:
+ *                 type: string
+ *                 format: date
+ *     responses:
+ *       200:
+ *         description: Refreshed entitlements. prompts.customMealNamesLapse is false after a new or existing schedule.
+ *       400:
+ *         description: Invalid today, subscription is not expired, complimentary family, or slots are already the defaults
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Only the family owner can reset meal names
+ *       500:
+ *         description: Failed to reset meal names
+ */
+router.post('/:family_group_id/meal-slots/reset-to-defaults', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await mealSlotsController.resetMealNamesToDefaults(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -12,6 +12,7 @@ import type { UserAttributes } from '../db/models/User.model.ts';
 import { TRIAL_DAYS } from '../constants/subscriptionPlans.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
 import { getOrCreateSubscription } from './entitlements.service.ts';
+import { updateSubscriptionClearingMealNamesResetWhenPremium } from './mealSlots.service.ts';
 
 type BillingInterval = 'month' | 'year';
 
@@ -466,7 +467,7 @@ export const syncSubscriptionFromStripe = async (
   const isPremium = status === 'active' || status === 'trialing';
   const isPaymentFailed = status === 'past_due' || status === 'unpaid';
 
-  await subscription.update({
+  await updateSubscriptionClearingMealNamesResetWhenPremium(subscription, {
     plan: isPremium ? 'premium' : 'free',
     status: status === 'trialing'
       ? 'trialing'

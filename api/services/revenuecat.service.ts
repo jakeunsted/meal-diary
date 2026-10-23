@@ -2,6 +2,7 @@ import { FamilyGroup, Subscription, SubscriptionEvent } from '../db/models/assoc
 import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
 import type { SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 import { getOrCreateSubscription } from './entitlements.service.ts';
+import { updateSubscriptionClearingMealNamesResetWhenPremium } from './mealSlots.service.ts';
 
 export class RevenueCatConfigError extends Error {
   constructor(message: string) {
@@ -249,7 +250,7 @@ export const syncSubscriptionFromRevenueCat = async (
     payment_failed_at: state.paymentFailedAt,
   };
 
-  await subscription.update(updates);
+  await updateSubscriptionClearingMealNamesResetWhenPremium(subscription, updates);
   return subscription;
 };
 

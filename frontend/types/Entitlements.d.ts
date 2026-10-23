@@ -33,6 +33,7 @@ export interface ResolvedEntitlements {
     trialExpired: boolean;
     paymentFailed: boolean;
     paymentFailedUntil: string | null;
+    customMealNamesLapse: boolean;
   };
   billing: {
     isOwner: boolean;

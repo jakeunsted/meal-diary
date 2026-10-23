@@ -254,6 +254,19 @@ const resources = {
           nonOwnerCta: 'Ask {{name}} to upgrade',
           nonOwnerCtaGeneric: 'Ask your family owner to upgrade',
         },
+        customMealNamesLapse: {
+          ownerTitle: 'Renew to keep your meal names',
+          ownerDescription:
+            'Your Family Plus period has ended. Renew to keep your custom meal names. Closing this, or choosing Not now, changes meal names back to Breakfast, Lunch, and Dinner from tomorrow. Extra meals from tomorrow are removed. Meals already logged on Breakfast, Lunch, and Dinner stay.',
+          renew: 'Renew Family Plus',
+          notNow: 'Not now',
+          error: "Couldn't update your meal names. Nothing was changed. Try again.",
+          nonOwnerTitle: 'Custom meal names need Family Plus',
+          nonOwnerDescription:
+            "Ask {{name}} to renew Family Plus to keep your custom meal names. If they don't, meal names go back to Breakfast, Lunch, and Dinner from tomorrow, and extra meals from tomorrow are removed. Closing this does not change the diary.",
+          nonOwnerDescriptionGeneric:
+            "Ask the family owner to renew Family Plus to keep your custom meal names. If they don't, meal names go back to Breakfast, Lunch, and Dinner from tomorrow, and extra meals from tomorrow are removed. Closing this does not change the diary.",
+        },
       },
       plansPage: {
         title: 'Family Plus plans',

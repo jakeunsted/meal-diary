@@ -9,7 +9,7 @@ import {
   isWeekAheadAllowed,
   resolveEntitlements,
 } from '../entitlements.service.ts';
-import { FamilyGroup, Recipe, Subscription, User } from '../../db/models/associations.ts';
+import { FamilyGroup, MealSlot, Recipe, Subscription, User } from '../../db/models/associations.ts';
 
 describe('entitlements.service', () => {
   beforeEach(() => {
@@ -97,6 +97,7 @@ describe('entitlements.service', () => {
       expect(result.billing.trialAvailable).toBe(true);
       expect(result.billing.storePlatform).toBeNull();
       expect(result.features.edit_past_weeks).toBe(false);
+      expect(result.prompts.customMealNamesLapse).toBe(false);
     });
 
     it('returns premium limits for complimentary families', async () => {
@@ -239,6 +240,130 @@ describe('entitlements.service', () => {
       vi.spyOn(Recipe, 'count').mockResolvedValue(10 as never);
 
       await expect(assertCanCreateRecipe(1, 10)).rejects.toBeInstanceOf(EntitlementRequiredError);
+    });
+  });
+
+  describe('prompts.customMealNamesLapse', () => {
+    const entitlementSlot = (id: number, name: string, position: number) => ({
+      dataValues: {
+        id,
+        name,
+        position,
+        legacy_key: null,
+        archived_at: null,
+      },
+    });
+
+    const customMealSlots = [
+      entitlementSlot(1, 'Brekkie', 1),
+      entitlementSlot(2, 'Lunch', 2),
+      entitlementSlot(3, 'Dinner', 3),
+      entitlementSlot(4, 'Snack', 4),
+    ];
+
+    const expiredSubscription = (overrides: Record<string, unknown> = {}) => ({
+      family_group_id: 1,
+      plan: 'free',
+      status: 'expired',
+      is_complimentary: false,
+      trial_ends_at: null,
+      trial_expired_prompt_seen_at: null,
+      payment_failed_at: null,
+      cancel_at_period_end: false,
+      meal_names_reset_effective_on: null,
+      meal_names_reset_applied_at: null,
+      store_platform: null,
+      ...overrides,
+    });
+
+    const mockEntitlementFamily = (
+      subscription: Record<string, unknown>,
+      slots = customMealSlots
+    ) => {
+      vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+        { dataValues: subscription, reload: vi.fn() },
+        false,
+      ] as never);
+      vi.spyOn(Subscription, 'findOne').mockResolvedValue({
+        dataValues: {
+          meal_names_reset_effective_on: null,
+          meal_names_reset_applied_at: null,
+        },
+      } as never);
+      vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+        dataValues: { id: 1, created_by: 10 },
+      } as never);
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, first_name: 'Alex', username: 'alex' },
+      } as never);
+      vi.spyOn(User, 'count').mockResolvedValue(2 as never);
+      vi.spyOn(Recipe, 'count').mockResolvedValue(1 as never);
+      vi.spyOn(MealSlot, 'findAll').mockResolvedValue(slots as never);
+    };
+
+    it('is true for the owner and a non-owner when Family Plus has ended and names differ', async () => {
+      mockEntitlementFamily(expiredSubscription());
+
+      const owner = await resolveEntitlements(1, 10);
+      const member = await resolveEntitlements(1, 99);
+
+      expect(owner.prompts.customMealNamesLapse).toBe(true);
+      expect(owner.billing.isOwner).toBe(true);
+      expect(member.prompts.customMealNamesLapse).toBe(true);
+      expect(member.billing.isOwner).toBe(false);
+    });
+
+    it('is true when the three names are in a different order', async () => {
+      mockEntitlementFamily(expiredSubscription(), [
+        entitlementSlot(1, 'Lunch', 1),
+        entitlementSlot(2, 'Breakfast', 2),
+        entitlementSlot(3, 'Dinner', 3),
+      ]);
+
+      const result = await resolveEntitlements(1, 10);
+
+      expect(result.prompts.customMealNamesLapse).toBe(true);
+    });
+
+    it('stays false for active, cancelled trialing, payment_failed, and complimentary', async () => {
+      const cases = [
+        expiredSubscription({ plan: 'premium', status: 'active', cancel_at_period_end: true }),
+        expiredSubscription({
+          plan: 'premium',
+          status: 'trialing',
+          cancel_at_period_end: true,
+        }),
+        expiredSubscription({ plan: 'free', status: 'payment_failed' }),
+        expiredSubscription({ is_complimentary: true, status: 'expired', plan: 'free' }),
+      ];
+
+      for (const subscription of cases) {
+        vi.restoreAllMocks();
+        vi.spyOn(billingService, 'isTrialEligible').mockResolvedValue(true);
+        mockEntitlementFamily(subscription);
+        const result = await resolveEntitlements(1, 10);
+        expect(result.prompts.customMealNamesLapse).toBe(false);
+      }
+    });
+
+    it('stays false for the three default names and for a pending reset', async () => {
+      mockEntitlementFamily(expiredSubscription(), [
+        entitlementSlot(1, ' Breakfast ', 1),
+        entitlementSlot(2, 'Lunch', 2),
+        entitlementSlot(3, 'Dinner', 3),
+      ]);
+      const defaults = await resolveEntitlements(1, 10);
+      expect(defaults.prompts.customMealNamesLapse).toBe(false);
+
+      vi.restoreAllMocks();
+      vi.spyOn(billingService, 'isTrialEligible').mockResolvedValue(true);
+      mockEntitlementFamily(
+        expiredSubscription({ meal_names_reset_effective_on: '2099-01-01' })
+      );
+      const pending = await resolveEntitlements(1, 99);
+      expect(pending.prompts.customMealNamesLapse).toBe(false);
+      expect(pending.billing.isOwner).toBe(false);
+      expect(MealSlot.findAll).not.toHaveBeenCalled();
     });
   });
 });

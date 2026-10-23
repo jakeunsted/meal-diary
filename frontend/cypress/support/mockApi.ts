@@ -3,7 +3,8 @@ import { isWeekAheadAllowed } from '../../utils/weekEntitlements';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
-  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted';
+  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted' | 'customMealNamesLapse' | 'customMealNamesLapseNonOwner' | 'alreadyDefault';
+  failResetMealSlots?: boolean;
 }
 
 export interface EntitlementsFixtureOptions {
@@ -15,6 +16,7 @@ export interface EntitlementsFixtureOptions {
     trialExpired?: boolean;
     paymentFailed?: boolean;
     paymentFailedUntil?: string | null;
+    customMealNamesLapse?: boolean;
   };
   trial?: { endsAt: string; daysRemaining: number } | null;
   billing?: { isOwner?: boolean; ownerDisplayName?: string | null; trialAvailable?: boolean; storePlatform?: 'web' | 'ios' | 'android' | null };
@@ -53,6 +55,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       trialExpired: options.prompts?.trialExpired ?? false,
       paymentFailed: options.prompts?.paymentFailed ?? false,
       paymentFailedUntil: options.prompts?.paymentFailedUntil ?? null,
+      customMealNamesLapse: options.prompts?.customMealNamesLapse ?? false,
     },
     billing: {
       isOwner: options.billing?.isOwner ?? true,
@@ -93,6 +96,25 @@ const resolveEntitlementsProfile = (profile: MockApiOptions['entitlementsProfile
         plan: 'free',
         billing: { trialAvailable: false },
       });
+    case 'customMealNamesLapse':
+      return createEntitlementsFixture({
+        plan: 'free',
+        status: 'expired',
+        prompts: { trialExpired: true, customMealNamesLapse: true },
+      });
+    case 'customMealNamesLapseNonOwner':
+      return createEntitlementsFixture({
+        plan: 'free',
+        status: 'expired',
+        prompts: { customMealNamesLapse: true },
+        billing: { isOwner: false, ownerDisplayName: 'Alex' },
+      });
+    case 'alreadyDefault':
+      return createEntitlementsFixture({
+        plan: 'free',
+        status: 'expired',
+        prompts: { customMealNamesLapse: false },
+      });
     case 'premium':
     default:
       return createEntitlementsFixture({ plan: 'premium' });
@@ -123,6 +145,16 @@ const defaultMealSlots = () => [
   { id: 2, name: 'Lunch', position: 2, legacy_key: 'lunch' },
   { id: 3, name: 'Dinner', position: 3, legacy_key: 'dinner' },
 ];
+
+const customMealSlots = () => [
+  { id: 1, name: 'Brekkie', position: 1, legacy_key: 'breakfast' },
+  { id: 2, name: 'Lunch', position: 2, legacy_key: 'lunch' },
+  { id: 3, name: 'Supper', position: 3, legacy_key: 'dinner' },
+];
+
+const usesCustomMealSlots = (profile: MockApiOptions['entitlementsProfile']) => {
+  return profile === 'customMealNamesLapse' || profile === 'customMealNamesLapseNonOwner';
+};
 
 const createWeeklyMeals = (weekStartDate: string) => {
   const slots = defaultMealSlots().map((slot) => ({
@@ -228,7 +260,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     activeUser: options.userWithoutFamilyGroup ? userWithoutFamily : userWithFamily,
     familyGroup,
     weeklyMeals: createWeeklyMeals(weekStartDate),
-    mealSlots: defaultMealSlots(),
+    mealSlots: usesCustomMealSlots(options.entitlementsProfile) ? customMealSlots() : defaultMealSlots(),
     shoppingList,
     recipes,
     entitlements: resolveEntitlementsProfile(options.entitlementsProfile),
@@ -331,6 +363,34 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       body: state.entitlements,
     });
   }).as('apiDismissEntitlementPrompt');
+
+  cy.intercept('POST', /\/api\/family-groups\/\d+\/meal-slots\/reset-to-defaults$/, (req) => {
+    if (options.failResetMealSlots) {
+      req.reply({
+        statusCode: 400,
+        body: { code: 'MEAL_SLOTS_VALIDATION_ERROR', message: 'Invalid meal slots' },
+      });
+      return;
+    }
+
+    if (!req.body?.today) {
+      req.reply({ statusCode: 400, body: { message: 'today is required' } });
+      return;
+    }
+
+    state.entitlements = {
+      ...state.entitlements,
+      prompts: {
+        ...state.entitlements.prompts,
+        customMealNamesLapse: false,
+      },
+    };
+    state.mealSlots = defaultMealSlots();
+    req.reply({
+      statusCode: 200,
+      body: state.entitlements,
+    });
+  }).as('apiResetMealSlots');
 
   cy.intercept('GET', /\/api\/family-groups\/\d+$/, {
     statusCode: 200,

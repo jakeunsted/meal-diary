@@ -2,7 +2,8 @@ import { installMockApi } from './mockApi';
 
 interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
-  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed';
+  entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted' | 'customMealNamesLapse' | 'customMealNamesLapseNonOwner' | 'alreadyDefault';
+  failResetMealSlots?: boolean;
 }
 
 interface LoginViaUiOptions {
