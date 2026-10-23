@@ -26,7 +26,7 @@ jobs:
       - run: npx turbo run build
 
   api-test:
-    name: API tests
+    name: Unit tests
     runs-on: ubuntu-latest
     env:
       NODE_ENV: test
@@ -47,4 +47,4 @@ jobs:
 
       - run: sh scripts/ci-install.sh
 
-      - run: npm test --workspace=meal-diary-api
+      - run: npm test

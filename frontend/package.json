@@ -26,6 +26,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "start": "node .output/server/index.mjs",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
     "test:e2e:record": "cypress run --record"
@@ -65,10 +67,12 @@
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@nuxtjs/style-resources": "^1.2.2",
+    "@vitest/coverage-v8": "^4.1.11",
     "cypress": "^15.21.1",
     "daisyui": "^5.7.37",
     "oxc-parser": "^0.89.0",
     "sass": "^1.104.1",
-    "sass-loader": "^16.0.8"
+    "sass-loader": "^16.0.8",
+    "vitest": "^4.1.11"
   }
 }

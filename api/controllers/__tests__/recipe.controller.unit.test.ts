@@ -5,6 +5,14 @@ vi.mock('../../services/recipe-import/import.service.ts', () => ({
   importRecipeFromUrl: vi.fn(),
 }));
 
+vi.mock('../../services/recipe.service.ts', () => ({
+  getRecipesByFamilyGroup: vi.fn(),
+  getRecipeById: vi.fn(),
+  createRecipe: vi.fn(),
+  updateRecipe: vi.fn(),
+  deleteRecipe: vi.fn(),
+}));
+
 vi.mock('../../services/entitlements.service.ts', async () => {
   const actual = await vi.importActual<typeof import('../../services/entitlements.service.ts')>(
     '../../services/entitlements.service.ts'
@@ -18,7 +26,15 @@ vi.mock('../../services/entitlements.service.ts', async () => {
 
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import * as recipeImportService from '../../services/recipe-import/import.service.ts';
-import { importRecipeFromUrl } from '../recipe/recipe.controller.ts';
+import * as recipeService from '../../services/recipe.service.ts';
+import {
+  createRecipe,
+  deleteRecipe,
+  getRecipeById,
+  getRecipes,
+  importRecipeFromUrl,
+  updateRecipe,
+} from '../recipe/recipe.controller.ts';
 import {
   InvalidRecipeImportUrlError,
   RecipeImportParseError,
@@ -197,5 +213,83 @@ describe('recipe.controller importRecipeFromUrl', () => {
     expect(res.json).toHaveBeenCalledWith({
       message: 'Failed to import recipe from URL',
     });
+  });
+});
+
+describe('recipe.controller recipes', () => {
+  const request = (
+    params: Record<string, string> = {},
+    body: Record<string, unknown> = {},
+    query: Record<string, unknown> = {}
+  ) =>
+    ({
+      params,
+      body,
+      query,
+      user: { dataValues: { id: 5, family_group_id: 10 } },
+    }) as unknown as Request;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('lists and reads recipes for the signed-in family', async () => {
+    vi.mocked(recipeService.getRecipesByFamilyGroup).mockResolvedValue([{ id: 1 }] as never);
+    const listed = mockResponse();
+    await getRecipes(request({ family_group_id: '10' }, {}, { search: 'pasta' }), listed);
+    expect(recipeService.getRecipesByFamilyGroup).toHaveBeenCalledWith(10, 'pasta');
+    expect(listed.status).toHaveBeenCalledWith(200);
+
+    const missingFamily = mockResponse();
+    await getRecipes(request(), missingFamily);
+    expect(missingFamily.status).toHaveBeenCalledWith(400);
+
+    vi.mocked(recipeService.getRecipeById).mockResolvedValue({
+      dataValues: { family_group_id: 10 },
+    } as never);
+    const found = mockResponse();
+    await getRecipeById(request({ id: '4' }), found);
+    expect(found.status).toHaveBeenCalledWith(200);
+
+    vi.mocked(recipeService.getRecipeById).mockResolvedValueOnce(null as never);
+    const missing = mockResponse();
+    await getRecipeById(request({ id: '4' }), missing);
+    expect(missing.status).toHaveBeenCalledWith(404);
+
+    vi.mocked(recipeService.getRecipeById).mockResolvedValueOnce({
+      dataValues: { family_group_id: 99 },
+    } as never);
+    const forbidden = mockResponse();
+    await getRecipeById(request({ id: '4' }), forbidden);
+    expect(forbidden.status).toHaveBeenCalledWith(403);
+  });
+
+  it('creates, updates, and deletes a recipe in the signed-in family', async () => {
+    vi.mocked(EntitlementsService.assertCanCreateRecipe).mockResolvedValue({} as never);
+    vi.mocked(recipeService.createRecipe).mockResolvedValue({ id: 7 } as never);
+    const created = mockResponse();
+    await createRecipe(request({}, { family_group_id: '10', name: 'Pasta' }), created);
+    expect(created.status).toHaveBeenCalledWith(201);
+
+    const incomplete = mockResponse();
+    await createRecipe(request({}, { family_group_id: '10' }), incomplete);
+    expect(incomplete.status).toHaveBeenCalledWith(400);
+
+    const otherFamily = mockResponse();
+    await createRecipe(request({}, { family_group_id: '11', name: 'Pasta' }), otherFamily);
+    expect(otherFamily.status).toHaveBeenCalledWith(403);
+
+    vi.mocked(recipeService.getRecipeById).mockResolvedValue({
+      dataValues: { family_group_id: 10 },
+    } as never);
+    vi.mocked(recipeService.updateRecipe).mockResolvedValue({ id: 7, name: 'Pesto' } as never);
+    const updated = mockResponse();
+    await updateRecipe(request({ id: '7' }, { name: 'Pesto' }), updated);
+    expect(updated.status).toHaveBeenCalledWith(200);
+
+    vi.mocked(recipeService.deleteRecipe).mockResolvedValue(undefined as never);
+    const deleted = mockResponse();
+    await deleteRecipe(request({ id: '7' }), deleted);
+    expect(deleted.json).toHaveBeenCalledWith({ message: 'Recipe deleted successfully' });
   });
 });

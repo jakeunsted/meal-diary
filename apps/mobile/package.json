@@ -77,6 +77,7 @@
     "@types/react": "~19.2.2",
     "babel-plugin-module-resolver": "^5.0.3",
     "tailwindcss": "^4.3.3",
+    "@vitest/coverage-v8": "^4.1.11",
     "typescript": "~6.0.3",
     "vitest": "^4.1.11"
   },
@@ -91,6 +92,7 @@
     "bump-version": "node ../../scripts/bump-mobile-version.mjs",
     "logcat:android": "bash ../../scripts/android-wireless-logcat.sh",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "start": "BROWSER=none expo start --port 3002",
     "android": "REACT_NATIVE_PACKAGER_HOSTNAME=10.0.2.2 BROWSER=none expo start --port 3002 --android --lan",
     "run:android": "expo run:android -d Small_Phone_API_36",

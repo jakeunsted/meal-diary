@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Request, Response } from 'express';
 
 process.env.JWT_ACCESS_SECRET = 'unit-test-secret';
@@ -9,6 +9,11 @@ vi.mock('../../services/auth.service.ts', () => ({
   authenticateUser: vi.fn(),
   refreshUserTokens: vi.fn(),
   revokeRefreshToken: vi.fn(),
+  generateOAuthState: vi.fn(),
+  exchangeGoogleCode: vi.fn(),
+  findOrCreateGoogleUser: vi.fn(),
+  createOAuthExchangeCode: vi.fn(),
+  exchangeOAuthCode: vi.fn(),
 }));
 
 vi.mock('../../services/passwordReset.service.ts', () => ({
@@ -26,9 +31,21 @@ vi.mock('../../services/authResponse.service.ts', () => ({
   })),
 }));
 
+import User from '../../db/models/User.model.ts';
 import * as AuthService from '../../services/auth.service.ts';
+import { buildAuthResponse } from '../../services/authResponse.service.ts';
 import { completePasswordReset, requestPasswordReset } from '../../services/passwordReset.service.ts';
-import { forgotPassword, login, refreshToken, logout, resetPassword } from '../auth/auth.controller.ts';
+import {
+  exchangeGoogleOAuthCode,
+  forgotPassword,
+  handleGoogleCallback,
+  initiateGoogleAuth,
+  login,
+  logout,
+  refreshToken,
+  resetPassword,
+  validateToken,
+} from '../auth/auth.controller.ts';
 
 const mockRequest = (body: Record<string, unknown>, user?: unknown) =>
   ({ body, user, ip: '127.0.0.1' }) as unknown as Request;
@@ -313,6 +330,143 @@ describe('Auth Controller', () => {
       expect(res.json).toHaveBeenCalledWith({
         message: 'Reset link is invalid or has expired',
       });
+    });
+  });
+
+  describe('validateToken', () => {
+    it('returns the sanitized user when the token middleware attached one', async () => {
+      const req = mockRequest({}, {
+        id: 1,
+        toJSON: () => ({
+          id: 1,
+          email: 'ada@example.com',
+          username: 'ada',
+          password_hash: 'secret',
+        }),
+      });
+      const res = mockResponse();
+
+      await validateToken(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        valid: true,
+        user: expect.objectContaining({
+          id: 1,
+          email: 'ada@example.com',
+          has_password: true,
+        }),
+      });
+    });
+  });
+
+  describe('initiateGoogleAuth', () => {
+    const originalClientId = process.env.GOOGLE_CLIENT_ID;
+
+    afterEach(() => {
+      if (originalClientId === undefined) {
+        delete process.env.GOOGLE_CLIENT_ID;
+      } else {
+        process.env.GOOGLE_CLIENT_ID = originalClientId;
+      }
+    });
+
+    it('redirects to Google and stores the oauth state', async () => {
+      process.env.GOOGLE_CLIENT_ID = 'google-client';
+      vi.mocked(AuthService.generateOAuthState).mockReturnValue('state-1');
+      const req = mockRequest({});
+      const res = {
+        status: vi.fn().mockReturnThis(),
+        json: vi.fn(),
+        cookie: vi.fn(),
+        redirect: vi.fn(),
+      } as unknown as Response;
+
+      await initiateGoogleAuth(req, res);
+
+      expect(res.cookie).toHaveBeenCalledWith('oauth_state', 'state-1', expect.objectContaining({
+        httpOnly: true,
+      }));
+      expect(res.redirect).toHaveBeenCalledWith(expect.stringContaining('state=state-1'));
+    });
+
+    it('returns 500 when Google OAuth is not configured', async () => {
+      delete process.env.GOOGLE_CLIENT_ID;
+      const req = mockRequest({});
+      const res = mockResponse();
+
+      await initiateGoogleAuth(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Google OAuth not configured' });
+    });
+  });
+
+  describe('handleGoogleCallback', () => {
+    it('redirects with an exchange code after a valid callback', async () => {
+      vi.spyOn(User, 'findOne').mockResolvedValue(null as never);
+      vi.mocked(AuthService.exchangeGoogleCode).mockResolvedValue({
+        profile: { email: 'ada@example.com' },
+      } as never);
+      vi.mocked(AuthService.findOrCreateGoogleUser).mockResolvedValue({ id: 4 } as never);
+      vi.mocked(AuthService.createOAuthExchangeCode).mockResolvedValue('exchange-1' as never);
+      const req = {
+        query: { code: 'auth-code', state: 'state-1' },
+        cookies: { oauth_state: 'state-1' },
+      } as unknown as Request;
+      const res = {
+        redirect: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as Response;
+
+      await handleGoogleCallback(req, res);
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      expect(res.clearCookie).toHaveBeenCalledWith('oauth_state');
+      expect(res.redirect).toHaveBeenCalledWith(
+        `${frontendUrl}/auth/google/callback?exchangeCode=exchange-1`
+      );
+    });
+
+    it('redirects to login when the state does not match', async () => {
+      const req = {
+        query: { code: 'auth-code', state: 'other' },
+        cookies: { oauth_state: 'state-1' },
+      } as unknown as Request;
+      const res = { redirect: vi.fn() } as unknown as Response;
+
+      await handleGoogleCallback(req, res);
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      expect(res.redirect).toHaveBeenCalledWith(`${frontendUrl}/login?error=invalid_state`);
+    });
+  });
+
+  describe('exchangeGoogleOAuthCode', () => {
+    it('returns a session for a valid exchange code', async () => {
+      vi.mocked(AuthService.exchangeOAuthCode).mockResolvedValue({
+        user: fakeUser,
+        tokens: fakeTokens,
+      } as never);
+      const req = mockRequest({ code: 'exchange-1' });
+      const res = mockResponse();
+
+      await exchangeGoogleOAuthCode(req, res);
+
+      expect(buildAuthResponse).toHaveBeenCalledWith(fakeUser, fakeTokens);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('returns 400 for a missing or expired code', async () => {
+      const missing = mockResponse();
+      await exchangeGoogleOAuthCode(mockRequest({}), missing);
+      expect(missing.status).toHaveBeenCalledWith(400);
+
+      vi.mocked(AuthService.exchangeOAuthCode).mockRejectedValueOnce(new Error('User not found'));
+      const expired = mockResponse();
+      await exchangeGoogleOAuthCode(mockRequest({ code: 'gone' }), expired);
+      expect(expired.status).toHaveBeenCalledWith(400);
+      expect(expired.json).toHaveBeenCalledWith({ message: 'Invalid or expired exchange code' });
     });
   });
 });
