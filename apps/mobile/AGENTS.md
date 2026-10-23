@@ -42,12 +42,12 @@ Mode-specific URLs:
 - `.env.development` — emulator/dev API + `dev-app.mealdiary.co.uk`
 - `.env.production` — `https://api.mealdiary.co.uk` + `https://app.mealdiary.co.uk`
 
-Keys in `apps/mobile/.env` / `.env.local` (see `.env.example`):
+Keys in `.env.development` and `.env.production` (see `.env.example`):
 
 - `EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY` — RevenueCat public Google SDK key
 - `EXPO_PUBLIC_REVENUECAT_IOS_API_KEY` — RevenueCat public Apple SDK key
 
-Without these keys (or on Expo web), upgrade CTAs open `${EXPO_PUBLIC_WEB_URL}/plans` instead of the in-app plans screen. Do not put `EXPO_PUBLIC_API_URL` in `.env.local` — that file outranks `.env.production` during `./gradlew bundleRelease`. Release builds still refuse local hosts in `constants/env.ts`.
+Without these keys (or on Expo web), upgrade CTAs open `${EXPO_PUBLIC_WEB_URL}/plans` instead of the in-app plans screen. Do not add `.env` or `.env.local`. Expo loads `.env.local` during `./gradlew bundleRelease` and it overrides `.env.production`. Release builds still refuse local hosts in `constants/env.ts`.
 
 ### API env
 

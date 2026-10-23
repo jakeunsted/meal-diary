@@ -14,8 +14,9 @@ From the monorepo root:
 
 ```bash
 npm install
-cp apps/mobile/.env.example apps/mobile/.env
 ```
+
+Key names and which file they belong in are in `apps/mobile/.env.example`. Dev uses `apps/mobile/.env.development`. Play / release builds use `apps/mobile/.env.production`. Both are gitignored. Do not add `.env` or `.env.local` — Expo loads `.env.local` for production builds too, and it overrides `.env.production`.
 
 ## Development
 
@@ -52,7 +53,7 @@ npm run dev:mobile:proxy:https
 # or: EXPO_PACKAGER_PROXY_URL=https://dev-app.mealdiary.co.uk npm run dev:mobile
 ```
 
-3. Set `EXPO_PUBLIC_API_URL` in `.env.development` or `.env.local` to an API URL reachable from the browser (e.g. `http://localhost:3001` or your dev API host). The API allows `dev-app.mealdiary.co.uk` in development CORS by default. Release builds use `.env.production` (`https://api.mealdiary.co.uk`) instead.
+3. Set `EXPO_PUBLIC_API_URL` in `.env.development` to an API URL reachable from the browser (e.g. `http://localhost:3001` or your dev API host). The API allows `dev-app.mealdiary.co.uk` in development CORS by default. Release builds use `.env.production` (`https://api.mealdiary.co.uk`) instead.
 4. **Google Sign-In on web** uses client-side PKCE (`expo-auth-session`), which requires a secure origin — serve `dev-app.mealdiary.co.uk` over **HTTPS** (e.g. mkcert + nginx `listen 443 ssl`). `http://localhost:3002` also works without a cert.
 
 Example nginx `location /` block (HTTP):
@@ -76,12 +77,11 @@ For Google Sign-In on web, add a `listen 443 ssl` server block with your mkcert 
 | Environment | File | `EXPO_PUBLIC_API_URL` / `EXPO_PUBLIC_WEB_URL` |
 |-------------|----------------------|-----------------------------------------------|
 | Android emulator | `.env.development` | `http://10.0.2.2:3001` / `https://dev-app.mealdiary.co.uk` |
-| Physical device | `.env.development.local` | `http://<your-lan-ip>:3001` |
-| Browser (localhost) | `.env.development.local` | `http://localhost:3001` |
-| Browser (`https://dev-app.mealdiary.co.uk`) | `.env.development` | `http://localhost:3001` (or your dev API host) |
+| Physical device | `.env.development` | `http://<your-lan-ip>:3001` / `https://dev-app.mealdiary.co.uk` |
+| Browser | `.env.development` | `http://localhost:3001` / `https://dev-app.mealdiary.co.uk` |
 | Production / Play AAB | `.env.production` | `https://api.mealdiary.co.uk` / `https://app.mealdiary.co.uk` |
 
-Expo loads `.env.local` in **both** development and production, and it outranks `.env.production`. Put machine-specific **dev** URLs in `.env.development.local` (development only), not `.env.local`. Release JS also rewrites `localhost`, `10.0.2.2`, and `dev-app.mealdiary.co.uk` to the production hosts.
+`expo start` loads `.env.development`. `./gradlew bundleRelease` loads `.env.production`. Release JS also rewrites `localhost`, `10.0.2.2`, and `dev-app.mealdiary.co.uk` to the production hosts.
 
 Local Play upload:
 
@@ -216,7 +216,7 @@ import { useFeatureFlag } from '@/lib/feature-flags/useFeatureFlag';
 const enabled = useFeatureFlag(FEATURE_FLAGS.featureFlagsEnabled);
 ```
 
-Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env`. Leave the key empty to disable PostHog. In `__DEV__`, analytics capture stays off while flags still evaluate. Release builds stay opted out until the person allows analytics. They can change that choice in Profile.
+Set `EXPO_PUBLIC_POSTHOG_KEY` (and optional `EXPO_PUBLIC_POSTHOG_HOST`) in `.env.development` and `.env.production`. Leave the key empty to disable PostHog. In `__DEV__`, analytics capture stays off while flags still evaluate. Release builds stay opted out until the person allows analytics. They can change that choice in Profile.
 
 ## Gotchas
 

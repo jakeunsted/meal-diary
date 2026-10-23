@@ -35,8 +35,7 @@ export const resolvePublicUrls = ({
   let resolvedApi = forceHttpsProductionApi(apiUrl || (isDev ? DEVELOPMENT_API_URL : PRODUCTION_API_URL));
   let resolvedWeb = webUrl || PRODUCTION_WEB_URL;
 
-  // `.env.local` outranks `.env.production` in Expo. Release bundles must not
-  // keep emulator / nginx-dev hosts even if those files leak into the build.
+  // Release bundles must not keep emulator or nginx-dev hosts.
   if (!isDev) {
     if (isLocalHostUrl(resolvedApi)) {
       resolvedApi = PRODUCTION_API_URL;
