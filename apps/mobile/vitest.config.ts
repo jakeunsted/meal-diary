@@ -10,7 +10,6 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'text-summary'],
-      all: true,
       include: ['**/*.{ts,tsx}'],
       exclude: [
         '**/*.unit.test.ts',
