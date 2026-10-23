@@ -20,6 +20,8 @@ export interface SubscriptionAttributes {
   complimentary_reason: string | null;
   trial_expired_prompt_seen_at: Date | null;
   payment_failed_at: Date | null;
+  meal_names_reset_effective_on: string | null;
+  meal_names_reset_applied_at: Date | null;
   created_at?: Date;
   updated_at?: Date;
 }
@@ -41,6 +43,8 @@ interface SubscriptionCreationAttributes extends Optional<
   | 'complimentary_reason'
   | 'trial_expired_prompt_seen_at'
   | 'payment_failed_at'
+  | 'meal_names_reset_effective_on'
+  | 'meal_names_reset_applied_at'
   | 'created_at'
   | 'updated_at'
 > {}
@@ -118,6 +122,16 @@ Subscription.init(
     payment_failed_at: {
       type: DataTypes.DATE,
       allowNull: true,
+    },
+    meal_names_reset_effective_on: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+      defaultValue: null,
+    },
+    meal_names_reset_applied_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+      defaultValue: null,
     },
     created_at: {
       type: DataTypes.DATE,

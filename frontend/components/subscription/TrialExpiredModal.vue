@@ -33,13 +33,19 @@
 <script setup>
 import PlanComparisonTable from '~/components/subscription/PlanComparisonTable.vue';
 
-const { prompts, dismissTrialExpiredPrompt } = useEntitlements();
+const { prompts, dismissTrialExpiredPrompt, trialExpiredSuppressedForVisit } = useEntitlements();
 
 const showModal = ref(false);
 const isDismissing = ref(false);
 
+const shouldShowTrialExpired = computed(() => {
+  return prompts.value.trialExpired
+    && !prompts.value.customMealNamesLapse
+    && !trialExpiredSuppressedForVisit.value;
+});
+
 watch(
-  () => prompts.value.trialExpired,
+  shouldShowTrialExpired,
   (shouldShow) => {
     showModal.value = shouldShow;
   },

@@ -22,10 +22,20 @@ export const useEntitlements = () => {
     storePlatform: null,
   });
 
+  const customMealNamesLapseHiddenForVisit = useState(
+    'custom-meal-names-lapse-hidden-for-visit',
+    () => false
+  );
+  const trialExpiredSuppressedForVisit = useState(
+    'trial-expired-suppressed-for-visit',
+    () => false
+  );
+
   const prompts = computed(() => entitlements.value?.prompts ?? {
     trialExpired: false,
     paymentFailed: false,
     paymentFailedUntil: null,
+    customMealNamesLapse: false,
   });
 
   const limits = computed(() => entitlements.value?.limits);
@@ -136,6 +146,31 @@ export const useEntitlements = () => {
     return response;
   };
 
+  const resetMealNamesToDefaults = async (today: string) => {
+    const familyGroupId = userStore.user?.family_group_id;
+    if (!familyGroupId) {
+      throw new Error('Family group is required');
+    }
+
+    const { api } = useApi();
+    const response = await api<ResolvedEntitlements>(
+      `/api/family-groups/${familyGroupId}/meal-slots/reset-to-defaults`,
+      {
+        method: 'POST',
+        silent: true,
+        body: { today },
+      }
+    );
+
+    trialExpiredSuppressedForVisit.value = true;
+    subscriptionStore.setEntitlements(response);
+    return response;
+  };
+
+  const hideCustomMealNamesLapseForVisit = () => {
+    customMealNamesLapseHiddenForVisit.value = true;
+  };
+
   return {
     entitlements,
     isPremium,
@@ -153,5 +188,9 @@ export const useEntitlements = () => {
     refreshEntitlements,
     refreshEntitlementsAfterUpgrade,
     dismissTrialExpiredPrompt,
+    customMealNamesLapseHiddenForVisit,
+    trialExpiredSuppressedForVisit,
+    resetMealNamesToDefaults,
+    hideCustomMealNamesLapseForVisit,
   };
 };

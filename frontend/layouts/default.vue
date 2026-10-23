@@ -4,6 +4,7 @@
       <ClientOnly>
         <UpgradeBanner v-if="showSubscriptionChrome" />
         <TrialExpiredModal v-if="showSubscriptionChrome" />
+        <CustomMealNamesLapseModal v-if="showSubscriptionChrome" />
         <PaywallModal />
       </ClientOnly>
       <slot />
@@ -14,6 +15,7 @@
 
 <script setup>
 import BottomNavigator from '~/components/nav/BottomNavigator.vue';
+import CustomMealNamesLapseModal from '~/components/subscription/CustomMealNamesLapseModal.vue';
 import PaywallModal from '~/components/subscription/PaywallModal.vue';
 import TrialExpiredModal from '~/components/subscription/TrialExpiredModal.vue';
 import UpgradeBanner from '~/components/subscription/UpgradeBanner.vue';

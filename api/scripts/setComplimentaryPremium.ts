@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { initializeDatabase } from '../db/db.ts';
 import { getOrCreateSubscription } from '../services/entitlements.service.ts';
+import { updateSubscriptionClearingMealNamesResetWhenPremium } from '../services/mealSlots.service.ts';
 
 dotenv.config({ quiet: true });
 
@@ -24,7 +25,7 @@ dotenv.config({ quiet: true });
     }
 
     const subscription = await getOrCreateSubscription(familyGroupId);
-    await subscription.update({
+    await updateSubscriptionClearingMealNamesResetWhenPremium(subscription, {
       is_complimentary: true,
       complimentary_reason: 'developer',
     });

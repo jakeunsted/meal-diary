@@ -9,6 +9,12 @@ import {
 } from '../db/models/associations.ts';
 import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
 import { isTrialEligible } from './billing.service.ts';
+import {
+  applyMealNamesResetIfDue,
+  familyMealSlotsDifferFromDefaults,
+  isPendingMealNamesReset,
+  isPremiumSubscriptionState,
+} from './mealSlots.service.ts';
 
 export interface ResolvedEntitlements {
   plan: SubscriptionPlan;
@@ -28,6 +34,7 @@ export interface ResolvedEntitlements {
     trialExpired: boolean;
     paymentFailed: boolean;
     paymentFailedUntil: string | null;
+    customMealNamesLapse: boolean;
   };
   billing: {
     isOwner: boolean;
@@ -98,16 +105,8 @@ export const isPastWeekEditable = (
   return targetMonday.getTime() >= currentMonday.getTime();
 };
 
-const isPremiumSubscription = (subscription: SubscriptionAttributes): boolean => {
-  if (subscription.is_complimentary) {
-    return true;
-  }
-
-  return (
-    subscription.plan === 'premium' &&
-    (subscription.status === 'active' || subscription.status === 'trialing')
-  );
-};
+const isPremiumSubscription = (subscription: SubscriptionAttributes): boolean =>
+  isPremiumSubscriptionState(subscription);
 
 const resolveLimits = (subscription: SubscriptionAttributes): PlanLimits => {
   if (isPremiumSubscription(subscription)) {
@@ -152,9 +151,23 @@ const getOwnerDisplayName = async (familyGroupId: number): Promise<string | null
   return owner.dataValues.username;
 };
 
+const resolveCustomMealNamesLapse = async (
+  subscription: SubscriptionAttributes
+): Promise<boolean> => {
+  if (subscription.status !== 'expired' || subscription.is_complimentary) {
+    return false;
+  }
+  if (isPendingMealNamesReset(subscription)) {
+    return false;
+  }
+
+  return familyMealSlotsDifferFromDefaults(subscription.family_group_id);
+};
+
 const resolvePrompts = (
   subscription: SubscriptionAttributes,
-  isOwner: boolean
+  isOwner: boolean,
+  customMealNamesLapse: boolean
 ): ResolvedEntitlements['prompts'] => {
   const now = Date.now();
 
@@ -181,6 +194,7 @@ const resolvePrompts = (
     trialExpired,
     paymentFailed,
     paymentFailedUntil,
+    customMealNamesLapse,
   };
 };
 
@@ -200,6 +214,12 @@ export const resolveEntitlements = async (
   requestingUserId: number
 ): Promise<ResolvedEntitlements> => {
   const subscriptionRecord = await getOrCreateSubscription(familyGroupId);
+  const applyResult = await applyMealNamesResetIfDue(familyGroupId, {
+    hint: subscriptionRecord.dataValues,
+  });
+  if (applyResult.applied || applyResult.cleared) {
+    await subscriptionRecord.reload();
+  }
   const subscription = subscriptionRecord.dataValues as SubscriptionAttributes;
 
   const familyGroup = await FamilyGroup.findByPk(familyGroupId);
@@ -231,7 +251,11 @@ export const resolveEntitlements = async (
       familyMemberCount,
       recipeCount,
     },
-    prompts: resolvePrompts(subscription, isOwner),
+    prompts: resolvePrompts(
+      subscription,
+      isOwner,
+      await resolveCustomMealNamesLapse(subscription)
+    ),
     billing: {
       isOwner,
       ownerDisplayName,

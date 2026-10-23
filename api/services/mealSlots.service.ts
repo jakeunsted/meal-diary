@@ -8,8 +8,7 @@ import {
   type MealSlotInput,
   type RemovedSlotImpact,
 } from '@meal-diary/shared';
-import { Op } from 'sequelize';
-import type { Transaction } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import sequelize from '../db/models/index.ts';
 import {
   DailyMeal,
@@ -18,7 +17,10 @@ import {
   MealDiary,
   MealSlot,
   Recipe,
+  Subscription,
 } from '../db/models/associations.ts';
+import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
+import { emitFamilyEvent } from './sse.service.ts';
 
 export const RECIPE_NOT_IN_FAMILY_MESSAGE =
   'Recipe does not belong to this family group';
@@ -92,6 +94,121 @@ export class MealSlotsValidationError extends Error {
     this.name = 'MealSlotsValidationError';
   }
 }
+
+export class MealNamesResetForbiddenError extends Error {
+  readonly code = 'MEAL_NAMES_RESET_FORBIDDEN';
+
+  constructor() {
+    super('Only the family owner can reset meal names');
+    this.name = 'MealNamesResetForbiddenError';
+  }
+}
+
+const MEAL_NAMES_RESET_STATUS_MESSAGE =
+  'Meal names can only be reset after Family Plus has ended';
+const MEAL_NAMES_RESET_COMPLIMENTARY_MESSAGE =
+  'Complimentary families cannot reset meal names';
+const MEAL_NAMES_RESET_ALREADY_DEFAULT_MESSAGE =
+  'Meal names already match the defaults';
+
+export interface MealNamesResetColumns {
+  meal_names_reset_effective_on?: string | Date | null;
+  meal_names_reset_applied_at?: Date | string | null;
+}
+
+export interface MealNamesResetApplyResult {
+  applied: boolean;
+  cleared: boolean;
+}
+
+export interface ScheduleMealNamesResetResult {
+  scheduled: boolean;
+  applied: boolean;
+  cleared: boolean;
+}
+
+const mealNamesResetNoop = (): MealNamesResetApplyResult => ({
+  applied: false,
+  cleared: false,
+});
+
+const dateOnlyString = (value: unknown): string | null => {
+  if (value == null || value === '') {
+    return null;
+  }
+  if (value instanceof Date) {
+    return formatDateOnly(value);
+  }
+  if (typeof value === 'string') {
+    const sliced = value.slice(0, 10);
+    return /^\d{4}-\d{2}-\d{2}$/.test(sliced) ? sliced : null;
+  }
+  return null;
+};
+
+const serverUtcTodayString = (): string => formatDateOnly(new Date());
+
+const addUtcDays = (date: Date, days: number): string =>
+  formatDateOnly(
+    new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + days))
+  );
+
+export const isPremiumSubscriptionState = (
+  subscription: Pick<SubscriptionAttributes, 'plan' | 'status' | 'is_complimentary'>
+): boolean => {
+  if (subscription.is_complimentary) {
+    return true;
+  }
+
+  return (
+    subscription.plan === 'premium' &&
+    (subscription.status === 'active' || subscription.status === 'trialing')
+  );
+};
+
+export const isPendingMealNamesReset = (
+  values: MealNamesResetColumns | null | undefined,
+  serverToday: string = serverUtcTodayString()
+): boolean => {
+  const effectiveOn = dateOnlyString(values?.meal_names_reset_effective_on);
+  if (!effectiveOn || values?.meal_names_reset_applied_at) {
+    return false;
+  }
+  return serverToday < effectiveOn;
+};
+
+const isMealNamesResetDue = (
+  values: MealNamesResetColumns | null | undefined,
+  serverToday: string
+): boolean => {
+  const effectiveOn = dateOnlyString(values?.meal_names_reset_effective_on);
+  if (!effectiveOn || values?.meal_names_reset_applied_at) {
+    return false;
+  }
+  return serverToday >= effectiveOn;
+};
+
+const slotsMatchDefaults = (
+  slots: Array<{ name: string; position: number }>
+): boolean => {
+  if (slots.length !== DEFAULT_MEAL_SLOT_NAMES.length) {
+    return false;
+  }
+  const ordered = [...slots].sort((a, b) => a.position - b.position);
+  return ordered.every(
+    (slot, index) => normalizeMealSlotName(slot.name) === DEFAULT_MEAL_SLOT_NAMES[index]
+  );
+};
+
+const preferKeeperSlot = (current: MealSlot | undefined, slot: MealSlot): MealSlot => {
+  if (!current) {
+    return slot;
+  }
+  if (current.dataValues.archived_at && !slot.dataValues.archived_at) {
+    return slot;
+  }
+  return current;
+};
 
 const formatDateOnly = (date: Date): string => date.toISOString().slice(0, 10);
 
@@ -174,6 +291,9 @@ export const getActiveMealSlots = async (
   familyGroupId: number,
   transaction?: Transaction
 ): Promise<MealSlotDto[]> => {
+  if (!transaction) {
+    await applyMealNamesResetIfDue(familyGroupId);
+  }
   await ensureDefaultMealSlots(familyGroupId, transaction);
   const slots = await MealSlot.findAll({
     where: {
@@ -189,10 +309,10 @@ export const getActiveMealSlots = async (
 const entryHasContent = (dish: string | null | undefined, recipeId: number | null | undefined) =>
   Boolean((dish && dish.trim()) || recipeId);
 
-/** Daily meal row ids for calendar days on/after today across the family's diaries. */
-const loadFutureDailyMealIds = async (
+/** Daily meal row ids whose calendar date matches the predicate, using the family's diaries. */
+const loadDailyMealIds = async (
   familyGroupId: number,
-  today: Date,
+  includeDate: (date: Date) => boolean,
   transaction?: Transaction
 ): Promise<number[]> => {
   const diaries = await MealDiary.findAll({
@@ -213,17 +333,25 @@ const loadFutureDailyMealIds = async (
     transaction,
   });
 
-  const futureIds: number[] = [];
+  const ids: number[] = [];
   for (const meal of dailyMeals) {
     const weekStart = diaryById.get(meal.dataValues.meal_diary_id);
     if (!weekStart) continue;
     const date = calendarDateForDiaryDay(weekStart, meal.dataValues.day_of_week);
-    if (isDateOnOrAfter(date, today)) {
-      futureIds.push(meal.dataValues.id);
+    if (includeDate(date)) {
+      ids.push(meal.dataValues.id);
     }
   }
-  return futureIds;
+  return ids;
 };
+
+/** Daily meal row ids for calendar days on/after today across the family's diaries. */
+const loadFutureDailyMealIds = async (
+  familyGroupId: number,
+  today: Date,
+  transaction?: Transaction
+): Promise<number[]> =>
+  loadDailyMealIds(familyGroupId, (date) => isDateOnOrAfter(date, today), transaction);
 
 /**
  * Count future (today+) daily meal entries with content for the given slot ids.
@@ -569,6 +697,377 @@ export const syncLegacyColumnsToEntries = async (
   }
 };
 
+const clearMealNamesResetColumns = async (
+  subscription: Subscription,
+  transaction: Transaction
+): Promise<void> => {
+  await subscription.update(
+    {
+      meal_names_reset_effective_on: null,
+      meal_names_reset_applied_at: null,
+    },
+    { transaction }
+  );
+};
+
+const freezeMealNameSnapshots = async (
+  familyGroupId: number,
+  effectiveOn: string,
+  transaction: Transaction
+): Promise<void> => {
+  const serverToday = parseDateOnly(serverUtcTodayString());
+  const effectiveDate = parseDateOnly(effectiveOn);
+  const dailyMealIds = await loadDailyMealIds(
+    familyGroupId,
+    (date) => isDateOnOrAfter(date, serverToday) && date.getTime() < effectiveDate.getTime(),
+    transaction
+  );
+  if (dailyMealIds.length === 0) {
+    return;
+  }
+
+  const activeSlots = await MealSlot.findAll({
+    where: { family_group_id: familyGroupId, archived_at: null },
+    transaction,
+  });
+
+  for (const dailyMealId of dailyMealIds) {
+    for (const slot of activeSlots) {
+      const [entry] = await DailyMealEntry.findOrCreate({
+        where: {
+          daily_meal_id: dailyMealId,
+          meal_slot_id: slot.dataValues.id,
+        },
+        defaults: {
+          daily_meal_id: dailyMealId,
+          meal_slot_id: slot.dataValues.id,
+          name: slot.dataValues.name,
+          position: slot.dataValues.position,
+          dish: null,
+          recipe_id: null,
+        },
+        transaction,
+      });
+      await entry.update(
+        {
+          name: slot.dataValues.name,
+          position: slot.dataValues.position,
+        },
+        { transaction }
+      );
+    }
+  }
+};
+
+const applyMealNamesResetLocked = async (
+  familyGroupId: number,
+  transaction: Transaction,
+  lockedSubscription?: Subscription
+): Promise<MealNamesResetApplyResult> => {
+  const subscription =
+    lockedSubscription ??
+    (await Subscription.findOne({
+      where: { family_group_id: familyGroupId },
+      transaction,
+      lock: Transaction.LOCK.UPDATE,
+    }));
+  if (!subscription) {
+    return mealNamesResetNoop();
+  }
+
+  const serverToday = serverUtcTodayString();
+  if (!isMealNamesResetDue(subscription.dataValues, serverToday)) {
+    return mealNamesResetNoop();
+  }
+
+  if (isPremiumSubscriptionState(subscription.dataValues)) {
+    await clearMealNamesResetColumns(subscription, transaction);
+    return { applied: false, cleared: true };
+  }
+
+  const slots = await MealSlot.findAll({
+    where: { family_group_id: familyGroupId },
+    transaction,
+  });
+  const keeperByKey = new Map<LegacyMealKey, MealSlot>();
+  for (const slot of slots) {
+    const legacyKey = slot.dataValues.legacy_key as LegacyMealKey | null;
+    if (!legacyKey || !DEFAULT_LEGACY_MEAL_KEYS.includes(legacyKey)) {
+      continue;
+    }
+    keeperByKey.set(legacyKey, preferKeeperSlot(keeperByKey.get(legacyKey), slot));
+  }
+
+  const now = new Date();
+  const keeperIds: number[] = [];
+  for (let index = 0; index < DEFAULT_LEGACY_MEAL_KEYS.length; index += 1) {
+    const legacyKey = DEFAULT_LEGACY_MEAL_KEYS[index];
+    const name = DEFAULT_MEAL_SLOT_NAMES[index];
+    const position = index + 1;
+    let keeper = keeperByKey.get(legacyKey);
+    if (!keeper) {
+      keeper = await MealSlot.create(
+        {
+          family_group_id: familyGroupId,
+          name,
+          position,
+          legacy_key: legacyKey,
+          archived_at: null,
+        },
+        { transaction }
+      );
+    } else {
+      await keeper.update(
+        {
+          name,
+          position,
+          archived_at: null,
+        },
+        { transaction }
+      );
+    }
+    keeperIds.push(keeper.dataValues.id);
+  }
+
+  const keeperIdSet = new Set(keeperIds);
+  for (const slot of slots) {
+    if (keeperIdSet.has(slot.dataValues.id) || slot.dataValues.archived_at != null) {
+      continue;
+    }
+    await slot.update({ archived_at: now }, { transaction });
+  }
+
+  const effectiveOn = dateOnlyString(subscription.dataValues.meal_names_reset_effective_on);
+  if (!effectiveOn) {
+    return mealNamesResetNoop();
+  }
+
+  const dailyMealIds = await loadDailyMealIds(
+    familyGroupId,
+    (date) => formatDateOnly(date) >= effectiveOn,
+    transaction
+  );
+  if (dailyMealIds.length > 0) {
+    await DailyMealEntry.destroy({
+      where: {
+        daily_meal_id: { [Op.in]: dailyMealIds },
+        meal_slot_id: { [Op.notIn]: keeperIds },
+      },
+      transaction,
+    });
+
+    for (let index = 0; index < keeperIds.length; index += 1) {
+      await DailyMealEntry.update(
+        {
+          name: DEFAULT_MEAL_SLOT_NAMES[index],
+          position: index + 1,
+        },
+        {
+          where: {
+            daily_meal_id: { [Op.in]: dailyMealIds },
+            meal_slot_id: keeperIds[index],
+          },
+          transaction,
+        }
+      );
+    }
+  }
+
+  await subscription.update(
+    {
+      meal_names_reset_applied_at: now,
+    },
+    { transaction }
+  );
+
+  return { applied: true, cleared: false };
+};
+
+const emitMealSlotsUpdated = (familyGroupId: number): void => {
+  emitFamilyEvent(familyGroupId, 'meal-slots-updated', {});
+};
+
+/**
+ * Apply a due meal-name reset. Reads call this before returning slots.
+ */
+export const applyMealNamesResetIfDue = async (
+  familyGroupId: number,
+  options?: {
+    transaction?: Transaction;
+    lockedSubscription?: Subscription;
+    hint?: MealNamesResetColumns;
+  }
+): Promise<MealNamesResetApplyResult> => {
+  const serverToday = serverUtcTodayString();
+  if (options?.hint && !isMealNamesResetDue(options.hint, serverToday)) {
+    return mealNamesResetNoop();
+  }
+
+  if (options?.transaction) {
+    return applyMealNamesResetLocked(
+      familyGroupId,
+      options.transaction,
+      options.lockedSubscription
+    );
+  }
+
+  const peek = await Subscription.findOne({
+    where: { family_group_id: familyGroupId },
+  });
+  if (!isMealNamesResetDue(peek?.dataValues, serverToday)) {
+    return mealNamesResetNoop();
+  }
+
+  const result = await sequelize.transaction((transaction) =>
+    applyMealNamesResetLocked(familyGroupId, transaction)
+  );
+  if (result.applied || result.cleared) {
+    emitMealSlotsUpdated(familyGroupId);
+  }
+  return result;
+};
+
+export const familyMealSlotsDifferFromDefaults = async (
+  familyGroupId: number
+): Promise<boolean> => {
+  const slots = await getActiveMealSlots(familyGroupId);
+  return !slotsMatchDefaults(slots);
+};
+
+/**
+ * When a sync leaves the family premium, drop a pending or already-applied
+ * meal-name reset. Slots and diary entries stay as they are.
+ * Families with neither column set keep the caller's single update.
+ */
+export const updateSubscriptionClearingMealNamesResetWhenPremium = async (
+  subscription: Subscription,
+  updates: Partial<SubscriptionAttributes>
+): Promise<void> => {
+  const current = subscription.dataValues;
+  const resulting = { ...current, ...updates };
+  const hasResetMarker =
+    dateOnlyString(current.meal_names_reset_effective_on) != null ||
+    current.meal_names_reset_applied_at != null;
+
+  if (!hasResetMarker || !isPremiumSubscriptionState(resulting)) {
+    await subscription.update(updates);
+    return;
+  }
+
+  await sequelize.transaction(async (transaction) => {
+    const locked = await Subscription.findOne({
+      where: { id: current.id },
+      transaction,
+      lock: Transaction.LOCK.UPDATE,
+    });
+    const target = locked ?? subscription;
+    const lockedResulting = { ...target.dataValues, ...updates };
+    const clear = isPremiumSubscriptionState(lockedResulting);
+    const nextUpdates: Partial<SubscriptionAttributes> = clear
+      ? {
+          ...updates,
+          meal_names_reset_effective_on: null,
+          meal_names_reset_applied_at: null,
+        }
+      : updates;
+    await target.update(nextUpdates, { transaction });
+    if (target !== subscription) {
+      Object.assign(subscription.dataValues, nextUpdates);
+    }
+  });
+};
+
+/**
+ * Owner-only. Schedules Breakfast, Lunch, and Dinner from the day after client today.
+ * A reset that is already due is applied in the same transaction first.
+ */
+export const scheduleMealNamesReset = async (
+  familyGroupId: number,
+  requestingUserId: number,
+  todayStr: string
+): Promise<ScheduleMealNamesResetResult> => {
+  const clientToday = assertTodayWithinSkew(todayStr);
+  const effectiveOn = addUtcDays(clientToday, 1);
+
+  const outcome = await sequelize.transaction(async (transaction) => {
+    const familyGroup = await FamilyGroup.findByPk(familyGroupId, { transaction });
+    if (!familyGroup || familyGroup.dataValues.created_by !== requestingUserId) {
+      throw new MealNamesResetForbiddenError();
+    }
+
+    const [subscriptionRow] = await Subscription.findOrCreate({
+      where: { family_group_id: familyGroupId },
+      defaults: { family_group_id: familyGroupId },
+      transaction,
+    });
+    const locked = await Subscription.findOne({
+      where: { id: subscriptionRow.dataValues.id },
+      transaction,
+      lock: Transaction.LOCK.UPDATE,
+    });
+    if (!locked) {
+      throw new Error('Subscription not found');
+    }
+
+    const applyResult = await applyMealNamesResetIfDue(familyGroupId, {
+      transaction,
+      lockedSubscription: locked,
+    });
+    const serverToday = serverUtcTodayString();
+    if (isPendingMealNamesReset(locked.dataValues, serverToday)) {
+      return {
+        scheduled: false,
+        applied: applyResult.applied,
+        cleared: applyResult.cleared,
+      };
+    }
+
+    const activeSlots =
+      locked.dataValues.is_complimentary || locked.dataValues.status !== 'expired'
+        ? []
+        : await getActiveMealSlots(familyGroupId, transaction);
+    const refusalMessage = locked.dataValues.is_complimentary
+      ? MEAL_NAMES_RESET_COMPLIMENTARY_MESSAGE
+      : locked.dataValues.status !== 'expired'
+        ? MEAL_NAMES_RESET_STATUS_MESSAGE
+        : slotsMatchDefaults(activeSlots)
+          ? MEAL_NAMES_RESET_ALREADY_DEFAULT_MESSAGE
+          : null;
+
+    if (refusalMessage) {
+      if (applyResult.applied || applyResult.cleared) {
+        return {
+          scheduled: false,
+          applied: applyResult.applied,
+          cleared: applyResult.cleared,
+        };
+      }
+      throw new MealSlotsValidationError(refusalMessage);
+    }
+
+    await locked.update(
+      {
+        meal_names_reset_effective_on: effectiveOn,
+        meal_names_reset_applied_at: null,
+      },
+      { transaction }
+    );
+    await freezeMealNameSnapshots(familyGroupId, effectiveOn, transaction);
+
+    return {
+      scheduled: true,
+      applied: applyResult.applied,
+      cleared: applyResult.cleared,
+    };
+  });
+
+  if (outcome.scheduled || outcome.applied || outcome.cleared) {
+    emitMealSlotsUpdated(familyGroupId);
+  }
+
+  return outcome;
+};
+
 /**
  * Build per-day slot DTOs for a week response.
  */
@@ -581,6 +1080,18 @@ export const buildDaySlotsForWeek = async (
   }>,
   today: Date = parseDateOnly(formatDateOnly(new Date()))
 ): Promise<Map<number, DayMealSlotDto[]>> => {
+  await applyMealNamesResetIfDue(familyGroupId);
+
+  const serverToday = serverUtcTodayString();
+  const subscription = await Subscription.findOne({
+    where: { family_group_id: familyGroupId },
+  });
+  const effectiveOn = dateOnlyString(subscription?.dataValues.meal_names_reset_effective_on);
+  const pendingReset =
+    effectiveOn != null &&
+    subscription?.dataValues.meal_names_reset_applied_at == null &&
+    serverToday < effectiveOn;
+
   const activeSlots = await getActiveMealSlots(familyGroupId);
 
   const dailyMealIds = dailyMealRows.map((r) => r.id);
@@ -637,11 +1148,46 @@ export const buildDaySlotsForWeek = async (
         )
   );
 
+  const keeperSlots = new Map<LegacyMealKey, MealSlot>();
+  if (pendingReset) {
+    const familySlots = await MealSlot.findAll({
+      where: { family_group_id: familyGroupId },
+    });
+    for (const slot of familySlots) {
+      const legacyKey = slot.dataValues.legacy_key as LegacyMealKey | null;
+      if (!legacyKey) continue;
+      keeperSlots.set(legacyKey, preferKeeperSlot(keeperSlots.get(legacyKey), slot));
+    }
+  }
+
   const result = new Map<number, DayMealSlotDto[]>();
 
   for (const row of dailyMealRows) {
     const date = calendarDateForDiaryDay(weekStartStr, row.day_of_week);
     const dayEntries = entriesByDailyMeal.get(row.id) ?? [];
+
+    if (pendingReset && effectiveOn && formatDateOnly(date) >= effectiveOn) {
+      const entryBySlot = new Map(
+        dayEntries.map((entry) => [entry.dataValues.meal_slot_id, entry])
+      );
+      result.set(
+        row.day_of_week,
+        DEFAULT_LEGACY_MEAL_KEYS.map((legacyKey, index) => {
+          const slot = keeperSlots.get(legacyKey);
+          const entry = slot ? entryBySlot.get(slot.dataValues.id) : undefined;
+          return {
+            id: entry?.dataValues.id ?? 0,
+            meal_slot_id: slot?.dataValues.id ?? 0,
+            name: DEFAULT_MEAL_SLOT_NAMES[index],
+            position: index + 1,
+            dish: entry?.dataValues.dish ?? null,
+            recipe_id: entry?.dataValues.recipe_id ?? null,
+            legacy_key: legacyKey,
+          };
+        })
+      );
+      continue;
+    }
 
     if (!isDateOnOrAfter(date, today)) {
       // Past day: snapshotted entries
