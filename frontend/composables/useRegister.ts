@@ -1,4 +1,4 @@
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import { isPasswordValid, isValidEmail } from '@meal-diary/shared';
 
 interface RegisterData {
@@ -14,33 +14,26 @@ export const useRegister = () => {
   const { t } = useI18n();
 
   /**
-   * Store the register string in the capacitor storage
+   * Store the register string in local storage
    * @param registerString - The register string to store
    */
   const storeRegisterString = async (registerString: string) => {
-    Preferences.set({
-      key: 'registerString',
-      value: registerString
-    });
+    browserStorage.set('registerString', registerString);
   }
 
   /**
-   * Get the register string from the capacitor storage
+   * Get the register string from local storage
    * @returns The register string
    */
   const getRegisterString = () => {
-    return Preferences.get({
-      key: 'registerString'
-    });
+    return browserStorage.get('registerString');
   }
 
   /**
-   * Delete the register string from the capacitor storage
+   * Delete the register string from local storage
    */
   const deleteRegisterString = async () => {
-    await Preferences.remove({
-      key: 'registerString'
-    });
+    browserStorage.remove('registerString');
   }
 
   /**
@@ -106,7 +99,7 @@ export const useRegister = () => {
     }
   
     try {
-      const registerString = await getRegisterString();
+      const registerString = getRegisterString();
       const response = await fetch('/api/user', {
         method: 'POST',
         headers: {
@@ -116,7 +109,7 @@ export const useRegister = () => {
           username: registrationData.username.trim(),
           email: registrationData.email.trim(),
           password: registrationData.password,
-          family_group_code: registerString.value,
+          family_group_code: registerString,
           terms_accepted: registrationData.terms_accepted
         }),
       });

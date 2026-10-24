@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import type { ResolvedEntitlements } from '~/types/Entitlements';
 
 const ENTITLEMENTS_KEY = 'entitlements';
@@ -29,11 +29,11 @@ export const useSubscriptionStore = defineStore('subscription', {
       this.entitlements = entitlements;
       if (import.meta.client) {
         if (entitlements) {
-          Preferences.set({ key: ENTITLEMENTS_KEY, value: JSON.stringify(entitlements) });
-          Preferences.set({ key: ENTITLEMENTS_FETCHED_KEY, value: String(Date.now()) });
+          browserStorage.set(ENTITLEMENTS_KEY, JSON.stringify(entitlements));
+          browserStorage.set(ENTITLEMENTS_FETCHED_KEY, String(Date.now()));
         } else {
-          Preferences.remove({ key: ENTITLEMENTS_KEY });
-          Preferences.remove({ key: ENTITLEMENTS_FETCHED_KEY });
+          browserStorage.remove(ENTITLEMENTS_KEY);
+          browserStorage.remove(ENTITLEMENTS_FETCHED_KEY);
         }
       }
     },
@@ -41,10 +41,8 @@ export const useSubscriptionStore = defineStore('subscription', {
     async hydrateFromStorage() {
       if (!import.meta.client) return;
 
-      const [{ value }, { value: fetchedAt }] = await Promise.all([
-        Preferences.get({ key: ENTITLEMENTS_KEY }),
-        Preferences.get({ key: ENTITLEMENTS_FETCHED_KEY }),
-      ]);
+      const value = browserStorage.get(ENTITLEMENTS_KEY);
+      const fetchedAt = browserStorage.get(ENTITLEMENTS_FETCHED_KEY);
 
       if (!value || !fetchedAt) return;
 
@@ -54,7 +52,7 @@ export const useSubscriptionStore = defineStore('subscription', {
       try {
         this.entitlements = JSON.parse(value) as ResolvedEntitlements;
       } catch {
-        await Preferences.remove({ key: ENTITLEMENTS_KEY });
+        browserStorage.remove(ENTITLEMENTS_KEY);
       }
     },
 
@@ -62,7 +60,7 @@ export const useSubscriptionStore = defineStore('subscription', {
       const userStore = useUserStore();
 
       if (!force && this.entitlements) {
-        const { value: fetchedAt } = await Preferences.get({ key: ENTITLEMENTS_FETCHED_KEY });
+        const fetchedAt = browserStorage.get(ENTITLEMENTS_FETCHED_KEY);
         if (fetchedAt && Date.now() - Number(fetchedAt) < CACHE_TTL_MS) {
           return this.entitlements;
         }
@@ -90,8 +88,8 @@ export const useSubscriptionStore = defineStore('subscription', {
       this.entitlements = null;
       this.error = null;
       if (import.meta.client) {
-        Preferences.remove({ key: ENTITLEMENTS_KEY });
-        Preferences.remove({ key: ENTITLEMENTS_FETCHED_KEY });
+        browserStorage.remove(ENTITLEMENTS_KEY);
+        browserStorage.remove(ENTITLEMENTS_FETCHED_KEY);
       }
     },
   },

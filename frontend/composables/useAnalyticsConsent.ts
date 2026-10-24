@@ -1,4 +1,4 @@
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 
 /**
  * Single source of truth for whether the user has consented to non-essential
@@ -26,7 +26,7 @@ export const useAnalyticsConsent = () => {
   const loadConsent = async (): Promise<ConsentState> => {
     if (loaded) return analyticsConsent.value;
     try {
-      const { value } = await Preferences.get({ key: PREF_KEY });
+      const value = browserStorage.get(PREF_KEY);
       if (value === 'granted') analyticsConsent.value = true;
       else if (value === 'denied') analyticsConsent.value = false;
       else analyticsConsent.value = null;
@@ -39,7 +39,7 @@ export const useAnalyticsConsent = () => {
 
   const persist = async (state: Exclude<ConsentState, null>) => {
     try {
-      await Preferences.set({ key: PREF_KEY, value: state ? 'granted' : 'denied' });
+      browserStorage.set(PREF_KEY, state ? 'granted' : 'denied');
     } catch {
       /* persistence is best-effort; in-memory state still applies this session */
     }

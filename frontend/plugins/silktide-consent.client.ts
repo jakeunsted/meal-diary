@@ -8,7 +8,7 @@ import { useAnalyticsConsent } from '~/composables/useAnalyticsConsent';
  *
  * Fail-closed: if the script can't load, analytics simply never gets consent.
  *
- * Self-hosted from /public/silktide so the Capacitor WebView loads it
+ * Self-hosted from /public/silktide so the consent manager loads
  * same-origin with no extra third party.
  */
 

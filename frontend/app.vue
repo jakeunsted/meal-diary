@@ -8,22 +8,14 @@
 </template>
 
 <script setup>
-import { Capacitor } from '@capacitor/core';
-
 const authStore = useAuthStore();
 const { initializeSSE, cleanupSSE } = useSSE();
 
-// Initialize auth store and Google Auth (for native platforms).
+// Initialize auth store.
 // Route middleware also calls initializeAuth; the store single-flight guard
 // prevents duplicate refresh attempts when both run on cold start.
 onMounted(async () => {
   await authStore.initializeAuth();
-
-  // Initialize Google Auth early for native platforms
-  if (Capacitor.isNativePlatform()) {
-    const { initialize } = useGoogleAuth();
-    await initialize();
-  }
 });
 
 // Initialize SSE connection

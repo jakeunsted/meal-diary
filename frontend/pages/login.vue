@@ -125,7 +125,7 @@ definePageMeta({
 import LegalLinks from '~/components/LegalLinks.vue';
 
 const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
-const { signInWithGoogle, isLoading: isGoogleLoginLoading, error: googleLoginError } = useGoogleAuth();
+const { signInWithGoogle, isLoading: isGoogleLoginLoading } = useGoogleAuth();
 const { signInWithApple, isLoading: isAppleLoginLoading, error: appleLoginError, isConfigured: isAppleConfigured } = useAppleAuth();
 const { track } = useAnalytics();
 const { reportAuthError } = useAuthAnalytics();
@@ -144,7 +144,7 @@ const resolvePostLoginRedirect = (defaultRedirect) => {
 };
 
 const isLoading = computed(() => isEmailLoginLoading.value || isGoogleLoginLoading.value || isAppleLoginLoading.value);
-const error = computed(() => emailLoginError.value || googleLoginError.value || appleLoginError.value);
+const error = computed(() => emailLoginError.value || appleLoginError.value);
 
 onMounted(() => {
   const errorCode = String(route.query.error || '');

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { startOfISOWeek } from 'date-fns';
 import { useUserStore } from './user';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import type {
   MealDiaryState,
   DailyMeal,
@@ -43,7 +43,7 @@ let weeklyMealsFetchDepth = 0;
 /** In-flight fetch per week key — duplicate requests share the same promise. */
 const inflightWeeklyMeals = new Map<string, Promise<void>>();
 
-/** Batches rapid Preferences writes (e.g. multiple SSE updates). */
+/** Batches rapid local storage writes (e.g. multiple SSE updates). */
 let persistDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const PERSIST_DEBOUNCE_MS = 400;
 
@@ -134,7 +134,6 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       return monday;
     },
 
-    // Save to Preferences
     async saveToLocalStorage() {
       if (import.meta.client) {
         const dataToStore = {
@@ -142,14 +141,11 @@ export const useMealDiaryStore = defineStore('mealDiary', {
           currentWeekStart: this.currentWeekStart,
           lastFetchTime: this.lastFetchTime
         };
-        await Preferences.set({
-          key: 'mealDiary',
-          value: JSON.stringify(dataToStore)
-        });
+        browserStorage.set('mealDiary', JSON.stringify(dataToStore));
       }
     },
 
-    /** Coalesce rapid writes (e.g. SSE bursts) before persisting to Preferences. */
+    /** Coalesce rapid writes (e.g. SSE bursts) before persisting to local storage. */
     schedulePersistToLocalStorage() {
       if (!import.meta.client) {
         return;
@@ -163,15 +159,14 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       }, PERSIST_DEBOUNCE_MS);
     },
 
-    // Load from Preferences
     async loadFromLocalStorage() {
       if (import.meta.client) {
-        const { value } = await Preferences.get({ key: 'mealDiary' });
+        const value = browserStorage.get('mealDiary');
         if (value) {
           try {
             const { weeklyMeals, currentWeekStart, lastFetchTime } = JSON.parse(value);
             if (!Array.isArray(weeklyMeals)) {
-              await Preferences.remove({ key: 'mealDiary' });
+              browserStorage.remove('mealDiary');
               return false;
             }
             this.currentWeekStart = currentWeekStart
@@ -187,14 +182,14 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             return true;
           } catch (error) {
             console.error('Failed to parse stored meal diary:', error);
-            await Preferences.remove({ key: 'mealDiary' });
+            browserStorage.remove('mealDiary');
           }
         }
       }
       return false;
     },
 
-    /** Load cached diary from Preferences only (no network). */
+    /** Load cached diary from local storage only (no network). */
     async hydrateFromStorage() {
       const authStore = useAuthStore();
       if (!authStore.user?.family_group_id) {
@@ -537,7 +532,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         return;
       }
       try {
-        const { value } = await Preferences.get({ key: MEAL_DIARY_PENDING_KEY });
+        const value = browserStorage.get(MEAL_DIARY_PENDING_KEY);
         if (!value) {
           this.pendingSlots = [];
         } else {
@@ -548,7 +543,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       } catch (error) {
         console.error('Failed to parse stored meal diary queue:', error);
         this.pendingSlots = [];
-        await Preferences.remove({ key: MEAL_DIARY_PENDING_KEY });
+        browserStorage.remove(MEAL_DIARY_PENDING_KEY);
       }
       pendingReady = true;
     },
@@ -557,10 +552,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
       if (!import.meta.client) {
         return;
       }
-      await Preferences.set({
-        key: MEAL_DIARY_PENDING_KEY,
-        value: JSON.stringify({ slots: this.pendingSlots }),
-      });
+      browserStorage.set(MEAL_DIARY_PENDING_KEY, JSON.stringify({ slots: this.pendingSlots }));
     },
 
     async dropUnmatchedPending(familyId: number) {
@@ -1209,7 +1201,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         this.weeklyMeals.push(next);
       }
 
-      // Save to Preferences after receiving update (debounced — SSE can send many events)
+      // Save to local storage after receiving update (debounced — SSE can send many events)
       this.schedulePersistToLocalStorage();
     },
 

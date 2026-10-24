@@ -10,9 +10,7 @@
     "**/frontend/.nuxt/**": true,
     "**/frontend/.output/**": true,
     "**/frontend/.cache/**": true,
-    "**/frontend/dist/**": true,
-    "**/frontend/ios/**": true,
-    "**/frontend/android/**": true
+    "**/frontend/dist/**": true
   },
   "search.exclude": {
     "**/node_modules": true,

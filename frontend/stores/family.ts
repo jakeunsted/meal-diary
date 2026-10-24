@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import type { FamilyMember, DisplayMember, FamilyGroup } from '~/types/FamilyGroup';
 import type { ApiResponse } from '~/types/Api';
 import { useApi } from '~/composables/useApi';
@@ -51,15 +51,15 @@ export const useFamilyStore = defineStore('family', {
       if (!userStore.user?.family_group_id) return;
       
       // Check if we have cached data that's less than 5 minutes old
-      const cachedData = await Preferences.get({ key: 'family_members' });
-      const lastFetched = await Preferences.get({ key: 'family_members_last_fetched' });
+      const cachedData = browserStorage.get('family_members');
+      const lastFetched = browserStorage.get('family_members_last_fetched');
       
-      if (cachedData.value && lastFetched.value) {
-        const lastFetchTime = new Date(lastFetched.value).getTime();
+      if (cachedData && lastFetched) {
+        const lastFetchTime = new Date(lastFetched).getTime();
         const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
         
         if (lastFetchTime > fiveMinutesAgo) {
-          this.members = JSON.parse(cachedData.value);
+          this.members = JSON.parse(cachedData);
           return;
         }
       }
@@ -104,21 +104,16 @@ export const useFamilyStore = defineStore('family', {
         );
 
         this.members = filteredMembers;
-        this.membersLastFetched = new Date().toISOString();
+        const membersLastFetched = new Date().toISOString();
+        this.membersLastFetched = membersLastFetched;
 
         // Cache the data
-        await Preferences.set({ 
-          key: 'family_members', 
-          value: JSON.stringify(filteredMembers) 
-        });
-        await Preferences.set({ 
-          key: 'family_members_last_fetched', 
-          value: this.membersLastFetched 
-        });
+        browserStorage.set('family_members', JSON.stringify(filteredMembers));
+        browserStorage.set('family_members_last_fetched', membersLastFetched);
       } catch (err: unknown) {
         // Try to load from cache if available
-        if (cachedData.value) {
-          this.members = JSON.parse(cachedData.value);
+        if (cachedData) {
+          this.members = JSON.parse(cachedData);
           this.error = 'Using cached data - unable to fetch latest family members';
         } else {
           this.error = err instanceof Error ? err.message : 'Failed to fetch family members';
@@ -135,15 +130,15 @@ export const useFamilyStore = defineStore('family', {
       if (!userStore.user?.family_group_id) return;
 
       // Check if we have cached data that's less than 5 minutes old
-      const cachedData = await Preferences.get({ key: 'family_group' });
-      const lastFetched = await Preferences.get({ key: 'family_group_last_fetched' });
+      const cachedData = browserStorage.get('family_group');
+      const lastFetched = browserStorage.get('family_group_last_fetched');
       
-      if (cachedData.value && lastFetched.value) {
-        const lastFetchTime = new Date(lastFetched.value).getTime();
+      if (cachedData && lastFetched) {
+        const lastFetchTime = new Date(lastFetched).getTime();
         const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
         
         if (lastFetchTime > fiveMinutesAgo) {
-          this.familyGroup = JSON.parse(cachedData.value);
+          this.familyGroup = JSON.parse(cachedData);
           return;
         }
       }
@@ -156,21 +151,16 @@ export const useFamilyStore = defineStore('family', {
         const response = await api<ApiResponse<FamilyGroup>>(`/api/family-groups/${userStore.user.family_group_id}`);
 
         this.familyGroup = response.data;
-        this.groupLastFetched = new Date().toISOString();
+        const groupLastFetched = new Date().toISOString();
+        this.groupLastFetched = groupLastFetched;
 
         // Cache the data
-        await Preferences.set({ 
-          key: 'family_group', 
-          value: JSON.stringify(response.data) 
-        });
-        await Preferences.set({
-          key: 'family_group_last_fetched',
-          value: this.groupLastFetched
-        });
+        browserStorage.set('family_group', JSON.stringify(response.data));
+        browserStorage.set('family_group_last_fetched', groupLastFetched);
       } catch (err: unknown) {
         // Try to load from cache if available
-        if (cachedData.value) {
-          this.familyGroup = JSON.parse(cachedData.value);
+        if (cachedData) {
+          this.familyGroup = JSON.parse(cachedData);
           this.error = 'Using cached data - unable to fetch latest family group';
         } else {
           this.error = err instanceof Error ? err.message : 'Failed to fetch family group';
@@ -182,10 +172,10 @@ export const useFamilyStore = defineStore('family', {
     },
 
     clearCache() {
-      Preferences.remove({ key: 'family_members' });
-      Preferences.remove({ key: 'family_members_last_fetched' });
-      Preferences.remove({ key: 'family_group' });
-      Preferences.remove({ key: 'family_group_last_fetched' });
+      browserStorage.remove('family_members');
+      browserStorage.remove('family_members_last_fetched');
+      browserStorage.remove('family_group');
+      browserStorage.remove('family_group_last_fetched');
       this.members = [];
       this.membersLastFetched = null;
       this.groupLastFetched = null;

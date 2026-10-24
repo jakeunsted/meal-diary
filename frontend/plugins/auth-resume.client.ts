@@ -5,10 +5,9 @@ import { isSessionExpiredError } from '~/utils/httpError';
 import { runWithTokenRefreshLock } from '~/utils/tokenRefresh';
 
 /**
- * Refreshes expired access tokens when the Capacitor app returns to the
- * foreground. Mobile WebViews don't re-run route middleware on resume, so
- * without this the store can hold a stale access token until the next
- * navigation — and a failed proactive refresh would previously log the user out.
+ * Refreshes expired access tokens when the website returns to the foreground.
+ * A background tab does not re-run route middleware, so without this the store
+ * can hold a stale access token until the next navigation.
  */
 export default defineNuxtPlugin(() => {
   if (!import.meta.client) return;

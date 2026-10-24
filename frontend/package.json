@@ -8,20 +8,6 @@
   "scripts": {
     "build": "nuxt build",
     "dev": "nuxt dev --host 0.0.0.0",
-    "dev-ios": "CAPACITOR_DEV=true npx cap sync && npx cap open ios",
-    "dev-android": "CAPACITOR_DEV=true CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap sync && npx cap open android",
-    "cap:sync:dev": "CAPACITOR_DEV=true npx cap sync",
-    "cap:sync:dev:emulator": "CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap sync",
-    "cap:sync:dev:device": "CAPACITOR_SERVER_URL=http://192.168.1.100:3000 npx cap sync",
-    "cap:sync:prod": "npx cap sync",
-    "cap:copy:dev": "CAPACITOR_DEV=true npx cap copy",
-    "cap:copy:dev:emulator": "CAPACITOR_SERVER_URL=http://10.0.2.2:3000 npx cap copy",
-    "cap:copy:dev:device": "CAPACITOR_SERVER_URL=http://192.168.1.100:3000 npx cap copy",
-    "setup:icons": "node scripts/setup-app-icons.js",
-    "build:android": "npm run build && npm run setup:icons && npx cap sync && cd android && ./gradlew assembleDebug",
-    "build:android:release": "npm run build && npm run setup:icons && npx cap sync && cd android && ./gradlew assembleRelease",
-    "install:android": "cd android && ./gradlew installDebug",
-    "build:android:install": "npm run build:android && npm run install:android",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
@@ -33,14 +19,6 @@
     "test:e2e:record": "cypress run --record"
   },
   "dependencies": {
-    "@capacitor/android": "^8.5.2",
-    "@capacitor/clipboard": "^8.0.1",
-    "@capacitor/core": "^8.5.2",
-    "@capacitor/filesystem": "^8.1.3",
-    "@capacitor/ios": "^8.5.2",
-    "@capacitor/preferences": "^8.0.1",
-    "@capacitor/share": "^8.0.1",
-    "@capgo/capacitor-social-login": "^8.5.7",
     "@formkit/auto-animate": "^0.10.0",
     "@meal-diary/shared": "*",
     "@nuxtjs/i18n": "^9.5.6",
@@ -62,7 +40,6 @@
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
-    "@capacitor/cli": "^8.5.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
