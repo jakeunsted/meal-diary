@@ -16,7 +16,8 @@
     "reset-shopping-lists": "tsx scripts/resetShoppingLists.ts",
     "backfill-shopping-categories": "tsx scripts/backfillShoppingListCategories.ts",
     "seed": "tsx scripts/seed.ts",
-    "set-complimentary": "tsx scripts/setComplimentaryPremium.ts"
+    "set-complimentary": "tsx scripts/setComplimentaryPremium.ts",
+    "report-slow-queries": "tsx scripts/reportSlowQueries.ts"
   },
   "author": "Jake Unsted",
   "license": "ISC",
@@ -53,6 +54,7 @@
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.3",
+    "node-cron": "^4.6.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.23.0",

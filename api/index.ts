@@ -22,6 +22,7 @@ import { initializeOtelLogs, shutdownOtelLogs, emitLog } from './utils/otelLogs.
 import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.ts';
 import { errorHandlerMiddleware } from './middleware/errorHandler.middleware.ts';
 import { serverErrorLogMiddleware } from './middleware/serverErrorLog.middleware.ts';
+import { startSlowQuerySchedule } from './services/slowQuerySchedule.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -135,6 +136,8 @@ app.use(errorHandlerMiddleware);
         attributes: { category: 'startup' },
       });
     }
+
+    startSlowQuerySchedule();
 
     // Start the server
     app.listen(PORT, () => {
