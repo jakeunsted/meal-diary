@@ -5,7 +5,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['**/*.{ts,js}'],
-      exclude: ['**/__tests__/**', 'node_modules/**', 'coverage/**'],
+      exclude: ['**/__tests__/**', 'node_modules/**', 'coverage/**', 'dist/**'],
     },
     projects: [
       {
@@ -13,7 +13,7 @@ export default defineConfig({
         test: {
           name: 'unit',
           include: ['**/*.unit.test.ts'],
-          exclude: ['node_modules/**'],
+          exclude: ['node_modules/**', 'dist/**'],
         },
       },
     ],

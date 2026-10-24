@@ -7,6 +7,19 @@ export default defineConfig({
     environment: 'node',
     include: ['**/*.unit.test.ts'],
     exclude: ['node_modules/**'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'text-summary'],
+      include: ['**/*.{ts,tsx}'],
+      exclude: [
+        '**/*.unit.test.ts',
+        '**/__tests__/**',
+        'node_modules/**',
+        'coverage/**',
+        'android/**',
+        'ios/**',
+      ],
+    },
   },
   define: {
     __DEV__: 'true',

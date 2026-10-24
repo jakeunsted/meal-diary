@@ -4,6 +4,10 @@
 # Dependencies
 node_modules
 
+# Test coverage
+coverage/
+coverage-reports/
+
 # Build output
 api/dist
 .nuxt
