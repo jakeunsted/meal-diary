@@ -5,8 +5,6 @@ frontend/.nuxt
 frontend/.output
 frontend/.cache
 frontend/dist
-frontend/ios
-frontend/android
 .env
 .env.*
 docs
