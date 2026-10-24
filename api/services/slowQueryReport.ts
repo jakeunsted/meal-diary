@@ -4,6 +4,12 @@ export const SEQUENTIAL_SCAN_MIN_DELTA = 50;
 export const SEQUENTIAL_SCAN_MIN_LIVE_ROWS = 1000;
 export const SLOW_QUERY_SQL_MAX_LENGTH = 1500;
 
+/** Does not contain the slow-query marker, so a test post does not start an investigation. */
+export const SLOW_QUERY_WEBHOOK_TEST_MESSAGE = [
+  'webhook-test',
+  'The Meal Diary slow query Slack webhook is configured.',
+].join('\n');
+
 const IGNORED_QUERY_FRAGMENTS = [
   'pg_stat_statements',
   'pg_stat_activity',

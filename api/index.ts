@@ -23,6 +23,7 @@ import { errorTrackingMiddleware } from './middleware/errorTracking.middleware.t
 import { errorHandlerMiddleware } from './middleware/errorHandler.middleware.ts';
 import { serverErrorLogMiddleware } from './middleware/serverErrorLog.middleware.ts';
 import { startSlowQuerySchedule } from './services/slowQuerySchedule.ts';
+import { sendSlowQueryWebhookTest } from './services/slowQueryReportRunner.ts';
 
 const __dirname = path.resolve('./api');
 const app = express();
@@ -103,6 +104,19 @@ app.use('/sse', sseRoutes);
 // health check
 app.get('/health', (req: Request, res: Response) => {
   res.status(200).json({ message: 'OK' });
+});
+
+// Posts one test message through SLACK_SLOW_QUERY_WEBHOOK_URL.
+// Same Basic Auth as /api-docs. Hidden when those credentials are unset.
+app.post('/internal/slow-query-webhook-test', swaggerBasicAuth, async (_req: Request, res: Response) => {
+  try {
+    await sendSlowQueryWebhookTest();
+    res.status(200).json({ message: 'Slack accepted the test message' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to post test message';
+    const status = message.includes('SLACK_SLOW_QUERY_WEBHOOK_URL') ? 503 : 502;
+    res.status(status).json({ message });
+  }
 });
 
 // Swagger UI — Basic Auth via SWAGGER_USER / SWAGGER_PASSWORD (404 if unset)

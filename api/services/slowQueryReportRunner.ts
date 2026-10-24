@@ -7,6 +7,7 @@ import {
   formatSequentialScanMessage,
   formatSlowStatementMessage,
   isIgnoredQuery,
+  SLOW_QUERY_WEBHOOK_TEST_MESSAGE,
   type ActiveQuery,
   type StatementSnapshot,
   type StatementStat,
@@ -214,6 +215,14 @@ const lockAcquired = async (transaction: Transaction): Promise<boolean> => {
  * The first run stores a baseline and does not alert on cumulative stats.
  * A second API instance skips the run while the lock is held.
  */
+export const sendSlowQueryWebhookTest = async (): Promise<void> => {
+  const webhookUrl = process.env.SLACK_SLOW_QUERY_WEBHOOK_URL?.trim();
+  if (!webhookUrl) {
+    throw new Error('SLACK_SLOW_QUERY_WEBHOOK_URL is required');
+  }
+  await postToSlack(webhookUrl, SLOW_QUERY_WEBHOOK_TEST_MESSAGE);
+};
+
 export const reportSlowQueries = async (): Promise<void> => {
   const webhookUrl = process.env.SLACK_SLOW_QUERY_WEBHOOK_URL?.trim();
   if (!webhookUrl) {

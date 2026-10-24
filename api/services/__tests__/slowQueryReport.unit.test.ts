@@ -5,6 +5,7 @@ import {
   formatActiveQueryMessage,
   formatSequentialScanMessage,
   formatSlowStatementMessage,
+  SLOW_QUERY_WEBHOOK_TEST_MESSAGE,
   type StatementStat,
   type TableStat,
 } from '../slowQueryReport.ts';
@@ -115,6 +116,11 @@ describe('findSequentialScanTables', () => {
 });
 
 describe('Slack messages', () => {
+  it('keeps the webhook test text off the slow-query marker', () => {
+    expect(SLOW_QUERY_WEBHOOK_TEST_MESSAGE.startsWith('webhook-test')).toBe(true);
+    expect(SLOW_QUERY_WEBHOOK_TEST_MESSAGE.includes('slow-query')).toBe(false);
+  });
+
   it('prefixes each finding with slow-query and strips quoted literals', () => {
     const statementMessage = formatSlowStatementMessage({
       query: "SELECT * FROM users WHERE email = 'a@b.com'",
