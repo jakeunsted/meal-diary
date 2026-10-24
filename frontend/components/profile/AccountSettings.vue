@@ -97,7 +97,6 @@
 </template>
 
 <script setup>
-import { Capacitor } from '@capacitor/core';
 import { useUserStore } from '~/stores/user';
 import { useAuthStore } from '~/stores/auth';
 import LogoutButton from '~/components/profile/LogoutButton.vue';
@@ -117,12 +116,10 @@ const openCookiePreferences = () => {
 };
 
 // Download my data (GDPR Art. 15/20) — fetch the JSON bundle via the api
-// composable (carries the bearer token) and save it as a file. The browser
-// download (<a download>) does not work inside the Capacitor WebView, so on
-// native we write the file and open the share sheet instead.
+// composable (carries the bearer token) and save it as a file.
 const isExporting = ref(false);
 
-const saveOnWeb = (json, filename) => {
+const saveExport = (json, filename) => {
   const blob = new Blob([json], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
@@ -134,26 +131,6 @@ const saveOnWeb = (json, filename) => {
   URL.revokeObjectURL(url);
 };
 
-const saveOnNative = async (json, filename) => {
-  const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
-  const { Share } = await import('@capacitor/share');
-
-  // Cache dir is shareable and auto-cleaned by the OS
-  const written = await Filesystem.writeFile({
-    path: filename,
-    data: json,
-    directory: Directory.Cache,
-    encoding: Encoding.UTF8,
-  });
-
-  await Share.share({
-    title: 'Meal Diary data export',
-    text: t('Your Meal Diary data'),
-    url: written.uri,
-    dialogTitle: t('Save your data'),
-  });
-};
-
 const handleDownloadData = async () => {
   if (isExporting.value) return;
   isExporting.value = true;
@@ -163,12 +140,7 @@ const handleDownloadData = async () => {
     const bundle = response?.data ?? response;
     const json = JSON.stringify(bundle, null, 2);
     const filename = `meal-diary-export-${new Date().toISOString().slice(0, 10)}.json`;
-
-    if (Capacitor.isNativePlatform()) {
-      await saveOnNative(json, filename);
-    } else {
-      saveOnWeb(json, filename);
-    }
+    saveExport(json, filename);
   } catch (err) {
     showError(t('Failed to download your data'));
     console.error('Data export failed:', err);

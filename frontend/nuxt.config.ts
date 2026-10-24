@@ -20,7 +20,7 @@ export default defineNuxtConfig({
   transpile: ['@meal-diary/shared'],
   devtools: { enabled: false },
   devServer: {
-    host: '0.0.0.0', // Listen on all interfaces so Android emulator can connect
+    host: '0.0.0.0', // Listen on all interfaces so other devices and Docker can connect
     port: 3000,
   },
   runtimeConfig: {
@@ -30,7 +30,6 @@ export default defineNuxtConfig({
     public: {
       baseUrl: process.env.BASE_URL || 'https://api.mealdiary.co.uk',
       origin: process.env.ORIGIN,
-      googleClientId: process.env.GOOGLE_CLIENT_ID || '',
       appleServicesId: process.env.APPLE_SERVICES_ID || '',
       posthogPublicKey:
         process.env.POSTHOG_PUBLIC_KEY ||

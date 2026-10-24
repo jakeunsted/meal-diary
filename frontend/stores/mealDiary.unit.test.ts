@@ -4,9 +4,9 @@ import type { DailyMeal, MealDiarySyncConflict } from '~/types/MealDiary';
 
 const api = vi.fn();
 
-vi.mock('@capacitor/preferences', () => ({
-  Preferences: {
-    get: vi.fn(),
+vi.mock('~/utils/browserStorage', () => ({
+  browserStorage: {
+    get: vi.fn(() => null),
     set: vi.fn(),
     remove: vi.fn(),
   },

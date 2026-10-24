@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const preferences = vi.hoisted(() => ({
+const storage = vi.hoisted(() => ({
   get: vi.fn(),
   set: vi.fn(),
   remove: vi.fn(),
 }));
 
-vi.mock('@capacitor/preferences', () => ({
-  Preferences: preferences,
+vi.mock('~/utils/browserStorage', () => ({
+  browserStorage: storage,
 }));
 
 import { useRegister } from './useRegister';
@@ -24,15 +24,15 @@ const valid = {
 describe('useRegister', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    preferences.get.mockResolvedValue({ value: 'able-boat-calm' });
+    storage.get.mockReturnValue('able-boat-calm');
   });
 
   it('stores and clears the family invite code', async () => {
     const register = useRegister();
     await register.storeRegisterString('able-boat-calm');
-    expect(preferences.set).toHaveBeenCalledWith({ key: 'registerString', value: 'able-boat-calm' });
+    expect(storage.set).toHaveBeenCalledWith('registerString', 'able-boat-calm');
     await register.deleteRegisterString();
-    expect(preferences.remove).toHaveBeenCalledWith({ key: 'registerString' });
+    expect(storage.remove).toHaveBeenCalledWith('registerString');
   });
 
   it('rejects an incomplete form before calling the API', async () => {

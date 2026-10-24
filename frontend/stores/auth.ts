@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import type { User } from '../types/User';
 import type { ResolvedEntitlements } from '../types/Entitlements';
 import { hasFamilyGroup } from '~/composables/useAuth';
@@ -69,7 +69,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
     
-    // Save to Preferences
+    // Save to browser storage
     if (import.meta.client) {
       const authState: AuthState = {
         user: authData.user,
@@ -83,10 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
         family_group_id: authState.user?.family_group_id,
         hasFamilyGroup: hasFamilyGroup(authState.user)
       });
-      await Preferences.set({
-        key: 'authState',
-        value: JSON.stringify(authState)
-      });
+      browserStorage.set('authState', JSON.stringify(authState));
     }
   };
   
@@ -112,56 +109,20 @@ export const useAuthStore = defineStore('auth', () => {
     
     // Then clear storage
     if (import.meta.client) {
-      try {
-        console.log('[Auth Store] Removing auth state from storage');
-        await Preferences.remove({ key: 'authState' });
-      } catch (error) {
-        console.error('[Auth Store] Failed to clear auth state from storage:', error);
-      }
-      try {
-        await Preferences.remove({ key: 'mealDiary' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'shoppingList' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'userData' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'family_members' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'family_group' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'family_members_last_fetched' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'family_group_last_fetched' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'entitlements' });
-      } catch (error) {
-        // zzz
-      }
-      try {
-        await Preferences.remove({ key: 'entitlements_last_fetched' });
-      } catch (error) {
-        // zzz
+      console.log('[Auth Store] Removing auth state from storage');
+      for (const key of [
+        'authState',
+        'mealDiary',
+        'shoppingList',
+        'userData',
+        'family_members',
+        'family_group',
+        'family_members_last_fetched',
+        'family_group_last_fetched',
+        'entitlements',
+        'entitlements_last_fetched',
+      ]) {
+        browserStorage.remove(key);
       }
       useSubscriptionStore().clearCache();
     }
@@ -178,7 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
     initializeAuthPromise = (async () => {
     try {
       console.log('[Auth Store] Initializing auth state from storage');
-      const { value } = await Preferences.get({ key: 'authState' });
+      const value = browserStorage.get('authState');
       if (value) {
         const authState: AuthState = JSON.parse(value);
         console.log('[Auth Store] Found stored auth state:', {
@@ -294,12 +255,9 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = token;
     // update authState
     if (import.meta.client) {
-      const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
+      const authState: AuthState = JSON.parse(browserStorage.get('authState') || '{}');
       authState.accessToken = token;
-      await Preferences.set({
-        key: 'authState',
-        value: JSON.stringify(authState)
-      });
+      browserStorage.set('authState', JSON.stringify(authState));
     }
   };
 
@@ -307,12 +265,9 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = token;
     // update authState
     if (import.meta.client) {
-      const authState: AuthState = JSON.parse(await Preferences.get({ key: 'authState' }).then(res => res.value || '{}'));
+      const authState: AuthState = JSON.parse(browserStorage.get('authState') || '{}');
       authState.refreshToken = token;
-      await Preferences.set({
-        key: 'authState',
-        value: JSON.stringify(authState)
-      });
+      browserStorage.set('authState', JSON.stringify(authState));
     }
   };
 
@@ -338,15 +293,12 @@ export const useAuthStore = defineStore('auth', () => {
       
       // Update local storage
       if (import.meta.client) {
-        const { value } = await Preferences.get({ key: 'authState' });
+        const value = browserStorage.get('authState');
         if (value) {
           const authState: AuthState = JSON.parse(value);
           authState.accessToken = tokens.accessToken;
           authState.refreshToken = tokens.refreshToken;
-          await Preferences.set({
-            key: 'authState',
-            value: JSON.stringify(authState)
-          });
+          browserStorage.set('authState', JSON.stringify(authState));
         }
       }
     } catch (error) {

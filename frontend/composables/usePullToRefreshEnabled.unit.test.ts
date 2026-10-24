@@ -1,12 +1,4 @@
 import { describe, expect, it, vi } from 'vitest';
-
-vi.mock('@capacitor/core', () => ({
-  Capacitor: {
-    isNativePlatform: vi.fn(() => false),
-  },
-}));
-
-import { Capacitor } from '@capacitor/core';
 import { usePullToRefreshEnabled } from './usePullToRefreshEnabled';
 
 describe('usePullToRefreshEnabled', () => {
@@ -14,7 +6,7 @@ describe('usePullToRefreshEnabled', () => {
     expect(usePullToRefreshEnabled().pullToRefreshEnabled.value).toBe(false);
   });
 
-  it('turns on for a narrow viewport or a native app', () => {
+  it('follows a narrow viewport', () => {
     const listeners: Array<() => void> = [];
     const media = {
       matches: true,
@@ -31,10 +23,6 @@ describe('usePullToRefreshEnabled', () => {
     media.matches = false;
     listeners[0]();
     expect(enabled.pullToRefreshEnabled.value).toBe(false);
-
-    vi.mocked(Capacitor.isNativePlatform).mockReturnValue(true);
-    listeners[0]();
-    expect(enabled.pullToRefreshEnabled.value).toBe(true);
 
     flushUnmounted();
     expect(media.removeEventListener).toHaveBeenCalled();

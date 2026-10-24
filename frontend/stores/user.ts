@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import type { User } from '~/types/User'
 import { useAuthStore } from '~/stores/auth';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import { useApi } from '~/composables/useApi';
 
 interface UserState {
@@ -56,15 +56,11 @@ export const useUserStore = defineStore('user', {
         this.user = response;
         this.lastFetchTime = now;
 
-        // Save to Preferences
         if (import.meta.client) {
-          await Preferences.set({
-            key: 'userData',
-            value: JSON.stringify({
-              user: response,
-              lastFetchTime: now
-            })
-          });
+          browserStorage.set('userData', JSON.stringify({
+            user: response,
+            lastFetchTime: now
+          }));
         }
 
         return response;
@@ -79,7 +75,7 @@ export const useUserStore = defineStore('user', {
     async loadFromStorage() {
       if (import.meta.client) {
         try {
-          const { value } = await Preferences.get({ key: 'userData' });
+          const value = browserStorage.get('userData');
           if (value) {
             const { user, lastFetchTime } = JSON.parse(value);
             this.user = user;
@@ -88,7 +84,7 @@ export const useUserStore = defineStore('user', {
           }
         } catch (error) {
           console.error('Failed to load user data from storage:', error);
-          await Preferences.remove({ key: 'userData' });
+          browserStorage.remove('userData');
         }
       }
       return false;
@@ -113,13 +109,10 @@ export const useUserStore = defineStore('user', {
 
         // Update storage
         if (import.meta.client) {
-          await Preferences.set({
-            key: 'userData',
-            value: JSON.stringify({
-              user: response,
-              lastFetchTime: this.lastFetchTime
-            })
-          });
+          browserStorage.set('userData', JSON.stringify({
+            user: response,
+            lastFetchTime: this.lastFetchTime
+          }));
         }
 
         return response;
@@ -140,7 +133,7 @@ export const useUserStore = defineStore('user', {
       this.error = null;
       this.lastFetchTime = null;
       if (import.meta.client) {
-        Preferences.remove({ key: 'userData' });
+        browserStorage.remove('userData');
       }
     },
   },

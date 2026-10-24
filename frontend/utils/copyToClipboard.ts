@@ -1,6 +1,3 @@
-import { Capacitor } from '@capacitor/core';
-import { Clipboard } from '@capacitor/clipboard';
-
 interface CopyToClipboardOptions {
   sourceElement?: HTMLInputElement | HTMLTextAreaElement | null;
 }
@@ -63,11 +60,6 @@ export async function copyToClipboard(
 ): Promise<void> {
   if (!text) {
     throw new Error('Nothing to copy');
-  }
-
-  if (Capacitor.isNativePlatform()) {
-    await Clipboard.write({ string: text });
-    return;
   }
 
   // Selecting a visible field is the most reliable approach inside <dialog> modals.

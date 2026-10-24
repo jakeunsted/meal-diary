@@ -186,7 +186,7 @@ definePageMeta({
   middleware: 'auth'
 });
 
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import {
   SHOPPING_CATEGORIES,
   categorizeShoppingItemName,
@@ -234,7 +234,7 @@ const loadViewSettings = async () => {
     return;
   }
   try {
-    const { value } = await Preferences.get({ key: VIEW_SETTINGS_KEY });
+    const value = browserStorage.get(VIEW_SETTINGS_KEY);
     if (value) {
       const parsed = JSON.parse(value);
       hideCheckedItems.value = !!parsed.hideCheckedItems;
@@ -251,13 +251,10 @@ const persistViewSettings = async () => {
   if (!import.meta.client || !viewSettingsLoaded) {
     return;
   }
-  await Preferences.set({
-    key: VIEW_SETTINGS_KEY,
-    value: JSON.stringify({
-      hideCheckedItems: hideCheckedItems.value,
-      hideCheckboxes: hideCheckboxes.value
-    })
-  });
+  browserStorage.set(VIEW_SETTINGS_KEY, JSON.stringify({
+    hideCheckedItems: hideCheckedItems.value,
+    hideCheckboxes: hideCheckboxes.value
+  }));
 };
 
 watch([hideCheckedItems, hideCheckboxes], () => {
@@ -351,30 +348,11 @@ const categoryLabel = (category: ShoppingCategory): string => {
   }
 };
 
-const handleInputFocus = async (event: FocusEvent) => {
+const handleInputFocus = (event: FocusEvent) => {
   const { scrollToInput } = useMobileInputScroll();
   const target = event.target as HTMLElement | null;
   if (target) {
     scrollToInput(target);
-  }
-
-  if (import.meta.client) {
-    try {
-      const { Capacitor } = await import('@capacitor/core');
-      if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
-        setTimeout(() => {
-          if (target) {
-            target.scrollIntoView({
-              behavior: 'auto',
-              block: 'center',
-              inline: 'nearest'
-            });
-          }
-        }, 600);
-      }
-    } catch (error) {
-      console.warn('Could not import Capacitor:', error);
-    }
   }
 };
 
@@ -509,43 +487,6 @@ onMounted(async () => {
   };
 
   loadData();
-
-  if (import.meta.client) {
-    try {
-      const { Capacitor } = await import('@capacitor/core');
-      if (Capacitor.isNativePlatform() && /Android/i.test(navigator.userAgent)) {
-        let initialViewportHeight = window.innerHeight;
-
-        const handleViewportResize = () => {
-          const currentHeight = window.innerHeight;
-          const heightDifference = initialViewportHeight - currentHeight;
-
-          if (heightDifference > 150) {
-            const focusedElement = document.activeElement;
-            if (focusedElement && focusedElement.tagName === 'INPUT') {
-              setTimeout(() => {
-                focusedElement.scrollIntoView({
-                  behavior: 'auto',
-                  block: 'center',
-                  inline: 'nearest'
-                });
-              }, 100);
-            }
-          }
-
-          initialViewportHeight = currentHeight;
-        };
-
-        window.addEventListener('resize', handleViewportResize);
-
-        onUnmounted(() => {
-          window.removeEventListener('resize', handleViewportResize);
-        });
-      }
-    } catch (error) {
-      console.warn('Could not set up viewport resize listener:', error);
-    }
-  }
 });
 </script>
 

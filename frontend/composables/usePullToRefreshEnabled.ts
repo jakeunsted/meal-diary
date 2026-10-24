@@ -1,11 +1,8 @@
-import { Capacitor } from '@capacitor/core';
-
 const readPullToRefreshEnabled = (): boolean => {
   if (!import.meta.client) {
     return false;
   }
-  const mq = window.matchMedia('(max-width: 768px)');
-  return Capacitor.isNativePlatform() || mq.matches;
+  return window.matchMedia('(max-width: 768px)').matches;
 };
 
 export const usePullToRefreshEnabled = () => {
@@ -18,7 +15,7 @@ export const usePullToRefreshEnabled = () => {
     }
     const mq = window.matchMedia('(max-width: 768px)');
     const sync = () => {
-      pullToRefreshEnabled.value = Capacitor.isNativePlatform() || mq.matches;
+      pullToRefreshEnabled.value = mq.matches;
     };
     sync();
     mq.addEventListener('change', sync);

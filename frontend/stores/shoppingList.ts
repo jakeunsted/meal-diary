@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { Preferences } from '@capacitor/preferences';
+import { browserStorage } from '~/utils/browserStorage';
 import {
   categorizeShoppingItemName,
   DEFAULT_SHOPPING_CATEGORY,
@@ -83,18 +83,15 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async saveToLocalStorage() {
       if (import.meta.client) {
-        await Preferences.set({
-          key: 'shoppingList',
-          value: JSON.stringify({
-            shoppingList: this.shoppingList,
-            pendingChanges: this.pendingChanges
-          })
-        });
+        browserStorage.set('shoppingList', JSON.stringify({
+          shoppingList: this.shoppingList,
+          pendingChanges: this.pendingChanges
+        }));
       }
     },
 
     /**
-     * Debounce rapid Preferences writes (typing, reorder tweaks).
+     * Debounce rapid local storage writes (typing, reorder tweaks).
      */
     scheduleSaveToLocalStorage() {
       if (!import.meta.client) {
@@ -115,7 +112,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
      */
     async loadFromLocalStorage() {
       if (import.meta.client) {
-        const { value } = await Preferences.get({ key: 'shoppingList' });
+        const value = browserStorage.get('shoppingList');
         if (value) {
           try {
             const data = JSON.parse(value);
@@ -130,7 +127,7 @@ export const useShoppingListStore = defineStore('shoppingList', {
             return true;
           } catch (error) {
             console.error('Failed to parse stored shopping list:', error);
-            await Preferences.remove({ key: 'shoppingList' });
+            browserStorage.remove('shoppingList');
           }
         }
       }
