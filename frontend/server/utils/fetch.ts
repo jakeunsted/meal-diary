@@ -67,6 +67,7 @@ export async function apiFetch<T = any>(path: string, options: ApiFetchOptions =
       statusCode: response.status,
       message: error.message || `API error: ${response.statusText}`,
       code: error.code,
+      linkToken: error.linkToken,
       feature: error.feature,
       upgradeUrl: error.upgradeUrl,
       plan: error.plan,

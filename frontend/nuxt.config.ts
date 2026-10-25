@@ -25,6 +25,7 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     apiInternalUrl: process.env.API_INTERNAL_URL || '',
+    webhookSharedSecret: process.env.WEBHOOK_SHARED_SECRET || '',
     posthogKey: process.env.POSTHOG_KEY || '',
     posthogHost: process.env.POSTHOG_HOST || 'https://prxhg.mealdiary.co.uk',
     public: {

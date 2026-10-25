@@ -8,6 +8,11 @@ vi.mock('../../services/user.service.ts', () => ({
   deleteUserAccount: vi.fn(),
 }));
 
+vi.mock('../../services/emailChange.service.ts', () => ({
+  requestEmailChange: vi.fn(),
+  confirmEmailChange: vi.fn(),
+}));
+
 vi.mock('../../services/dataExport.service.ts', () => ({
   exportUserData: vi.fn(),
 }));

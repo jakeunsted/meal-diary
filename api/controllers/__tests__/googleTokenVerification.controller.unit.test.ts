@@ -20,6 +20,7 @@ vi.mock('../../utils/otelLogs.ts', () => ({
 import * as AuthService from '../../services/auth.service.ts';
 import { trackAuthLog } from '../../utils/otelLogs.ts';
 import { trackEvent } from '../../utils/posthog.ts';
+import { PasswordAccountLinkRequiredError } from '../../services/passwordLinkError.ts';
 import { verifyGoogleToken } from '../auth/googleTokenVerification.controller.ts';
 
 const mockResponse = () =>
@@ -109,5 +110,21 @@ describe('verifyGoogleToken', () => {
     const infrastructure = mockResponse();
     await verifyGoogleToken(mockRequest({ idToken: 'bad' }), infrastructure);
     expect(infrastructure.status).toHaveBeenCalledWith(500);
+  });
+
+  it('returns a password-link challenge instead of a session', async () => {
+    vi.mocked(AuthService.authenticateWithGoogleToken).mockRejectedValueOnce(
+      new PasswordAccountLinkRequiredError('raw-link')
+    );
+    const res = mockResponse();
+
+    await verifyGoogleToken(mockRequest({ idToken: 'google-token' }), res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'This email already has a password',
+      code: 'password_link_required',
+      linkToken: 'raw-link',
+    });
   });
 });

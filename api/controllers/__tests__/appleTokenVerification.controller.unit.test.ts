@@ -63,7 +63,8 @@ describe('verifyAppleToken', () => {
     expect(AuthService.authenticateWithAppleToken).toHaveBeenCalledWith(
       'apple-token',
       'nonce-1',
-      { givenName: '  Ada  ', familyName: undefined }
+      { givenName: '  Ada  ', familyName: undefined },
+      undefined
     );
     expect(res.status).toHaveBeenCalledWith(200);
     expect(trackEvent).toHaveBeenCalledWith('8', 'login_success', { auth_method: 'apple' });

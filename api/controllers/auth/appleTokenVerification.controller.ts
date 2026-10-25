@@ -3,6 +3,7 @@ import * as AuthService from '../../services/auth.service.ts';
 import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import { trackAuthLog } from '../../utils/otelLogs.ts';
 import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../utils/clientError.ts';
+import { PasswordAccountLinkRequiredError } from '../../services/passwordLinkError.ts';
 
 const optionalName = (value: unknown): string | undefined => {
   return typeof value === 'string' && value.trim() ? value : undefined;
@@ -16,7 +17,7 @@ const optionalName = (value: unknown): string | undefined => {
  */
 export const verifyAppleToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idToken, nonce, givenName, familyName } = req.body ?? {};
+    const { idToken, nonce, givenName, familyName, currentPassword } = req.body ?? {};
 
     if (!idToken || !nonce) {
       res.status(400).json({ message: 'ID token and nonce are required' });
@@ -36,7 +37,8 @@ export const verifyAppleToken = async (req: Request, res: Response): Promise<voi
         {
           givenName: optionalName(givenName),
           familyName: optionalName(familyName),
-        }
+        },
+        typeof currentPassword === 'string' ? currentPassword : undefined
       );
 
       await trackEvent(user.id.toString(), 'apple_token_verification_success', {
@@ -65,6 +67,15 @@ export const verifyAppleToken = async (req: Request, res: Response): Promise<voi
         refreshToken: tokens.refreshToken
       });
     } catch (serviceError) {
+      if (serviceError instanceof PasswordAccountLinkRequiredError) {
+        res.status(409).json({
+          message: serviceError.message,
+          code: serviceError.code,
+          linkToken: serviceError.linkToken,
+        });
+        return;
+      }
+
       if (isInfrastructureError(serviceError)) {
         res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
         return;
@@ -75,7 +86,10 @@ export const verifyAppleToken = async (req: Request, res: Response): Promise<voi
       let reason = 'server_error';
       let statusCode = 500;
 
-      if (errorMessage.includes('required')) {
+      if (errorMessage === 'Incorrect password') {
+        reason = 'invalid_credentials';
+        statusCode = 401;
+      } else if (errorMessage.includes('required')) {
         reason = 'missing_token';
         statusCode = 400;
       } else if (errorMessage.includes('not configured')) {

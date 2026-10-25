@@ -1,5 +1,5 @@
 import { Link, useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Linking,
@@ -51,17 +51,26 @@ export default function RegistrationStep1Screen() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<RegisterFieldErrors>(emptyRegisterErrors());
+  const inviteCode = typeof code === 'string' ? code.trim() : '';
+  const [inviteChoice, setInviteChoice] = useState<'pending' | 'confirmed' | 'skipped' | 'absent'>(
+    inviteCode ? 'pending' : 'absent'
+  );
 
   const passwordRequirementResults = useMemo(
     () => evaluatePassword(password),
     [password]
   );
 
-  useEffect(() => {
-    if (typeof code === 'string' && code.length > 0) {
-      void storeRegisterCode(code);
-    }
-  }, [code]);
+  const handleConfirmInvite = async () => {
+    if (!inviteCode) return;
+    await storeRegisterCode(inviteCode);
+    setInviteChoice('confirmed');
+  };
+
+  const handleSkipInvite = async () => {
+    await clearRegisterCode();
+    setInviteChoice('skipped');
+  };
 
   const handleOpenTerms = () => {
     void Linking.openURL(`${env.webUrl}/terms`);
@@ -92,7 +101,11 @@ export default function RegistrationStep1Screen() {
     setErrors(emptyRegisterErrors());
 
     try {
-      const familyGroupCode = (await getRegisterCode()) ?? undefined;
+      const familyGroupCode = inviteChoice === 'confirmed'
+        ? inviteCode
+        : inviteChoice === 'skipped'
+          ? undefined
+          : (await getRegisterCode()) ?? undefined;
 
       await registerUser({
         username: username.trim(),
@@ -161,6 +174,22 @@ export default function RegistrationStep1Screen() {
         </Heading>
 
         <Box className="gap-4">
+          {inviteChoice === 'pending' && inviteCode ? (
+            <Box className="gap-3 rounded-lg bg-surface p-4" testID="family-invite-prompt">
+              <Text className="text-ice text-center">{t('registration.familyInviteTitle')}</Text>
+              <Text className="text-ice text-center text-lg font-semibold" testID="family-invite-code">
+                {inviteCode}
+              </Text>
+              <Text className="text-ice/70 text-center text-sm">{t('registration.familyInviteBody')}</Text>
+              <Button onPress={handleConfirmInvite} testID="family-invite-confirm">
+                <ButtonText>{t('registration.familyInviteConfirm')}</ButtonText>
+              </Button>
+              <Button variant="outline" onPress={handleSkipInvite} testID="family-invite-skip">
+                <ButtonText>{t('registration.familyInviteSkip')}</ButtonText>
+              </Button>
+            </Box>
+          ) : null}
+
           <AppleSignInSection
             label={t('registration.signUpWithApple')}
             buttonType="sign-up"

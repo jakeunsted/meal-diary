@@ -241,6 +241,46 @@ describe('entitlements.service', () => {
 
       await expect(assertCanCreateRecipe(1, 10)).rejects.toBeInstanceOf(EntitlementRequiredError);
     });
+
+    it('counts members and recipes on the caller transaction', async () => {
+      vi.spyOn(Subscription, 'findOrCreate').mockResolvedValue([
+        {
+          dataValues: {
+            family_group_id: 1,
+            plan: 'free',
+            status: 'active',
+            is_complimentary: false,
+            trial_ends_at: null,
+            trial_expired_prompt_seen_at: null,
+            payment_failed_at: null,
+          },
+        },
+        false,
+      ] as never);
+
+      vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+        dataValues: { id: 1, created_by: 10 },
+      } as never);
+
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, username: 'owner' },
+      } as never);
+
+      const userCount = vi.spyOn(User, 'count').mockResolvedValue(1 as never);
+      const recipeCount = vi.spyOn(Recipe, 'count').mockResolvedValue(0 as never);
+      const transaction = { id: 'locked-family' };
+
+      await assertCanCreateRecipe(1, 10, transaction as never);
+
+      expect(userCount).toHaveBeenCalledWith({
+        where: { family_group_id: 1 },
+        transaction,
+      });
+      expect(recipeCount).toHaveBeenCalledWith({
+        where: { family_group_id: 1 },
+        transaction,
+      });
+    });
   });
 
   describe('prompts.customMealNamesLapse', () => {

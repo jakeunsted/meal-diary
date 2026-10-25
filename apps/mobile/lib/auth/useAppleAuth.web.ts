@@ -4,6 +4,7 @@ import { ApiError } from '@/lib/api/errors';
 import { isAppleWebCancel, signInWithAppleWeb } from '@/lib/auth/appleWeb';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { completeAppleSignIn } from '@/lib/auth/completeAppleSignIn';
+import { rethrowPasswordLink } from '@/lib/auth/passwordLink';
 import type { User } from '@/types/api';
 
 export function useAppleAuth() {
@@ -27,6 +28,7 @@ export function useAppleAuth() {
         setAuth
       );
     } catch (err) {
+      rethrowPasswordLink(err);
       if (isAppleWebCancel(err)) {
         throw err;
       }

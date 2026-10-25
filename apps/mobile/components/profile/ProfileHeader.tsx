@@ -8,7 +8,7 @@ import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { ApiError } from '@/lib/api/client';
-import { updateUserProfile } from '@/lib/queries/family';
+import { confirmEmailChange, requestEmailChange, updateUserProfile } from '@/lib/queries/family';
 import type { User } from '@/types/api';
 
 interface ProfileHeaderProps {
@@ -27,12 +27,24 @@ export function ProfileHeader({ user, isLoading, error }: ProfileHeaderProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [emailDraft, setEmailDraft] = useState('');
+  const [emailCode, setEmailCode] = useState('');
+  const [emailCodeSent, setEmailCodeSent] = useState(false);
+  const [isSavingEmail, setIsSavingEmail] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [emailSuccess, setEmailSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     setDisplayName(user?.username ?? '');
     setSaveError(null);
     setSaveSuccess(null);
   }, [user?.username]);
+
+  useEffect(() => {
+    setEmailDraft(user?.email ?? '');
+    setEmailCode('');
+    setEmailCodeSent(false);
+  }, [user?.email]);
 
   if (isLoading) {
     return (
@@ -54,6 +66,44 @@ export function ProfileHeader({ user, isLoading, error }: ProfileHeaderProps) {
 
   const trimmed = displayName.trim();
   const canSave = trimmed.length > 0 && trimmed !== user.username && !isSaving;
+  const trimmedEmail = emailDraft.trim().toLowerCase();
+  const canSendEmailCode =
+    !isSavingEmail &&
+    !emailCodeSent &&
+    trimmedEmail.length > 0 &&
+    trimmedEmail !== user.email.toLowerCase();
+  const canConfirmEmail = !isSavingEmail && emailCodeSent && emailCode.trim().length === 6;
+
+  const handleRequestEmailChange = async () => {
+    if (!canSendEmailCode) return;
+    setIsSavingEmail(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+    try {
+      await requestEmailChange(trimmedEmail);
+      setEmailCodeSent(true);
+      setEmailSuccess(t('profile.emailCodeSent'));
+    } catch (err) {
+      setEmailError(err instanceof ApiError ? err.message : t('profile.emailUpdateFailed'));
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
+
+  const handleConfirmEmailChange = async () => {
+    if (!canConfirmEmail) return;
+    setIsSavingEmail(true);
+    setEmailError(null);
+    setEmailSuccess(null);
+    try {
+      await confirmEmailChange(emailCode.trim());
+      setEmailSuccess(t('profile.emailUpdated'));
+    } catch (err) {
+      setEmailError(err instanceof ApiError ? err.message : t('profile.emailUpdateFailed'));
+    } finally {
+      setIsSavingEmail(false);
+    }
+  };
 
   const handleSaveDisplayName = async () => {
     if (!canSave) return;
@@ -98,12 +148,49 @@ export function ProfileHeader({ user, isLoading, error }: ProfileHeaderProps) {
         <Box>
           <Text className="text-ice/80 mb-2 text-sm">{t('profile.email')}</Text>
           <TextInput
-            className="rounded-lg bg-base px-4 py-3 text-ice/60"
-            value={user.email}
-            editable={false}
+            className="rounded-lg bg-base px-4 py-3 text-ice"
+            value={emailDraft}
+            onChangeText={setEmailDraft}
+            editable={!isSavingEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
             testID="profile-email-input"
           />
         </Box>
+        {emailCodeSent ? (
+          <Box>
+            <Text className="text-ice/80 mb-2 text-sm">{t('profile.confirmationCode')}</Text>
+            <TextInput
+              className="rounded-lg bg-base px-4 py-3 text-ice"
+              value={emailCode}
+              onChangeText={setEmailCode}
+              editable={!isSavingEmail}
+              keyboardType="number-pad"
+              testID="profile-email-code-input"
+            />
+          </Box>
+        ) : null}
+        {emailError ? (
+          <Text className="text-red-400 text-sm" testID="profile-email-error">
+            {emailError}
+          </Text>
+        ) : null}
+        {emailSuccess ? (
+          <Text className="text-green-400 text-sm" testID="profile-email-success">
+            {emailSuccess}
+          </Text>
+        ) : null}
+        <Button
+          variant="outline"
+          disabled={emailCodeSent ? !canConfirmEmail : !canSendEmailCode}
+          onPress={emailCodeSent ? handleConfirmEmailChange : handleRequestEmailChange}
+          testID={emailCodeSent ? 'profile-email-confirm' : 'profile-email-send-code'}
+        >
+          {isSavingEmail ? <ButtonSpinner color="#F1F5F9" /> : null}
+          <ButtonText>
+            {emailCodeSent ? t('profile.confirmEmail') : t('profile.sendConfirmationCode')}
+          </ButtonText>
+        </Button>
         {saveError ? (
           <Text className="text-red-400 text-sm" testID="profile-display-name-error">
             {saveError}

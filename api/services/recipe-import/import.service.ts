@@ -26,6 +26,7 @@ const mapImportedRecipeToCreatePayload = (
 });
 
 export const importRecipeFromUrl = async (input: ImportRecipeFromUrlInput) => {
+  // Fetch the page before createRecipe locks the family row for the recipe cap.
   const importedRecipe = await parseRecipeFromUrl(input.url);
 
   return createRecipe(mapImportedRecipeToCreatePayload(importedRecipe, input));

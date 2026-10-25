@@ -7,6 +7,8 @@ import RefreshToken from '../db/models/RefreshToken.model.ts';
 import OAuthExchangeCode from '../db/models/OAuthExchangeCode.model.ts';
 import { normalizeEmail } from '../utils/normalizeEmail.ts';
 import { HttpError } from '../utils/httpError.ts';
+import { PasswordAccountLinkRequiredError } from './passwordLinkError.ts';
+import type { OAuthLinkProfile } from './oauthLink.service.ts';
 
 const REFRESH_TOKEN_TTL_DAYS = 28;
 const OAUTH_EXCHANGE_TTL_MS = 2 * 60 * 1000;
@@ -120,11 +122,56 @@ const optionalName = (value: string | undefined): string | undefined => {
 };
 
 /**
+ * Attach a provider id to a password account only after the current password is proved.
+ * Without that proof, issue a short-lived link challenge instead of a session.
+ */
+const provePasswordOrChallenge = async (
+  user: User & UserAttributes,
+  input: {
+    provider: 'google' | 'apple';
+    subject: string;
+    email: string;
+    profile: OAuthLinkProfile;
+    currentPassword?: string;
+    updates: Partial<UserAttributes>;
+  }
+): Promise<void> => {
+  if (!user.password_hash) {
+    return;
+  }
+
+  if (!input.currentPassword) {
+    const { createOAuthLinkChallenge } = await import('./oauthLink.service.ts');
+    const linkToken = await createOAuthLinkChallenge({
+      userId: user.id,
+      provider: input.provider,
+      subject: input.subject,
+      email: input.email,
+      profile: input.profile,
+    });
+    throw new PasswordAccountLinkRequiredError(linkToken);
+  }
+
+  const matches = await bcrypt.compare(input.currentPassword, user.password_hash);
+  if (!matches) {
+    throw new Error('Incorrect password');
+  }
+
+  input.updates.password_hash = null;
+  await user.update(input.updates);
+  await RefreshToken.destroy({ where: { user_id: user.id } });
+};
+
+/**
  * Find or create user from Google profile data
  * @param {GoogleProfile} googleProfile - Google profile data
+ * @param {string} [currentPassword] - Current password, required to link a password account
  * @returns {Promise<User & UserAttributes>} The user object
  */
-export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Promise<User & UserAttributes> => {
+export const findOrCreateGoogleUser = async (
+  googleProfile: GoogleProfile,
+  currentPassword?: string
+): Promise<User & UserAttributes> => {
   const googleId = googleProfile.id;
   const email = googleProfile.email?.toLowerCase();
   const firstName = googleProfile.given_name;
@@ -160,7 +207,20 @@ export const findOrCreateGoogleUser = async (googleProfile: GoogleProfile): Prom
     if (!user.normalized_email) {
       updates.normalized_email = normalizeEmail(email);
     }
-    if (Object.keys(updates).length > 0) {
+    if (!user.google_id && user.password_hash) {
+      await provePasswordOrChallenge(user, {
+        provider: 'google',
+        subject: googleId,
+        email,
+        profile: {
+          givenName: firstName,
+          familyName: lastName,
+          avatarUrl,
+        },
+        currentPassword,
+        updates,
+      });
+    } else if (Object.keys(updates).length > 0) {
       await user.update(updates);
     }
   } else {
@@ -535,7 +595,10 @@ export const verifyGoogleIdToken = async (idToken: string): Promise<GoogleProfil
  * @returns {Promise<{ user: User & UserAttributes; tokens: TokenPair; isNewUser: boolean }>} User, tokens, and whether user is new
  * @throws {Error} If token is invalid or authentication fails
  */
-export const authenticateWithGoogleToken = async (idToken: string): Promise<{
+export const authenticateWithGoogleToken = async (
+  idToken: string,
+  currentPassword?: string
+): Promise<{
   user: User & UserAttributes;
   tokens: TokenPair;
   isNewUser: boolean;
@@ -548,7 +611,7 @@ export const authenticateWithGoogleToken = async (idToken: string): Promise<{
   const isNewUser = !existingUser;
 
   // Find or create user
-  const user = await findOrCreateGoogleUser(googleProfile);
+  const user = await findOrCreateGoogleUser(googleProfile, currentPassword);
 
   // Generate JWT tokens
   const tokens = await generateTokens(user.id);
@@ -684,7 +747,10 @@ export const verifyAppleIdToken = async (idToken: string, rawNonce: string): Pro
  * @param {AppleProfile} appleProfile - Verified Apple profile, plus optional name from the client
  * @returns {Promise<User & UserAttributes>} The user object
  */
-export const findOrCreateAppleUser = async (appleProfile: AppleProfile): Promise<User & UserAttributes> => {
+export const findOrCreateAppleUser = async (
+  appleProfile: AppleProfile,
+  currentPassword?: string
+): Promise<User & UserAttributes> => {
   const appleId = appleProfile.id;
   const email = appleProfile.email?.toLowerCase();
   const givenName = optionalName(appleProfile.givenName);
@@ -709,6 +775,17 @@ export const findOrCreateAppleUser = async (appleProfile: AppleProfile): Promise
     }
     if (!user.normalized_email && (user.email || email)) {
       updates.normalized_email = normalizeEmail(user.email || email || '');
+    }
+    if (!user.apple_id && user.password_hash) {
+      await provePasswordOrChallenge(user, {
+        provider: 'apple',
+        subject: appleId,
+        email: user.email,
+        profile: { givenName, familyName },
+        currentPassword,
+        updates,
+      });
+      return user;
     }
     if (Object.keys(updates).length > 0) {
       await user.update(updates);
@@ -755,7 +832,8 @@ export const findOrCreateAppleUser = async (appleProfile: AppleProfile): Promise
 export const authenticateWithAppleToken = async (
   idToken: string,
   rawNonce: string,
-  name: { givenName?: string; familyName?: string } = {}
+  name: { givenName?: string; familyName?: string } = {},
+  currentPassword?: string
 ): Promise<{
   user: User & UserAttributes;
   tokens: TokenPair;
@@ -772,10 +850,77 @@ export const authenticateWithAppleToken = async (
     : null;
   const isNewUser = !existingByAppleId && !existingByEmail;
 
-  const user = await findOrCreateAppleUser(appleProfile);
+  const user = await findOrCreateAppleUser(appleProfile, currentPassword);
   const tokens = await generateTokens(user.id);
 
   return { user, tokens, isNewUser };
+};
+
+/**
+ * Finish linking Google or Apple to a password account after the password is proved.
+ * Clears the password and that user's refresh tokens, then issues a new session.
+ */
+export const completeOAuthAccountLink = async (
+  linkToken: string,
+  password: string
+): Promise<{ user: User & UserAttributes; tokens: TokenPair }> => {
+  if (!linkToken || !password) {
+    throw new Error('Link token and password are required');
+  }
+
+  const { findActiveOAuthLinkChallenge, markOAuthLinkChallengeUsed } = await import('./oauthLink.service.ts');
+  const challenge = await findActiveOAuthLinkChallenge(linkToken);
+  if (!challenge) {
+    throw new Error('Invalid or expired link');
+  }
+
+  const user = await User.findByPk(challenge.user_id) as (User & UserAttributes) | null;
+  if (!user || !user.password_hash || user.email.toLowerCase() !== challenge.email.toLowerCase()) {
+    throw new Error('Invalid or expired link');
+  }
+
+  const matches = await bcrypt.compare(password, user.password_hash);
+  if (!matches) {
+    throw new Error('Incorrect password');
+  }
+
+  let profile: OAuthLinkProfile = {};
+  try {
+    profile = JSON.parse(challenge.profile_json) as OAuthLinkProfile;
+  } catch {
+    profile = {};
+  }
+
+  const updates: Partial<UserAttributes> = { password_hash: null };
+  if (challenge.provider === 'google') {
+    if (user.google_id && user.google_id !== challenge.subject) {
+      throw new Error('Email already linked to a different Google account');
+    }
+    updates.google_id = challenge.subject;
+    if (profile.avatarUrl && !user.avatar_url) {
+      updates.avatar_url = profile.avatarUrl;
+    }
+  } else if (challenge.provider === 'apple') {
+    if (user.apple_id && user.apple_id !== challenge.subject) {
+      throw new Error('Invalid or expired link');
+    }
+    updates.apple_id = challenge.subject;
+  } else {
+    throw new Error('Invalid or expired link');
+  }
+
+  if (profile.givenName && !user.first_name) {
+    updates.first_name = profile.givenName;
+  }
+  if (profile.familyName && !user.last_name) {
+    updates.last_name = profile.familyName;
+  }
+
+  await user.update(updates);
+  await RefreshToken.destroy({ where: { user_id: user.id } });
+  await markOAuthLinkChallengeUsed(challenge.id);
+  const tokens = await generateTokens(user.id);
+  return { user, tokens };
 };
 
 /**

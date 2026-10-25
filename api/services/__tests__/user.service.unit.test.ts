@@ -6,7 +6,7 @@ import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
 import Subscription from '../../db/models/Subscription.model.ts';
-import { createUser, deleteUserAccount, isValidEmail } from '../user.service.ts';
+import { createUser, deleteUserAccount, isValidEmail, updateUser } from '../user.service.ts';
 import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
 import { TrialRedemption } from '../../db/models/associations.ts';
@@ -26,6 +26,10 @@ beforeEach(() => {
   vi.restoreAllMocks();
   // No existing user with the same username/email
   vi.spyOn(User, 'findOne').mockResolvedValue(null);
+  vi.spyOn(sequelize, 'transaction').mockResolvedValue({
+    commit: vi.fn().mockResolvedValue(undefined),
+    rollback: vi.fn().mockResolvedValue(undefined),
+  } as never);
 });
 
 describe('isValidEmail', () => {
@@ -108,6 +112,10 @@ describe('createUser', () => {
     await expect(
       createUser({ ...validInput, family_group_code: 'invite-code' })
     ).rejects.toThrow(EntitlementRequiredError);
+
+    expect(FamilyGroup.findByPk).toHaveBeenCalledWith(1, expect.objectContaining({
+      lock: 'UPDATE',
+    }));
   });
 
   it('throws when the terms have not been accepted', async () => {
@@ -139,7 +147,8 @@ describe('createUser', () => {
         username: 'newuser',
         email: 'new@example.com',
         terms_accepted_at: expect.any(Date),
-      })
+      }),
+      expect.objectContaining({ transaction: expect.anything() })
     );
     expect(result.user).not.toHaveProperty('password_hash');
   });
@@ -150,6 +159,28 @@ describe('createUser', () => {
     await expect(createUser(validInput)).rejects.toThrow(
       'User with this username or email already exists'
     );
+  });
+});
+
+describe('updateUser', () => {
+  it('does not write an email supplied in the payload', async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const row = {
+      id: 1,
+      username: 'ada',
+      email: 'ada@example.com',
+      update,
+      toJSON() {
+        return { id: 1, username: 'ada', email: 'ada@example.com' };
+      },
+    };
+    vi.spyOn(User, 'findByPk').mockResolvedValue(row as never);
+
+    await updateUser(1, { username: 'ada', email: 'attacker@example.com' });
+
+    expect(update).toHaveBeenCalled();
+    expect(update.mock.calls[0][0]).not.toHaveProperty('email');
+    expect(update.mock.calls[0][0]).not.toHaveProperty('normalized_email');
   });
 });
 

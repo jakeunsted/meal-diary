@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import { trackEvent, getDistinctId } from '../../utils/posthog.ts';
 import * as UserService from '../../services/user.service.ts';
+import * as EmailChangeService from '../../services/emailChange.service.ts';
 import * as DataExportService from '../../services/dataExport.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
 import { routeParamInt } from '../../utils/routeParam.ts';
@@ -187,5 +188,56 @@ export const exportOwnData = async (req: Request, res: Response) => {
     }
     console.error('Error exporting user data:', error);
     return res.status(500).json({ message: 'Failed to export data' });
+  }
+};
+
+const emailChangeStatus = (message: string): number => {
+  if (message.includes('not found')) return 404;
+  if (message.includes('already in use')) return 409;
+  if (message.includes('Failed to send')) return 502;
+  return 400;
+};
+
+const ownUserId = (req: Request): number => {
+  return (req.user as { dataValues: { id: number } }).dataValues.id;
+};
+
+export const requestOwnEmailChange = async (req: Request, res: Response) => {
+  try {
+    const email = req.body?.email;
+    if (typeof email !== 'string' || !email.trim()) {
+      return res.status(400).json({ message: 'A valid email address is required' });
+    }
+
+    await EmailChangeService.requestEmailChange(ownUserId(req), email);
+    return res.status(200).json({ message: 'Confirmation code sent' });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update email';
+    const status = emailChangeStatus(message);
+    if (status === 400 || status === 404 || status === 409 || status === 502) {
+      return res.status(status).json({ message });
+    }
+    console.error('Error requesting email change:', error);
+    return res.status(500).json({ message: 'Failed to update email' });
+  }
+};
+
+export const confirmOwnEmailChange = async (req: Request, res: Response) => {
+  try {
+    const code = req.body?.code;
+    if (typeof code !== 'string' || !code.trim()) {
+      return res.status(400).json({ message: 'Confirmation code is invalid or has expired' });
+    }
+
+    const user = await EmailChangeService.confirmEmailChange(ownUserId(req), code.trim());
+    return res.status(200).json(user);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update email';
+    const status = emailChangeStatus(message);
+    if (status === 400 || status === 404 || status === 409 || status === 502) {
+      return res.status(status).json({ message });
+    }
+    console.error('Error confirming email change:', error);
+    return res.status(500).json({ message: 'Failed to update email' });
   }
 };

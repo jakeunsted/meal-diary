@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { isPasswordValid, isValidEmail } from '@meal-diary/shared';
 import sequelize from '../db/models/index.ts';
 import User, { type UserAttributes } from '../db/models/User.model.ts';
@@ -128,41 +128,53 @@ export const createUser = async (userData: CreateUserData): Promise<{
   // Invite code only — never trust a numeric family_group_id from the client
   const resolvedFamilyGroupId = await resolveFamilyGroupId(family_group_code);
 
-  if (resolvedFamilyGroupId) {
-    const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId);
-    if (!familyGroup) {
-      throw new Error('Family group not found');
-    }
-    await assertCanAddFamilyMember(
-      resolvedFamilyGroupId,
-      Number(familyGroup.dataValues.created_by)
-    );
-  }
-
   // Check if user already exists
   if (await userExists(username, email)) {
     throw new Error('User with this username or email already exists');
   }
 
-  // Hash password
+  // Hash before taking the family lock so the lock is not held during bcrypt
   const hashedPassword = await hashPassword(password);
 
-  // Create new user
-  const newUser = await User.create({
-    username,
-    email: email.toLowerCase(),
-    normalized_email: normalizeEmail(email),
-    password_hash: hashedPassword,
-    first_name,
-    last_name,
-    family_group_id: resolvedFamilyGroupId,
-    terms_accepted_at: new Date()
-  }) as User & UserAttributes;
+  const transaction = await sequelize.transaction();
 
-  return {
-    user: sanitizeUser(newUser),
-    familyGroupId: resolvedFamilyGroupId || null
-  };
+  try {
+    if (resolvedFamilyGroupId) {
+      const familyGroup = await FamilyGroup.findByPk(resolvedFamilyGroupId, {
+        transaction,
+        lock: Transaction.LOCK.UPDATE,
+      });
+      if (!familyGroup) {
+        throw new Error('Family group not found');
+      }
+      await assertCanAddFamilyMember(
+        resolvedFamilyGroupId,
+        Number(familyGroup.dataValues.created_by),
+        transaction
+      );
+    }
+
+    const newUser = await User.create({
+      username,
+      email: email.toLowerCase(),
+      normalized_email: normalizeEmail(email),
+      password_hash: hashedPassword,
+      first_name,
+      last_name,
+      family_group_id: resolvedFamilyGroupId,
+      terms_accepted_at: new Date()
+    }, { transaction }) as User & UserAttributes;
+
+    await transaction.commit();
+
+    return {
+      user: sanitizeUser(newUser),
+      familyGroupId: resolvedFamilyGroupId || null
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
 };
 
 /**
@@ -191,7 +203,8 @@ export const getUserById = async (userId: number): Promise<SanitizedUser> => {
  * @throws {Error} If user not found or validation fails
  */
 export const updateUser = async (userId: number, userData: UpdateUserData): Promise<SanitizedUser> => {
-  const { username, email, first_name, last_name, avatar_url } = userData;
+  // Email is applied only after the new mailbox confirms a single-use code.
+  const { username, first_name, last_name, avatar_url } = userData;
 
   const user = await User.findByPk(userId) as User & UserAttributes | null;
 
@@ -207,23 +220,9 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     }
   }
 
-  // Check if email is being changed and already exists
-  if (email && email.toLowerCase() !== user.email) {
-    if (!isValidEmail(email)) {
-      throw new Error('A valid email address is required');
-    }
-
-    const existingEmail = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (existingEmail) {
-      throw new Error('Email already in use');
-    }
-  }
-
   // Membership changes only via family-group join/leave/create/transfer — never via mass assignment
   await user.update({
     username,
-    email: email?.toLowerCase(),
-    normalized_email: email ? normalizeEmail(email) : undefined,
     first_name,
     last_name,
     avatar_url

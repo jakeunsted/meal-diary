@@ -1,6 +1,7 @@
 import express from 'express';
 import * as userController from '../controllers/user/user.controller.ts';
 import { authenticateToken, requireSelf } from '../middleware/auth.middleware.ts';
+import { passwordResetLimiter } from '../middleware/rateLimit.middleware.ts';
 
 const router = express.Router();
 
@@ -248,6 +249,22 @@ router.delete('/me', authenticateToken, async (req, res, next) => {
  *       500:
  *         description: Failed to export data
  */
+router.post('/me/email-change', authenticateToken, passwordResetLimiter, async (req, res, next) => {
+  try {
+    await userController.requestOwnEmailChange(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/me/email-change/confirm', authenticateToken, passwordResetLimiter, async (req, res, next) => {
+  try {
+    await userController.confirmOwnEmailChange(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
 router.get('/me/export', authenticateToken, async (req, res, next) => {
   try {
     await userController.exportOwnData(req, res);

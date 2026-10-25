@@ -1,4 +1,5 @@
 import type { EntitlementFeature, SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
+import type { Transaction } from 'sequelize';
 import { PAYMENT_FAILED_BANNER_DAYS, PLANS } from '../constants/subscriptionPlans.ts';
 import type { PlanLimits } from '../constants/subscriptionPlans.ts';
 import {
@@ -211,7 +212,8 @@ export const getOrCreateSubscription = async (
 
 export const resolveEntitlements = async (
   familyGroupId: number,
-  requestingUserId: number
+  requestingUserId: number,
+  transaction?: Transaction
 ): Promise<ResolvedEntitlements> => {
   const subscriptionRecord = await getOrCreateSubscription(familyGroupId);
   const applyResult = await applyMealNamesResetIfDue(familyGroupId, {
@@ -229,10 +231,16 @@ export const resolveEntitlements = async (
   const limits = resolveLimits(subscription);
   const effectivePlan: SubscriptionPlan = isPremiumSubscription(subscription) ? 'premium' : 'free';
 
-  const [familyMemberCount, recipeCount] = await Promise.all([
-    User.count({ where: { family_group_id: familyGroupId } }),
-    Recipe.count({ where: { family_group_id: familyGroupId } }),
-  ]);
+  const usageWhere = { family_group_id: familyGroupId };
+  const [familyMemberCount, recipeCount] = transaction
+    ? [
+        await User.count({ where: usageWhere, transaction }),
+        await Recipe.count({ where: usageWhere, transaction }),
+      ]
+    : await Promise.all([
+        User.count({ where: usageWhere }),
+        Recipe.count({ where: usageWhere }),
+      ]);
 
   const trialAvailable = isOwner && familyGroup
     ? await isTrialEligible(
@@ -280,9 +288,10 @@ export const resolveEntitlements = async (
 
 export const assertCanAddFamilyMember = async (
   familyGroupId: number,
-  requestingUserId: number
+  requestingUserId: number,
+  transaction?: Transaction
 ): Promise<ResolvedEntitlements> => {
-  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId);
+  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId, transaction);
 
   if (entitlements.usage.familyMemberCount >= entitlements.limits.maxFamilyMembers) {
     throw new EntitlementRequiredError('family_members', entitlements.plan);
@@ -293,9 +302,10 @@ export const assertCanAddFamilyMember = async (
 
 export const assertCanCreateRecipe = async (
   familyGroupId: number,
-  requestingUserId: number
+  requestingUserId: number,
+  transaction?: Transaction
 ): Promise<ResolvedEntitlements> => {
-  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId);
+  const entitlements = await resolveEntitlements(familyGroupId, requestingUserId, transaction);
 
   if (
     Number.isFinite(entitlements.limits.maxRecipes) &&

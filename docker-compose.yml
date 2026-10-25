@@ -26,6 +26,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
+      # WEBHOOK_SHARED_SECRET must match the frontend env file or family live updates are rejected.
       - ./api/.env
     ports:
       - "3001:3001"
@@ -49,6 +50,7 @@ services:
       - root_node_modules:/app/node_modules
     working_dir: /app
     env_file:
+      # WEBHOOK_SHARED_SECRET must match the API env file or family live updates are rejected.
       - ./frontend/.env
     command: sh -c "sh scripts/docker-install-frontend.sh && npm run dev --workspace=nuxt-app"
 

@@ -10,7 +10,7 @@ interface AppleAuthResponse {
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event);
-    const { idToken, nonce, givenName, familyName } = body ?? {};
+    const { idToken, nonce, givenName, familyName, currentPassword } = body ?? {};
 
     if (!idToken || !nonce) {
       throw createError({
@@ -26,6 +26,7 @@ export default defineEventHandler(async (event) => {
         nonce,
         ...(givenName ? { givenName } : {}),
         ...(familyName ? { familyName } : {}),
+        ...(currentPassword ? { currentPassword } : {}),
       }),
     }, event);
 
@@ -34,7 +35,12 @@ export default defineEventHandler(async (event) => {
     if (error.statusCode) {
       throw createError({
         statusCode: error.statusCode,
-        message: error.message || 'Token verification failed'
+        message: error.message || 'Token verification failed',
+        data: {
+          code: error.code,
+          linkToken: error.linkToken,
+          message: error.message,
+        },
       });
     }
 

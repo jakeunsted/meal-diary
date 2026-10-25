@@ -4,6 +4,7 @@ import { env } from '@/constants/env';
 import { ApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { completeGoogleSignIn } from '@/lib/auth/completeGoogleSignIn';
+import { rethrowPasswordLink } from '@/lib/auth/passwordLink';
 import { isNativeGoogleSignInAvailable } from '@/lib/auth/isNativeGoogleSignInAvailable';
 import type { User } from '@/types/api';
 
@@ -101,6 +102,7 @@ export function useGoogleAuth() {
 
       return await completeGoogleSignIn(idToken, setAuth);
     } catch (err) {
+      rethrowPasswordLink(err);
       if (
         isErrorWithCode &&
         statusCodes &&

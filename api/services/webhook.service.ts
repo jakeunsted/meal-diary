@@ -81,9 +81,18 @@ export const sendDailyMealWebhook = async (
     const eventData = { dailyMeal: payload };
     emitFamilyEvent(familyGroupId, eventType, eventData);
 
+    const webhookSecret = process.env.WEBHOOK_SHARED_SECRET;
+    if (!webhookSecret) {
+      console.error('Error sending webhook: WEBHOOK_SHARED_SECRET is not defined');
+      return;
+    }
+
     const response = await fetch(webHookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-webhook-secret': webhookSecret,
+      },
       body: JSON.stringify({
         eventType,
         familyGroupId,
@@ -124,9 +133,18 @@ export const sendShoppingListItemWebhook = async (
 
     emitFamilyEvent(familyGroupId, eventType, eventData);
 
+    const webhookSecret = process.env.WEBHOOK_SHARED_SECRET;
+    if (!webhookSecret) {
+      console.error('Error sending webhook: WEBHOOK_SHARED_SECRET is not defined');
+      return;
+    }
+
     const response = await fetch(webHookUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-webhook-secret': webhookSecret,
+      },
       body: JSON.stringify({
         eventType,
         familyGroupId,

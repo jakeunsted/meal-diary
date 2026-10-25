@@ -1,6 +1,7 @@
-import { Recipe, RecipeIngredient, DailyMeal, DailyMealEntry } from '../db/models/associations.ts';
-import { Op } from 'sequelize';
+import { Recipe, RecipeIngredient, DailyMeal, DailyMealEntry, FamilyGroup } from '../db/models/associations.ts';
+import { Op, Transaction } from 'sequelize';
 import sequelize from '../db/models/index.ts';
+import { assertCanCreateRecipe } from './entitlements.service.ts';
 
 export interface IngredientInput {
   id?: number;
@@ -73,6 +74,16 @@ export const createRecipe = async (input: CreateRecipeInput): Promise<Recipe> =>
   const transaction = await sequelize.transaction();
 
   try {
+    const familyGroup = await FamilyGroup.findByPk(input.family_group_id, {
+      transaction,
+      lock: Transaction.LOCK.UPDATE,
+    });
+    if (!familyGroup) {
+      throw new Error('Family group not found');
+    }
+
+    await assertCanCreateRecipe(input.family_group_id, input.created_by, transaction);
+
     const recipe = await Recipe.create({
       family_group_id: input.family_group_id,
       created_by: input.created_by,

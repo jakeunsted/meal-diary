@@ -210,7 +210,11 @@ const assertFamilyOwner = async (
     throw new Error('Family group not found');
   }
 
-  if (familyGroup.dataValues.created_by !== userId) {
+  const user = await User.findByPk(userId);
+  if (
+    familyGroup.dataValues.created_by !== userId ||
+    user?.dataValues.family_group_id !== familyGroupId
+  ) {
     throw new BillingAuthorizationError();
   }
 

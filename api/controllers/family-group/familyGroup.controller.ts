@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
+import { Transaction } from 'sequelize';
 import { FamilyGroup, User, Subscription } from '../../db/models/associations.ts';
+import sequelize from '../../db/models/index.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
@@ -35,6 +37,11 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
+    const user = await User.findByPk(created_by);
+    if (user?.dataValues.family_group_id) {
+      return res.status(409).json({ message: 'You already belong to a family group' });
+    }
+
     // Generate a unique random identifier
     let random_identifier = generateRandomIdentifier();
     let isUnique = false;
@@ -54,11 +61,8 @@ export const createFamilyGroup = async (req: Request, res: Response) => {
       random_identifier
     });
 
-    // if user does not have a family group, add them to this new family group
-    const user = await User.findByPk(created_by);
-    if (!user?.dataValues.family_group_id) {
-      await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: created_by } });
-    }
+    // The caller had no family when this request started, so this group is their membership.
+    await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: created_by } });
 
     await Subscription.create({ family_group_id: Number(familyGroup.dataValues.id) });
 
@@ -113,12 +117,40 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Family group not found' });
     }
 
+    const currentUser = await User.findByPk(user_id);
+    const currentFamilyId = currentUser?.dataValues.family_group_id;
+    if (currentFamilyId) {
+      const currentFamily = await FamilyGroup.findByPk(currentFamilyId);
+      if (currentFamily?.dataValues.created_by === user_id) {
+        return res.status(409).json({
+          message: 'Transfer ownership of your current family before joining another family',
+        });
+      }
+    }
+
+    const transaction = await sequelize.transaction();
     try {
+      const lockedFamily = await FamilyGroup.findByPk(Number(familyGroup.dataValues.id), {
+        transaction,
+        lock: Transaction.LOCK.UPDATE,
+      });
+      if (!lockedFamily) {
+        throw new Error('Family group not found');
+      }
+
       await EntitlementsService.assertCanAddFamilyMember(
-        Number(familyGroup.dataValues.id),
-        user_id
+        Number(lockedFamily.dataValues.id),
+        user_id,
+        transaction
       );
+
+      await User.update(
+        { family_group_id: lockedFamily.dataValues.id },
+        { where: { id: user_id }, transaction }
+      );
+      await transaction.commit();
     } catch (error) {
+      await transaction.rollback();
       if (handleEntitlementError(error, res)) {
         await trackEvent(user_id.toString(), 'family_group_join_failure', {
           reason: 'member_limit',
@@ -127,8 +159,6 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
       }
       throw error;
     }
-
-    await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: user_id } });
 
     // Track successful family group join
     await trackEvent(user_id.toString(), 'family_group_join_success', {

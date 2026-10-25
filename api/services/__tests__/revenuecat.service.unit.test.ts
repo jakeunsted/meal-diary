@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Subscription, SubscriptionEvent } from '../../db/models/associations.ts';
+import { FamilyGroup, Subscription, SubscriptionEvent, User } from '../../db/models/associations.ts';
 import * as entitlementsService from '../entitlements.service.ts';
 import {
   getAppUserId,
   handleRevenueCatWebhook,
+  linkRevenueCatUser,
   reprocessLatestRevenueCatEvent,
   syncSubscriptionFromRevenueCat,
 } from '../revenuecat.service.ts';
@@ -13,6 +14,32 @@ describe('revenuecat.service', () => {
     vi.restoreAllMocks();
     process.env.REVENUECAT_ENTITLEMENT_ID = 'family_plus';
     process.env.REVENUECAT_WEBHOOK_SECRET = 'rc_webhook_secret';
+  });
+
+  describe('linkRevenueCatUser', () => {
+    it('rejects an owner who is no longer a member and links a current member', async () => {
+      vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+        dataValues: { id: 4, created_by: 10 },
+      } as never);
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, family_group_id: 9 },
+      } as never);
+
+      await expect(linkRevenueCatUser(4, 10)).rejects.toThrow(
+        'Only the family owner can manage billing'
+      );
+
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: { id: 10, family_group_id: 4 },
+      } as never);
+      const update = vi.fn().mockResolvedValue(undefined);
+      vi.spyOn(entitlementsService, 'getOrCreateSubscription').mockResolvedValue({
+        update,
+      } as never);
+
+      await expect(linkRevenueCatUser(4, 10)).resolves.toBe('fg_4');
+      expect(update).toHaveBeenCalledWith({ revenuecat_app_user_id: 'fg_4' });
+    });
   });
 
   describe('getAppUserId', () => {

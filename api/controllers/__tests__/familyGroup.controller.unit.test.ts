@@ -9,6 +9,18 @@ const userUpdate = vi.fn();
 const userFindAll = vi.fn();
 const subscriptionCreate = vi.fn();
 const shoppingListCreate = vi.fn();
+const { transaction } = vi.hoisted(() => ({
+  transaction: {
+    commit: vi.fn(),
+    rollback: vi.fn(),
+  },
+}));
+
+vi.mock('../../db/models/index.ts', () => ({
+  default: {
+    transaction: vi.fn(async () => transaction),
+  },
+}));
 
 vi.mock('../../db/models/associations.ts', () => ({
   FamilyGroup: {
@@ -96,7 +108,10 @@ describe('familyGroup.controller', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     familyGroupFindOne.mockResolvedValue(null);
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 4, created_by: 99 } });
     familyGroupCreate.mockResolvedValue({ dataValues: { id: 4 } });
+    transaction.commit.mockResolvedValue(undefined);
+    transaction.rollback.mockResolvedValue(undefined);
     userFindByPk.mockResolvedValue({ dataValues: { family_group_id: null } });
     userUpdate.mockResolvedValue([1]);
     subscriptionCreate.mockResolvedValue({});
@@ -121,6 +136,12 @@ describe('familyGroup.controller', () => {
     const unauthorized = mockResponse();
     await createFamilyGroup(mockRequest({ name: 'Home' }, {}, null), unauthorized);
     expect(unauthorized.status).toHaveBeenCalledWith(401);
+
+    userFindByPk.mockResolvedValueOnce({ dataValues: { family_group_id: 10 } });
+    const conflict = mockResponse();
+    await createFamilyGroup(mockRequest({ name: 'Second' }), conflict);
+    expect(conflict.status).toHaveBeenCalledWith(409);
+    expect(familyGroupCreate).toHaveBeenCalledTimes(1);
   });
 
   it('joins a family group and maps missing, unknown, and member-limit responses', async () => {
@@ -137,16 +158,30 @@ describe('familyGroup.controller', () => {
     const joined = mockResponse();
     await joinFamilyGroup(mockRequest({ random_identifier: 'able-boat-calm' }), joined);
     expect(joined.status).toHaveBeenCalledWith(200);
+    expect(familyGroupFindByPk).toHaveBeenCalledWith(4, expect.objectContaining({
+      transaction,
+      lock: 'UPDATE',
+    }));
+    expect(EntitlementsService.assertCanAddFamilyMember).toHaveBeenCalledWith(4, 5, transaction);
     expect(userUpdate).toHaveBeenCalledWith(
       { family_group_id: 4 },
-      { where: { id: 5 } }
+      expect.objectContaining({ where: { id: 5 }, transaction })
     );
+    expect(transaction.commit).toHaveBeenCalled();
 
     vi.mocked(EntitlementsService.assertCanAddFamilyMember).mockRejectedValueOnce(new Error('limit'));
     vi.mocked(handleEntitlementError).mockReturnValueOnce(true);
     const limited = mockResponse();
     await joinFamilyGroup(mockRequest({ random_identifier: 'able-boat-calm' }), limited);
     expect(trackEvent).toHaveBeenCalledWith('5', 'family_group_join_failure', { reason: 'member_limit' });
+
+    userFindByPk.mockResolvedValue({ dataValues: { id: 5, family_group_id: 10 } });
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 10, created_by: 5 } });
+    userUpdate.mockClear();
+    const stillOwner = mockResponse();
+    await joinFamilyGroup(mockRequest({ random_identifier: 'able-boat-calm' }), stillOwner);
+    expect(stillOwner.status).toHaveBeenCalledWith(409);
+    expect(userUpdate).not.toHaveBeenCalled();
   });
 
   it('returns a family group only to its members', async () => {

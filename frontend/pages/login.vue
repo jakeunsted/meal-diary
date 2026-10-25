@@ -50,8 +50,12 @@
 
         <div class="divider">{{ $t('OR') }}</div>
 
+        <div v-if="oauthLinkToken" class="alert alert-info" data-testid="oauth-link-alert">
+          <span>{{ $t('This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.') }}</span>
+        </div>
+
         <form @submit.prevent="handleLogin" class="space-y-4" data-testid="login-form">
-          <div class="form-control">
+          <div v-if="!oauthLinkToken" class="form-control">
             <label class="label">
               <span class="label-text">{{ $t('Email') }}</span>
             </label>
@@ -98,7 +102,7 @@
             :disabled="isLoading"
           >
             <span v-if="isLoading" class="loading loading-spinner"></span>
-            <span v-else>{{ $t('Login') }}</span>
+            <span v-else>{{ oauthLinkToken ? $t('Link account') : $t('Login') }}</span>
           </button>
           <div class="text-center">
             <p>
@@ -124,9 +128,9 @@ definePageMeta({
 
 import LegalLinks from '~/components/LegalLinks.vue';
 
-const { login, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
+const { login, linkOAuthAccount, isLoading: isEmailLoginLoading, error: emailLoginError } = useAuth();
 const { signInWithGoogle, isLoading: isGoogleLoginLoading } = useGoogleAuth();
-const { signInWithApple, isLoading: isAppleLoginLoading, error: appleLoginError, isConfigured: isAppleConfigured } = useAppleAuth();
+const { signInWithApple, isLoading: isAppleLoginLoading, error: appleLoginError, linkToken: appleLinkToken, isConfigured: isAppleConfigured } = useAppleAuth();
 const { track } = useAnalytics();
 const { reportAuthError } = useAuthAnalytics();
 const route = useRoute();
@@ -134,6 +138,13 @@ const email = ref('');
 const password = ref('');
 const accountDeleted = computed(() => route.query.deleted === '1');
 const passwordReset = computed(() => route.query.reset === '1');
+const oauthLinkToken = computed(() => {
+  const queryToken = route.query.linkToken;
+  if (typeof queryToken === 'string' && queryToken) {
+    return queryToken;
+  }
+  return appleLinkToken.value || '';
+});
 
 const resolvePostLoginRedirect = (defaultRedirect) => {
   const redirect = route.query.redirect;
@@ -159,6 +170,15 @@ onMounted(() => {
 
 const handleLogin = async () => {
   try {
+    if (oauthLinkToken.value) {
+      const response = await linkOAuthAccount(oauthLinkToken.value, password.value);
+      track('login', { method: 'oauth_link' });
+      if (response && response.redirect) {
+        navigateTo(resolvePostLoginRedirect(response.redirect));
+      }
+      return;
+    }
+
     const response = await login(email.value, password.value);
     track('login', { method: 'email' });
     if (response && response.redirect) {
@@ -173,7 +193,7 @@ const handleLogin = async () => {
 const handleAppleLogin = async () => {
   try {
     const result = await signInWithApple();
-    if (result === 'cancelled') {
+    if (result === 'cancelled' || result === 'link_required') {
       return;
     }
     track('login', { method: 'apple' });

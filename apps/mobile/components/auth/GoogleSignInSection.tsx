@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Platform } from 'react-native';
 import { useTranslation } from 'react-i18next';
+
+import { PasswordAccountLinkForm } from '@/components/auth/PasswordAccountLinkForm';
 
 import { GoogleIcon } from '@/components/auth/GoogleIcon';
 import { AuthOrDivider, SocialAuthLegal } from '@/components/auth/SocialAuthLegal';
@@ -9,6 +12,7 @@ import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
 import { isGoogleWebSignInAvailable } from '@/lib/auth/googleRedirectUri';
 import { isNativeGoogleSignInAvailable } from '@/lib/auth/isNativeGoogleSignInAvailable';
+import { PasswordLinkRequired } from '@/lib/auth/passwordLink';
 import { useGoogleAuth } from '@/lib/auth/useGoogleAuth';
 
 interface GoogleSignInSectionProps {
@@ -32,13 +36,18 @@ function GoogleSignInSectionContent({
   testID = 'google-sign-in-button',
 }: GoogleSignInSectionProps) {
   const { signInWithGoogle, isLoading, error } = useGoogleAuth();
+  const [linkToken, setLinkToken] = useState<string | null>(null);
 
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
       await onSuccess();
-    } catch (error) {
-      const message = error instanceof Error ? error.message.toLowerCase() : '';
+    } catch (signInError) {
+      if (signInError instanceof PasswordLinkRequired) {
+        setLinkToken(signInError.linkToken);
+        return;
+      }
+      const message = signInError instanceof Error ? signInError.message.toLowerCase() : '';
       if (!message.includes('cancel')) {
         onError?.();
       }
@@ -62,7 +71,11 @@ function GoogleSignInSectionContent({
         <ButtonText>{label}</ButtonText>
       </Button>
 
-      {error ? (
+      {linkToken ? (
+        <PasswordAccountLinkForm linkToken={linkToken} onSuccess={onSuccess} />
+      ) : null}
+
+      {error && !linkToken ? (
         <Box className="rounded-lg bg-red-500/15 px-4 py-3">
           <Text className="text-red-400 text-center text-sm">{error}</Text>
         </Box>

@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+
+import { PasswordAccountLinkForm } from '@/components/auth/PasswordAccountLinkForm';
 
 import type { AppleSignInSectionProps } from '@/components/auth/appleSignInSectionProps';
 import { AuthOrDivider, SocialAuthLegal } from '@/components/auth/SocialAuthLegal';
@@ -9,6 +12,7 @@ import { ButtonSpinner } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
 import { env } from '@/constants/env';
 import { isAppleWebCancel } from '@/lib/auth/appleWeb';
+import { PasswordLinkRequired } from '@/lib/auth/passwordLink';
 import { useAppleAuth } from '@/lib/auth/useAppleAuth.web';
 
 function AppleIcon() {
@@ -30,6 +34,7 @@ export function AppleSignInSection({
 }: AppleSignInSectionProps) {
   const { t } = useTranslation();
   const { signInWithApple, isLoading, error } = useAppleAuth();
+  const [linkToken, setLinkToken] = useState<string | null>(null);
 
   if (!env.isAppleWebConfigured) {
     return null;
@@ -44,6 +49,10 @@ export function AppleSignInSection({
       await signInWithApple();
       await onSuccess();
     } catch (err) {
+      if (err instanceof PasswordLinkRequired) {
+        setLinkToken(err.linkToken);
+        return;
+      }
       if (isAppleWebCancel(err)) {
         return;
       }
@@ -69,7 +78,11 @@ export function AppleSignInSection({
         <Text className="text-base font-semibold text-black">{label}</Text>
       </Pressable>
 
-      {error ? (
+      {linkToken ? (
+        <PasswordAccountLinkForm linkToken={linkToken} onSuccess={onSuccess} />
+      ) : null}
+
+      {error && !linkToken ? (
         <Box className="rounded-lg bg-red-500/15 px-4 py-3">
           <Text className="text-red-400 text-center text-sm">{error || t('login.appleFailed')}</Text>
         </Box>
