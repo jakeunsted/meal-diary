@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Request, Response } from 'express';
+import type { Request } from 'express';
+
+interface RateLimitResponseMock {
+  status: ReturnType<typeof vi.fn>;
+  send: ReturnType<typeof vi.fn>;
+}
 
 interface CapturedLimiterOptions {
   handler?: (
     req: Request,
-    res: Response,
+    res: RateLimitResponseMock,
     next: unknown,
     handlerOptions: { statusCode: number; message: unknown },
   ) => void;
@@ -29,7 +34,7 @@ const mockReq = (path: string): Request => ({
   socket: { remoteAddress: '203.0.113.5' },
 }) as Request;
 
-const mockRes = () => {
+const mockRes = (): RateLimitResponseMock => {
   const res = {
     status: vi.fn(() => res),
     send: vi.fn(() => res),
