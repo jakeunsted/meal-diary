@@ -7,7 +7,7 @@ export interface UserAttributes {
   username: string;
   email: string;
   normalized_email?: string | null;
-  password_hash?: string;
+  password_hash?: string | null;
   google_id?: string;
   apple_id?: string;
   first_name?: string;

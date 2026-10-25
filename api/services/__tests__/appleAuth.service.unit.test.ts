@@ -23,11 +23,19 @@ vi.mock('../../db/models/User.model.ts', () => ({
 vi.mock('../../db/models/RefreshToken.model.ts', () => ({
   default: {
     create: vi.fn(),
+    destroy: vi.fn(),
   },
+}));
+
+vi.mock('../oauthLink.service.ts', () => ({
+  createOAuthLinkChallenge: vi.fn(async () => 'link-token-raw'),
+  findActiveOAuthLinkChallenge: vi.fn(),
+  markOAuthLinkChallengeUsed: vi.fn(),
 }));
 
 import User from '../../db/models/User.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
+import { createOAuthLinkChallenge } from '../oauthLink.service.ts';
 import {
   authenticateUser,
   authenticateWithAppleToken,
@@ -282,6 +290,59 @@ describe('authenticateWithAppleToken', () => {
 
     expect(existing.apple_id).toBe('original-apple');
     expect(existing.update).not.toHaveBeenCalled();
+  });
+
+  it('requires the current password before attaching Apple to a password account', async () => {
+    const existing = userRow({ password_hash: 'stored-hash', apple_id: undefined });
+
+    vi.mocked(User.findOne).mockImplementation((async (options: { where?: Record<string, string> }) => {
+      const where = options?.where ?? {};
+      if (where.email === 'ada@example.com') {
+        return existing;
+      }
+      return null;
+    }) as never);
+
+    const idToken = signAppleToken({ email: 'ada@example.com' });
+
+    await expect(authenticateWithAppleToken(idToken, RAW_NONCE)).rejects.toMatchObject({
+      message: 'This email already has a password',
+      code: 'password_link_required',
+      linkToken: 'link-token-raw',
+    });
+    expect(existing.update).not.toHaveBeenCalled();
+    expect(createOAuthLinkChallenge).toHaveBeenCalledWith(expect.objectContaining({
+      userId: existing.id,
+      provider: 'apple',
+      subject: 'apple-user-1',
+      email: 'ada@example.com',
+    }));
+  });
+
+  it('clears the password and refresh tokens after the current password is proved', async () => {
+    const bcrypt = await import('bcrypt');
+    vi.mocked(bcrypt.default.compare).mockResolvedValue(true as never);
+    const existing = userRow({ password_hash: 'stored-hash', apple_id: undefined });
+
+    vi.mocked(User.findOne).mockImplementation((async (options: { where?: Record<string, string> }) => {
+      const where = options?.where ?? {};
+      if (where.email === 'ada@example.com') {
+        return existing;
+      }
+      return null;
+    }) as never);
+
+    const idToken = signAppleToken({ email: 'ada@example.com' });
+    const result = await authenticateWithAppleToken(idToken, RAW_NONCE, {}, 'Password1!');
+
+    expect(bcrypt.default.compare).toHaveBeenCalledWith('Password1!', 'stored-hash');
+    expect(existing.update).toHaveBeenCalledWith(expect.objectContaining({
+      apple_id: 'apple-user-1',
+      password_hash: null,
+    }));
+    expect(RefreshToken.destroy).toHaveBeenCalledWith({ where: { user_id: existing.id } });
+    expect(result.user.apple_id).toBe('apple-user-1');
+    expect(result.isNewUser).toBe(false);
   });
 });
 

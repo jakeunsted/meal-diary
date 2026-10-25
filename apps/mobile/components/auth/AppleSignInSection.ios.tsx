@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useTranslation } from 'react-i18next';
 
+import { PasswordAccountLinkForm } from '@/components/auth/PasswordAccountLinkForm';
 import type { AppleSignInSectionProps } from '@/components/auth/appleSignInSectionProps';
 import { AuthOrDivider, SocialAuthLegal } from '@/components/auth/SocialAuthLegal';
 import { Box } from '@/components/ui/box';
 import { Text } from '@/components/ui/text';
+import { PasswordLinkRequired } from '@/lib/auth/passwordLink';
 import { useAppleAuth } from '@/lib/auth/useAppleAuth';
 
 function AppleSignInSectionContent({
@@ -20,6 +22,7 @@ function AppleSignInSectionContent({
 }: AppleSignInSectionProps) {
   const { t } = useTranslation();
   const { signInWithApple, isLoading, error } = useAppleAuth();
+  const [linkToken, setLinkToken] = useState<string | null>(null);
 
   const handleAppleSignIn = async () => {
     if (disabled || isLoading) {
@@ -29,12 +32,16 @@ function AppleSignInSectionContent({
     try {
       await signInWithApple();
       await onSuccess();
-    } catch (error) {
+    } catch (signInError) {
+      if (signInError instanceof PasswordLinkRequired) {
+        setLinkToken(signInError.linkToken);
+        return;
+      }
       const cancelled =
-        typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        (error as { code?: string }).code === 'ERR_REQUEST_CANCELED';
+        typeof signInError === 'object' &&
+        signInError !== null &&
+        'code' in signInError &&
+        (signInError as { code?: string }).code === 'ERR_REQUEST_CANCELED';
       if (!cancelled) {
         onError?.();
       }
@@ -66,7 +73,11 @@ function AppleSignInSectionContent({
         />
       </Box>
 
-      {error ? (
+      {linkToken ? (
+        <PasswordAccountLinkForm linkToken={linkToken} onSuccess={onSuccess} />
+      ) : null}
+
+      {error && !linkToken ? (
         <Box className="rounded-lg bg-red-500/15 px-4 py-3">
           <Text className="text-red-400 text-center text-sm">{error || t('login.appleFailed')}</Text>
         </Box>

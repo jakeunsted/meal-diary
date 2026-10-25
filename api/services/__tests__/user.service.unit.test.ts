@@ -6,7 +6,7 @@ import FamilyGroup from '../../db/models/FamilyGroup.model.ts';
 import Recipe from '../../db/models/Recipe.model.ts';
 import RefreshToken from '../../db/models/RefreshToken.model.ts';
 import Subscription from '../../db/models/Subscription.model.ts';
-import { createUser, deleteUserAccount, isValidEmail } from '../user.service.ts';
+import { createUser, deleteUserAccount, isValidEmail, updateUser } from '../user.service.ts';
 import { EntitlementRequiredError } from '../entitlements.service.ts';
 import * as FamilyGroupService from '../familyGroup.service.ts';
 import { TrialRedemption } from '../../db/models/associations.ts';
@@ -150,6 +150,28 @@ describe('createUser', () => {
     await expect(createUser(validInput)).rejects.toThrow(
       'User with this username or email already exists'
     );
+  });
+});
+
+describe('updateUser', () => {
+  it('does not write an email supplied in the payload', async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const row = {
+      id: 1,
+      username: 'ada',
+      email: 'ada@example.com',
+      update,
+      toJSON() {
+        return { id: 1, username: 'ada', email: 'ada@example.com' };
+      },
+    };
+    vi.spyOn(User, 'findByPk').mockResolvedValue(row as never);
+
+    await updateUser(1, { username: 'ada', email: 'attacker@example.com' });
+
+    expect(update).toHaveBeenCalled();
+    expect(update.mock.calls[0][0]).not.toHaveProperty('email');
+    expect(update.mock.calls[0][0]).not.toHaveProperty('normalized_email');
   });
 });
 

@@ -40,13 +40,52 @@
               </label>
               <input
                 type="email"
-                :value="user.email"
+                v-model="emailDraft"
                 class="input input-bordered"
                 data-testid="profile-email-input"
-                disabled
-                readonly
+                :disabled="isSavingEmail"
               />
             </div>
+            <div v-if="emailCodeSent" class="form-control">
+              <label class="label">
+                <span class="label-text">{{ $t('Confirmation code') }}</span>
+              </label>
+              <input
+                type="text"
+                v-model="emailCode"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                class="input input-bordered"
+                data-testid="profile-email-code-input"
+                :disabled="isSavingEmail"
+              />
+            </div>
+            <div v-if="emailError" class="text-error text-sm" data-testid="profile-email-error">
+              {{ emailError }}
+            </div>
+            <div v-if="emailSuccess" class="text-success text-sm" data-testid="profile-email-success">
+              {{ emailSuccess }}
+            </div>
+            <button
+              v-if="!emailCodeSent"
+              class="btn btn-outline"
+              data-testid="profile-email-send-code"
+              :disabled="!canSendEmailCode"
+              @click="handleRequestEmailChange"
+            >
+              <span v-if="isSavingEmail" class="loading loading-spinner loading-sm"></span>
+              <span v-else>{{ $t('Send confirmation code') }}</span>
+            </button>
+            <button
+              v-else
+              class="btn btn-outline"
+              data-testid="profile-email-confirm"
+              :disabled="!canConfirmEmail"
+              @click="handleConfirmEmailChange"
+            >
+              <span v-if="isSavingEmail" class="loading loading-spinner loading-sm"></span>
+              <span v-else>{{ $t('Confirm email') }}</span>
+            </button>
             <div v-if="displayNameError" class="text-error text-sm" data-testid="profile-display-name-error">
               {{ displayNameError }}
             </div>
@@ -84,6 +123,8 @@ import type { User } from '../../types/User';
 import { ref, watch, computed } from 'vue';
 import AvatarCustomizer from './AvatarCustomizer.vue';
 import { useUserStore } from '~/stores/user';
+import { useAuthStore } from '~/stores/auth';
+import { browserStorage } from '~/utils/browserStorage';
 
 const showAvatarCustomizer = ref(false);
 const userStore = useUserStore();
@@ -100,11 +141,27 @@ const displayName = ref('');
 const isSavingDisplayName = ref(false);
 const displayNameError = ref('');
 const displayNameSuccess = ref('');
+const emailDraft = ref('');
+const emailCode = ref('');
+const emailCodeSent = ref(false);
+const isSavingEmail = ref(false);
+const emailError = ref('');
+const emailSuccess = ref('');
 
 watch(
   () => props.user?.username,
   (username) => {
     displayName.value = username ?? '';
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.user?.email,
+  (email) => {
+    emailDraft.value = email ?? '';
+    emailCode.value = '';
+    emailCodeSent.value = false;
   },
   { immediate: true }
 );
@@ -115,6 +172,79 @@ const canSaveDisplayName = computed(() => {
   if (!trimmed) return false;
   return trimmed !== (props.user?.username ?? '');
 });
+
+const canSendEmailCode = computed(() => {
+  if (isSavingEmail.value || emailCodeSent.value) return false;
+  const trimmed = emailDraft.value.trim().toLowerCase();
+  if (!trimmed) return false;
+  return trimmed !== (props.user?.email ?? '').toLowerCase();
+});
+
+const canConfirmEmail = computed(() => {
+  if (isSavingEmail.value || !emailCodeSent.value) return false;
+  return emailCode.value.trim().length === 6;
+});
+
+const applyUpdatedUser = (updated: User) => {
+  userStore.user = updated;
+  userStore.lastFetchTime = Date.now();
+  const authStore = useAuthStore();
+  if (authStore.user) {
+    authStore.user = { ...authStore.user, ...updated };
+  }
+  if (import.meta.client) {
+    browserStorage.set('userData', JSON.stringify({
+      user: updated,
+      lastFetchTime: userStore.lastFetchTime,
+    }));
+    const raw = browserStorage.get('authState');
+    if (raw) {
+      const state = JSON.parse(raw);
+      state.user = { ...state.user, ...updated };
+      browserStorage.set('authState', JSON.stringify(state));
+    }
+  }
+};
+
+const handleRequestEmailChange = async () => {
+  emailError.value = '';
+  emailSuccess.value = '';
+  isSavingEmail.value = true;
+  try {
+    const { api } = useApi();
+    await api('/api/user/me/email-change', {
+      method: 'POST',
+      body: { email: emailDraft.value.trim() },
+      silent: true,
+    });
+    emailCodeSent.value = true;
+    emailSuccess.value = t('We sent a confirmation code to your new email address.');
+  } catch (err: any) {
+    emailError.value = err?.data?.message || t('Failed to update email');
+  } finally {
+    isSavingEmail.value = false;
+  }
+};
+
+const handleConfirmEmailChange = async () => {
+  emailError.value = '';
+  emailSuccess.value = '';
+  isSavingEmail.value = true;
+  try {
+    const { api } = useApi();
+    const updated = await api<User>('/api/user/me/email-change/confirm', {
+      method: 'POST',
+      body: { code: emailCode.value.trim() },
+      silent: true,
+    });
+    applyUpdatedUser(updated);
+    emailSuccess.value = t('Email updated');
+  } catch (err: any) {
+    emailError.value = err?.data?.message || t('Failed to update email');
+  } finally {
+    isSavingEmail.value = false;
+  }
+};
 
 const handleSaveDisplayName = async () => {
   displayNameError.value = '';

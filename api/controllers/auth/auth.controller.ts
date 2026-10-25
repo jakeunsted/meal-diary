@@ -5,6 +5,7 @@ import { trackEvent, getDistinctId, sanitizeErrorForAnalytics } from '../../util
 import { trackAuthLog, logAuth } from '../../utils/otelLogs.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
+import { PasswordAccountLinkRequiredError } from '../../services/passwordLinkError.ts';
 import { sanitizeUser } from '../../services/user.service.ts';
 import {
   completePasswordReset,
@@ -370,6 +371,11 @@ export const handleGoogleCallback = async (req: Request, res: Response): Promise
 
       res.redirect(redirectUrl);
     } catch (serviceError) {
+      if (serviceError instanceof PasswordAccountLinkRequiredError) {
+        res.redirect(`${FRONTEND_URL}/login?linkToken=${encodeURIComponent(serviceError.linkToken)}`);
+        return;
+      }
+
       console.error('[Google OAuth] Service error:', serviceError);
       const { error_message, error_type } = sanitizeErrorForAnalytics(serviceError);
       await trackAuthLog(req, 'google_oauth_callback_failure', {
@@ -471,5 +477,46 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
 
     console.error('Reset password error:', error);
     res.status(500).json({ message: 'Server error during password reset' });
+  }
+};
+
+/**
+ * Prove the current password and link the pending Google or Apple identity.
+ */
+export const linkOAuthAccount = async (req: Request, res: Response): Promise<void> => {
+  const linkToken = req.body?.linkToken;
+  const password = req.body?.password;
+
+  if (typeof linkToken !== 'string' || !linkToken || typeof password !== 'string' || !password) {
+    res.status(400).json({ message: 'Link token and password are required' });
+    return;
+  }
+
+  try {
+    const { user, tokens } = await AuthService.completeOAuthAccountLink(linkToken, password);
+    const response = await buildAuthResponse(user, tokens);
+    res.status(200).json(response);
+  } catch (error) {
+    if (isInfrastructureError(error)) {
+      res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
+      return;
+    }
+
+    const message = error instanceof Error ? error.message : 'Invalid or expired link';
+    if (message === 'Incorrect password') {
+      res.status(401).json({ message });
+      return;
+    }
+    if (message.includes('already linked')) {
+      res.status(409).json({ message });
+      return;
+    }
+    if (message.includes('required') || message === 'Invalid or expired link') {
+      res.status(400).json({ message });
+      return;
+    }
+
+    console.error('OAuth account link error:', error);
+    res.status(500).json({ message: 'Server error during account link' });
   }
 };

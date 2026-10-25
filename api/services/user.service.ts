@@ -191,7 +191,8 @@ export const getUserById = async (userId: number): Promise<SanitizedUser> => {
  * @throws {Error} If user not found or validation fails
  */
 export const updateUser = async (userId: number, userData: UpdateUserData): Promise<SanitizedUser> => {
-  const { username, email, first_name, last_name, avatar_url } = userData;
+  // Email is applied only after the new mailbox confirms a single-use code.
+  const { username, first_name, last_name, avatar_url } = userData;
 
   const user = await User.findByPk(userId) as User & UserAttributes | null;
 
@@ -207,23 +208,9 @@ export const updateUser = async (userId: number, userData: UpdateUserData): Prom
     }
   }
 
-  // Check if email is being changed and already exists
-  if (email && email.toLowerCase() !== user.email) {
-    if (!isValidEmail(email)) {
-      throw new Error('A valid email address is required');
-    }
-
-    const existingEmail = await User.findOne({ where: { email: email.toLowerCase() } });
-    if (existingEmail) {
-      throw new Error('Email already in use');
-    }
-  }
-
   // Membership changes only via family-group join/leave/create/transfer — never via mass assignment
   await user.update({
     username,
-    email: email?.toLowerCase(),
-    normalized_email: email ? normalizeEmail(email) : undefined,
     first_name,
     last_name,
     avatar_url

@@ -426,6 +426,15 @@
     "askOwnerToUpgrade": "Ask {name} to upgrade for more recipes.",
     "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for more recipes."
   },
+  "This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.": "This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.",
+  "Link account": "Link account",
+  "Send confirmation code": "Send confirmation code",
+  "Confirmation code": "Confirmation code",
+  "Confirm email": "Confirm email",
+  "We sent a confirmation code to your new email address.": "We sent a confirmation code to your new email address.",
+  "Email updated": "Email updated",
+  "Failed to update email": "Failed to update email",
+  "Could not link this sign-in method.": "Could not link this sign-in method.",
   "recipeDetail": {
     "shoppingListPremium": "Add recipe ingredients to your shopping list with Family Plus.",
     "shoppingListUpgrade": "View plans",

@@ -29,9 +29,10 @@ export const useAppleAuth = () => {
   const config = useRuntimeConfig();
   const isLoading = ref(false);
   const error = ref<string | null>(null);
+  const linkToken = ref<string | null>(null);
   const isConfigured = computed(() => Boolean(config.public.appleServicesId));
 
-  const signInWithApple = async (): Promise<'cancelled' | 'success'> => {
+  const signInWithApple = async (): Promise<'cancelled' | 'success' | 'link_required'> => {
     const clientId = config.public.appleServicesId;
     if (!clientId) {
       throw new Error('Sign in with Apple is not configured');
@@ -39,6 +40,7 @@ export const useAppleAuth = () => {
 
     isLoading.value = true;
     error.value = null;
+    linkToken.value = null;
 
     try {
       const credential = await signInWithApplePopup(clientId);
@@ -70,6 +72,12 @@ export const useAppleAuth = () => {
         return 'cancelled';
       }
 
+      const payload = err.data?.data ?? err.data ?? {};
+      if (payload.code === 'password_link_required' && typeof payload.linkToken === 'string') {
+        linkToken.value = payload.linkToken;
+        return 'link_required';
+      }
+
       error.value = err.data?.message || err.message || 'Apple sign-in failed. Please try again.';
       throw err;
     } finally {
@@ -81,6 +89,7 @@ export const useAppleAuth = () => {
     signInWithApple,
     isLoading,
     error,
+    linkToken,
     isConfigured,
   };
 };

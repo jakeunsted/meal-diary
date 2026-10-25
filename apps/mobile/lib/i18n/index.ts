@@ -347,6 +347,10 @@ const resources = {
         noAccount: "Don't have an account?",
         register: 'Register',
         forgotPassword: 'Forgot password?',
+        passwordLinkExplanation:
+          'This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.',
+        linkAccount: 'Link account',
+        passwordLinkFailed: 'Could not link this sign-in method.',
       },
       passwordReset: {
         title: 'Forgot password',
@@ -488,6 +492,12 @@ const resources = {
         saveDisplayName: 'Save',
         displayNameUpdated: 'Display name updated',
         displayNameUpdateFailed: 'Failed to update display name',
+        sendConfirmationCode: 'Send confirmation code',
+        confirmationCode: 'Confirmation code',
+        confirmEmail: 'Confirm email',
+        emailCodeSent: 'We sent a confirmation code to your new email address.',
+        emailUpdated: 'Email updated',
+        emailUpdateFailed: 'Failed to update email',
         account: {
           downloadData: 'Download my data',
           deleteAccount: 'Delete account',

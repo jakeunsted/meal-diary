@@ -1,5 +1,5 @@
 import { Router, type RequestHandler } from 'express';
-import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback, exchangeGoogleOAuthCode, forgotPassword, resetPassword } from '../controllers/auth/auth.controller.ts';
+import { login, refreshToken, logout, validateToken, initiateGoogleAuth, handleGoogleCallback, exchangeGoogleOAuthCode, forgotPassword, resetPassword, linkOAuthAccount } from '../controllers/auth/auth.controller.ts';
 import { verifyGoogleToken } from '../controllers/auth/googleTokenVerification.controller.ts';
 import { verifyAppleToken } from '../controllers/auth/appleTokenVerification.controller.ts';
 import { authenticateToken } from '../middleware/auth.middleware.ts';
@@ -517,5 +517,7 @@ router.post('/google/verify-token', loginLimiter, wrapHandler(verifyGoogleToken)
  *         description: Server error or Sign in with Apple not configured
  */
 router.post('/apple/verify-token', loginLimiter, wrapHandler(verifyAppleToken));
+
+router.post('/oauth/link', loginLimiter, wrapHandler(linkOAuthAccount));
 
 export default router; 

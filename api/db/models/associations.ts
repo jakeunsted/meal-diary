@@ -8,6 +8,8 @@ import DailyMealEntry from './DailyMealEntry.model.ts';
 import RefreshToken from './RefreshToken.model.ts';
 import PasswordResetToken from './PasswordResetToken.model.ts';
 import OAuthExchangeCode from './OAuthExchangeCode.model.ts';
+import OAuthLinkChallenge from './OAuthLinkChallenge.model.ts';
+import EmailChangeToken from './EmailChangeToken.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
@@ -224,6 +226,28 @@ User.hasMany(OAuthExchangeCode, {
   as: 'oauthExchangeCodes',
 });
 
+OAuthLinkChallenge.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user',
+});
+User.hasMany(OAuthLinkChallenge, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'oauthLinkChallenges',
+});
+
+EmailChangeToken.belongsTo(User, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'user',
+});
+User.hasMany(EmailChangeToken, {
+  foreignKey: 'user_id',
+  foreignKeyConstraint: true,
+  as: 'emailChangeTokens',
+});
+
 // Export all models
 export {
   User,
@@ -236,6 +260,8 @@ export {
   RefreshToken,
   PasswordResetToken,
   OAuthExchangeCode,
+  OAuthLinkChallenge,
+  EmailChangeToken,
   ShoppingListItem,
   Recipe,
   RecipeIngredient,

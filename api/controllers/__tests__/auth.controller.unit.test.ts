@@ -14,6 +14,7 @@ vi.mock('../../services/auth.service.ts', () => ({
   findOrCreateGoogleUser: vi.fn(),
   createOAuthExchangeCode: vi.fn(),
   exchangeOAuthCode: vi.fn(),
+  completeOAuthAccountLink: vi.fn(),
 }));
 
 vi.mock('../../services/passwordReset.service.ts', () => ({
@@ -32,6 +33,7 @@ vi.mock('../../services/authResponse.service.ts', () => ({
 }));
 
 import User from '../../db/models/User.model.ts';
+import { PasswordAccountLinkRequiredError } from '../../services/passwordLinkError.ts';
 import * as AuthService from '../../services/auth.service.ts';
 import { buildAuthResponse } from '../../services/authResponse.service.ts';
 import { completePasswordReset, requestPasswordReset } from '../../services/passwordReset.service.ts';
@@ -439,6 +441,30 @@ describe('Auth Controller', () => {
 
       const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
       expect(res.redirect).toHaveBeenCalledWith(`${frontendUrl}/login?error=invalid_state`);
+    });
+
+    it('sends a password account to the link form without an exchange code', async () => {
+      vi.spyOn(User, 'findOne').mockResolvedValue({ id: 4 } as never);
+      vi.mocked(AuthService.exchangeGoogleCode).mockResolvedValue({
+        profile: { email: 'ada@example.com' },
+      } as never);
+      vi.mocked(AuthService.findOrCreateGoogleUser).mockRejectedValue(
+        new PasswordAccountLinkRequiredError('raw-link')
+      );
+      const req = {
+        query: { code: 'auth-code', state: 'state-1' },
+        cookies: { oauth_state: 'state-1' },
+      } as unknown as Request;
+      const res = {
+        redirect: vi.fn(),
+        clearCookie: vi.fn(),
+      } as unknown as Response;
+
+      await handleGoogleCallback(req, res);
+
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:8080';
+      expect(res.redirect).toHaveBeenCalledWith(`${frontendUrl}/login?linkToken=raw-link`);
+      expect(AuthService.createOAuthExchangeCode).not.toHaveBeenCalled();
     });
   });
 

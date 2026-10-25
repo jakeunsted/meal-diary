@@ -216,8 +216,40 @@ export const useAuth = () => {
     }
   };
   
+  const linkOAuthAccount = async (linkToken: string, password: string) => {
+    try {
+      isLoading.value = true;
+      error.value = null;
+
+      const { api } = useApi();
+      const response = await api<AuthResponse & { redirect?: string }>('/api/auth/oauth/link', {
+        method: 'POST',
+        body: { linkToken, password },
+        silent: true,
+      });
+
+      if (response && response.accessToken && response.refreshToken) {
+        authStore.setAuth(response);
+        if (!hasFamilyGroup(response.user)) {
+          response.redirect = '/registration/step-2';
+        } else {
+          response.redirect = '/diary';
+        }
+        return response;
+      }
+
+      throw new Error('Invalid response from server');
+    } catch (err: any) {
+      error.value = err.data?.message || err.data?.data?.message || 'Could not link this sign-in method.';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  };
+
   return {
     login,
+    linkOAuthAccount,
     logout,
     refreshTokens,
     isLoading,

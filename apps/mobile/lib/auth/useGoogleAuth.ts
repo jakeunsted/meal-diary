@@ -6,6 +6,7 @@ import { env } from '@/constants/env';
 import { ApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { completeGoogleSignIn } from '@/lib/auth/completeGoogleSignIn';
+import { rethrowPasswordLink } from '@/lib/auth/passwordLink';
 import { getGoogleRedirectUri } from '@/lib/auth/googleRedirectUri';
 import type { User } from '@/types/api';
 
@@ -54,6 +55,7 @@ export function useGoogleAuth() {
 
       return await completeGoogleSignIn(idToken, setAuth);
     } catch (err) {
+      rethrowPasswordLink(err);
       const message =
         err instanceof ApiError
           ? err.message

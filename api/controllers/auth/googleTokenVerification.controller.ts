@@ -3,6 +3,7 @@ import * as AuthService from '../../services/auth.service.ts';
 import { trackEvent, sanitizeErrorForAnalytics } from '../../utils/posthog.ts';
 import { trackAuthLog } from '../../utils/otelLogs.ts';
 import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../utils/clientError.ts';
+import { PasswordAccountLinkRequiredError } from '../../services/passwordLinkError.ts';
 
 /**
  * Verify Google ID token and authenticate user
@@ -12,7 +13,7 @@ import { INTERNAL_SERVER_ERROR_MESSAGE, isInfrastructureError } from '../../util
  */
 export const verifyGoogleToken = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { idToken } = req.body;
+    const { idToken, currentPassword } = req.body ?? {};
 
     if (!idToken) {
       res.status(400).json({ message: 'ID token is required' });
@@ -26,7 +27,10 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
     }
 
     try {
-      const { user, tokens, isNewUser } = await AuthService.authenticateWithGoogleToken(idToken);
+      const { user, tokens, isNewUser } = await AuthService.authenticateWithGoogleToken(
+        idToken,
+        typeof currentPassword === 'string' ? currentPassword : undefined
+      );
 
       // Track successful Google token verification
       await trackEvent(user.id.toString(), 'google_token_verification_success', {
@@ -58,6 +62,15 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
         refreshToken: tokens.refreshToken
       });
     } catch (serviceError) {
+      if (serviceError instanceof PasswordAccountLinkRequiredError) {
+        res.status(409).json({
+          message: serviceError.message,
+          code: serviceError.code,
+          linkToken: serviceError.linkToken,
+        });
+        return;
+      }
+
       if (isInfrastructureError(serviceError)) {
         res.status(500).json({ message: INTERNAL_SERVER_ERROR_MESSAGE });
         return;
@@ -69,7 +82,10 @@ export const verifyGoogleToken = async (req: Request, res: Response): Promise<vo
       let reason = 'server_error';
       let statusCode = 500;
       
-      if (errorMessage.includes('required')) {
+      if (errorMessage === 'Incorrect password') {
+        reason = 'invalid_credentials';
+        statusCode = 401;
+      } else if (errorMessage.includes('required')) {
         reason = 'missing_token';
         statusCode = 400;
       } else if (errorMessage.includes('not configured')) {

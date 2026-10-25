@@ -5,6 +5,7 @@ import * as Crypto from 'expo-crypto';
 import { ApiError } from '@/lib/api/errors';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { completeAppleSignIn } from '@/lib/auth/completeAppleSignIn';
+import { rethrowPasswordLink } from '@/lib/auth/passwordLink';
 import type { User } from '@/types/api';
 
 function isAppleCancel(error: unknown): boolean {
@@ -55,6 +56,7 @@ export function useAppleAuth() {
         setAuth
       );
     } catch (err) {
+      rethrowPasswordLink(err);
       if (isAppleCancel(err)) {
         throw err;
       }

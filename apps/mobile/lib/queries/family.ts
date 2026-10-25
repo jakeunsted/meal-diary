@@ -62,6 +62,27 @@ export async function fetchUserById(userId: number): Promise<User> {
   return apiFetch<User>(`/users/${userId}`);
 }
 
+export async function requestEmailChange(email: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>('/users/me/email-change', {
+    method: 'POST',
+    body: { email },
+  });
+}
+
+export async function confirmEmailChange(code: string): Promise<User> {
+  const user = await apiFetch<User>('/users/me/email-change/confirm', {
+    method: 'POST',
+    body: { code },
+  });
+  const stored = await getAuthState();
+  if (stored) {
+    await setAuthState({ ...stored, user });
+  }
+  useAuthStore.getState().setUser(user);
+  await queryClient.invalidateQueries({ queryKey: ['user', user.id] });
+  return user;
+}
+
 export async function updateUserProfile(
   userId: number,
   payload: { username?: string; avatar_url?: string }
