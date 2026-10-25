@@ -89,6 +89,9 @@ export const verifyAppleToken = async (req: Request, res: Response): Promise<voi
       if (errorMessage === 'Incorrect password') {
         reason = 'invalid_credentials';
         statusCode = 401;
+      } else if (errorMessage.includes('already linked')) {
+        reason = 'already_linked';
+        statusCode = 409;
       } else if (errorMessage.includes('required')) {
         reason = 'missing_token';
         statusCode = 400;
