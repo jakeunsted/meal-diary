@@ -10,7 +10,6 @@ const handlers = vi.hoisted(() => ({
 const authStore = {
   isAuthenticated,
   user: { id: 5, family_group_id: 9 } as { id: number; family_group_id?: number } | null,
-  updateTokensFromSSE: vi.fn(),
 };
 const items: Array<{ id: number; checked?: boolean; category?: string; position?: number }> = [];
 const shoppingListStore = {
@@ -61,6 +60,7 @@ describe('useSSE', () => {
 
     useSSE().initializeSSE();
     await vi.waitFor(() => expect(handlers.setup).toHaveBeenCalledWith(9, expect.any(Object)));
+    expect(captured['token-refresh']).toBeUndefined();
 
     captured['add-item']({ actorUserId: 5, item: { id: 1 } });
     expect(items).toHaveLength(0);

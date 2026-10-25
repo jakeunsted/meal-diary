@@ -17,6 +17,7 @@ interface AuthState {
 }
 
 let initializeAuthPromise: Promise<void> | null = null;
+let authStorageListenerRegistered = false;
 
 export const useAuthStore = defineStore('auth', () => {
   const router = useRouter();
@@ -272,39 +273,50 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   /**
-   * Updates tokens from SSE events (when server refreshes tokens)
-   * This method is called when the server emits a token-refresh event
+   * Family live updates must not carry session tokens. Ignore any payload
+   * so a forged event cannot replace the stored session.
    */
-  const updateTokensFromSSE = async (tokens: { accessToken: string; refreshToken: string; userId: number }) => {
-    // Validate input
-    if (!tokens.accessToken || !tokens.refreshToken || !tokens.userId) {
+  const updateTokensFromSSE = async (_tokens?: unknown) => {
+    return;
+  };
+
+  /**
+   * Apply auth written by another tab. The storage event does not fire in the
+   * tab that wrote the value, so this does not write localStorage again.
+   */
+  const applyExternalAuthState = (raw: string | null) => {
+    if (!raw) {
+      user.value = null;
+      accessToken.value = null;
+      refreshToken.value = null;
       return;
     }
 
-    // Only update if the tokens are for the current user
-    if (user.value?.id !== tokens.userId) {
-      return;
-    }
-    
     try {
-      // Update store state
-      accessToken.value = tokens.accessToken;
-      refreshToken.value = tokens.refreshToken;
-      
-      // Update local storage
-      if (import.meta.client) {
-        const value = browserStorage.get('authState');
-        if (value) {
-          const authState: AuthState = JSON.parse(value);
-          authState.accessToken = tokens.accessToken;
-          authState.refreshToken = tokens.refreshToken;
-          browserStorage.set('authState', JSON.stringify(authState));
-        }
+      const authState: AuthState = JSON.parse(raw);
+      if (!authState.user || !authState.accessToken || !authState.refreshToken) {
+        return;
       }
+      if (isTokenExpired(authState.refreshToken, 0)) {
+        return;
+      }
+      user.value = authState.user;
+      accessToken.value = authState.accessToken;
+      refreshToken.value = authState.refreshToken;
     } catch (error) {
-      console.error('[Auth Store] Failed to update tokens from SSE:', error);
+      console.error('[Auth Store] Failed to apply auth state from another tab:', error);
     }
   };
+
+  if (import.meta.client && !authStorageListenerRegistered && typeof window !== 'undefined') {
+    authStorageListenerRegistered = true;
+    window.addEventListener('storage', (event: StorageEvent) => {
+      if (event.key !== 'authState') {
+        return;
+      }
+      useAuthStore().applyExternalAuthState(event.newValue);
+    });
+  }
   
   return {
     // State
@@ -323,6 +335,7 @@ export const useAuthStore = defineStore('auth', () => {
     initializeAuth,
     setAccessToken,
     setRefreshToken,
-    updateTokensFromSSE
+    updateTokensFromSSE,
+    applyExternalAuthState
   };
 }); 

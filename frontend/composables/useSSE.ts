@@ -28,9 +28,6 @@ export const useSSE = () => {
     // Setup global SSE connection for meal diary and shopping list
     if (!sseConnection) {
       sseConnection = $sse.setup(familyGroupId, {
-        // Token refresh events
-        'token-refresh': (data) => authStore.updateTokensFromSSE(data),
-
         // Shopping list item events
         'add-item': (data) => {
           // Ignore events triggered by the current user

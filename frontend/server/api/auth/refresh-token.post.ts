@@ -1,5 +1,4 @@
 import { apiFetch } from '~/server/utils/fetch';
-import { SSE_EMITTER } from '~/server/plugins/sse';
 
 interface TokenResponse {
   accessToken: string;
@@ -26,16 +25,8 @@ export default defineEventHandler(async (event) => {
       method: 'POST',
       body: JSON.stringify({ refreshToken }),
     }, event);
-    
-    // Emit SSE event for token refresh if user has a family group
-    if (response.user?.family_group_id) {
-      SSE_EMITTER.emit(`family-${response.user.family_group_id}`, 'token-refresh', {
-        accessToken: response.accessToken,
-        refreshToken: response.refreshToken,
-        userId: response.user.id
-      });
-    }
-    
+
+    // Tokens stay on this HTTP response. They are not published on the family channel.
     return response;
   } catch (error: any) {
     // If the error is from the API, pass through the status code and message
