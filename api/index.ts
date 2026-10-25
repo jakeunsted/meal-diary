@@ -56,8 +56,9 @@ if (posthog) {
 initializeOtelLogs();
 
 // Middleware
-// Trust proxy for Railway (needed for rate limiting and correct IP addresses)
-// Railway uses 1 proxy, so we trust only the first proxy
+// Railway's public edge is one proxy and overwrites forwarding headers, so
+// req.protocol and the hostname follow that hop. Rate limits do not use
+// req.ip: the listen port is also reachable without the edge.
 app.set('trust proxy', 1);
 
 if (process.env.NODE_ENV === 'development') {
