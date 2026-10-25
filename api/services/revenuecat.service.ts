@@ -1,4 +1,4 @@
-import { FamilyGroup, Subscription, SubscriptionEvent } from '../db/models/associations.ts';
+import { FamilyGroup, Subscription, SubscriptionEvent, User } from '../db/models/associations.ts';
 import type { SubscriptionAttributes } from '../db/models/Subscription.model.ts';
 import type { SubscriptionPlan, SubscriptionStatus } from '@meal-diary/shared';
 import { getOrCreateSubscription } from './entitlements.service.ts';
@@ -336,7 +336,11 @@ export const linkRevenueCatUser = async (
     throw new Error('Family group not found');
   }
 
-  if (familyGroup.dataValues.created_by !== ownerUserId) {
+  const owner = await User.findByPk(ownerUserId);
+  if (
+    familyGroup.dataValues.created_by !== ownerUserId ||
+    owner?.dataValues.family_group_id !== familyGroupId
+  ) {
     throw new Error('Only the family owner can manage billing');
   }
 

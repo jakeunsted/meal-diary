@@ -11,6 +11,7 @@ import {
   TrialAlreadyUsedError,
   BillingManagedByStoreError,
   AlreadySubscribedError,
+  BillingAuthorizationError,
 } from '../billing.service.ts';
 
 const mockCheckoutSessionsCreate = vi.hoisted(() => vi.fn());
@@ -132,6 +133,7 @@ describe('billing.service', () => {
           id: 10,
           email: 'owner@example.com',
           normalized_email: 'owner@example.com',
+          family_group_id: 1,
           google_id: null,
         },
         update: vi.fn().mockResolvedValue(undefined),
@@ -219,6 +221,22 @@ describe('billing.service', () => {
       await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
         AlreadySubscribedError
       );
+    });
+
+    it('rejects checkout when the owner is no longer a member of the family', async () => {
+      setupCheckoutMocks(false);
+      vi.spyOn(User, 'findByPk').mockResolvedValue({
+        dataValues: {
+          id: 10,
+          email: 'owner@example.com',
+          family_group_id: 99,
+        },
+      } as never);
+
+      await expect(createCheckoutSession(1, 10, 'month')).rejects.toBeInstanceOf(
+        BillingAuthorizationError
+      );
+      expect(mockCheckoutSessionsCreate).not.toHaveBeenCalled();
     });
   });
 

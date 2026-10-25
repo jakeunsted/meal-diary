@@ -121,6 +121,12 @@ describe('familyGroup.controller', () => {
     const unauthorized = mockResponse();
     await createFamilyGroup(mockRequest({ name: 'Home' }, {}, null), unauthorized);
     expect(unauthorized.status).toHaveBeenCalledWith(401);
+
+    userFindByPk.mockResolvedValueOnce({ dataValues: { family_group_id: 10 } });
+    const conflict = mockResponse();
+    await createFamilyGroup(mockRequest({ name: 'Second' }), conflict);
+    expect(conflict.status).toHaveBeenCalledWith(409);
+    expect(familyGroupCreate).toHaveBeenCalledTimes(1);
   });
 
   it('joins a family group and maps missing, unknown, and member-limit responses', async () => {
@@ -147,6 +153,14 @@ describe('familyGroup.controller', () => {
     const limited = mockResponse();
     await joinFamilyGroup(mockRequest({ random_identifier: 'able-boat-calm' }), limited);
     expect(trackEvent).toHaveBeenCalledWith('5', 'family_group_join_failure', { reason: 'member_limit' });
+
+    userFindByPk.mockResolvedValue({ dataValues: { id: 5, family_group_id: 10 } });
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 10, created_by: 5 } });
+    userUpdate.mockClear();
+    const stillOwner = mockResponse();
+    await joinFamilyGroup(mockRequest({ random_identifier: 'able-boat-calm' }), stillOwner);
+    expect(stillOwner.status).toHaveBeenCalledWith(409);
+    expect(userUpdate).not.toHaveBeenCalled();
   });
 
   it('returns a family group only to its members', async () => {
