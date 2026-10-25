@@ -102,6 +102,9 @@ export const createRecipe = async (req: Request, res: Response) => {
 
     return res.status(201).json(recipe);
   } catch (error) {
+    if (handleEntitlementError(error, res)) {
+      return;
+    }
     console.error('Error creating recipe:', error);
     return res.status(500).json({ message: 'Failed to create recipe' });
   }
@@ -143,6 +146,10 @@ export const importRecipeFromUrl = async (req: Request, res: Response) => {
 
     return res.status(201).json(recipe);
   } catch (error) {
+    if (handleEntitlementError(error, res)) {
+      return;
+    }
+
     if (error instanceof InvalidRecipeImportUrlError) {
       return res.status(400).json({ message: error.message });
     }

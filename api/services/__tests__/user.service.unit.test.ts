@@ -26,6 +26,10 @@ beforeEach(() => {
   vi.restoreAllMocks();
   // No existing user with the same username/email
   vi.spyOn(User, 'findOne').mockResolvedValue(null);
+  vi.spyOn(sequelize, 'transaction').mockResolvedValue({
+    commit: vi.fn().mockResolvedValue(undefined),
+    rollback: vi.fn().mockResolvedValue(undefined),
+  } as never);
 });
 
 describe('isValidEmail', () => {
@@ -108,6 +112,10 @@ describe('createUser', () => {
     await expect(
       createUser({ ...validInput, family_group_code: 'invite-code' })
     ).rejects.toThrow(EntitlementRequiredError);
+
+    expect(FamilyGroup.findByPk).toHaveBeenCalledWith(1, expect.objectContaining({
+      lock: 'UPDATE',
+    }));
   });
 
   it('throws when the terms have not been accepted', async () => {
@@ -139,7 +147,8 @@ describe('createUser', () => {
         username: 'newuser',
         email: 'new@example.com',
         terms_accepted_at: expect.any(Date),
-      })
+      }),
+      expect.objectContaining({ transaction: expect.anything() })
     );
     expect(result.user).not.toHaveProperty('password_hash');
   });

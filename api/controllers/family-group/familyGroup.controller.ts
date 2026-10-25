@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
+import { Transaction } from 'sequelize';
 import { FamilyGroup, User, Subscription } from '../../db/models/associations.ts';
+import sequelize from '../../db/models/index.ts';
 import ShoppingList from '../../db/models/ShoppingList.model.ts';
 import { fourLetterWords } from '../../constants/four-letter-words.ts';
 import { createNewWeeklyMeals } from '../../services/mealDiary.service.ts';
@@ -126,12 +128,29 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
       }
     }
 
+    const transaction = await sequelize.transaction();
     try {
+      const lockedFamily = await FamilyGroup.findByPk(Number(familyGroup.dataValues.id), {
+        transaction,
+        lock: Transaction.LOCK.UPDATE,
+      });
+      if (!lockedFamily) {
+        throw new Error('Family group not found');
+      }
+
       await EntitlementsService.assertCanAddFamilyMember(
-        Number(familyGroup.dataValues.id),
-        user_id
+        Number(lockedFamily.dataValues.id),
+        user_id,
+        transaction
       );
+
+      await User.update(
+        { family_group_id: lockedFamily.dataValues.id },
+        { where: { id: user_id }, transaction }
+      );
+      await transaction.commit();
     } catch (error) {
+      await transaction.rollback();
       if (handleEntitlementError(error, res)) {
         await trackEvent(user_id.toString(), 'family_group_join_failure', {
           reason: 'member_limit',
@@ -140,8 +159,6 @@ export const joinFamilyGroup = async (req: Request, res: Response) => {
       }
       throw error;
     }
-
-    await User.update({ family_group_id: familyGroup.dataValues.id }, { where: { id: user_id } });
 
     // Track successful family group join
     await trackEvent(user_id.toString(), 'family_group_join_success', {

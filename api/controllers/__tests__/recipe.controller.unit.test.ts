@@ -91,6 +91,25 @@ describe('recipe.controller importRecipeFromUrl', () => {
     });
   });
 
+  it('returns the recipe cap when the locked recount rejects the import', async () => {
+    vi.mocked(EntitlementsService.assertCanCreateRecipe).mockResolvedValue({} as never);
+    const error = new EntitlementsService.EntitlementRequiredError('recipes', 'free');
+    vi.mocked(recipeImportService.importRecipeFromUrl).mockRejectedValue(error);
+
+    const req = mockRequest({
+      family_group_id: 10,
+      url: 'https://example.com/recipe',
+    });
+    const res = mockResponse();
+
+    await importRecipeFromUrl(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+      feature: 'recipes',
+    }));
+  });
+
   it('returns 400 when family group id or url is missing', async () => {
     const req = mockRequest({ family_group_id: 10 });
     const res = mockResponse();
@@ -270,6 +289,12 @@ describe('recipe.controller recipes', () => {
     const created = mockResponse();
     await createRecipe(request({}, { family_group_id: '10', name: 'Pasta' }), created);
     expect(created.status).toHaveBeenCalledWith(201);
+
+    const error = new EntitlementsService.EntitlementRequiredError('recipes', 'free');
+    vi.mocked(recipeService.createRecipe).mockRejectedValueOnce(error);
+    const capped = mockResponse();
+    await createRecipe(request({}, { family_group_id: '10', name: 'Pasta' }), capped);
+    expect(capped.status).toHaveBeenCalledWith(403);
 
     const incomplete = mockResponse();
     await createRecipe(request({}, { family_group_id: '10' }), incomplete);

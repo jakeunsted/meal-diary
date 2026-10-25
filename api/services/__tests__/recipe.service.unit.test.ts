@@ -9,6 +9,8 @@ const ingredientBulkCreate = vi.fn();
 const ingredientDestroy = vi.fn();
 const dailyMealUpdate = vi.fn();
 const dailyMealEntryUpdate = vi.fn();
+const familyGroupFindByPk = vi.fn();
+const assertCanCreateRecipe = vi.fn();
 const sequelizeQuery = vi.fn();
 const transaction = { commit: vi.fn(), rollback: vi.fn() };
 
@@ -19,7 +21,14 @@ vi.mock('../../db/models/index.ts', () => ({
   },
 }));
 
+vi.mock('../entitlements.service.ts', () => ({
+  assertCanCreateRecipe: (...args: unknown[]) => assertCanCreateRecipe(...args),
+}));
+
 vi.mock('../../db/models/associations.ts', () => ({
+  FamilyGroup: {
+    findByPk: (...args: unknown[]) => familyGroupFindByPk(...args),
+  },
   Recipe: {
     findAll: (...args: unknown[]) => recipeFindAll(...args),
     findByPk: (...args: unknown[]) => recipeFindByPk(...args),
@@ -38,12 +47,56 @@ vi.mock('../../db/models/associations.ts', () => ({
   },
 }));
 
-import { deleteRecipe, getRecipesByFamilyGroup, updateRecipe } from '../recipe.service.ts';
+import { createRecipe, deleteRecipe, getRecipesByFamilyGroup, updateRecipe } from '../recipe.service.ts';
 
 beforeEach(() => {
   vi.clearAllMocks();
   transaction.commit.mockReset();
   transaction.rollback.mockReset();
+});
+
+describe('createRecipe', () => {
+  it('locks the family and recounts before inserting the recipe', async () => {
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 4 } });
+    assertCanCreateRecipe.mockResolvedValue({});
+    recipeCreate.mockResolvedValue({ dataValues: { id: 8 } });
+    recipeFindByPk.mockResolvedValue({ id: 8, name: 'Soup' });
+
+    const result = await createRecipe({
+      family_group_id: 4,
+      created_by: 5,
+      name: 'Soup',
+    });
+
+    expect(familyGroupFindByPk).toHaveBeenCalledWith(4, expect.objectContaining({
+      transaction,
+      lock: 'UPDATE',
+    }));
+    expect(assertCanCreateRecipe).toHaveBeenCalledWith(4, 5, transaction);
+    expect(familyGroupFindByPk.mock.invocationCallOrder[0]).toBeLessThan(
+      assertCanCreateRecipe.mock.invocationCallOrder[0]
+    );
+    expect(assertCanCreateRecipe.mock.invocationCallOrder[0]).toBeLessThan(
+      recipeCreate.mock.invocationCallOrder[0]
+    );
+    expect(transaction.commit).toHaveBeenCalled();
+    expect(result).toEqual({ id: 8, name: 'Soup' });
+  });
+
+  it('does not insert a recipe when the recount rejects the cap', async () => {
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 4 } });
+    assertCanCreateRecipe.mockRejectedValue(new Error('limit'));
+
+    await expect(createRecipe({
+      family_group_id: 4,
+      created_by: 5,
+      name: 'Soup',
+    })).rejects.toThrow('limit');
+
+    expect(recipeCreate).not.toHaveBeenCalled();
+    expect(transaction.rollback).toHaveBeenCalled();
+    expect(transaction.commit).not.toHaveBeenCalled();
+  });
 });
 
 describe('getRecipesByFamilyGroup', () => {

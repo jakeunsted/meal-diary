@@ -37,6 +37,9 @@ describe('recipe-import/import.service', () => {
     });
 
     expect(parseRecipeFromUrl).toHaveBeenCalledWith('https://example.com/curry');
+    expect(vi.mocked(parseRecipeFromUrl).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(createRecipe).mock.invocationCallOrder[0]
+    );
     expect(createRecipe).toHaveBeenCalledWith({
       family_group_id: 7,
       created_by: 3,

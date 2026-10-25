@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import express from 'express';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import sequelize from '../../db/models/index.ts';
 
 process.env.JWT_ACCESS_SECRET = 'unit-test-secret';
 delete process.env.POSTHOG_KEY;
@@ -292,9 +293,17 @@ describe('family group routes authorization', () => {
   });
 
   it('join uses the authenticated user id, ignoring user_id in the body', async () => {
+    vi.spyOn(User, 'findByPk').mockResolvedValue(fakeUser(1, null));
     vi.spyOn(FamilyGroup, 'findOne').mockResolvedValue({
       dataValues: { id: 5 },
     } as unknown as FamilyGroup);
+    vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
+      dataValues: { id: 5 },
+    } as unknown as FamilyGroup);
+    vi.spyOn(sequelize, 'transaction').mockResolvedValue({
+      commit: vi.fn().mockResolvedValue(undefined),
+      rollback: vi.fn().mockResolvedValue(undefined),
+    } as never);
     const update = vi.spyOn(User, 'update').mockResolvedValue([1]);
 
     const res = await request(app)
@@ -305,11 +314,12 @@ describe('family group routes authorization', () => {
     expect(res.status).toBe(200);
     expect(update).toHaveBeenCalledWith(
       { family_group_id: 5 },
-      { where: { id: 1 } }
+      expect.objectContaining({ where: { id: 1 } })
     );
   });
 
   it('create uses the authenticated user as creator, ignoring created_by in the body', async () => {
+    vi.spyOn(User, 'findByPk').mockResolvedValue(fakeUser(1, null));
     vi.spyOn(FamilyGroup, 'findOne').mockResolvedValue(null);
     const create = vi.spyOn(FamilyGroup, 'create').mockResolvedValue({
       dataValues: { id: 7, name: 'New family' },
