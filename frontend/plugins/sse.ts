@@ -1,81 +1,128 @@
 import { defineNuxtPlugin } from '#app'
+import { useAuthStore } from '~/stores/auth';
 
 interface SSEHandlers {
   [key: string]: (data: any) => void;
 }
 
+interface SseConnection {
+  close: () => void;
+}
+
+const RECONNECT_DELAY_MS = 5000;
+
 export default defineNuxtPlugin(() => {
-  let eventSource: EventSource | null = null;
+  let connection: SseConnection | null = null;
   let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   let isReconnecting = false;
-  
-  const setupSSE = (familyGroupId: number, handlers: SSEHandlers) => {
-    if (import.meta.client) {
-      // Close existing connection if any
-      if (eventSource) {
-        eventSource.close();
-        eventSource = null;
-      }
-      
-      // Clear any pending reconnection
-      if (reconnectTimeout) {
-        clearTimeout(reconnectTimeout);
-        reconnectTimeout = null;
-      }
-      
-      eventSource = new EventSource(`/api/server-sent-events/${familyGroupId}`);
-      
-      eventSource.onopen = (_event: Event) => {
-        isReconnecting = false;
-      };
-      
-      eventSource.onmessage = (event: MessageEvent) => {
-        try {
-          const data = JSON.parse(event.data);
-          
-          // Call the appropriate handler if it exists
-          if (handlers[data.type]) {
-            handlers[data.type](data.data);
-          }
-        } catch (error) {
-          console.error('[SSE Plugin] Error parsing SSE message:', error, event.data);
-        }
-      };
-      
-      eventSource.onerror = (_event: Event) => {
-        // EventSource readyState: 0 = CONNECTING, 1 = OPEN, 2 = CLOSED
-        const readyState = eventSource?.readyState;
-        
-        if (readyState === EventSource.CLOSED) {
-          // Only reconnect if we're not already reconnecting
-          if (!isReconnecting) {
-            isReconnecting = true;
-            eventSource?.close();
-            eventSource = null;
-            
-            reconnectTimeout = setTimeout(() => {
-              setupSSE(familyGroupId, handlers);
-            }, 5000);
-          }
-        }
-      };
-    }
-    
-    return eventSource;
-  };
-  
+
   const closeSSE = () => {
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
     }
     isReconnecting = false;
-    if (eventSource) {
-      eventSource.close();
-      eventSource = null;
+    if (connection) {
+      connection.close();
+      connection = null;
     }
   };
-  
+
+  const setupSSE = (familyGroupId: number, handlers: SSEHandlers): SseConnection | null => {
+    if (!import.meta.client) {
+      return null;
+    }
+
+    closeSSE();
+
+    let aborted = false;
+    const controller = new AbortController();
+
+    const scheduleReconnect = () => {
+      if (aborted || isReconnecting) {
+        return;
+      }
+      isReconnecting = true;
+      reconnectTimeout = setTimeout(() => {
+        reconnectTimeout = null;
+        isReconnecting = false;
+        if (!aborted) {
+          void connect();
+        }
+      }, RECONNECT_DELAY_MS);
+    };
+
+    const connect = async () => {
+      const accessToken = useAuthStore().accessToken;
+      if (!accessToken) {
+        scheduleReconnect();
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/server-sent-events/${familyGroupId}`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            Accept: 'text/event-stream',
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          scheduleReconnect();
+          return;
+        }
+
+        isReconnecting = false;
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (!aborted) {
+          const { value, done } = await reader.read();
+          if (done) {
+            break;
+          }
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() ?? '';
+          for (const frame of frames) {
+            const dataLine = frame.split('\n').find((line) => line.startsWith('data: '));
+            if (!dataLine) {
+              continue;
+            }
+            try {
+              const payload = JSON.parse(dataLine.slice('data: '.length));
+              if (handlers[payload.type]) {
+                handlers[payload.type](payload.data);
+              }
+            } catch (error) {
+              console.error('[SSE Plugin] Error parsing SSE message:', error, dataLine);
+            }
+          }
+        }
+      } catch (error) {
+        if (aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+          return;
+        }
+        console.error('[SSE Plugin] Stream failed:', error);
+      }
+
+      if (!aborted) {
+        scheduleReconnect();
+      }
+    };
+
+    connection = {
+      close: () => {
+        aborted = true;
+        controller.abort();
+      },
+    };
+    void connect();
+    return connection;
+  };
+
   return {
     provide: {
       sse: {

@@ -15,7 +15,7 @@ export const useSSE = () => {
   const { $sse } = useNuxtApp();
   const router = useRouter();
 
-  let sseConnection: EventSource | null = null;
+  let sseConnection: { close: () => void } | null = null;
 
   /**
    * Setup SSE connection with all event handlers

@@ -1,51 +1,89 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+
+const authStore = { accessToken: 'access-token' as string | null };
+
+vi.mock('~/stores/auth', () => ({
+  useAuthStore: () => authStore,
+}));
+
 import plugin from './sse';
 
-class FakeEventSource {
-  static CONNECTING = 0;
-  static OPEN = 1;
-  static CLOSED = 2;
-  static instances: FakeEventSource[] = [];
-  url = '';
-  readyState = FakeEventSource.OPEN;
-  onopen: ((event: Event) => void) | null = null;
-  onmessage: ((event: MessageEvent) => void) | null = null;
-  onerror: ((event: Event) => void) | null = null;
-  close = vi.fn();
+const encoder = new TextEncoder();
 
-  constructor(url: string) {
-    this.url = url;
-    FakeEventSource.instances.push(this);
+const flush = async () => {
+  for (let step = 0; step < 20; step += 1) {
+    await Promise.resolve();
   }
-}
+};
+
+const streamFrom = (frames: string[], options?: { hang?: boolean }) => {
+  let index = 0;
+  return {
+    getReader: () => ({
+      read: async () => {
+        if (index >= frames.length) {
+          if (options?.hang) {
+            return new Promise(() => {});
+          }
+          return { done: true, value: undefined };
+        }
+        const value = encoder.encode(frames[index]);
+        index += 1;
+        return { done: false, value };
+      },
+    }),
+  };
+};
 
 describe('sse plugin', () => {
   afterEach(() => {
     vi.useRealTimers();
-    FakeEventSource.instances = [];
+    vi.unstubAllGlobals();
+    authStore.accessToken = 'access-token';
   });
 
-  it('dispatches messages and reconnects after the stream closes', () => {
+  it('sends the bearer token, dispatches frames, and reconnects after the stream ends', async () => {
     vi.useFakeTimers();
-    vi.stubGlobal('EventSource', FakeEventSource);
     globalThis.__NUXT_CLIENT__ = true;
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        body: streamFrom(['data: {"type":"add-item","data":{"id":1}}\n\n', 'data: not-json\n\n']),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        body: streamFrom([], { hang: true }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
     const sse = plugin({} as never).provide.sse;
     const onAdd = vi.fn();
-
     sse.setup(9, { 'add-item': onAdd });
-    const stream = FakeEventSource.instances[0];
-    expect(stream.url).toBe('/api/server-sent-events/9');
+    await flush();
 
-    stream.onmessage?.({ data: JSON.stringify({ type: 'add-item', data: { id: 1 } }) } as MessageEvent);
     expect(onAdd).toHaveBeenCalledWith({ id: 1 });
+    expect(fetchMock).toHaveBeenCalledWith('/api/server-sent-events/9', expect.objectContaining({
+      headers: expect.objectContaining({ Authorization: 'Bearer access-token' }),
+    }));
 
-    stream.onmessage?.({ data: 'not-json' } as MessageEvent);
-    stream.readyState = FakeEventSource.CLOSED;
-    stream.onerror?.({} as Event);
-    vi.advanceTimersByTime(5000);
-    expect(FakeEventSource.instances).toHaveLength(2);
+    await vi.advanceTimersByTimeAsync(5000);
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
 
     sse.close();
-    expect(FakeEventSource.instances[1].close).toHaveBeenCalled();
+  });
+
+  it('does not open a stream without an access token', async () => {
+    vi.useFakeTimers();
+    globalThis.__NUXT_CLIENT__ = true;
+    authStore.accessToken = null;
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const sse = plugin({} as never).provide.sse;
+    sse.setup(9, {});
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(fetchMock).not.toHaveBeenCalled();
+    sse.close();
   });
 });
