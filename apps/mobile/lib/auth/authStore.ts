@@ -11,6 +11,7 @@ import { clearMealDiaryCache } from '@/lib/diary/mealDiaryStorage';
 import { clearPendingQueue } from '@/lib/shopping-list/shoppingListPendingQueue';
 import { clearShoppingListCache } from '@/lib/shopping-list/shoppingListStorage';
 import { isSessionExpiredError } from '@/lib/auth/httpError';
+import { clearRegisterCode } from '@/lib/auth/registerStorage';
 import { isTokenExpired } from '@/lib/auth/jwt';
 import { refreshTokens } from '@/lib/auth/refreshTokens';
 import { runWithTokenRefreshLock } from '@/lib/auth/tokenRefreshLock';
@@ -218,6 +219,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   clearSession: async () => {
+    await clearRegisterCode();
     await clearMealDiaryCache();
     await clearAllMealDiaryPendingQueues();
     resetMealDiarySyncState();
