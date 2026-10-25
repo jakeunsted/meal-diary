@@ -1,5 +1,6 @@
 import { Sequelize } from 'sequelize';
 import dotenv from 'dotenv';
+import { productionDatabaseSsl } from '../productionSsl.ts';
 
 dotenv.config({ quiet: true });
 
@@ -30,10 +31,7 @@ if (process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test') {
   sequelize = new Sequelize(process.env.DATABASE_URL, {
     dialect: 'postgres',
     dialectOptions: {
-      ssl: {
-        require: true,
-        rejectUnauthorized: false,
-      }
+      ssl: productionDatabaseSsl(process.env.DATABASE_SSL_CA),
     },
     logging: process.env.DEBUG === 'true' ? console.log : false,
   });
