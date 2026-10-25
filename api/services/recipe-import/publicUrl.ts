@@ -8,6 +8,23 @@ import { InvalidRecipeImportUrlError, RecipeImportParseError } from './errors.ts
 const MAX_REDIRECTS = 5;
 /** Per-hop deadline for recipe HTML fetch (connect + response body). */
 export const RECIPE_IMPORT_FETCH_TIMEOUT_MS = 10_000;
+/** Per-hop ceiling for a recipe page, including redirect responses. */
+export const RECIPE_IMPORT_MAX_BYTES = 1024 * 1024;
+
+const declaredContentLength = (headers: http.IncomingHttpHeaders): number | undefined => {
+  const raw = headers['content-length'];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  const length = Number(value);
+  if (!Number.isFinite(length) || length < 0) {
+    return undefined;
+  }
+
+  return length;
+};
 
 const redirectStatuses = new Set([301, 302, 303, 307, 308]);
 
@@ -183,7 +200,13 @@ export const fetchPinnedHttpUrl = (
       reject(error);
     };
 
-    const request = transport.request(
+    let request!: http.ClientRequest;
+    const timer = setTimeout(() => {
+      request.destroy();
+      fail(new Error('Recipe import fetch timed out'));
+    }, timeoutMs);
+
+    request = transport.request(
       {
         protocol: url.protocol,
         hostname: pinned.address,
@@ -199,7 +222,33 @@ export const fetchPinnedHttpUrl = (
       },
       (incoming) => {
         const chunks: Buffer[] = [];
+
+        const rejectOversized = (): void => {
+          chunks.length = 0;
+          clearTimeout(timer);
+          fail(new InvalidRecipeImportUrlError());
+          incoming.destroy();
+          request.destroy();
+        };
+
+        const declaredLength = declaredContentLength(incoming.headers);
+        if (declaredLength !== undefined && declaredLength > RECIPE_IMPORT_MAX_BYTES) {
+          rejectOversized();
+          return;
+        }
+
+        let received = 0;
         incoming.on('data', (chunk: Buffer) => {
+          if (settled) {
+            return;
+          }
+
+          received += chunk.length;
+          if (received > RECIPE_IMPORT_MAX_BYTES) {
+            rejectOversized();
+            return;
+          }
+
           chunks.push(chunk);
         });
         incoming.on('end', () => {
@@ -231,11 +280,6 @@ export const fetchPinnedHttpUrl = (
         });
       }
     );
-
-    const timer = setTimeout(() => {
-      request.destroy();
-      fail(new Error('Recipe import fetch timed out'));
-    }, timeoutMs);
 
     request.on('error', (error) => {
       clearTimeout(timer);
