@@ -1,7 +1,38 @@
-import rateLimit from 'express-rate-limit';
+import { isIP } from 'node:net';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import type { Options, RateLimitRequestHandler } from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import { trackEvent } from '../utils/posthog.ts';
+
+// Railway's public edge replaces X-Real-IP with the caller it saw. req.ip is
+// not that value: trust proxy is 1, so it follows X-Forwarded-For, and a
+// connection that skips the edge (a published port, or private networking)
+// can choose it. A list in X-Real-IP is ignored. A private-network caller can
+// still send one X-Real-IP; the edge's own addresses are not a stable list.
+const singleClientIp = (value: string | string[] | undefined): string | undefined => {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!isIP(trimmed)) {
+    return undefined;
+  }
+  return ipKeyGenerator(trimmed);
+};
+
+export const rateLimitClientKey = (req: Request): string => {
+  const fromEdge = singleClientIp(req.headers?.['x-real-ip']);
+  if (fromEdge) {
+    return fromEdge;
+  }
+
+  const peer = req.socket?.remoteAddress;
+  if (typeof peer === 'string' && isIP(peer)) {
+    return ipKeyGenerator(peer);
+  }
+
+  return 'unknown';
+};
 
 // Keep aligned with the routers mounted in index.ts. Scanner traffic hits the
 // global limiter on paths this API does not serve, and those denials were
@@ -39,11 +70,11 @@ const trackRateLimitDenial = (req: Request, limiterType: string): void => {
     return;
   }
 
-  const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  trackEvent(ip, 'rate_limit_exceeded', {
+  const clientKey = rateLimitClientKey(req);
+  trackEvent(clientKey, 'rate_limit_exceeded', {
     endpoint: req.path,
     method: req.method,
-    ip,
+    ip: clientKey,
     limiter_type: limiterType,
   }).catch(trackErr => {
     console.error('Error tracking rate limit event:', trackErr);
@@ -53,16 +84,20 @@ const trackRateLimitDenial = (req: Request, limiterType: string): void => {
 // Function to create rate limiters with environment-based configuration
 const createRateLimiter = (options: Partial<Options>, limiterType: string): RateLimitRequestHandler => {
   const environment = process.env.NODE_ENV;
+  const shared = {
+    ...options,
+    keyGenerator: (req: Request) => rateLimitClientKey(req),
+  };
   if (environment === 'development') {
     // No rate limits in development environment
     return rateLimit({
-      ...options,
+      ...shared,
       limit: Number.MAX_SAFE_INTEGER,
     });
   }
   
   return rateLimit({
-    ...options,
+    ...shared,
     handler: (req: Request, res: Response, _next, handlerOptions) => {
       trackRateLimitDenial(req, limiterType);
       res.status(handlerOptions.statusCode).send(handlerOptions.message);
