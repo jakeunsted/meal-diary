@@ -14,61 +14,122 @@
             <img :src="user.avatar_url || '/temp-avatars/generic-avatar.png'" class="w-full h-full object-cover" />
           </div>
         </div>
-        <h2 class="text-2xl font-bold text-center mb-2">{{ fullName }}</h2>
-        <button class="btn btn-primary mb-6" @click="showAvatarCustomizer = true">
-          <fa icon="pen" class="mr-2" />
-          {{ $t('Customize Avatar') }}
+        <h2 class="text-2xl font-bold text-center mb-1">{{ fullName }}</h2>
+        <p class="text-center text-base-content/70 mb-6 break-all" data-testid="profile-email">
+          {{ user.email }}
+        </p>
+        <div class="flex flex-wrap justify-center gap-2">
+          <button class="btn btn-primary" @click="showAvatarCustomizer = true">
+            <fa icon="pen" class="mr-2" />
+            {{ $t('Customize Avatar') }}
+          </button>
+          <button
+            class="btn btn-outline"
+            data-testid="profile-edit-account"
+            @click="handleOpenAccountDetails"
+          >
+            {{ $t('Edit account') }}
+          </button>
+        </div>
+      </div>
+    </Transition>
+
+    <dialog class="modal" :class="{ 'modal-open': showAccountDetails }" data-testid="profile-account-dialog">
+      <div class="modal-box">
+        <button
+          type="button"
+          class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+          data-testid="profile-account-dialog-close"
+          @click="handleCloseAccountDetails"
+        >
+          ✕
+        </button>
+        <h3 class="font-bold text-lg mb-4">{{ $t('Account details') }}</h3>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-sm opacity-70">{{ $t('Display name') }}</span>
+          <input
+            type="text"
+            v-model="displayName"
+            class="input input-bordered w-full"
+            data-testid="profile-display-name-input"
+            :disabled="isSavingDisplayName"
+          />
+        </label>
+        <div v-if="displayNameError" class="alert alert-error mt-3" data-testid="profile-display-name-error">
+          <span>{{ displayNameError }}</span>
+        </div>
+        <div v-if="displayNameSuccess" class="alert alert-success mt-3" data-testid="profile-display-name-success">
+          <span>{{ displayNameSuccess }}</span>
+        </div>
+        <div class="mt-3 flex justify-end">
+          <button
+            class="btn btn-primary"
+            data-testid="profile-save-display-name"
+            :disabled="!canSaveDisplayName"
+            @click="handleSaveDisplayName"
+          >
+            <span v-if="isSavingDisplayName" class="loading loading-spinner loading-sm"></span>
+            <span v-else>{{ $t('Save') }}</span>
+          </button>
+        </div>
+
+        <div class="divider">{{ $t('Email') }}</div>
+
+        <p class="break-all" data-testid="profile-account-current-email">{{ user?.email }}</p>
+        <p v-if="!isChangingEmail && !emailSuccess" class="text-sm opacity-70 mt-1">
+          {{ $t('A new address is saved only after that inbox confirms a code.') }}
+        </p>
+        <div v-if="emailError" class="alert alert-error mt-3" data-testid="profile-email-error">
+          <span>{{ emailError }}</span>
+        </div>
+        <div v-if="emailSuccess" class="alert alert-success mt-3" data-testid="profile-email-success">
+          <span>{{ emailSuccess }}</span>
+        </div>
+
+        <button
+          v-if="!isChangingEmail"
+          class="btn btn-outline mt-4"
+          data-testid="profile-email-start"
+          @click="handleStartEmailChange"
+        >
+          {{ $t('Change email') }}
         </button>
 
-        <div class="card bg-base-200 w-full">
-          <div class="card-body gap-3">
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">{{ $t('Display name') }}</span>
-              </label>
-              <input
-                type="text"
-                v-model="displayName"
-                class="input input-bordered"
-                data-testid="profile-display-name-input"
-                :disabled="isSavingDisplayName"
-              />
-            </div>
-            <div class="form-control">
-              <label class="label">
-                <span class="label-text">{{ $t('Email') }}</span>
-              </label>
-              <input
-                type="email"
-                v-model="emailDraft"
-                class="input input-bordered"
-                data-testid="profile-email-input"
-                :disabled="isSavingEmail"
-              />
-            </div>
-            <div v-if="emailCodeSent" class="form-control">
-              <label class="label">
-                <span class="label-text">{{ $t('Confirmation code') }}</span>
-              </label>
-              <input
-                type="text"
-                v-model="emailCode"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                class="input input-bordered"
-                data-testid="profile-email-code-input"
-                :disabled="isSavingEmail"
-              />
-            </div>
-            <div v-if="emailError" class="text-error text-sm" data-testid="profile-email-error">
-              {{ emailError }}
-            </div>
-            <div v-if="emailSuccess" class="text-success text-sm" data-testid="profile-email-success">
-              {{ emailSuccess }}
-            </div>
+        <div v-else class="mt-4 flex flex-col gap-3">
+          <p class="text-sm opacity-70">
+            {{ $t('We will send a 6-digit code to the new address. This email stays until you confirm it.') }}
+          </p>
+          <label v-if="!emailCodeSent" class="flex flex-col gap-1">
+            <span class="text-sm opacity-70">{{ $t('New email') }}</span>
+            <input
+              type="email"
+              v-model="emailDraft"
+              class="input input-bordered w-full"
+              data-testid="profile-email-input"
+              :disabled="isSavingEmail"
+            />
+          </label>
+          <label v-else class="flex flex-col gap-1">
+            <span class="text-sm opacity-70">{{ $t('Confirmation code') }}</span>
+            <input
+              type="text"
+              v-model="emailCode"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              class="input input-bordered w-full tracking-widest"
+              data-testid="profile-email-code-input"
+              :disabled="isSavingEmail"
+            />
+          </label>
+          <div class="flex justify-end gap-2">
+            <button class="btn btn-ghost" :disabled="isSavingEmail" @click="handleCancelEmailChange">
+              {{ $t('Cancel') }}
+            </button>
             <button
               v-if="!emailCodeSent"
-              class="btn btn-outline"
+              class="btn btn-primary"
               data-testid="profile-email-send-code"
               :disabled="!canSendEmailCode"
               @click="handleRequestEmailChange"
@@ -78,7 +139,7 @@
             </button>
             <button
               v-else
-              class="btn btn-outline"
+              class="btn btn-primary"
               data-testid="profile-email-confirm"
               :disabled="!canConfirmEmail"
               @click="handleConfirmEmailChange"
@@ -86,25 +147,13 @@
               <span v-if="isSavingEmail" class="loading loading-spinner loading-sm"></span>
               <span v-else>{{ $t('Confirm email') }}</span>
             </button>
-            <div v-if="displayNameError" class="text-error text-sm" data-testid="profile-display-name-error">
-              {{ displayNameError }}
-            </div>
-            <div v-if="displayNameSuccess" class="text-success text-sm" data-testid="profile-display-name-success">
-              {{ displayNameSuccess }}
-            </div>
-            <button
-              class="btn btn-primary"
-              data-testid="profile-save-display-name"
-              :disabled="!canSaveDisplayName"
-              @click="handleSaveDisplayName"
-            >
-              <span v-if="isSavingDisplayName" class="loading loading-spinner loading-sm"></span>
-              <span v-else>{{ $t('Save') }}</span>
-            </button>
           </div>
         </div>
       </div>
-    </Transition>
+      <form method="dialog" class="modal-backdrop">
+        <button type="button" @click="handleCloseAccountDetails">{{ $t('close') }}</button>
+      </form>
+    </dialog>
 
     <dialog id="avatar_customizer_modal" class="modal" :class="{ 'modal-open': showAvatarCustomizer }">
       <div class="modal-box">
@@ -127,6 +176,8 @@ import { useAuthStore } from '~/stores/auth';
 import { browserStorage } from '~/utils/browserStorage';
 
 const showAvatarCustomizer = ref(false);
+const showAccountDetails = ref(false);
+const isChangingEmail = ref(false);
 const userStore = useUserStore();
 const { t } = useI18n();
 
@@ -162,9 +213,45 @@ watch(
     emailDraft.value = email ?? '';
     emailCode.value = '';
     emailCodeSent.value = false;
+    isChangingEmail.value = false;
   },
   { immediate: true }
 );
+
+const handleOpenAccountDetails = () => {
+  displayName.value = props.user?.username ?? '';
+  emailDraft.value = props.user?.email ?? '';
+  emailCode.value = '';
+  emailCodeSent.value = false;
+  isChangingEmail.value = false;
+  displayNameError.value = '';
+  displayNameSuccess.value = '';
+  emailError.value = '';
+  emailSuccess.value = '';
+  showAccountDetails.value = true;
+};
+
+const handleCloseAccountDetails = () => {
+  showAccountDetails.value = false;
+};
+
+const handleStartEmailChange = () => {
+  emailDraft.value = '';
+  emailCode.value = '';
+  emailCodeSent.value = false;
+  emailError.value = '';
+  emailSuccess.value = '';
+  isChangingEmail.value = true;
+};
+
+const handleCancelEmailChange = () => {
+  emailDraft.value = props.user?.email ?? '';
+  emailCode.value = '';
+  emailCodeSent.value = false;
+  emailError.value = '';
+  emailSuccess.value = '';
+  isChangingEmail.value = false;
+};
 
 const canSaveDisplayName = computed(() => {
   if (isSavingDisplayName.value) return false;
