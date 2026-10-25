@@ -273,23 +273,11 @@ describe('Auth Controller', () => {
 
       await forgotPassword(req, res);
 
-      expect(requestPasswordReset).toHaveBeenCalledWith('user@example.com', undefined);
+      expect(requestPasswordReset).toHaveBeenCalledWith('user@example.com');
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         message: 'If an account exists for that email, we sent password reset instructions.',
       });
-    });
-
-    it('forwards an app client flag', async () => {
-      vi.mocked(requestPasswordReset).mockResolvedValue(undefined);
-
-      const req = mockRequest({ email: 'user@example.com', client: 'app' });
-      const res = mockResponse();
-
-      await forgotPassword(req, res);
-
-      expect(requestPasswordReset).toHaveBeenCalledWith('user@example.com', 'app');
-      expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 400 when email is missing', async () => {
