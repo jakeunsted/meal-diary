@@ -13,7 +13,7 @@ import { routeParamInt } from '../../utils/routeParam.ts';
  */
 export const subscribeFamilySse = (req: Request, res: Response): void => {
   const familyGroupId = routeParamInt(req.params.family_group_id);
-  const userId = req.user?.dataValues.id;
+  const userId = (req.user as User | undefined)?.dataValues.id;
 
   if (!userId) {
     res.status(401).end();
