@@ -70,6 +70,20 @@ describe('verifyAppleToken', () => {
     expect(trackEvent).toHaveBeenCalledWith('8', 'login_success', { auth_method: 'apple' });
   });
 
+  it('returns 409 when the email is already linked to a different Apple account', async () => {
+    vi.mocked(AuthService.authenticateWithAppleToken).mockRejectedValueOnce(
+      new Error('Email already linked to a different Apple account')
+    );
+    const res = mockResponse();
+
+    await verifyAppleToken(mockRequest({ idToken: 'token', nonce: 'nonce' }), res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(res.json).toHaveBeenCalledWith({
+      message: 'Email already linked to a different Apple account',
+    });
+  });
+
   it('returns 400 when the token or nonce is missing', async () => {
     const res = mockResponse();
 

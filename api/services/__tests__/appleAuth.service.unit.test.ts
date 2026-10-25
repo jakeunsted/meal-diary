@@ -274,7 +274,7 @@ describe('authenticateWithAppleToken', () => {
     );
   });
 
-  it('does not replace an apple_id that is already set', async () => {
+  it('rejects a different Apple subject when the email already has an apple_id', async () => {
     const existing = userRow({ apple_id: 'original-apple', first_name: 'Ada', last_name: 'Lovelace' });
 
     vi.mocked(User.findOne).mockImplementation((async (options: { where?: Record<string, string> }) => {
@@ -286,7 +286,9 @@ describe('authenticateWithAppleToken', () => {
     }) as never);
 
     const idToken = signAppleToken({ sub: 'different-apple', email: 'ada@example.com' });
-    await authenticateWithAppleToken(idToken, RAW_NONCE, { givenName: 'Other' });
+    await expect(authenticateWithAppleToken(idToken, RAW_NONCE, { givenName: 'Other' })).rejects.toThrow(
+      'Email already linked to a different Apple account'
+    );
 
     expect(existing.apple_id).toBe('original-apple');
     expect(existing.update).not.toHaveBeenCalled();

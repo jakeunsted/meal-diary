@@ -760,6 +760,9 @@ export const findOrCreateAppleUser = async (
 
   if (!user && email) {
     user = await User.findOne({ where: { email } }) as (User & UserAttributes) | null;
+    if (user?.apple_id && user.apple_id !== appleId) {
+      throw new Error('Email already linked to a different Apple account');
+    }
   }
 
   if (user) {
