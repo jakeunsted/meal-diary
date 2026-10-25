@@ -46,6 +46,36 @@ describe('Password reset', () => {
     cy.get('[data-testid="password-reset-alert"]').should('be.visible');
   });
 
+  it('keeps an app reset link on the HTTPS form', () => {
+    cy.intercept('POST', '/api/auth/reset-password', {
+      statusCode: 200,
+      body: { message: 'Password updated' },
+    }).as('resetPassword');
+
+    cy.visitApp('/reset-password?token=test-token&client=app', {
+      onBeforeLoad(win) {
+        Object.defineProperty(win.navigator, 'userAgent', {
+          value: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+          configurable: true,
+        });
+      },
+    });
+
+    cy.get('[data-testid="open-in-app-link"]').should('not.exist');
+    cy.location('pathname').should('eq', '/reset-password');
+    cy.location('href').should('not.contain', 'mealdiary:');
+
+    cy.get('[data-testid="reset-password-input"]').type('NewPassword1!');
+    cy.get('[data-testid="reset-confirm-password-input"]').type('NewPassword1!');
+    cy.get('[data-testid="reset-password-submit-button"]').click();
+
+    cy.wait('@resetPassword').its('request.body').should('deep.equal', {
+      token: 'test-token',
+      password: 'NewPassword1!',
+    });
+    cy.location('pathname').should('eq', '/login');
+  });
+
   it('shows an error when the reset token is invalid', () => {
     cy.intercept('POST', '/api/auth/reset-password', {
       statusCode: 400,

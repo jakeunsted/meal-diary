@@ -31,7 +31,7 @@ export default function ForgotPasswordScreen() {
       await apiFetch('/auth/forgot-password', {
         method: 'POST',
         auth: false,
-        body: { email: trimmedEmail, client: 'app' },
+        body: { email: trimmedEmail },
       });
       setSubmitted(true);
     } catch (error) {
