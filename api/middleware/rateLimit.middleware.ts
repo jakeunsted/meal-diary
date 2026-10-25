@@ -3,6 +3,53 @@ import type { Options, RateLimitRequestHandler } from 'express-rate-limit';
 import type { Request, Response } from 'express';
 import { trackEvent } from '../utils/posthog.ts';
 
+// Keep aligned with the routers mounted in index.ts. Scanner traffic hits the
+// global limiter on paths this API does not serve, and those denials were
+// flooding PostHog. Secret-file probes under a real prefix are skipped too.
+const PRODUCT_ROUTE_PREFIXES = [
+  '/users',
+  '/meal-diaries',
+  '/family-groups',
+  '/shopping-list',
+  '/auth',
+  '/recipes',
+  '/billing',
+  '/sse',
+  '/health',
+  '/internal',
+  '/api-docs',
+];
+
+const PROBE_PATH_PATTERN = /(?:^|\/)\.|%2e|%2f|\.\.|\*|id_rsa|id_ecdsa|proc\/self/i;
+
+export const shouldTrackRateLimitDenial = (path: string): boolean => {
+  const matchesProductRoute = PRODUCT_ROUTE_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+
+  if (!matchesProductRoute) {
+    return false;
+  }
+
+  return !PROBE_PATH_PATTERN.test(path);
+};
+
+const trackRateLimitDenial = (req: Request, limiterType: string): void => {
+  if (!shouldTrackRateLimitDenial(req.path)) {
+    return;
+  }
+
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  trackEvent(ip, 'rate_limit_exceeded', {
+    endpoint: req.path,
+    method: req.method,
+    ip,
+    limiter_type: limiterType,
+  }).catch(trackErr => {
+    console.error('Error tracking rate limit event:', trackErr);
+  });
+};
+
 // Function to create rate limiters with environment-based configuration
 const createRateLimiter = (options: Partial<Options>, limiterType: string): RateLimitRequestHandler => {
   const environment = process.env.NODE_ENV;
@@ -17,15 +64,7 @@ const createRateLimiter = (options: Partial<Options>, limiterType: string): Rate
   return rateLimit({
     ...options,
     handler: (req: Request, res: Response, _next, handlerOptions) => {
-      const ip = req.ip || req.socket.remoteAddress || 'unknown';
-      trackEvent(ip, 'rate_limit_exceeded', {
-        endpoint: req.path,
-        method: req.method,
-        ip,
-        limiter_type: limiterType,
-      }).catch(trackErr => {
-        console.error('Error tracking rate limit event:', trackErr);
-      });
+      trackRateLimitDenial(req, limiterType);
       res.status(handlerOptions.statusCode).send(handlerOptions.message);
     },
   });
