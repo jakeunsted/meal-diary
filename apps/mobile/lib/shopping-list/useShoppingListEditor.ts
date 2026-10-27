@@ -74,6 +74,8 @@ function asCategorizedItems(items: ShoppingListItem[]) {
 export function useShoppingListEditor() {
   const queryClient = useQueryClient();
   const [newItemName, setNewItemName] = useState('');
+  const newItemNameRef = useRef(newItemName);
+  newItemNameRef.current = newItemName;
   const [actionError, setActionError] = useState<string | null>(null);
   const [focusedItemId, setFocusedItemId] = useState<number | string | null>(null);
   const addItemMutation = useAddShoppingListItem();
@@ -367,23 +369,19 @@ export function useShoppingListEditor() {
         return;
       }
 
-      skipBlurCommitItemIdRef.current = itemId;
+      // Open the next row before the save finishes so the keyboard never drops.
+      const shoppingList = getLatestShoppingList(familyGroupId);
+      const nextTempId = shoppingList
+        ? insertItemBelow(familyGroupId, shoppingList, itemId, createdBy)
+        : null;
+      if (nextTempId) {
+        skipBlurCommitItemIdRef.current = itemId;
+        focusItem(nextTempId);
+      }
 
       const resolvedId = await commitItemName(familyGroupId, itemId, name);
       if (!resolvedId) {
         skipBlurCommitItemIdRef.current = null;
-        return;
-      }
-
-      const latestList = getLatestShoppingList(familyGroupId);
-      if (!latestList) {
-        skipBlurCommitItemIdRef.current = null;
-        return;
-      }
-
-      const nextTempId = insertItemBelow(familyGroupId, latestList, resolvedId, createdBy);
-      if (nextTempId) {
-        focusItem(nextTempId);
       }
     },
     [commitItemName, focusItem, getLatestShoppingList, insertItemBelow, removeLocalItem]
@@ -391,11 +389,13 @@ export function useShoppingListEditor() {
 
   const handleAddNewItem = useCallback(
     async (familyGroupId: number | undefined, category?: ShoppingCategory) => {
-      const trimmedName = newItemName.trim();
+      const trimmedName = newItemNameRef.current.trim();
       if (!familyGroupId || !trimmedName) {
         return false;
       }
 
+      newItemNameRef.current = '';
+      setNewItemName('');
       setActionError(null);
 
       const resolvedCategory = category ?? categorizeShoppingItemName(trimmedName);
@@ -406,18 +406,17 @@ export function useShoppingListEditor() {
           name: trimmedName,
           category: resolvedCategory,
         });
-        setNewItemName('');
         return true;
       } catch (error) {
         if (isIgnorableShoppingListMutationError(error)) {
-          setNewItemName('');
           return true;
         }
+        setNewItemName((current) => (current.trim() ? current : trimmedName));
         setActionError(resolveShoppingListErrorMessage(error));
         return false;
       }
     },
-    [addItemMutation, newItemName]
+    [addItemMutation]
   );
 
   const handleRemoveItem = useCallback(

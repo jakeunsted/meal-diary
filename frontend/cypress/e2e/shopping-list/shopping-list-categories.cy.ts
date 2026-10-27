@@ -25,7 +25,7 @@ describe('Shopping list categories', () => {
     cy.selectShoppingListTab('all');
     cy.get('[data-testid="shopping-list-new-item-input"]').clear().type('Salmon{enter}');
     cy.wait('@apiAddShoppingItem');
-    cy.get('[data-testid="shopping-list-new-item-input"]').should('have.value', '');
+    cy.get('[data-testid="shopping-list-new-item-input"]').should('have.value', '').and('be.focused');
     cy.get('[data-testid="shopping-list-new-item-input"]').type('Apples{enter}');
     cy.wait('@apiAddShoppingItem');
     cy.get('[data-testid="shopping-list-new-item-input"]').type('Sourdough{enter}');

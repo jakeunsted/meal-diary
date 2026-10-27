@@ -147,6 +147,7 @@ export function ShoppingListItemRow({
       onBlur={() => onBlur?.(draftName)}
       onSubmitEditing={() => onSubmitEditing?.(draftName)}
       blurOnSubmit={false}
+      submitBehavior="submit"
       returnKeyType="next"
       autoFocus
       testID={`shopping-item-edit-input-${item.id}`}
