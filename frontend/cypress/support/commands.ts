@@ -4,6 +4,8 @@ interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
   entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted' | 'customMealNamesLapse' | 'customMealNamesLapseNonOwner' | 'alreadyDefault';
   failResetMealSlots?: boolean;
+  recipes?: Array<Record<string, any>>;
+  recipeCategories?: Array<Record<string, any>>;
 }
 
 interface LoginViaUiOptions {

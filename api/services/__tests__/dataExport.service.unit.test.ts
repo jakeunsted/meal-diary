@@ -5,6 +5,7 @@ import {
   MealDiary,
   ShoppingList,
   Recipe,
+  RecipeCategory,
 } from '../../db/models/associations.ts';
 import { exportUserData } from '../dataExport.service.ts';
 
@@ -37,8 +38,22 @@ describe('exportUserData', () => {
     vi.spyOn(FamilyGroup, 'findByPk').mockResolvedValue({
       toJSON: () => ({ id: 7, name: 'Reeves Mead' }),
     } as never);
+    vi.spyOn(RecipeCategory, 'findAll').mockResolvedValue([
+      { toJSON: () => ({ id: 9, family_group_id: 7, name: 'Slow cooker', is_default: false, default_key: null }) },
+      { toJSON: () => ({ id: 11, family_group_id: 7, name: 'Batch cook', is_default: false, default_key: null }) },
+      { toJSON: () => ({ id: 3, family_group_id: 7, name: 'Dinner', is_default: true, default_key: 'dinner' }) },
+    ] as never);
     vi.spyOn(Recipe, 'findAll').mockResolvedValue([
-      { toJSON: () => ({ id: 1, name: 'Soup' }) },
+      {
+        toJSON: () => ({
+          id: 1,
+          name: 'Soup',
+          categories: [
+            { id: 9, name: 'Slow cooker', is_default: false, default_key: null },
+            { id: 3, name: 'Dinner', is_default: true, default_key: 'dinner' },
+          ],
+        }),
+      },
     ] as never);
     vi.spyOn(MealDiary, 'findAll').mockResolvedValue([
       { toJSON: () => ({ id: 1, week_start_date: '2026-06-08' }) },
@@ -50,13 +65,22 @@ describe('exportUserData', () => {
     const result = await exportUserData(1);
 
     expect(Object.keys(result).sort()).toEqual(
-      ['exportedAt', 'familyGroup', 'mealDiaries', 'recipes', 'shoppingLists', 'user'].sort()
+      ['exportedAt', 'familyGroup', 'mealDiaries', 'recipeCategories', 'recipes', 'shoppingLists', 'user'].sort()
     );
     expect(result.exportedAt).toEqual(expect.any(String));
     expect(result.user).not.toHaveProperty('password_hash');
     expect(result.user.email).toBe('jake@example.com');
     expect(result.familyGroup).toMatchObject({ name: 'Reeves Mead' });
+    expect(result.recipeCategories).toEqual([
+      { id: 3, family_group_id: 7, name: 'Dinner', is_default: true, default_key: 'dinner' },
+      { id: 11, family_group_id: 7, name: 'Batch cook', is_default: false, default_key: null },
+      { id: 9, family_group_id: 7, name: 'Slow cooker', is_default: false, default_key: null },
+    ]);
     expect(result.recipes).toHaveLength(1);
+    expect(result.recipes[0].categories).toEqual([
+      { id: 3, name: 'Dinner', is_default: true, default_key: 'dinner' },
+      { id: 9, name: 'Slow cooker', is_default: false, default_key: null },
+    ]);
     expect(result.mealDiaries).toHaveLength(1);
     expect(result.shoppingLists).toHaveLength(1);
   });
@@ -71,6 +95,7 @@ describe('exportUserData', () => {
     const result = await exportUserData(1);
 
     expect(result.familyGroup).toBeNull();
+    expect(result.recipeCategories).toEqual([]);
     expect(result.recipes).toEqual([]);
     expect(result.mealDiaries).toEqual([]);
     expect(result.shoppingLists).toEqual([]);

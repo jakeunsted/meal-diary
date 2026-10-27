@@ -15,6 +15,8 @@ import {
   EmailChangeToken,
   Recipe,
   RecipeIngredient,
+  RecipeCategory,
+  RecipeCategoryAssignment,
   Subscription,
   TrialRedemption,
   SubscriptionEvent,
@@ -54,6 +56,8 @@ export {
   EmailChangeToken,
   Recipe,
   RecipeIngredient,
+  RecipeCategory,
+  RecipeCategoryAssignment,
   Subscription,
   TrialRedemption,
   SubscriptionEvent

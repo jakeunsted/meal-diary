@@ -92,7 +92,15 @@
         :isLoading="recipeStore.loading"
         @submit="handleCreate"
         @cancel="router.push('/recipes')"
-      />
+      >
+        <template #categories>
+          <RecipeCategoryField
+            v-model="categoryIds"
+            :visible-categories="recipeStore.categories"
+            :assigned-categories="[]"
+          />
+        </template>
+      </RecipeForm>
     </div>
 
     <dialog
@@ -151,6 +159,7 @@ definePageMeta({
 import { useRecipeStore } from '~/stores/recipe';
 import { useUserStore } from '~/stores/user';
 import RecipeForm from '~/components/recipe/RecipeForm.vue';
+import RecipeCategoryField from '~/components/recipe/RecipeCategoryField.vue';
 import { extractEntitlementError, extractErrorMessage } from '~/utils/httpError';
 
 const router = useRouter();
@@ -162,6 +171,7 @@ const { hasFeature, refreshEntitlements } = useEntitlements();
 const { openPaywall } = usePaywall();
 
 const canCreateRecipe = hasFeature('recipes');
+const categoryIds = ref<number[]>([]);
 const creationMode = ref<'manual' | 'import' | null>(null);
 const creationOptionsDialog = ref<HTMLDialogElement | null>(null);
 const importUrl = ref('');
@@ -221,7 +231,10 @@ const handleCreate = async (formData) => {
   }
 
   try {
-    const recipe = await recipeStore.createRecipe(formData);
+    const recipe = await recipeStore.createRecipe({
+      ...formData,
+      category_ids: categoryIds.value,
+    });
     if (recipe) {
       track('recipe_created');
       router.push(`/recipes/${recipe.id}`);
@@ -230,6 +243,10 @@ const handleCreate = async (formData) => {
     const entitlementError = extractEntitlementError(error);
     if (entitlementError?.feature === 'recipes') {
       openPaywall('recipes');
+      return;
+    }
+    if (entitlementError?.feature === 'custom_recipe_categories') {
+      openPaywall('custom_recipe_categories');
       return;
     }
 
@@ -273,6 +290,11 @@ onMounted(async () => {
   }
 
   await refreshEntitlements();
+  try {
+    await recipeStore.fetchCategories();
+  } catch (error) {
+    console.error('Error loading recipe categories:', error);
+  }
   await handleOpenCreationOptions();
 });
 

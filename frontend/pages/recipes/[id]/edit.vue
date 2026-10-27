@@ -20,7 +20,16 @@
       :isLoading="recipeStore.loading"
       @submit="handleUpdate"
       @cancel="router.push(recipePath)"
-    />
+    >
+      <template #categories>
+        <RecipeCategoryField
+          :model-value="categoryIds"
+          :visible-categories="recipeStore.categories"
+          :assigned-categories="recipe.categories ?? []"
+          @update:model-value="handleCategoryIdsUpdate"
+        />
+      </template>
+    </RecipeForm>
   </div>
 </template>
 
@@ -32,26 +41,51 @@ definePageMeta({
 import { useRecipeStore } from '~/stores/recipe';
 import { useUserStore } from '~/stores/user';
 import RecipeForm from '~/components/recipe/RecipeForm.vue';
+import RecipeCategoryField from '~/components/recipe/RecipeCategoryField.vue';
+import { extractEntitlementError } from '~/utils/httpError';
 
 const route = useRoute();
 const router = useRouter();
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
 const { track } = useAnalytics();
+const { openPaywall } = usePaywall();
 
 const recipe = computed(() => recipeStore.currentRecipe);
+const categoryIds = ref([]);
+const hasEditedCategories = ref(false);
 
 const recipePath = computed(() => {
   const fromQuery = route.query.from === 'diary' ? '?from=diary' : '';
   return `/recipes/${route.params.id}${fromQuery}`;
 });
 
+watch(recipe, (value) => {
+  if (!value || hasEditedCategories.value) {
+    return;
+  }
+  categoryIds.value = (value.categories ?? []).map((category) => category.id);
+}, { immediate: true });
+
+const handleCategoryIdsUpdate = (ids) => {
+  hasEditedCategories.value = true;
+  categoryIds.value = ids;
+};
+
 const handleUpdate = async (formData) => {
   try {
-    await recipeStore.updateRecipe(parseInt(route.params.id), formData);
+    await recipeStore.updateRecipe(parseInt(route.params.id), {
+      ...formData,
+      category_ids: categoryIds.value,
+    });
     track('recipe_edited');
     router.push(recipePath.value);
   } catch (error) {
+    const entitlementError = extractEntitlementError(error);
+    if (entitlementError?.feature === 'custom_recipe_categories') {
+      openPaywall('custom_recipe_categories');
+      return;
+    }
     console.error('Error updating recipe:', error);
   }
 };
@@ -60,6 +94,11 @@ onMounted(async () => {
   if (!userStore.user?.family_group_id) {
     await userStore.fetchUser();
   }
-  await recipeStore.fetchRecipeById(parseInt(route.params.id));
+  await Promise.all([
+    recipeStore.fetchRecipeById(parseInt(route.params.id)),
+    recipeStore.fetchCategories().catch((error) => {
+      console.error('Error loading recipe categories:', error);
+    }),
+  ]);
 });
 </script>

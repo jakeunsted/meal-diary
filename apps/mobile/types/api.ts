@@ -48,6 +48,7 @@ export interface PlanLimits {
   canEditPastWeeks: boolean;
   canAddRecipeToShoppingList: boolean;
   canCustomizeMealSlots: boolean;
+  canUseCustomRecipeCategories: boolean;
 }
 
 export interface ResolvedEntitlements {

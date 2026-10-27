@@ -5,6 +5,8 @@ interface MockApiOptions {
   userWithoutFamilyGroup?: boolean;
   entitlementsProfile?: 'premium' | 'free' | 'freeRecipeLimit' | 'trialExpired' | 'paymentFailed' | 'trialExhausted' | 'customMealNamesLapse' | 'customMealNamesLapseNonOwner' | 'alreadyDefault';
   failResetMealSlots?: boolean;
+  recipes?: Array<Record<string, any>>;
+  recipeCategories?: Array<Record<string, any>>;
 }
 
 export interface EntitlementsFixtureOptions {
@@ -37,6 +39,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       recipes: options.features?.recipes ?? true,
       recipe_to_shopping_list: options.features?.recipe_to_shopping_list ?? isPremium,
       custom_meal_slots: options.features?.custom_meal_slots ?? isPremium,
+      custom_recipe_categories: options.features?.custom_recipe_categories ?? isPremium,
     },
     limits: {
       maxFamilyMembers: isPremium ? 8 : 2,
@@ -45,6 +48,7 @@ export const createEntitlementsFixture = (options: EntitlementsFixtureOptions = 
       canEditPastWeeks: isPremium,
       canAddRecipeToShoppingList: isPremium,
       canCustomizeMealSlots: isPremium,
+      canUseCustomRecipeCategories: isPremium,
     },
     usage: {
       familyMemberCount: options.usage?.familyMemberCount ?? 1,
@@ -130,6 +134,7 @@ interface MockApiState {
   mealSlots: Array<Record<string, any>>;
   shoppingList: Record<string, any>;
   recipes: Array<Record<string, any>>;
+  recipeCategories: Array<Record<string, any>>;
   entitlements: Record<string, any>;
 }
 
@@ -236,7 +241,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     updated_at: getIsoDate(),
     items: shoppingListItems,
   };
-  const recipes = [
+  const defaultRecipes = [
     {
       id: 501,
       family_group_id: 1,
@@ -245,6 +250,7 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
       description: 'Simple pasta bake',
       instructions: 'Cook pasta, bake with sauce.',
       portions: 4,
+      categories: [],
       ingredients: [
         { id: 1, recipe_id: 501, name: 'Pasta', quantity: 500, unit: 'g' },
         { id: 2, recipe_id: 501, name: 'Tomato sauce', quantity: 1, unit: 'jar' },
@@ -252,6 +258,18 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
       created_at: getIsoDate(),
       updated_at: getIsoDate(),
     },
+  ];
+  const recipes = (options.recipes ?? defaultRecipes).map((recipe) => ({
+    ...recipe,
+    family_group_id: recipe.family_group_id ?? 1,
+    created_by: recipe.created_by ?? 1,
+    categories: recipe.categories ?? [],
+  }));
+  const recipeCategories = options.recipeCategories ?? [
+    { id: 1, family_group_id: 1, name: 'Breakfast', is_default: true, default_key: 'breakfast', assignable: true },
+    { id: 2, family_group_id: 1, name: 'Lunch', is_default: true, default_key: 'lunch', assignable: true },
+    { id: 3, family_group_id: 1, name: 'Dinner', is_default: true, default_key: 'dinner', assignable: true },
+    { id: 4, family_group_id: 1, name: 'Dessert', is_default: true, default_key: 'dessert', assignable: true },
   ];
 
   return {
@@ -263,14 +281,164 @@ const createMockApiState = (options: MockApiOptions = {}): MockApiState => {
     mealSlots: usesCustomMealSlots(options.entitlementsProfile) ? customMealSlots() : defaultMealSlots(),
     shoppingList,
     recipes,
+    recipeCategories,
     entitlements: resolveEntitlementsProfile(options.entitlementsProfile),
   };
+};
+
+const STARTER_KEY_ORDER = ['breakfast', 'lunch', 'dinner', 'dessert'];
+
+const sortRecipeCategories = (categories: Array<Record<string, any>>) => {
+  return [...categories].sort((left, right) => {
+    const leftIndex = STARTER_KEY_ORDER.indexOf(left.default_key);
+    const rightIndex = STARTER_KEY_ORDER.indexOf(right.default_key);
+    const leftRank = leftIndex === -1 ? Number.POSITIVE_INFINITY : leftIndex;
+    const rightRank = rightIndex === -1 ? Number.POSITIVE_INFINITY : rightIndex;
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+    return String(left.name).localeCompare(String(right.name), undefined, { sensitivity: 'base' });
+  });
+};
+
+const categoryNameMessage = (code: string) => {
+  switch (code) {
+    case 'empty':
+      return 'Category name is required';
+    case 'too_long':
+      return 'Category name must be 32 characters or fewer';
+    case 'emoji':
+      return 'Category name cannot include emoji';
+    case 'control_chars':
+      return 'Category name cannot include control characters';
+    case 'duplicate':
+      return 'A category with this name already exists';
+    default:
+      return 'Invalid category name';
+  }
 };
 
 export const installMockApi = (options: MockApiOptions = {}) => {
   const state = createMockApiState(options);
   let nextItemId = 2000;
   let nextRecipeId = 900;
+  let nextCategoryId = Math.max(
+    0,
+    ...state.recipeCategories.map((category) => Number(category.id) || 0),
+  ) + 1;
+
+  const canUseCustomRecipeCategories = () => Boolean(state.entitlements.features?.custom_recipe_categories);
+
+  const presentCategory = (category: Record<string, any>, assignable: boolean) => ({
+    id: category.id,
+    family_group_id: category.family_group_id ?? state.familyGroup.id,
+    name: category.name,
+    is_default: Boolean(category.is_default),
+    default_key: category.default_key ?? null,
+    assignable,
+  });
+
+  const visibleRecipeCategories = () => {
+    const featureOn = canUseCustomRecipeCategories();
+    return sortRecipeCategories(state.recipeCategories)
+      .filter((category) => featureOn || category.is_default)
+      .map((category) => presentCategory(category, true));
+  };
+
+  const presentRecipe = (recipe: Record<string, any>) => {
+    const featureOn = canUseCustomRecipeCategories();
+    const categories = sortRecipeCategories(
+      (recipe.categories ?? [])
+        .map((category: Record<string, any>) =>
+          state.recipeCategories.find((entry) => entry.id === category.id)
+        )
+        .filter(Boolean)
+    ).map((category: Record<string, any>) => ({
+      id: category.id,
+      name: category.name,
+      is_default: Boolean(category.is_default),
+      default_key: category.default_key ?? null,
+      assignable: Boolean(category.is_default) || featureOn,
+    }));
+    const { category_ids: _categoryIds, ...rest } = recipe;
+    return { ...rest, categories };
+  };
+
+  const categoryNameError = (name: unknown, ignoreId?: number) => {
+    const normalized = String(name ?? '').trim();
+    if (!normalized) {
+      return 'empty';
+    }
+    if (normalized.length > 32) {
+      return 'too_long';
+    }
+    if (/\p{Extended_Pictographic}/u.test(normalized)) {
+      return 'emoji';
+    }
+    if (/[\u0000-\u001F\u007F-\u009F]/.test(normalized)) {
+      return 'control_chars';
+    }
+    const duplicate = state.recipeCategories.some((category) => {
+      if (ignoreId != null && category.id === ignoreId) {
+        return false;
+      }
+      return String(category.name).trim().toLowerCase() === normalized.toLowerCase();
+    });
+    return duplicate ? 'duplicate' : null;
+  };
+
+  const entitlementRequired = () => ({
+    statusCode: 403,
+    body: {
+      code: 'ENTITLEMENT_REQUIRED',
+      feature: 'custom_recipe_categories',
+      plan: state.entitlements.plan ?? 'free',
+      upgradeUrl: '/plans',
+    },
+  });
+
+  const applyCategoryIds = (recipe: Record<string, any>, categoryIds: number[]) => {
+    const uniqueIds = [...new Set(categoryIds.map((id) => Number(id)))];
+    const featureOn = canUseCustomRecipeCategories();
+    const existingIds = new Set((recipe.categories ?? []).map((category: Record<string, any>) => category.id));
+    for (const id of uniqueIds) {
+      const category = state.recipeCategories.find((entry) => entry.id === id);
+      if (!category) {
+        return { error: 'invalid_category' as const };
+      }
+      if (!category.is_default && !existingIds.has(id) && !featureOn) {
+        return { error: 'entitlement' as const };
+      }
+    }
+    return {
+      categories: uniqueIds
+        .map((id) => state.recipeCategories.find((entry) => entry.id === id))
+        .filter(Boolean),
+    };
+  };
+
+  const replyCategoryIds = (
+    req: { reply: (response: Record<string, any>) => void; body: Record<string, any> },
+    recipe: Record<string, any>,
+    categoryIds: unknown,
+  ) => {
+    if (!Array.isArray(categoryIds)) {
+      return { ok: true as const, categories: recipe.categories ?? [] };
+    }
+    const applied = applyCategoryIds(recipe, categoryIds);
+    if (applied.error === 'invalid_category') {
+      req.reply({
+        statusCode: 400,
+        body: { code: 'invalid_category', message: 'One or more categories are not in this family' },
+      });
+      return { ok: false as const };
+    }
+    if (applied.error === 'entitlement') {
+      req.reply(entitlementRequired());
+      return { ok: false as const };
+    }
+    return { ok: true as const, categories: applied.categories };
+  };
 
   cy.intercept('GET', '/api/health', { statusCode: 200, body: { status: 'ok' } });
 
@@ -662,25 +830,113 @@ export const installMockApi = (options: MockApiOptions = {}) => {
     req.reply({ statusCode: 200, body: { slots: state.mealSlots } });
   }).as('apiPutMealSlots');
 
+  cy.intercept('GET', /\/api\/family-groups\/\d+\/recipe-categories$/, (req) => {
+    req.reply({ statusCode: 200, body: { categories: visibleRecipeCategories() } });
+  }).as('apiGetRecipeCategories');
+
+  cy.intercept('POST', /\/api\/family-groups\/\d+\/recipe-categories$/, (req) => {
+    if (!canUseCustomRecipeCategories()) {
+      req.reply(entitlementRequired());
+      return;
+    }
+    const code = categoryNameError(req.body?.name);
+    if (code) {
+      req.reply({ statusCode: 400, body: { code, message: categoryNameMessage(code) } });
+      return;
+    }
+    const category = {
+      id: nextCategoryId++,
+      family_group_id: state.familyGroup.id,
+      name: String(req.body?.name ?? '').trim(),
+      is_default: false,
+      default_key: null,
+      assignable: true,
+    };
+    state.recipeCategories.push(category);
+    req.reply({ statusCode: 201, body: { category: presentCategory(category, true) } });
+  }).as('apiCreateRecipeCategory');
+
+  cy.intercept('PATCH', /\/api\/family-groups\/\d+\/recipe-categories\/\d+$/, (req) => {
+    const categoryId = Number(req.url.split('/').pop());
+    const category = state.recipeCategories.find((entry) => entry.id === categoryId);
+    if (!category) {
+      req.reply({ statusCode: 404, body: { message: 'Category not found' } });
+      return;
+    }
+    if (category.is_default) {
+      req.reply({
+        statusCode: 400,
+        body: { code: 'default_category_locked', message: 'Starter categories cannot be renamed or deleted' },
+      });
+      return;
+    }
+    if (!canUseCustomRecipeCategories()) {
+      req.reply(entitlementRequired());
+      return;
+    }
+    const code = categoryNameError(req.body?.name, categoryId);
+    if (code) {
+      req.reply({ statusCode: 400, body: { code, message: categoryNameMessage(code) } });
+      return;
+    }
+    category.name = String(req.body?.name ?? '').trim();
+    req.reply({ statusCode: 200, body: { category: presentCategory(category, true) } });
+  }).as('apiUpdateRecipeCategory');
+
+  cy.intercept('DELETE', /\/api\/family-groups\/\d+\/recipe-categories\/\d+$/, (req) => {
+    const categoryId = Number(req.url.split('/').pop());
+    const category = state.recipeCategories.find((entry) => entry.id === categoryId);
+    if (!category) {
+      req.reply({ statusCode: 404, body: { message: 'Category not found' } });
+      return;
+    }
+    if (category.is_default) {
+      req.reply({
+        statusCode: 400,
+        body: { code: 'default_category_locked', message: 'Starter categories cannot be renamed or deleted' },
+      });
+      return;
+    }
+    if (!canUseCustomRecipeCategories()) {
+      req.reply(entitlementRequired());
+      return;
+    }
+    state.recipeCategories = state.recipeCategories.filter((entry) => entry.id !== categoryId);
+    state.recipes = state.recipes.map((recipe) => ({
+      ...recipe,
+      categories: (recipe.categories ?? []).filter((entry: Record<string, any>) => entry.id !== categoryId),
+    }));
+    req.reply({ statusCode: 200, body: { ok: true } });
+  }).as('apiDeleteRecipeCategory');
+
   cy.intercept('GET', /\/api\/recipes\/family\/\d+(\?.*)?$/, (req) => {
     const search = req.query.search?.toString().toLowerCase() || '';
     const filteredRecipes = search
       ? state.recipes.filter((recipe) => recipe.name.toLowerCase().includes(search))
       : state.recipes;
-    req.reply({ statusCode: 200, body: filteredRecipes });
+    req.reply({ statusCode: 200, body: filteredRecipes.map(presentRecipe) });
   }).as('apiGetRecipes');
 
   cy.intercept('POST', '/api/recipes', (req) => {
+    const body = { ...(req.body ?? {}) };
+    const categoryIds = body.category_ids;
+    delete body.category_ids;
     const newRecipe = {
       id: nextRecipeId++,
       family_group_id: state.familyGroup.id,
       created_by: state.activeUser.id,
       created_at: getIsoDate(),
       updated_at: getIsoDate(),
-      ...req.body,
+      categories: [],
+      ...body,
     };
+    const applied = replyCategoryIds(req, { categories: [] }, categoryIds);
+    if (!applied.ok) {
+      return;
+    }
+    newRecipe.categories = applied.categories;
     state.recipes.push(newRecipe);
-    req.reply({ statusCode: 200, body: newRecipe });
+    req.reply({ statusCode: 200, body: presentRecipe(newRecipe) });
   }).as('apiCreateRecipe');
 
   cy.intercept('GET', /\/api\/recipes\/\d+$/, (req) => {
@@ -690,7 +946,7 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       req.reply({ statusCode: 404, body: { message: 'Recipe not found' } });
       return;
     }
-    req.reply({ statusCode: 200, body: recipe });
+    req.reply({ statusCode: 200, body: presentRecipe(recipe) });
   }).as('apiGetRecipeById');
 
   cy.intercept('PUT', /\/api\/recipes\/\d+$/, (req) => {
@@ -700,12 +956,20 @@ export const installMockApi = (options: MockApiOptions = {}) => {
       req.reply({ statusCode: 404, body: { message: 'Recipe not found' } });
       return;
     }
+    const body = { ...(req.body ?? {}) };
+    const categoryIds = body.category_ids;
+    delete body.category_ids;
+    const applied = replyCategoryIds(req, state.recipes[recipeIndex], categoryIds);
+    if (!applied.ok) {
+      return;
+    }
     state.recipes[recipeIndex] = {
       ...state.recipes[recipeIndex],
-      ...req.body,
+      ...body,
+      categories: applied.categories,
       updated_at: getIsoDate(),
     };
-    req.reply({ statusCode: 200, body: state.recipes[recipeIndex] });
+    req.reply({ statusCode: 200, body: presentRecipe(state.recipes[recipeIndex]) });
   }).as('apiUpdateRecipe');
 
   cy.intercept('DELETE', /\/api\/recipes\/\d+$/, (req) => {

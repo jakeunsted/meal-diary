@@ -13,6 +13,8 @@ import EmailChangeToken from './EmailChangeToken.model.ts';
 import ShoppingListItem from './ShoppingListItem.model.ts';
 import Recipe from './Recipe.model.ts';
 import RecipeIngredient from './RecipeIngredient.model.ts';
+import RecipeCategory from './RecipeCategory.model.ts';
+import RecipeCategoryAssignment from './RecipeCategoryAssignment.model.ts';
 import Subscription from './Subscription.model.ts';
 import TrialRedemption from './TrialRedemption.model.ts';
 import SubscriptionEvent from './SubscriptionEvent.model.ts';
@@ -133,6 +135,32 @@ Recipe.hasMany(RecipeIngredient, {
 RecipeIngredient.belongsTo(Recipe, {
   foreignKey: 'recipe_id',
   foreignKeyConstraint: true
+});
+
+FamilyGroup.hasMany(RecipeCategory, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+  as: 'recipeCategories',
+  onDelete: 'CASCADE',
+});
+RecipeCategory.belongsTo(FamilyGroup, {
+  foreignKey: 'family_group_id',
+  foreignKeyConstraint: true,
+});
+
+Recipe.belongsToMany(RecipeCategory, {
+  through: RecipeCategoryAssignment,
+  foreignKey: 'recipe_id',
+  otherKey: 'recipe_category_id',
+  as: 'categories',
+  onDelete: 'CASCADE',
+});
+RecipeCategory.belongsToMany(Recipe, {
+  through: RecipeCategoryAssignment,
+  foreignKey: 'recipe_category_id',
+  otherKey: 'recipe_id',
+  as: 'categorizedRecipes',
+  onDelete: 'CASCADE',
 });
 
 // DailyMeal <-> Recipe associations (for each meal type)
@@ -265,6 +293,8 @@ export {
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
+  RecipeCategory,
+  RecipeCategoryAssignment,
   Subscription,
   TrialRedemption,
   SubscriptionEvent,

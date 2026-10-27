@@ -188,6 +188,35 @@ const resources = {
         updateFailed: 'Failed to update recipe',
         deleteFailed: 'Failed to delete recipe',
       },
+      recipes: {
+        categories: {
+          all: 'All',
+          uncategorized: 'Uncategorized',
+          fieldLabel: 'Categories',
+          emptyCategory: 'No recipes in {{name}} yet',
+          emptyUncategorized: 'Every recipe is in a category',
+          manage: 'Categories',
+          add: 'Add category',
+          addCustom: 'Add a custom category',
+          rename: 'Rename',
+          delete: 'Delete',
+          remove: 'Remove',
+          nameLabel: 'Category name',
+          nameEmpty: 'Enter a name',
+          nameDuplicate: 'That category already exists',
+          nameTooLong: 'Use 32 characters or fewer',
+          nameInvalid: 'Use letters, numbers, and punctuation',
+          sharedNotice: 'Everyone in the household sees these categories',
+          renameNotice: 'Everyone in the household will see this name',
+          deleteTitle: 'Delete {{name}}?',
+          deleteBody:
+            'This removes {{name}} from every recipe in the household. The recipes stay.',
+          startersFixed: 'Breakfast, Lunch, Dinner, and Dessert stay as they are',
+          lapsedNote:
+            'Custom categories are hidden until Family Plus is renewed. Labels already on recipes stay. You can remove one from that recipe.',
+          assignedLocked: 'Family Plus is needed to add this again',
+        },
+      },
       recipeImport: {
         chooseMethodTitle: 'How would you like to add this recipe?',
         chooseMethodDescription: 'Create it by hand or import it from a recipe website.',
@@ -254,6 +283,14 @@ const resources = {
           nonOwnerCta: 'Ask {{name}} to upgrade',
           nonOwnerCtaGeneric: 'Ask your family owner to upgrade',
         },
+        custom_recipe_categories: {
+          title: 'Custom recipe categories',
+          description:
+            'Add your own recipe categories, such as Slow cooker, with Family Plus.',
+          ownerCta: 'View plans to upgrade',
+          nonOwnerCta: 'Ask {{name}} to upgrade',
+          nonOwnerCtaGeneric: 'Ask your family owner to upgrade',
+        },
         customMealNamesLapse: {
           ownerTitle: 'Renew to keep your meal names',
           ownerDescription:
@@ -309,6 +346,7 @@ const resources = {
           recipes: 'Unlimited recipes',
           recipeToShoppingList: 'Add recipe ingredients to shopping list',
           customMealSlots: 'Custom daily meal names',
+          customRecipeCategories: 'Custom recipe categories',
         },
       },
       common: {

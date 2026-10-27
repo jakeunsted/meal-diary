@@ -131,6 +131,7 @@ const resolveFeatures = (
     !Number.isFinite(limits.maxRecipes) || usage.recipeCount < limits.maxRecipes,
   recipe_to_shopping_list: limits.canAddRecipeToShoppingList,
   custom_meal_slots: limits.canCustomizeMealSlots,
+  custom_recipe_categories: limits.canUseCustomRecipeCategories,
 });
 
 const getOwnerDisplayName = async (familyGroupId: number): Promise<string | null> => {

@@ -52,6 +52,10 @@ vi.mock('../../services/mealSlots.service.ts', () => ({
   ensureDefaultMealSlots: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock('../../services/recipeCategories.service.ts', () => ({
+  ensureDefaultRecipeCategories: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('../../services/familyGroup.service.ts', () => ({
   leaveFamilyGroup: vi.fn(),
   transferFamilyGroupOwnership: vi.fn(),
@@ -75,6 +79,7 @@ import { handleEntitlementError } from '../../middleware/entitlement.middleware.
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import * as FamilyGroupService from '../../services/familyGroup.service.ts';
 import { trackEvent } from '../../utils/posthog.ts';
+import { ensureDefaultRecipeCategories } from '../../services/recipeCategories.service.ts';
 import {
   createFamilyGroup,
   deleteFamilyGroup,
@@ -130,6 +135,7 @@ describe('familyGroup.controller', () => {
       created_by: 5,
     }));
     expect(userUpdate).toHaveBeenCalled();
+    expect(ensureDefaultRecipeCategories).toHaveBeenCalledWith(4);
     expect(res.status).toHaveBeenCalledWith(201);
     expect(trackEvent).toHaveBeenCalledWith('5', 'family_group_created', { family_group_id: 4 });
 

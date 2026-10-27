@@ -42,6 +42,14 @@
         />
       </div>
       <button
+        type="button"
+        class="btn btn-ghost"
+        data-testid="recipe-categories-manage"
+        @click="handleOpenCategoryManager"
+      >
+        {{ $t('recipesPage.categories.manage') }}
+      </button>
+      <button
         class="btn btn-primary"
         data-testid="recipes-new-button"
         :disabled="!canCreateRecipe"
@@ -52,33 +60,57 @@
       </button>
     </div>
 
-    <div v-if="recipeStore.loading && recipes.length === 0" class="flex justify-center py-8">
+    <div v-if="isLoadingBook" class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
 
-    <div v-else-if="recipeStore.recipes.length === 0" class="text-center py-12">
-      <fa icon="book-open" class="text-5xl text-base-content/30 mb-4" />
-      <p class="text-lg font-medium">{{ $t('No recipes yet') }}</p>
-      <p class="text-base-content/60 mb-4">{{ $t('Create your first recipe to get started!') }}</p>
-      <button class="btn btn-primary" :disabled="!canCreateRecipe" @click="handleCreateRecipe">
-        <fa icon="plus" class="mr-1" />
-        {{ $t('New Recipe') }}
-      </button>
-    </div>
-
-    <div v-else-if="recipes.length === 0" class="text-center py-12">
-      <p class="text-lg font-medium">{{ $t('No recipes found') }}</p>
-      <p class="text-base-content/60">{{ $t('Try a different search term') }}</p>
-    </div>
-
-    <div v-else class="grid gap-3">
-      <RecipeCard
-        v-for="recipe in recipes"
-        :key="recipe.id"
-        :recipe="recipe"
-        @click="navigateTo(`/recipes/${recipe.id}`)"
+    <template v-else>
+      <RecipeCategoryTabs
+        v-model="selectedFilter"
+        :categories="recipeStore.categories"
+        :counts="categoryCounts"
       />
-    </div>
+
+      <div v-if="showLibraryEmpty" class="text-center py-12">
+        <fa icon="book-open" class="text-5xl text-base-content/30 mb-4" />
+        <p class="text-lg font-medium">{{ $t('No recipes yet') }}</p>
+        <p class="text-base-content/60 mb-4">{{ $t('Create your first recipe to get started!') }}</p>
+        <button class="btn btn-primary" :disabled="!canCreateRecipe" @click="handleCreateRecipe">
+          <fa icon="plus" class="mr-1" />
+          {{ $t('New Recipe') }}
+        </button>
+      </div>
+
+      <div v-else-if="emptyCategoryMessage" class="text-center py-12">
+        <p class="text-lg font-medium">{{ emptyCategoryMessage }}</p>
+      </div>
+
+      <div v-else-if="recipes.length === 0" class="text-center py-12">
+        <p class="text-lg font-medium">{{ $t('No recipes found') }}</p>
+        <p class="text-base-content/60">{{ $t('Try a different search term') }}</p>
+      </div>
+
+      <div v-else class="grid gap-3">
+        <RecipeCard
+          v-for="recipe in recipes"
+          :key="recipe.id"
+          :recipe="recipe"
+          @click="navigateTo(`/recipes/${recipe.id}`)"
+        />
+      </div>
+    </template>
+
+    <dialog
+      ref="categoryManagerDialog"
+      class="modal"
+      data-testid="recipe-category-manager"
+      @close="handleCategoryManagerDialogClose"
+    >
+      <RecipeCategoryManager v-if="isCategoryManagerOpen" @close="handleCloseCategoryManager" />
+      <form method="dialog" class="modal-backdrop">
+        <button type="submit">{{ $t('Close') }}</button>
+      </form>
+    </dialog>
   </div>
 </template>
 
@@ -87,9 +119,15 @@ definePageMeta({
   middleware: 'auth'
 });
 
+import {
+  countRecipesForCategoryTabs,
+  recipeMatchesCategoryFilter,
+} from '@meal-diary/shared';
 import { useRecipeStore } from '~/stores/recipe';
 import { useUserStore } from '~/stores/user';
 import RecipeCard from '~/components/recipe/RecipeCard.vue';
+import RecipeCategoryManager from '~/components/recipe/RecipeCategoryManager.vue';
+import RecipeCategoryTabs from '~/components/recipe/RecipeCategoryTabs.vue';
 
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
@@ -104,6 +142,10 @@ const {
 const { openPaywall } = usePaywall();
 
 const searchQuery = ref('');
+const isLoadingBook = ref(true);
+const isCategoryManagerOpen = ref(false);
+const categoryManagerDialog = ref(null);
+const selectedFilter = ref({ kind: 'all' });
 const canCreateRecipe = hasFeature('recipes');
 
 const recipeUsageLabel = computed(() => {
@@ -142,13 +184,78 @@ const handleCreateRecipe = () => {
   router.push('/recipes/create');
 };
 
-const recipes = computed(() => {
-  if (!searchQuery.value) return recipeStore.recipes;
-  const query = searchQuery.value.toLowerCase();
-  return recipeStore.recipes.filter(recipe =>
-    recipe.name.toLowerCase().includes(query)
-  );
+const categoryCounts = computed(() =>
+  countRecipesForCategoryTabs(
+    recipeStore.recipes.map((recipe) => ({ categories: recipe.categories ?? [] })),
+    recipeStore.categories
+  )
+);
+
+const selectedCategory = computed(() => {
+  if (selectedFilter.value.kind !== 'category') {
+    return null;
+  }
+  return recipeStore.categories.find((category) => category.id === selectedFilter.value.categoryId) ?? null;
 });
+
+const showLibraryEmpty = computed(() =>
+  recipeStore.recipes.length === 0 && selectedFilter.value.kind === 'all'
+);
+
+const emptyCategoryMessage = computed(() => {
+  if (selectedFilter.value.kind === 'category' && selectedCategory.value) {
+    const count = categoryCounts.value.byId[selectedCategory.value.id] ?? 0;
+    if (count === 0) {
+      return t('recipesPage.categories.emptyCategory', { name: selectedCategory.value.name });
+    }
+  }
+  if (selectedFilter.value.kind === 'uncategorized' && categoryCounts.value.uncategorized === 0) {
+    return t('recipesPage.categories.emptyUncategorized');
+  }
+  return '';
+});
+
+const recipes = computed(() => {
+  const query = searchQuery.value.toLowerCase();
+  return recipeStore.recipes.filter((recipe) => {
+    const matchesName = !query || recipe.name.toLowerCase().includes(query);
+    const matchesCategory = recipeMatchesCategoryFilter(
+      { categories: recipe.categories ?? [] },
+      selectedFilter.value
+    );
+    return matchesName && matchesCategory;
+  });
+});
+
+watch(
+  () => recipeStore.categories.map((category) => category.id).join(','),
+  () => {
+    if (selectedFilter.value.kind !== 'category') {
+      return;
+    }
+    const stillVisible = recipeStore.categories.some(
+      (category) => category.id === selectedFilter.value.categoryId
+    );
+    if (!stillVisible) {
+      selectedFilter.value = { kind: 'all' };
+    }
+  }
+);
+
+const handleOpenCategoryManager = async () => {
+  isCategoryManagerOpen.value = true;
+  await nextTick();
+  categoryManagerDialog.value?.showModal();
+};
+
+const handleCloseCategoryManager = () => {
+  categoryManagerDialog.value?.close();
+  isCategoryManagerOpen.value = false;
+};
+
+const handleCategoryManagerDialogClose = () => {
+  isCategoryManagerOpen.value = false;
+};
 
 const handleSearch = () => {
   recipeStore.setSearchQuery(searchQuery.value);
@@ -164,9 +271,14 @@ onMounted(async () => {
       await userStore.fetchUser();
     }
     await refreshEntitlements();
-    await recipeStore.fetchRecipes();
+    await Promise.all([
+      recipeStore.fetchRecipes(),
+      recipeStore.fetchCategories(),
+    ]);
   } catch (error) {
     console.error('Error loading recipes:', error);
+  } finally {
+    isLoadingBook.value = false;
   }
 });
 </script>

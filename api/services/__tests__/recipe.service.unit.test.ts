@@ -13,6 +13,11 @@ const familyGroupFindByPk = vi.fn();
 const assertCanCreateRecipe = vi.fn();
 const sequelizeQuery = vi.fn();
 const transaction = { commit: vi.fn(), rollback: vi.fn() };
+const ensureDefaultRecipeCategories = vi.fn();
+const attachRecipeCategories = vi.fn(async (...args: unknown[]) => args[0]);
+const syncRecipeCategoryAssignments = vi.fn();
+const deleteRecipeCategoryAssignments = vi.fn();
+const parseRecipeFromUrl = vi.fn();
 
 vi.mock('../../db/models/index.ts', () => ({
   default: {
@@ -23,6 +28,17 @@ vi.mock('../../db/models/index.ts', () => ({
 
 vi.mock('../entitlements.service.ts', () => ({
   assertCanCreateRecipe: (...args: unknown[]) => assertCanCreateRecipe(...args),
+}));
+
+vi.mock('../recipeCategories.service.ts', () => ({
+  ensureDefaultRecipeCategories: (...args: unknown[]) => ensureDefaultRecipeCategories(...args),
+  attachRecipeCategories: (...args: unknown[]) => attachRecipeCategories(...args),
+  syncRecipeCategoryAssignments: (...args: unknown[]) => syncRecipeCategoryAssignments(...args),
+  deleteRecipeCategoryAssignments: (...args: unknown[]) => deleteRecipeCategoryAssignments(...args),
+}));
+
+vi.mock('../recipe-import/parseRecipeFromUrl.ts', () => ({
+  parseRecipeFromUrl: (...args: unknown[]) => parseRecipeFromUrl(...args),
 }));
 
 vi.mock('../../db/models/associations.ts', () => ({
@@ -47,6 +63,7 @@ vi.mock('../../db/models/associations.ts', () => ({
   },
 }));
 
+import { importRecipeFromUrl } from '../recipe-import/import.service.ts';
 import { createRecipe, deleteRecipe, getRecipesByFamilyGroup, updateRecipe } from '../recipe.service.ts';
 
 beforeEach(() => {
@@ -80,7 +97,27 @@ describe('createRecipe', () => {
       recipeCreate.mock.invocationCallOrder[0]
     );
     expect(transaction.commit).toHaveBeenCalled();
+    expect(syncRecipeCategoryAssignments).not.toHaveBeenCalled();
     expect(result).toEqual({ id: 8, name: 'Soup' });
+  });
+
+  it('assigns category ids inside the create transaction', async () => {
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 4 } });
+    assertCanCreateRecipe.mockResolvedValue({});
+    recipeCreate.mockResolvedValue({ dataValues: { id: 8 } });
+    recipeFindByPk.mockResolvedValue({ id: 8, name: 'Soup' });
+
+    await createRecipe({
+      family_group_id: 4,
+      created_by: 5,
+      name: 'Soup',
+      category_ids: [1, 1, 2],
+    });
+
+    expect(syncRecipeCategoryAssignments).toHaveBeenCalledWith(8, 4, 5, [1, 1, 2], transaction);
+    expect(syncRecipeCategoryAssignments.mock.invocationCallOrder[0]).toBeLessThan(
+      transaction.commit.mock.invocationCallOrder[0]
+    );
   });
 
   it('does not insert a recipe when the recount rejects the cap', async () => {
@@ -128,6 +165,7 @@ describe('updateRecipe', () => {
   const existing = {
     dataValues: {
       id: 8,
+      family_group_id: 4,
       name: 'Old name',
       description: 'Old description',
       instructions: 'Old instructions',
@@ -144,7 +182,7 @@ describe('updateRecipe', () => {
     const updated = await updateRecipe(8, {
       name: 'New name',
       ingredients: [{ name: 'Onion', quantity: 1, unit: 'pc' }],
-    });
+    }, 5);
 
     expect(ingredientDestroy).toHaveBeenCalledWith({
       where: { recipe_id: 8 },
@@ -163,7 +201,7 @@ describe('updateRecipe', () => {
       .mockResolvedValueOnce(existing)
       .mockResolvedValueOnce({ id: 8 });
 
-    await updateRecipe(8, { portions: 4 });
+    await updateRecipe(8, { portions: 4 }, 5);
 
     expect(ingredientDestroy).not.toHaveBeenCalled();
     expect(ingredientBulkCreate).not.toHaveBeenCalled();
@@ -176,9 +214,29 @@ describe('updateRecipe', () => {
   it('rolls back when the recipe does not exist', async () => {
     recipeFindByPk.mockResolvedValue(null);
 
-    await expect(updateRecipe(8, { name: 'Missing' })).rejects.toThrow('Recipe not found');
+    await expect(updateRecipe(8, { name: 'Missing' }, 5)).rejects.toThrow('Recipe not found');
     expect(transaction.rollback).toHaveBeenCalled();
     expect(transaction.commit).not.toHaveBeenCalled();
+  });
+
+  it('keeps category assignments when category_ids is omitted', async () => {
+    recipeFindByPk
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce({ id: 8 });
+
+    await updateRecipe(8, { name: 'New name' }, 5);
+
+    expect(syncRecipeCategoryAssignments).not.toHaveBeenCalled();
+  });
+
+  it('clears category assignments when category_ids is empty', async () => {
+    recipeFindByPk
+      .mockResolvedValueOnce(existing)
+      .mockResolvedValueOnce({ id: 8 });
+
+    await updateRecipe(8, { category_ids: [] }, 5);
+
+    expect(syncRecipeCategoryAssignments).toHaveBeenCalledWith(8, 4, 5, [], transaction);
   });
 });
 
@@ -222,6 +280,32 @@ describe('deleteRecipe', () => {
       where: { id: 8 },
       transaction,
     });
+    expect(deleteRecipeCategoryAssignments).toHaveBeenCalledWith(8, transaction);
     expect(transaction.commit).toHaveBeenCalled();
+  });
+});
+
+describe('importRecipeFromUrl', () => {
+  it('creates the recipe without categories', async () => {
+    parseRecipeFromUrl.mockResolvedValue({
+      name: 'Imported soup',
+      description: 'Warm',
+      instructions: 'Simmer',
+      portions: 2,
+      ingredients: [],
+    });
+    familyGroupFindByPk.mockResolvedValue({ dataValues: { id: 4 } });
+    assertCanCreateRecipe.mockResolvedValue({});
+    recipeCreate.mockResolvedValue({ dataValues: { id: 8 } });
+    recipeFindByPk.mockResolvedValue({ id: 8, name: 'Imported soup' });
+
+    await importRecipeFromUrl({
+      family_group_id: 4,
+      created_by: 5,
+      url: 'https://example.com/soup',
+    });
+
+    expect(recipeCreate.mock.calls[0][0]).not.toHaveProperty('category_ids');
+    expect(syncRecipeCategoryAssignments).not.toHaveBeenCalled();
   });
 });

@@ -4,6 +4,7 @@ import { useApi } from '~/composables/useApi';
 import type {
   ImportRecipeFromUrlPayload,
   Recipe,
+  RecipeCategory,
   RecipeIngredient,
   RecipeState,
 } from '~/types/Recipe';
@@ -11,6 +12,7 @@ import type {
 export const useRecipeStore = defineStore('recipe', {
   state: (): RecipeState => ({
     recipes: [],
+    categories: [],
     currentRecipe: null,
     loading: false,
     searchQuery: '',
@@ -62,12 +64,79 @@ export const useRecipeStore = defineStore('recipe', {
       }
     },
 
+    async fetchCategories() {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      try {
+        const { api } = useApi();
+        const response = await api<{ categories: RecipeCategory[] }>(
+          `/api/family-groups/${userStore.user.family_group_id}/recipe-categories`
+        );
+        this.categories = response.categories ?? [];
+        return this.categories;
+      } catch (error) {
+        console.error('Error fetching recipe categories:', error);
+        throw error;
+      }
+    },
+
+    async createCategory(name: string) {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      const { api } = useApi();
+      const response = await api<{ category: RecipeCategory }>(
+        `/api/family-groups/${userStore.user.family_group_id}/recipe-categories`,
+        {
+          method: 'POST',
+          body: { name },
+          silent: true,
+        }
+      );
+      await this.fetchCategories();
+      return response.category;
+    },
+
+    async renameCategory(categoryId: number, name: string) {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      const { api } = useApi();
+      const response = await api<{ category: RecipeCategory }>(
+        `/api/family-groups/${userStore.user.family_group_id}/recipe-categories/${categoryId}`,
+        {
+          method: 'PATCH',
+          body: { name },
+          silent: true,
+        }
+      );
+      await Promise.all([this.fetchCategories(), this.fetchRecipes()]);
+      return response.category;
+    },
+
+    async deleteCategory(categoryId: number) {
+      const userStore = useUserStore();
+      if (!userStore.user?.family_group_id) return;
+
+      const { api } = useApi();
+      await api(
+        `/api/family-groups/${userStore.user.family_group_id}/recipe-categories/${categoryId}`,
+        {
+          method: 'DELETE',
+          silent: true,
+        }
+      );
+      await Promise.all([this.fetchCategories(), this.fetchRecipes()]);
+    },
+
     async createRecipe(recipeData: {
       name: string;
       description?: string;
       instructions?: string;
       portions?: number;
       ingredients?: RecipeIngredient[];
+      category_ids?: number[];
     }) {
       const userStore = useUserStore();
       if (!userStore.user?.family_group_id) return;
@@ -123,6 +192,7 @@ export const useRecipeStore = defineStore('recipe', {
       instructions?: string;
       portions?: number;
       ingredients?: RecipeIngredient[];
+      category_ids?: number[];
     }) {
       try {
         this.loading = true;

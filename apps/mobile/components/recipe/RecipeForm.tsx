@@ -3,9 +3,13 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
+import { RecipeCategoryField } from '@/components/recipe/RecipeCategoryField';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonSpinner, ButtonText } from '@/components/ui/button';
 import { Text } from '@/components/ui/text';
+import { usePaywallStore } from '@/lib/entitlements/paywallStore';
+import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
+import { useRecipeCategories } from '@/lib/queries/recipeCategories';
 import type {
   CreateRecipePayload,
   Recipe,
@@ -41,12 +45,25 @@ function mapIngredientsToDraft(ingredients?: RecipeIngredient[]): IngredientDraf
   }));
 }
 
+function categoryIdsFromRecipe(recipe: Recipe | null | undefined): number[] | null {
+  if (!recipe) {
+    return [];
+  }
+
+  if (!recipe.categories) {
+    return null;
+  }
+
+  return recipe.categories.map((category) => category.id);
+}
+
 function buildSubmitPayload(
   name: string,
   description: string,
   instructions: string,
   portions: string,
-  ingredients: IngredientDraft[]
+  ingredients: IngredientDraft[],
+  categoryIds: number[] | null
 ): RecipeFormValues {
   const cleanedIngredients = ingredients
     .filter((ingredient) => ingredient.name.trim())
@@ -62,6 +79,7 @@ function buildSubmitPayload(
     instructions: instructions.trim() || undefined,
     portions: portions.trim() ? Number.parseInt(portions, 10) : undefined,
     ingredients: cleanedIngredients,
+    ...(categoryIds != null ? { category_ids: categoryIds } : {}),
   };
 }
 
@@ -82,6 +100,26 @@ export function RecipeForm({
   const [ingredients, setIngredients] = useState<IngredientDraft[]>(() =>
     mapIngredientsToDraft(initialData?.ingredients)
   );
+  const [categoryIds, setCategoryIds] = useState<number[] | null>(() =>
+    categoryIdsFromRecipe(initialData)
+  );
+  const userQuery = useCurrentUser();
+  const familyGroupId = userQuery.data?.family_group_id;
+  const entitlementsQuery = useEntitlements(familyGroupId);
+  const categoriesQuery = useRecipeCategories(familyGroupId);
+  const openPaywall = usePaywallStore((state) => state.openPaywall);
+  const visibleCategories = categoriesQuery.data ?? [];
+  const canUseCustomCategories =
+    entitlementsQuery.data?.features.custom_recipe_categories === true;
+  const showAddCustom = entitlementsQuery.isSuccess && !canUseCustomCategories;
+  const selectedCategoryIds =
+    categoryIds ?? initialData?.categories?.map((category) => category.id) ?? [];
+  const lockedCategories = (initialData?.categories ?? []).filter(
+    (category) =>
+      category.assignable === false &&
+      selectedCategoryIds.includes(category.id) &&
+      !visibleCategories.some((visible) => visible.id === category.id)
+  );
 
   useEffect(() => {
     if (!initialData) {
@@ -93,7 +131,37 @@ export function RecipeForm({
     setInstructions(initialData.instructions ?? '');
     setPortions(initialData.portions != null ? String(initialData.portions) : '');
     setIngredients(mapIngredientsToDraft(initialData.ingredients));
+    setCategoryIds(categoryIdsFromRecipe(initialData));
   }, [initialData]);
+
+  const handleToggleCategory = (categoryId: number) => {
+    const category = visibleCategories.find((item) => item.id === categoryId);
+    if (!category) {
+      return;
+    }
+
+    const ids = categoryIds ?? initialData?.categories?.map((item) => item.id) ?? [];
+    if (ids.includes(categoryId)) {
+      setCategoryIds(ids.filter((id) => id !== categoryId));
+      return;
+    }
+
+    if (!category.assignable || (!category.is_default && showAddCustom)) {
+      openPaywall('custom_recipe_categories');
+      return;
+    }
+
+    setCategoryIds([...ids, categoryId]);
+  };
+
+  const handleRemoveLockedCategory = (categoryId: number) => {
+    const ids = categoryIds ?? initialData?.categories?.map((item) => item.id) ?? [];
+    setCategoryIds(ids.filter((id) => id !== categoryId));
+  };
+
+  const handleAddCustomCategory = () => {
+    openPaywall('custom_recipe_categories');
+  };
 
   const handleAddIngredient = () => {
     setIngredients((current) => [...current, { name: '', quantity: '', unit: '' }]);
@@ -120,7 +188,9 @@ export function RecipeForm({
       return;
     }
 
-    onSubmit(buildSubmitPayload(name, description, instructions, portions, ingredients));
+    onSubmit(
+      buildSubmitPayload(name, description, instructions, portions, ingredients, categoryIds)
+    );
   };
 
   const inputClassName =
@@ -172,6 +242,18 @@ export function RecipeForm({
           testID="recipe-form-portions-input"
         />
       </Box>
+
+      <RecipeCategoryField
+        options={visibleCategories}
+        selectedIds={selectedCategoryIds}
+        lockedCategories={lockedCategories}
+        isLoading={categoriesQuery.isLoading && visibleCategories.length === 0}
+        showAddCustom={showAddCustom}
+        errorMessage={categoriesQuery.isError ? t('login.networkError') : null}
+        onToggle={handleToggleCategory}
+        onRemoveLocked={handleRemoveLockedCategory}
+        onAddCustom={handleAddCustomCategory}
+      />
 
       <Box>
         <Text className="mb-2 text-sm font-semibold text-ice">

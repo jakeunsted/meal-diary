@@ -97,6 +97,8 @@ describe('entitlements.service', () => {
       expect(result.billing.trialAvailable).toBe(true);
       expect(result.billing.storePlatform).toBeNull();
       expect(result.features.edit_past_weeks).toBe(false);
+      expect(result.features.custom_recipe_categories).toBe(false);
+      expect(result.limits.canUseCustomRecipeCategories).toBe(false);
       expect(result.prompts.customMealNamesLapse).toBe(false);
     });
 
@@ -132,6 +134,8 @@ describe('entitlements.service', () => {
       expect(result.plan).toBe('premium');
       expect(result.isComplimentary).toBe(true);
       expect(result.features.edit_past_weeks).toBe(true);
+      expect(result.features.custom_recipe_categories).toBe(true);
+      expect(result.limits.canUseCustomRecipeCategories).toBe(true);
       expect(result.billing.isOwner).toBe(false);
       expect(result.billing.ownerDisplayName).toBe('owner');
     });

@@ -57,5 +57,11 @@ const rows = [
     free: '✗',
     premium: '✓',
   },
+  {
+    key: 'custom_recipe_categories',
+    labelKey: 'plansPage.rows.customRecipeCategories',
+    free: '✗',
+    premium: '✓',
+  },
 ];
 </script>

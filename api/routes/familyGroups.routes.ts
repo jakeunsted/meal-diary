@@ -2,6 +2,7 @@ import express from 'express';
 import * as familyGroupController from '../controllers/family-group/familyGroup.controller.ts';
 import * as entitlementsController from '../controllers/entitlements/entitlements.controller.ts';
 import * as mealSlotsController from '../controllers/meal-slots/mealSlots.controller.ts';
+import * as recipeCategoriesController from '../controllers/recipe-categories/recipeCategories.controller.ts';
 import { authenticateToken, requireFamilyMember } from '../middleware/auth.middleware.ts';
 
 const router = express.Router();
@@ -487,6 +488,132 @@ router.put('/:family_group_id/meal-slots', authenticateToken, requireFamilyMembe
 router.post('/:family_group_id/meal-slots/reset-to-defaults', authenticateToken, requireFamilyMember, async (req, res, next) => {
   try {
     await mealSlotsController.resetMealNamesToDefaults(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/recipe-categories:
+ *   get:
+ *     summary: List visible recipe categories for a family
+ *     tags: [RecipeCategories]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Starters, plus custom categories when Family Plus is active
+ *   post:
+ *     summary: Create a custom recipe category
+ *     tags: [RecipeCategories]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 maxLength: 32
+ *     responses:
+ *       201:
+ *         description: Created category
+ *       400:
+ *         description: Invalid name
+ *       403:
+ *         description: Entitlement required
+ */
+router.get('/:family_group_id/recipe-categories', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await recipeCategoriesController.getRecipeCategories(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:family_group_id/recipe-categories', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await recipeCategoriesController.postRecipeCategory(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
+ * /family-groups/{family_group_id}/recipe-categories/{category_id}:
+ *   patch:
+ *     summary: Rename a custom recipe category
+ *     tags: [RecipeCategories]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *       - in: path
+ *         name: category_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       200:
+ *         description: Renamed category
+ *       400:
+ *         description: Invalid name or starter category
+ *       403:
+ *         description: Entitlement required
+ *       404:
+ *         description: Category not found
+ *   delete:
+ *     summary: Delete a custom recipe category
+ *     tags: [RecipeCategories]
+ *     parameters:
+ *       - in: path
+ *         name: family_group_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *       - in: path
+ *         name: category_id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *     responses:
+ *       204:
+ *         description: Category deleted
+ *       400:
+ *         description: Starter category
+ *       403:
+ *         description: Entitlement required
+ *       404:
+ *         description: Category not found
+ */
+router.patch('/:family_group_id/recipe-categories/:category_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await recipeCategoriesController.patchRecipeCategory(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/:family_group_id/recipe-categories/:category_id', authenticateToken, requireFamilyMember, async (req, res, next) => {
+  try {
+    await recipeCategoriesController.deleteRecipeCategoryById(req, res);
   } catch (error) {
     next(error);
   }

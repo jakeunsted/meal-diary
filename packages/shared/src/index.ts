@@ -90,6 +90,26 @@ export type {
 } from './mealSlots/index.ts';
 
 export {
+  DEFAULT_RECIPE_CATEGORIES,
+  MAX_RECIPE_CATEGORY_NAME_LENGTH,
+  RECIPE_CATEGORY_STARTER_KEYS,
+  countRecipesForCategoryTabs,
+  getRecipeCategoryNameError,
+  normalizeRecipeCategoryName,
+  recipeCategoryNameError,
+  recipeMatchesCategoryFilter,
+} from './recipeCategories/index.ts';
+
+export type {
+  RecipeCategoryFilter,
+  RecipeCategoryNameErrorCode,
+  RecipeCategoryRef,
+  RecipeCategoryStarterKey,
+  RecipeCategoryTabCounts,
+  RecipeForCategoryFilter,
+} from './recipeCategories/index.ts';
+
+export {
   mealDiarySlotValuesMatch,
   normalizeMealDiaryDish,
 } from './mealDiary/sync.ts';

@@ -1,6 +1,11 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import {
+  countRecipesForCategoryTabs,
+  recipeMatchesCategoryFilter,
+  type RecipeCategoryFilter,
+} from '@meal-diary/shared';
 import { useFocusEffect, useRouter, type Href } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -14,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TourTarget } from '@/components/onboarding/TourTarget';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
+import { RecipeCategoryTabs } from '@/components/recipe/RecipeCategoryTabs';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -22,7 +28,11 @@ import { openPlans } from '@/lib/billing/openPlans';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useRecipeEntitlements } from '@/lib/entitlements/useRecipeEntitlements';
 import { useCurrentUser, useEntitlements } from '@/lib/queries/profile';
+import { useRecipeCategories } from '@/lib/queries/recipeCategories';
 import { useFamilyRecipes } from '@/lib/queries/recipes';
+import type { RecipeCategory } from '@/types/recipe';
+
+const EMPTY_RECIPE_CATEGORIES: RecipeCategory[] = [];
 
 export default function RecipesScreen() {
   const { t } = useTranslation();
@@ -32,20 +42,48 @@ export default function RecipesScreen() {
   const familyGroupId = userQuery.data?.family_group_id;
   const entitlementsQuery = useEntitlements(familyGroupId);
   const recipesQuery = useFamilyRecipes(familyGroupId);
+  const categoriesQuery = useRecipeCategories(familyGroupId);
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const recipeEntitlements = useRecipeEntitlements(entitlementsQuery.data);
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<RecipeCategoryFilter>({ kind: 'all' });
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const allRecipes = recipesQuery.data ?? [];
+  const visibleCategories = categoriesQuery.data ?? EMPTY_RECIPE_CATEGORIES;
+  const categoryCounts = useMemo(
+    () =>
+      countRecipesForCategoryTabs(
+        allRecipes.map((recipe) => ({ categories: recipe.categories ?? [] })),
+        visibleCategories
+      ),
+    [allRecipes, visibleCategories]
+  );
   const filteredRecipes = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) {
-      return allRecipes;
-    }
 
-    return allRecipes.filter((recipe) => recipe.name.toLowerCase().includes(query));
-  }, [allRecipes, searchQuery]);
+    return allRecipes.filter((recipe) => {
+      if (
+        !recipeMatchesCategoryFilter(
+          { categories: recipe.categories ?? [] },
+          categoryFilter
+        )
+      ) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return recipe.name.toLowerCase().includes(query);
+    });
+  }, [allRecipes, categoryFilter, searchQuery]);
+  const selectedCategoryName =
+    categoryFilter.kind === 'category'
+      ? (visibleCategories.find((category) => category.id === categoryFilter.categoryId)?.name ??
+        '')
+      : '';
 
   const hasRecipeData = allRecipes.length > 0;
   const showSkeleton = recipesQuery.isLoading && !hasRecipeData;
@@ -67,10 +105,18 @@ export default function RecipesScreen() {
     router.push(`/(tabs)/recipes/${recipeId}` as Href);
   };
 
+  const handleManageCategories = () => {
+    router.push('/(tabs)/recipes/categories' as Href);
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([recipesQuery.refetch(), entitlementsQuery.refetch()]);
+      await Promise.all([
+        recipesQuery.refetch(),
+        categoriesQuery.refetch(),
+        entitlementsQuery.refetch(),
+      ]);
     } finally {
       setIsRefreshing(false);
     }
@@ -84,8 +130,27 @@ export default function RecipesScreen() {
 
       void entitlementsQuery.refetch();
       void recipesQuery.refetch();
-    }, [familyGroupId, entitlementsQuery.refetch, recipesQuery.refetch])
+      void categoriesQuery.refetch();
+    }, [
+      familyGroupId,
+      entitlementsQuery.refetch,
+      recipesQuery.refetch,
+      categoriesQuery.refetch,
+    ])
   );
+
+  useEffect(() => {
+    if (!categoriesQuery.isSuccess || categoryFilter.kind !== 'category') {
+      return;
+    }
+
+    const stillVisible = visibleCategories.some(
+      (category) => category.id === categoryFilter.categoryId
+    );
+    if (!stillVisible) {
+      setCategoryFilter({ kind: 'all' });
+    }
+  }, [categoriesQuery.isSuccess, categoryFilter, visibleCategories]);
 
   return (
     <Box className="flex-1 bg-base">
@@ -177,11 +242,32 @@ export default function RecipesScreen() {
             </Button>
           </View>
 
+          {!showSkeleton ? (
+            <>
+              <Pressable
+                accessibilityRole="button"
+                className="mb-3 self-start py-1"
+                onPress={handleManageCategories}
+                testID="recipe-categories-manage"
+              >
+                <Text className="text-sm font-medium text-primary">
+                  {t('recipes.categories.manage')}
+                </Text>
+              </Pressable>
+              <RecipeCategoryTabs
+                categories={visibleCategories}
+                selected={categoryFilter}
+                counts={categoryCounts}
+                onChange={setCategoryFilter}
+              />
+            </>
+          ) : null}
+
           {showSkeleton ? (
             <Box className="items-center py-8">
               <ActivityIndicator size="large" color="#6366F1" />
             </Box>
-          ) : allRecipes.length === 0 ? (
+          ) : categoryFilter.kind === 'all' && allRecipes.length === 0 ? (
             <Box className="items-center py-12">
               <FontAwesome name="book" size={48} color="rgba(241, 245, 249, 0.3)" />
               <Text className="mt-4 text-lg font-medium text-ice">
@@ -198,6 +284,19 @@ export default function RecipesScreen() {
                 <FontAwesome name="plus" size={14} color="#F1F5F9" />
                 <ButtonText className="ml-2 text-ice">{t('recipeForm.newRecipe')}</ButtonText>
               </Button>
+            </Box>
+          ) : categoryFilter.kind === 'category' &&
+            (categoryCounts.byId[categoryFilter.categoryId] ?? 0) === 0 ? (
+            <Box className="items-center py-12">
+              <Text className="text-center text-lg font-medium text-ice">
+                {t('recipes.categories.emptyCategory', { name: selectedCategoryName })}
+              </Text>
+            </Box>
+          ) : categoryFilter.kind === 'uncategorized' && categoryCounts.uncategorized === 0 ? (
+            <Box className="items-center py-12">
+              <Text className="text-center text-lg font-medium text-ice">
+                {t('recipes.categories.emptyUncategorized')}
+              </Text>
             </Box>
           ) : filteredRecipes.length === 0 ? (
             <Box className="items-center py-12">
