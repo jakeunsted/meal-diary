@@ -14,7 +14,6 @@ import {
   RefreshControl,
   TextInput,
 } from 'react-native';
-import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 
@@ -232,6 +231,50 @@ export default function ShoppingListScreen() {
     />
   );
 
+  const renderNewItemField = () => (
+    <Box className="flex-row items-center gap-2 py-1">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('shoppingList.addItem')}
+        className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
+        onPressIn={() => {
+          retainNewItemFocusRef.current = true;
+        }}
+        onPress={handleAddNewItem}
+        testID="shopping-list-new-item-button"
+      >
+        {editor.isAdding ? (
+          <ActivityIndicator size="small" color="#6366F1" />
+        ) : (
+          <FontAwesome name="plus" size={12} color="#6366F1" />
+        )}
+      </Pressable>
+      <TextInput
+        ref={newItemInputRef}
+        className="flex-1 px-2 py-2 text-base text-ice"
+        placeholder={t('shoppingList.enterNewItem')}
+        placeholderTextColor="rgba(241, 245, 249, 0.4)"
+        value={editor.newItemName}
+        onChangeText={(value) => {
+          editor.clearActionError();
+          editor.setNewItemName(value);
+        }}
+        onSubmitEditing={handleAddNewItem}
+        onBlur={() => {
+          if (!retainNewItemFocusRef.current) {
+            return;
+          }
+          retainNewItemFocusRef.current = false;
+          newItemInputRef.current?.focus();
+        }}
+        blurOnSubmit={false}
+        submitBehavior="submit"
+        returnKeyType="next"
+        testID="shopping-list-new-item-input"
+      />
+    </Box>
+  );
+
   const renderCategoryList = (category: ShoppingCategory, items: ShoppingListItem[]) => {
     if (items.length === 0) {
       return null;
@@ -353,6 +396,8 @@ export default function ShoppingListScreen() {
                 ) : isShoppingCategory(activeTab) ? (
                   renderCategoryList(activeTab, activeItemsForTab)
                 ) : null}
+
+                {renderNewItemField()}
               </TourTarget>
 
               {!viewSettings.hideCheckedItems ? (
@@ -372,54 +417,6 @@ export default function ShoppingListScreen() {
             </Box>
           )}
         </ShoppingListScrollContainer>
-
-        {showSkeleton ? null : (
-          <KeyboardStickyView>
-            <Box className="border-t border-border bg-base px-4 py-2">
-              <Box className="flex-row items-center gap-2">
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={t('shoppingList.addItem')}
-                  className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
-                  onPressIn={() => {
-                    retainNewItemFocusRef.current = true;
-                  }}
-                  onPress={handleAddNewItem}
-                  testID="shopping-list-new-item-button"
-                >
-                  {editor.isAdding ? (
-                    <ActivityIndicator size="small" color="#6366F1" />
-                  ) : (
-                    <FontAwesome name="plus" size={12} color="#6366F1" />
-                  )}
-                </Pressable>
-                <TextInput
-                  ref={newItemInputRef}
-                  className="flex-1 px-2 py-2 text-base text-ice"
-                  placeholder={t('shoppingList.enterNewItem')}
-                  placeholderTextColor="rgba(241, 245, 249, 0.4)"
-                  value={editor.newItemName}
-                  onChangeText={(value) => {
-                    editor.clearActionError();
-                    editor.setNewItemName(value);
-                  }}
-                  onSubmitEditing={handleAddNewItem}
-                  onBlur={() => {
-                    if (!retainNewItemFocusRef.current) {
-                      return;
-                    }
-                    retainNewItemFocusRef.current = false;
-                    newItemInputRef.current?.focus();
-                  }}
-                  blurOnSubmit={false}
-                  submitBehavior="submit"
-                  returnKeyType="next"
-                  testID="shopping-list-new-item-input"
-                />
-              </Box>
-            </Box>
-          </KeyboardStickyView>
-        )}
     </Box>
   );
 }

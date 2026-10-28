@@ -1,9 +1,5 @@
 <template>
-  <div
-    class="max-w-4xl mx-auto px-4 pb-16"
-    style="overflow-anchor: none"
-    :class="{ 'hide-checkboxes': hideCheckboxes }"
-  >
+  <div class="max-w-4xl mx-auto px-4" :class="{ 'hide-checkboxes': hideCheckboxes }">
     <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="handlePullRefresh" />
     <div class="relative flex items-center justify-center m-4">
       <h1 class="text-2xl font-bold text-center" data-testid="shopping-list-title">
@@ -104,6 +100,11 @@
           />
         </template>
       </ShoppingListSortableList>
+      <ShoppingListNewItemField
+        v-model="newItemName"
+        :placeholder="$t('Enter new item')"
+        @submit="handleAddNewItem"
+      />
       </div>
 
       <div v-if="hasCheckedItems && !hideCheckedItems" class="mt-4 bg-base-200 rounded-box">
@@ -161,33 +162,6 @@
         </div>
       </div>
 
-      <div
-        class="fixed inset-x-0 z-40 border-t border-base-300 bg-base-100"
-        :style="{ bottom: `${composerBottomPx}px` }"
-        data-testid="shopping-list-new-item-bar"
-      >
-        <div class="mx-auto flex max-w-4xl items-center gap-2 px-4 py-2">
-          <button
-            class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
-            type="button"
-            data-testid="shopping-list-new-item-button"
-            @mousedown.prevent
-            @click="handleAddNewItem"
-          >
-            <fa icon="plus" />
-          </button>
-          <input
-            ref="newItemInput"
-            type="text"
-            enterkeyhint="next"
-            :placeholder="$t('Enter new item')"
-            class="input input-ghost w-full pr-5"
-            data-testid="shopping-list-new-item-input"
-            v-model="newItemName"
-            @keydown.enter.prevent="handleAddNewItem"
-          />
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -215,7 +189,6 @@ import { usePullToRefreshEnabled } from '~/composables/usePullToRefreshEnabled';
 import { useShoppingListStore } from '~/stores/shoppingList';
 import { useUserStore } from '~/stores/user';
 import { flattenShoppingListItems } from '~/utils/shoppingListTree';
-import { shoppingListComposerBottomPx } from '~/utils/shoppingListComposerInset';
 import type { ShoppingListItem as ShoppingListItemType } from '~/types/ShoppingList';
 
 const { pullToRefreshEnabled } = usePullToRefreshEnabled();
@@ -231,8 +204,6 @@ const hasData = computed(() => {
 });
 
 const newItemName = ref('');
-const newItemInput = ref<HTMLInputElement | null>(null);
-const composerBottomPx = ref(80);
 const checkedItemsExpanded = ref(false);
 const activeTab = ref<ShoppingListTab>('all');
 const categories = SHOPPING_CATEGORIES;
@@ -361,24 +332,6 @@ const categoryLabel = (category: ShoppingCategory): string => {
   }
 };
 
-const updateComposerBottom = () => {
-  const viewport = window.visualViewport;
-  if (!viewport) {
-    composerBottomPx.value = shoppingListComposerBottomPx({
-      windowInnerHeight: window.innerHeight,
-      viewportHeight: window.innerHeight,
-      viewportOffsetTop: 0,
-    });
-    return;
-  }
-
-  composerBottomPx.value = shoppingListComposerBottomPx({
-    windowInnerHeight: window.innerHeight,
-    viewportHeight: viewport.height,
-    viewportOffsetTop: viewport.offsetTop,
-  });
-};
-
 const handleAddNewItem = async () => {
   const trimmedName = newItemName.value.trim();
   if (!trimmedName) {
@@ -391,10 +344,6 @@ const handleAddNewItem = async () => {
       : activeTab.value;
 
   newItemName.value = '';
-  if (newItemInput.value) {
-    newItemInput.value.value = '';
-    newItemInput.value.focus({ preventScroll: true });
-  }
 
   try {
     await shoppingListStore.addItem({
@@ -499,10 +448,6 @@ const handleInsertBelow = async (itemId: number | string) => {
 };
 
 onMounted(async () => {
-  updateComposerBottom();
-  window.visualViewport?.addEventListener('resize', updateComposerBottom);
-  window.visualViewport?.addEventListener('scroll', updateComposerBottom);
-
   await nextTick();
   track('shopping_list_viewed');
 
@@ -522,11 +467,6 @@ onMounted(async () => {
   };
 
   loadData();
-});
-
-onUnmounted(() => {
-  window.visualViewport?.removeEventListener('resize', updateComposerBottom);
-  window.visualViewport?.removeEventListener('scroll', updateComposerBottom);
 });
 </script>
 
