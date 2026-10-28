@@ -256,7 +256,7 @@ describe('recipe.controller recipes', () => {
     vi.mocked(recipeService.getRecipesByFamilyGroup).mockResolvedValue([{ id: 1 }] as never);
     const listed = mockResponse();
     await getRecipes(request({ family_group_id: '10' }, {}, { search: 'pasta' }), listed);
-    expect(recipeService.getRecipesByFamilyGroup).toHaveBeenCalledWith(10, 'pasta');
+    expect(recipeService.getRecipesByFamilyGroup).toHaveBeenCalledWith(10, 'pasta', 5);
     expect(listed.status).toHaveBeenCalledWith(200);
 
     const missingFamily = mockResponse();

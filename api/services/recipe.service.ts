@@ -2,6 +2,12 @@ import { Recipe, RecipeIngredient, DailyMeal, DailyMealEntry, FamilyGroup } from
 import { Op, Transaction } from 'sequelize';
 import sequelize from '../db/models/index.ts';
 import { assertCanCreateRecipe } from './entitlements.service.ts';
+import {
+  attachRecipeCategories,
+  deleteRecipeCategoryAssignments,
+  ensureDefaultRecipeCategories,
+  syncRecipeCategoryAssignments,
+} from './recipeCategories.service.ts';
 
 export interface IngredientInput {
   id?: number;
@@ -18,6 +24,7 @@ export interface CreateRecipeInput {
   instructions?: string;
   portions?: number;
   ingredients?: IngredientInput[];
+  category_ids?: number[];
 }
 
 interface UpdateRecipeInput {
@@ -26,6 +33,7 @@ interface UpdateRecipeInput {
   instructions?: string;
   portions?: number;
   ingredients?: IngredientInput[];
+  category_ids?: number[];
 }
 
 /**
@@ -33,8 +41,11 @@ interface UpdateRecipeInput {
  */
 export const getRecipesByFamilyGroup = async (
   familyGroupId: number,
-  search?: string
+  search?: string,
+  requestingUserId?: number
 ): Promise<Recipe[]> => {
+  await ensureDefaultRecipeCategories(familyGroupId);
+
   const where: any = { family_group_id: familyGroupId };
 
   if (search) {
@@ -50,19 +61,38 @@ export const getRecipesByFamilyGroup = async (
     order: [['name', 'ASC']],
   });
 
+  if (requestingUserId != null) {
+    await attachRecipeCategories(recipes, familyGroupId, requestingUserId);
+  }
+
   return recipes;
 };
 
 /**
  * Get a single recipe by ID
  */
-export const getRecipeById = async (recipeId: number): Promise<Recipe | null> => {
+export const getRecipeById = async (
+  recipeId: number,
+  requestingUserId?: number
+): Promise<Recipe | null> => {
   const recipe = await Recipe.findByPk(recipeId, {
     include: [{
       model: RecipeIngredient,
       as: 'ingredients',
     }],
   });
+
+  if (!recipe) {
+    return null;
+  }
+
+  const familyGroupId = recipe.dataValues?.family_group_id;
+  if (typeof familyGroupId === 'number') {
+    await ensureDefaultRecipeCategories(familyGroupId);
+    if (requestingUserId != null) {
+      await attachRecipeCategories([recipe], familyGroupId, requestingUserId);
+    }
+  }
 
   return recipe;
 };
@@ -105,10 +135,20 @@ export const createRecipe = async (input: CreateRecipeInput): Promise<Recipe> =>
       );
     }
 
+    if (input.category_ids !== undefined) {
+      await syncRecipeCategoryAssignments(
+        recipe.dataValues.id,
+        input.family_group_id,
+        input.created_by,
+        input.category_ids,
+        transaction
+      );
+    }
+
     await transaction.commit();
 
     // Re-fetch with ingredients
-    const fullRecipe = await getRecipeById(recipe.dataValues.id);
+    const fullRecipe = await getRecipeById(recipe.dataValues.id, input.created_by);
     return fullRecipe!;
   } catch (error) {
     await transaction.rollback();
@@ -121,7 +161,8 @@ export const createRecipe = async (input: CreateRecipeInput): Promise<Recipe> =>
  */
 export const updateRecipe = async (
   recipeId: number,
-  input: UpdateRecipeInput
+  input: UpdateRecipeInput,
+  requestingUserId: number
 ): Promise<Recipe> => {
   const transaction = await sequelize.transaction();
 
@@ -158,9 +199,19 @@ export const updateRecipe = async (
       }
     }
 
+    if (input.category_ids !== undefined) {
+      await syncRecipeCategoryAssignments(
+        recipeId,
+        recipe.dataValues.family_group_id,
+        requestingUserId,
+        input.category_ids,
+        transaction
+      );
+    }
+
     await transaction.commit();
 
-    const fullRecipe = await getRecipeById(recipeId);
+    const fullRecipe = await getRecipeById(recipeId, requestingUserId);
     return fullRecipe!;
   } catch (error) {
     await transaction.rollback();
@@ -213,6 +264,8 @@ export const deleteRecipe = async (recipeId: number): Promise<void> => {
       where: { recipe_id: recipeId },
       transaction,
     });
+
+    await deleteRecipeCategoryAssignments(recipeId, transaction);
 
     // Delete the recipe
     await Recipe.destroy({

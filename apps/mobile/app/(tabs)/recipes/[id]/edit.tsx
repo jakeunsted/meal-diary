@@ -15,6 +15,8 @@ import { Button, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
 import { Text } from '@/components/ui/text';
 import { captureEvent } from '@/lib/analytics/posthog';
+import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
+import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useCurrentUser } from '@/lib/queries/profile';
 import { useRecipe, useUpdateRecipe } from '@/lib/queries/recipes';
 import type { UpdateRecipePayload } from '@/types/recipe';
@@ -30,6 +32,7 @@ export default function EditRecipeScreen() {
   const familyGroupId = userQuery.data?.family_group_id;
   const recipeQuery = useRecipe(parsedRecipeId);
   const updateRecipeMutation = useUpdateRecipe();
+  const openPaywall = usePaywallStore((state) => state.openPaywall);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   if (!parsedRecipeId) {
@@ -51,7 +54,13 @@ export default function EditRecipeScreen() {
       });
       captureEvent('recipe_edited');
       router.back();
-    } catch {
+    } catch (error) {
+      const entitlementFeature = getEntitlementFeatureFromError(error);
+      if (entitlementFeature) {
+        openPaywall(entitlementFeature);
+        return;
+      }
+
       setSubmitError(t('recipeForm.updateFailed'));
     }
   };

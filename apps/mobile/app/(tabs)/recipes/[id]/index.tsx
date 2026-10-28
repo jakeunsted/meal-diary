@@ -247,6 +247,20 @@ export default function RecipeDetailScreen() {
             ) : null}
             <ScreenTitle align="left">{recipe.name}</ScreenTitle>
 
+            {recipe.categories && recipe.categories.length > 0 ? (
+              <View className="mb-4 flex-row flex-wrap gap-2" testID="recipe-assigned-categories">
+                {recipe.categories.map((category) => (
+                  <View
+                    key={category.id}
+                    className="rounded-full bg-ice/10 px-3 py-1"
+                    testID={`recipe-assigned-category-${category.id}`}
+                  >
+                    <Text className="text-sm text-ice">{category.name}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
             {recipe.description ? (
               <Text className="mb-4 text-ice/70">{recipe.description}</Text>
             ) : null}

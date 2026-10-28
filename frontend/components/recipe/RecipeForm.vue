@@ -45,6 +45,8 @@
         />
       </div>
 
+      <slot name="categories" />
+
       <!-- Ingredients -->
       <div class="form-control">
         <label class="label">

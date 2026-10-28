@@ -227,6 +227,7 @@ export default function PlansScreen() {
                   'recipes',
                   'recipeToShoppingList',
                   'customMealSlots',
+                  'customRecipeCategories',
                 ] as const
               ).map((row) => (
                 <Text key={row} className="text-ice/70 text-sm">

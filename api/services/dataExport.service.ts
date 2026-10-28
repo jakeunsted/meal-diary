@@ -7,12 +7,15 @@ import {
   ShoppingListItem,
   Recipe,
   RecipeIngredient,
+  RecipeCategory,
 } from '../db/models/associations.ts';
+import { sortRecipeCategories } from './recipeCategories.service.ts';
 
 export interface UserDataExport {
   exportedAt: string;
   user: Record<string, any>;
   familyGroup: Record<string, any> | null;
+  recipeCategories: Record<string, any>[];
   recipes: Record<string, any>[];
   mealDiaries: Record<string, any>[];
   shoppingLists: Record<string, any>[];
@@ -36,6 +39,7 @@ export const exportUserData = async (userId: number): Promise<UserDataExport> =>
   const familyGroupId = user.dataValues.family_group_id;
 
   let familyGroup: Record<string, any> | null = null;
+  let recipeCategories: Record<string, any>[] = [];
   let recipes: Record<string, any>[] = [];
   let mealDiaries: Record<string, any>[] = [];
   let shoppingLists: Record<string, any>[] = [];
@@ -44,12 +48,38 @@ export const exportUserData = async (userId: number): Promise<UserDataExport> =>
     const group = await FamilyGroup.findByPk(familyGroupId);
     familyGroup = group ? (group.toJSON() as Record<string, any>) : null;
 
+    const categoryRows = await RecipeCategory.findAll({
+      where: { family_group_id: familyGroupId },
+    });
+    recipeCategories = sortRecipeCategories(
+      categoryRows.map((category) => category.toJSON() as Record<string, any>)
+    );
+
     const recipeRows = await Recipe.findAll({
       where: { family_group_id: familyGroupId },
-      include: [{ model: RecipeIngredient, as: 'ingredients' }],
+      include: [
+        { model: RecipeIngredient, as: 'ingredients' },
+        {
+          model: RecipeCategory,
+          as: 'categories',
+          through: { attributes: [] },
+        },
+      ],
       order: [['name', 'ASC']],
     });
-    recipes = recipeRows.map((r) => r.toJSON() as Record<string, any>);
+    recipes = recipeRows.map((recipe) => {
+      const json = recipe.toJSON() as Record<string, any>;
+      const categories = Array.isArray(json.categories) ? json.categories : [];
+      json.categories = sortRecipeCategories(
+        categories.map((category: Record<string, any>) => {
+          const rest = { ...category };
+          delete rest.RecipeCategoryAssignment;
+          delete rest.recipe_category_assignments;
+          return rest;
+        })
+      );
+      return json;
+    });
 
     const mealDiaryRows = await MealDiary.findAll({
       where: { family_group_id: familyGroupId },
@@ -69,6 +99,7 @@ export const exportUserData = async (userId: number): Promise<UserDataExport> =>
     exportedAt: new Date().toISOString(),
     user: userJson,
     familyGroup,
+    recipeCategories,
     recipes,
     mealDiaries,
     shoppingLists,

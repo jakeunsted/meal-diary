@@ -13,6 +13,7 @@ interface RecipeCardProps {
 export function RecipeCard({ recipe, onPress }: RecipeCardProps) {
   const { t } = useTranslation();
   const ingredientCount = recipe.ingredients?.length ?? 0;
+  const categories = recipe.categories ?? [];
 
   return (
     <Pressable
@@ -51,6 +52,19 @@ export function RecipeCard({ recipe, onPress }: RecipeCardProps) {
           ) : null}
         </View>
       </View>
+      {categories.length > 0 ? (
+        <View className="mt-2 flex-row flex-wrap gap-1.5" testID={`recipe-card-categories-${recipe.id}`}>
+          {categories.map((category) => (
+            <View
+              key={category.id}
+              className="rounded-full bg-ice/10 px-2 py-0.5"
+              testID={`recipe-card-category-${recipe.id}-${category.id}`}
+            >
+              <Text className="text-xs text-ice/80">{category.name}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
     </Pressable>
   );
 }

@@ -61,8 +61,8 @@
       },
       "recipes": {
         "title": "A recipe book that grows with you",
-        "body": "Save family favourites with portions and ingredients, or import a recipe from a URL when you find something you want to cook.",
-        "alt": "Meal Diary recipe book screenshot listing saved recipes"
+        "body": "Save family favourites with portions and ingredients, filter them by category such as Breakfast or Dinner, or import a recipe from a URL when you find something you want to cook.",
+        "alt": "Meal Diary recipe book screenshot with category filters and a label on each recipe"
       },
       "import": {
         "title": "Create by hand or import from a link",
@@ -129,17 +129,17 @@
     "recipes": {
       "seo": {
         "title": "Recipe book & URL import — Meal Diary",
-        "description": "Keep household recipes in one book. Create recipes manually or import from a recipe website URL."
+        "description": "Keep household recipes in one book. Filter by Breakfast, Lunch, Dinner or Dessert, or import from a recipe website URL."
       },
       "title": "Recipe book with URL import",
       "subtitle": "Favourites in one place — typed by hand or pulled in from a recipe link.",
-      "body": "Search your recipe book, see portions and ingredient counts at a glance, and add new recipes when inspiration strikes. Choose create manually or import from URL — we’ll pull in what we can from the page.",
+      "body": "Search your recipe book, see portions and ingredient counts at a glance, and filter by Breakfast, Lunch, Dinner or Dessert. Choose create manually or import from URL — we’ll pull in what we can from the page.",
       "points": {
         "one": "Searchable household recipe book",
         "two": "Portions and ingredient counts on each card",
         "three": "Import from a recipe website URL"
       },
-      "alt": "Screenshot of the Meal Diary recipe book",
+      "alt": "Screenshot of the Meal Diary recipe book with category filters",
       "importAlt": "Screenshot of the import-from-URL recipe chooser"
     },
     "shopping": {

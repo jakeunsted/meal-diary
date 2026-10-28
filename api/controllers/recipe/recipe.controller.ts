@@ -4,11 +4,23 @@ import * as recipeService from '../../services/recipe.service.ts';
 import * as recipeImportService from '../../services/recipe-import/import.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
+import { InvalidRecipeCategoryError } from '../../services/recipeCategories.service.ts';
 import {
   InvalidRecipeImportUrlError,
   RecipeImportParseError,
 } from '../../services/recipe-import/errors.ts';
 import { routeParamInt } from '../../utils/routeParam.ts';
+
+const handleRecipeWriteError = (error: unknown, res: Response): boolean => {
+  if (handleEntitlementError(error, res)) {
+    return true;
+  }
+  if (error instanceof InvalidRecipeCategoryError) {
+    res.status(400).json({ code: error.code, message: error.message });
+    return true;
+  }
+  return false;
+};
 
 /**
  * Get all recipes for a family group
@@ -24,7 +36,8 @@ export const getRecipes = async (req: Request, res: Response) => {
 
     const recipes = await recipeService.getRecipesByFamilyGroup(
       routeParamInt(family_group_id),
-      search as string | undefined
+      search as string | undefined,
+      (req.user as User | undefined)?.dataValues.id
     );
 
     return res.status(200).json(recipes);
@@ -45,7 +58,10 @@ export const getRecipeById = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Recipe ID is required' });
     }
 
-    const recipe = await recipeService.getRecipeById(routeParamInt(id));
+    const recipe = await recipeService.getRecipeById(
+      routeParamInt(id),
+      (req.user as User | undefined)?.dataValues.id
+    );
 
     if (!recipe) {
       return res.status(404).json({ message: 'Recipe not found' });
@@ -67,7 +83,7 @@ export const getRecipeById = async (req: Request, res: Response) => {
  */
 export const createRecipe = async (req: Request, res: Response) => {
   try {
-    const { family_group_id, name, description, instructions, portions, ingredients } = req.body;
+    const { family_group_id, name, description, instructions, portions, ingredients, category_ids } = req.body;
     const user = req.user as User;
 
     if (!family_group_id || !name) {
@@ -98,11 +114,12 @@ export const createRecipe = async (req: Request, res: Response) => {
       instructions,
       portions,
       ingredients,
+      category_ids,
     });
 
     return res.status(201).json(recipe);
   } catch (error) {
-    if (handleEntitlementError(error, res)) {
+    if (handleRecipeWriteError(error, res)) {
       return;
     }
     console.error('Error creating recipe:', error);
@@ -169,19 +186,20 @@ export const importRecipeFromUrl = async (req: Request, res: Response) => {
 export const updateRecipe = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, description, instructions, portions, ingredients } = req.body;
+    const { name, description, instructions, portions, ingredients, category_ids } = req.body;
+    const user = req.user as User | undefined;
 
     if (!id) {
       return res.status(400).json({ message: 'Recipe ID is required' });
     }
 
     // Verify recipe exists and belongs to the user's family
-    const existingRecipe = await recipeService.getRecipeById(routeParamInt(id));
+    const existingRecipe = await recipeService.getRecipeById(routeParamInt(id), user?.dataValues.id);
     if (!existingRecipe) {
       return res.status(404).json({ message: 'Recipe not found' });
     }
 
-    if (existingRecipe.dataValues.family_group_id !== (req.user as User | undefined)?.dataValues.family_group_id) {
+    if (!user || existingRecipe.dataValues.family_group_id !== user.dataValues.family_group_id) {
       return res.status(403).json({ message: 'Forbidden' });
     }
 
@@ -191,10 +209,14 @@ export const updateRecipe = async (req: Request, res: Response) => {
       instructions,
       portions,
       ingredients,
-    });
+      category_ids,
+    }, user.dataValues.id);
 
     return res.status(200).json(recipe);
   } catch (error) {
+    if (handleRecipeWriteError(error, res)) {
+      return;
+    }
     console.error('Error updating recipe:', error);
     return res.status(500).json({ message: 'Failed to update recipe' });
   }

@@ -290,7 +290,8 @@
       "editPastWeeks": "Edit past weeks",
       "recipes": "Recipes",
       "recipeToShoppingList": "Add recipe ingredients to shopping list",
-      "customMealSlots": "Custom daily meal names"
+      "customMealSlots": "Custom daily meal names",
+      "customRecipeCategories": "Custom recipe categories"
     }
   },
   "paywall": {
@@ -334,6 +335,13 @@
     "custom_meal_slots": {
       "title": "Custom meal layout",
       "description": "Rename, reorder, and choose how many daily meals you plan with Family Plus.",
+      "ownerCta": "View plans to upgrade",
+      "nonOwnerCta": "Ask {name} to upgrade",
+      "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
+    },
+    "custom_recipe_categories": {
+      "title": "Custom recipe categories",
+      "description": "Add your own recipe categories, such as Slow cooker, with Family Plus.",
       "ownerCta": "View plans to upgrade",
       "nonOwnerCta": "Ask {name} to upgrade",
       "nonOwnerCtaGeneric": "Ask your family owner to upgrade"
@@ -423,7 +431,32 @@
     "limitReached": "You've reached your recipe limit.",
     "upgradeLink": "View plans to upgrade",
     "askOwnerToUpgrade": "Ask {name} to upgrade for more recipes.",
-    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for more recipes."
+    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for more recipes.",
+    "categories": {
+      "all": "All",
+      "uncategorized": "Uncategorized",
+      "fieldLabel": "Categories",
+      "emptyCategory": "No recipes in {name} yet",
+      "emptyUncategorized": "Every recipe is in a category",
+      "manage": "Categories",
+      "add": "Add category",
+      "addCustom": "Add a custom category",
+      "rename": "Rename",
+      "delete": "Delete",
+      "remove": "Remove",
+      "nameLabel": "Category name",
+      "nameEmpty": "Enter a name",
+      "nameDuplicate": "That category already exists",
+      "nameTooLong": "Use 32 characters or fewer",
+      "nameInvalid": "Use letters, numbers, and punctuation",
+      "sharedNotice": "Everyone in the household sees these categories",
+      "renameNotice": "Everyone in the household will see this name",
+      "deleteTitle": "Delete {name}?",
+      "deleteBody": "This removes {name} from every recipe in the household. The recipes stay.",
+      "startersFixed": "Breakfast, Lunch, Dinner, and Dessert stay as they are",
+      "lapsedNote": "Custom categories are hidden until Family Plus is renewed. Labels already on recipes stay. You can remove one from that recipe.",
+      "assignedLocked": "Family Plus is needed to add this again"
+    }
   },
   "This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.": "This email already has a password. Enter it to link this sign-in method. Password sign-in will be removed.",
   "Link account": "Link account",

@@ -128,6 +128,10 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
     }
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   if (!response.ok) {
     const errorBody = await parseErrorBody(response);
     const message = errorBody.message ?? `API request failed: ${response.status}`;

@@ -1,9 +1,20 @@
+import type { RecipeCategoryStarterKey } from '@meal-diary/shared';
+
 export interface RecipeIngredient {
   id?: number;
   recipe_id?: number;
   name: string;
   quantity?: number | null;
   unit?: string | null;
+}
+
+export interface RecipeCategory {
+  id: number;
+  family_group_id?: number;
+  name: string;
+  is_default: boolean;
+  default_key: RecipeCategoryStarterKey | null;
+  assignable: boolean;
 }
 
 export interface Recipe {
@@ -15,12 +26,14 @@ export interface Recipe {
   instructions?: string | null;
   portions?: number | null;
   ingredients?: RecipeIngredient[];
+  categories?: RecipeCategory[];
   created_at?: string;
   updated_at?: string;
 }
 
 export interface RecipeState {
   recipes: Recipe[];
+  categories: RecipeCategory[];
   currentRecipe: Recipe | null;
   loading: boolean;
   searchQuery: string;

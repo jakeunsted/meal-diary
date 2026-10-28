@@ -33,6 +33,21 @@
     <div v-else-if="recipe" class="pb-8">
       <h1 class="text-2xl font-bold mb-4 break-words">{{ recipe.name }}</h1>
 
+      <div
+        v-if="recipe.categories?.length"
+        class="flex flex-wrap gap-2 mb-4"
+        data-testid="recipe-detail-categories"
+      >
+        <span
+          v-for="category in recipe.categories"
+          :key="category.id"
+          class="badge badge-outline"
+          :data-testid="`recipe-category-label-${category.id}`"
+        >
+          {{ category.name }}
+        </span>
+      </div>
+
       <p v-if="recipe.description" class="text-base-content/70 mb-4 break-words">{{ recipe.description }}</p>
 
       <div v-if="recipe.portions" class="badge badge-primary mb-4">

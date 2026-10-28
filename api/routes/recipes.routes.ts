@@ -53,6 +53,23 @@ const router = express.Router();
  *           type: array
  *           items:
  *             $ref: '#/components/schemas/RecipeIngredient'
+ *         categories:
+ *           type: array
+ *           description: Assigned categories. Starters first, then custom names. Hidden custom categories stay listed with assignable false.
+ *           items:
+ *             type: object
+ *             properties:
+ *               id:
+ *                 type: integer
+ *               name:
+ *                 type: string
+ *               is_default:
+ *                 type: boolean
+ *               default_key:
+ *                 type: string
+ *                 nullable: true
+ *               assignable:
+ *                 type: boolean
  *         created_at:
  *           type: string
  *           format: date-time
@@ -171,6 +188,11 @@ router.get('/:id', authenticateToken, async (req, res, next) => {
  *                       type: number
  *                     unit:
  *                       type: string
+ *               category_ids:
+ *                 type: array
+ *                 description: Omitted leaves the recipe uncategorized. An empty array clears categories.
+ *                 items:
+ *                   type: integer
  *     responses:
  *       201:
  *         description: The created recipe
@@ -238,6 +260,11 @@ router.post('/import-from-url', authenticateToken, async (req, res, next) => {
  *                       type: number
  *                     unit:
  *                       type: string
+ *               category_ids:
+ *                 type: array
+ *                 description: Omitted keeps current assignments. An empty array clears them.
+ *                 items:
+ *                   type: integer
  *     responses:
  *       200:
  *         description: The updated recipe
