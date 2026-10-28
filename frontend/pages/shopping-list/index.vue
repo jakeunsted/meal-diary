@@ -100,27 +100,11 @@
           />
         </template>
       </ShoppingListSortableList>
-      </div>
-
-      <div class="pt-4 flex items-center gap-2 my-2">
-        <button
-          class="btn btn-outline btn-primary btn-sm rounded-lg w-[1.5rem]! h-[1.5rem]!"
-          type="button"
-          data-testid="shopping-list-new-item-button"
-          @click="handleAddNewItem"
-        >
-          <fa icon="plus" />
-        </button>
-        <input
-          ref="newItemInput"
-          type="text"
-          :placeholder="$t('Enter new item')"
-          class="input input-ghost w-full pr-5"
-          data-testid="shopping-list-new-item-input"
-          v-model="newItemName"
-          @keyup.enter="handleAddNewItem"
-          @focus="handleInputFocus"
-        />
+      <ShoppingListNewItemField
+        v-model="newItemName"
+        :placeholder="$t('Enter new item')"
+        @submit="handleAddNewItem"
+      />
       </div>
 
       <div v-if="hasCheckedItems && !hideCheckedItems" class="mt-4 bg-base-200 rounded-box">
@@ -177,6 +161,7 @@
           </div>
         </div>
       </div>
+
     </div>
   </div>
 </template>
@@ -219,7 +204,6 @@ const hasData = computed(() => {
 });
 
 const newItemName = ref('');
-const newItemInput = ref<HTMLInputElement | null>(null);
 const checkedItemsExpanded = ref(false);
 const activeTab = ref<ShoppingListTab>('all');
 const categories = SHOPPING_CATEGORIES;
@@ -348,34 +332,30 @@ const categoryLabel = (category: ShoppingCategory): string => {
   }
 };
 
-const handleInputFocus = (event: FocusEvent) => {
-  const { scrollToInput } = useMobileInputScroll();
-  const target = event.target as HTMLElement | null;
-  if (target) {
-    scrollToInput(target);
-  }
-};
-
 const handleAddNewItem = async () => {
-  if (!newItemName.value.trim()) {
+  const trimmedName = newItemName.value.trim();
+  if (!trimmedName) {
     return;
   }
-  try {
-    const category =
-      activeTab.value === 'all'
-        ? categorizeShoppingItemName(newItemName.value)
-        : activeTab.value;
 
+  const category =
+    activeTab.value === 'all'
+      ? categorizeShoppingItemName(trimmedName)
+      : activeTab.value;
+
+  newItemName.value = '';
+
+  try {
     await shoppingListStore.addItem({
-      name: newItemName.value,
+      name: trimmedName,
       category,
     });
     track('shopping_list_item_added');
-    newItemName.value = '';
-    await nextTick();
-    newItemInput.value?.focus();
   } catch (error) {
     console.error('Error adding item:', error);
+    if (!newItemName.value.trim()) {
+      newItemName.value = trimmedName;
+    }
   }
 };
 

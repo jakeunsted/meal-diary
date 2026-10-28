@@ -68,6 +68,7 @@ export default function ShoppingListScreen() {
   const syncStatus = useShoppingListSyncStatus(familyGroupId);
   const viewSettings = useShoppingListViewSettings();
   const newItemInputRef = useRef<TextInput>(null);
+  const retainNewItemFocusRef = useRef(false);
   const itemInputRefs = useRef(new Map<string, TextInput>());
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<ShoppingListTab>('all');
@@ -144,7 +145,7 @@ export default function ShoppingListScreen() {
     void shoppingList.refresh();
   };
 
-  const handleAddNewItem = async () => {
+  const handleAddNewItem = () => {
     const trimmedName = editor.newItemName.trim();
     if (!trimmedName) {
       return;
@@ -155,11 +156,14 @@ export default function ShoppingListScreen() {
         ? categorizeShoppingItemName(trimmedName)
         : activeTab;
 
-    const added = await editor.handleAddNewItem(familyGroupId, category);
-    if (added) {
-      captureEvent('shopping_list_item_added');
-      newItemInputRef.current?.focus();
-    }
+    // Stay on this field. Blurring here closes the keyboard and resizes the tab bar.
+    newItemInputRef.current?.clear();
+    newItemInputRef.current?.focus();
+    void editor.handleAddNewItem(familyGroupId, category).then((added) => {
+      if (added) {
+        captureEvent('shopping_list_item_added');
+      }
+    });
   };
 
   const handleRemoveItem = (itemId: number | string) => {
@@ -225,6 +229,50 @@ export default function ShoppingListScreen() {
       isUpdating={isItemBusy}
       dragHandleProps={dragHandleProps}
     />
+  );
+
+  const renderNewItemField = () => (
+    <Box className="flex-row items-center gap-2 py-1">
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={t('shoppingList.addItem')}
+        className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
+        onPressIn={() => {
+          retainNewItemFocusRef.current = true;
+        }}
+        onPress={handleAddNewItem}
+        testID="shopping-list-new-item-button"
+      >
+        {editor.isAdding ? (
+          <ActivityIndicator size="small" color="#6366F1" />
+        ) : (
+          <FontAwesome name="plus" size={12} color="#6366F1" />
+        )}
+      </Pressable>
+      <TextInput
+        ref={newItemInputRef}
+        className="flex-1 px-2 py-2 text-base text-ice"
+        placeholder={t('shoppingList.enterNewItem')}
+        placeholderTextColor="rgba(241, 245, 249, 0.4)"
+        value={editor.newItemName}
+        onChangeText={(value) => {
+          editor.clearActionError();
+          editor.setNewItemName(value);
+        }}
+        onSubmitEditing={handleAddNewItem}
+        onBlur={() => {
+          if (!retainNewItemFocusRef.current) {
+            return;
+          }
+          retainNewItemFocusRef.current = false;
+          newItemInputRef.current?.focus();
+        }}
+        blurOnSubmit={false}
+        submitBehavior="submit"
+        returnKeyType="next"
+        testID="shopping-list-new-item-input"
+      />
+    </Box>
   );
 
   const renderCategoryList = (category: ShoppingCategory, items: ShoppingListItem[]) => {
@@ -349,36 +397,7 @@ export default function ShoppingListScreen() {
                   renderCategoryList(activeTab, activeItemsForTab)
                 ) : null}
 
-                <Box className="mt-4 flex-row items-center gap-2">
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={t('shoppingList.addItem')}
-                    className="h-8 w-8 items-center justify-center rounded-lg border border-primary"
-                    disabled={editor.isAdding}
-                    onPress={handleAddNewItem}
-                    testID="shopping-list-new-item-button"
-                  >
-                    {editor.isAdding ? (
-                      <ActivityIndicator size="small" color="#6366F1" />
-                    ) : (
-                      <FontAwesome name="plus" size={12} color="#6366F1" />
-                    )}
-                  </Pressable>
-                  <TextInput
-                    ref={newItemInputRef}
-                    className="flex-1 px-2 py-2 text-base text-ice"
-                    placeholder={t('shoppingList.enterNewItem')}
-                    placeholderTextColor="rgba(241, 245, 249, 0.4)"
-                    value={editor.newItemName}
-                    onChangeText={(value) => {
-                      editor.clearActionError();
-                      editor.setNewItemName(value);
-                    }}
-                    onSubmitEditing={handleAddNewItem}
-                    returnKeyType="done"
-                    testID="shopping-list-new-item-input"
-                  />
-                </Box>
+                {renderNewItemField()}
               </TourTarget>
 
               {!viewSettings.hideCheckedItems ? (
