@@ -27,7 +27,9 @@ import { queryClient } from '@/lib/api/queryClient';
 import { useAuthStore } from '@/lib/auth/authStore';
 import { useAuthResume } from '@/lib/auth/useAuthResume';
 import { useRevenueCatIdentity } from '@/lib/billing/useRevenueCatIdentity';
+import { RecipeSyncReviewHost } from '@/components/recipe/RecipeSyncReview';
 import { useMealDiarySync } from '@/lib/diary/useMealDiarySync';
+import { useRecipeSync } from '@/lib/recipe/useRecipeSync';
 import { useShoppingListSync } from '@/lib/shopping-list/useShoppingListSync';
 import { useFamilyRealtime } from '@/lib/realtime/useFamilyRealtime';
 
@@ -85,6 +87,7 @@ function RootLayoutNav() {
   useFamilyRealtime();
   useShoppingListSync(familyGroupId ?? undefined);
   useMealDiarySync(familyGroupId ?? undefined);
+  useRecipeSync(familyGroupId ?? undefined);
   useRevenueCatIdentity();
 
   useEffect(() => {
@@ -168,6 +171,7 @@ export default function RootLayout() {
                 preserveEdgeToEdge
               >
                 <RootLayoutNav />
+                <RecipeSyncReviewHost />
                 <AnalyticsConsentModal />
               </KeyboardProvider>
             </GestureHandlerRootView>

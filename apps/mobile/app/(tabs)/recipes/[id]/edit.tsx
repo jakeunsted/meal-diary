@@ -1,6 +1,8 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
+import { toRecipeSyncValue, type RecipeSyncValue } from '@meal-diary/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   ActivityIndicator,
@@ -10,6 +12,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { RecipeForm, type RecipeFormValues } from '@/components/recipe/RecipeForm';
+import { RecipeSyncStatusBanner } from '@/components/recipe/RecipeSyncReview';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
 import { ScreenTitle } from '@/components/ui/ScreenTitle';
@@ -18,7 +21,8 @@ import { captureEvent } from '@/lib/analytics/posthog';
 import { getEntitlementFeatureFromError } from '@/lib/entitlements/entitlementErrors';
 import { usePaywallStore } from '@/lib/entitlements/paywallStore';
 import { useCurrentUser } from '@/lib/queries/profile';
-import { useRecipe, useUpdateRecipe } from '@/lib/queries/recipes';
+import { useRecipe } from '@/lib/queries/recipes';
+import { saveRecipeEdit } from '@/lib/recipe/recipeSync';
 import type { UpdateRecipePayload } from '@/types/recipe';
 
 export default function EditRecipeScreen() {
@@ -31,9 +35,19 @@ export default function EditRecipeScreen() {
   const userQuery = useCurrentUser();
   const familyGroupId = userQuery.data?.family_group_id;
   const recipeQuery = useRecipe(parsedRecipeId);
-  const updateRecipeMutation = useUpdateRecipe();
+  const queryClient = useQueryClient();
   const openPaywall = usePaywallStore((state) => state.openPaywall);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formDirty, setFormDirty] = useState(false);
+  const [baseline, setBaseline] = useState<RecipeSyncValue | null>(null);
+
+  useEffect(() => {
+    if (!recipeQuery.data || formDirty) {
+      return;
+    }
+    setBaseline(toRecipeSyncValue(recipeQuery.data));
+  }, [formDirty, recipeQuery.data]);
 
   if (!parsedRecipeId) {
     return <Redirect href="/(tabs)/recipes" />;
@@ -46,11 +60,14 @@ export default function EditRecipeScreen() {
 
     setSubmitError(null);
 
+    setIsSaving(true);
     try {
-      await updateRecipeMutation.mutateAsync({
+      await saveRecipeEdit(queryClient, {
         recipeId: parsedRecipeId,
         familyGroupId,
         payload: formData as UpdateRecipePayload,
+        baseline,
+        current: recipeQuery.data ?? null,
       });
       captureEvent('recipe_edited');
       router.back();
@@ -62,6 +79,8 @@ export default function EditRecipeScreen() {
       }
 
       setSubmitError(t('recipeForm.updateFailed'));
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -93,8 +112,15 @@ export default function EditRecipeScreen() {
           </Pressable>
 
           <ScreenTitle align="left">{t('recipeForm.editRecipe')}</ScreenTitle>
+          <RecipeSyncStatusBanner />
 
-          {recipeQuery.isLoading ? (
+          {recipeQuery.isFetching && recipeQuery.data ? (
+            <Box className="mb-2 items-end" accessibilityLabel={t('recipeSync.refreshing')}>
+              <ActivityIndicator size="small" color="#6366F1" testID="recipe-refreshing" />
+            </Box>
+          ) : null}
+
+          {recipeQuery.isLoading && !recipeQuery.data ? (
             <Box className="items-center py-8">
               <ActivityIndicator size="large" color="#6366F1" />
             </Box>
@@ -115,7 +141,8 @@ export default function EditRecipeScreen() {
               <RecipeForm
                 initialData={recipeQuery.data}
                 submitLabel={t('recipeForm.saveChanges')}
-                isLoading={updateRecipeMutation.isPending}
+                isLoading={isSaving}
+                onDirty={() => setFormDirty(true)}
                 onSubmit={handleUpdate}
                 onCancel={handleCancel}
               />

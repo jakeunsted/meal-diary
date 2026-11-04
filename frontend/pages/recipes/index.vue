@@ -60,11 +60,17 @@
       </button>
     </div>
 
-    <div v-if="isLoadingBook" class="flex justify-center py-8">
+    <RecipeSyncReviewHost />
+
+    <div v-if="isLoadingBook && recipes.length === 0" class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
     </div>
 
     <template v-else>
+      <div v-if="isLoadingBook" class="flex justify-end mb-2" aria-busy="true">
+        <span class="loading loading-spinner loading-sm text-primary" data-testid="recipes-refreshing"></span>
+      </div>
+
       <RecipeCategoryTabs
         v-model="selectedFilter"
         :categories="recipeStore.categories"
@@ -128,6 +134,7 @@ import { useUserStore } from '~/stores/user';
 import RecipeCard from '~/components/recipe/RecipeCard.vue';
 import RecipeCategoryManager from '~/components/recipe/RecipeCategoryManager.vue';
 import RecipeCategoryTabs from '~/components/recipe/RecipeCategoryTabs.vue';
+import RecipeSyncReviewHost from '~/components/recipe/RecipeSyncReviewHost.vue';
 
 const recipeStore = useRecipeStore();
 const userStore = useUserStore();
@@ -270,6 +277,7 @@ onMounted(async () => {
     if (!userStore.user?.family_group_id) {
       await userStore.fetchUser();
     }
+    recipeStore.hydrateFromStorage();
     await refreshEntitlements();
     await Promise.all([
       recipeStore.fetchRecipes(),

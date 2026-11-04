@@ -1,6 +1,11 @@
 import type { Request, Response } from 'express';
+import { parseRecipeSyncValue, type RecipeSyncValue } from '@meal-diary/shared';
 import { User } from '../../db/models/associations.ts';
 import * as recipeService from '../../services/recipe.service.ts';
+import {
+  applyRecipeSync,
+  RecipeSyncForbiddenError,
+} from '../../services/recipeSync.service.ts';
 import * as recipeImportService from '../../services/recipe-import/import.service.ts';
 import * as EntitlementsService from '../../services/entitlements.service.ts';
 import { handleEntitlementError } from '../../middleware/entitlement.middleware.ts';
@@ -221,6 +226,67 @@ export const updateRecipe = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to update recipe' });
   }
 };
+
+const readRecipeSyncBody = (
+  body: { baseline?: unknown; recipe?: unknown; expected?: unknown },
+  withExpected: boolean
+): { baseline: RecipeSyncValue; recipe: RecipeSyncValue; expected: RecipeSyncValue | null } | null => {
+  const baseline = parseRecipeSyncValue(body?.baseline);
+  const recipe = parseRecipeSyncValue(body?.recipe);
+  const expected = withExpected ? parseRecipeSyncValue(body?.expected) : null;
+  if (!baseline || !recipe || (withExpected && !expected)) {
+    return null;
+  }
+  return { baseline, recipe, expected };
+};
+
+const syncRecipeEdit = async (
+  req: Request,
+  res: Response,
+  withExpected: boolean
+) => {
+  try {
+    const user = req.user as User | undefined;
+    const familyGroupId = user?.dataValues.family_group_id;
+    if (!user || !familyGroupId) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+
+    const parsed = readRecipeSyncBody(req.body ?? {}, withExpected);
+    if (!parsed) {
+      return res.status(400).json({ message: 'Invalid recipe sync payload' });
+    }
+
+    const result = await applyRecipeSync({
+      recipeId: routeParamInt(req.params.id),
+      userId: user.dataValues.id,
+      familyGroupId,
+      baseline: parsed.baseline,
+      recipe: parsed.recipe,
+      reference: withExpected ? parsed.expected! : parsed.baseline,
+    });
+    return res.status(200).json(result);
+  } catch (error) {
+    if (error instanceof RecipeSyncForbiddenError) {
+      return res.status(403).json({ message: 'Forbidden' });
+    }
+    if (handleRecipeWriteError(error, res)) {
+      return;
+    }
+    console.error('Error syncing recipe:', error);
+    return res.status(500).json({ message: 'Failed to sync recipe' });
+  }
+};
+
+/**
+ * Apply an offline recipe edit when the server still matches its baseline.
+ */
+export const syncRecipe = async (req: Request, res: Response) => syncRecipeEdit(req, res, false);
+
+/**
+ * Keep an offline recipe edit when the server still matches the reviewed value.
+ */
+export const resolveRecipeSync = async (req: Request, res: Response) => syncRecipeEdit(req, res, true);
 
 /**
  * Delete a recipe

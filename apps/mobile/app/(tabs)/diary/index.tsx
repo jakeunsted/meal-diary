@@ -231,6 +231,15 @@ export default function DiaryScreen() {
         }
       >
         <Box className="relative mx-4 items-center justify-center">
+          {showWeekLoading ? (
+            <ActivityIndicator
+              size="small"
+              color="#6366F1"
+              accessibilityLabel={t('diary.refreshing')}
+              style={{ position: 'absolute', left: 0 }}
+              testID="diary-week-loading"
+            />
+          ) : null}
           <ScreenTitle testID="diary-title">{t('diary.title')}</ScreenTitle>
           <Pressable
             accessibilityRole="button"
@@ -294,7 +303,7 @@ export default function DiaryScreen() {
           <DiarySkeleton />
         ) : (
           <Box className="relative">
-            <Box className={showWeekLoading ? 'opacity-50' : ''}>
+            <Box>
               <TourTarget id="diary-plan">
                 <WeekCalendarPicker
                   key={diary.resolvedWeekKey}
@@ -322,15 +331,6 @@ export default function DiaryScreen() {
                 ))}
               </TourTarget>
             </Box>
-
-            {showWeekLoading ? (
-              <Box
-                className="absolute inset-0 items-center justify-center"
-                testID="diary-week-loading"
-              >
-                <ActivityIndicator size="large" color="#6366F1" />
-              </Box>
-            ) : null}
           </Box>
         )}
       </ScrollView>

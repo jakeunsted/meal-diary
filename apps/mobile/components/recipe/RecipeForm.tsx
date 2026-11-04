@@ -1,5 +1,5 @@
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, TextInput, View } from 'react-native';
 
@@ -23,6 +23,7 @@ interface RecipeFormProps {
   initialData?: Recipe | null;
   submitLabel: string;
   isLoading?: boolean;
+  onDirty?: () => void;
   onSubmit: (values: RecipeFormValues) => void;
   onCancel: () => void;
 }
@@ -87,6 +88,7 @@ export function RecipeForm({
   initialData,
   submitLabel,
   isLoading = false,
+  onDirty,
   onSubmit,
   onCancel,
 }: RecipeFormProps) {
@@ -114,6 +116,14 @@ export function RecipeForm({
   const showAddCustom = entitlementsQuery.isSuccess && !canUseCustomCategories;
   const selectedCategoryIds =
     categoryIds ?? initialData?.categories?.map((category) => category.id) ?? [];
+  const hasEditedRef = useRef(false);
+  const markEdited = () => {
+    if (hasEditedRef.current) {
+      return;
+    }
+    hasEditedRef.current = true;
+    onDirty?.();
+  };
   const lockedCategories = (initialData?.categories ?? []).filter(
     (category) =>
       category.assignable === false &&
@@ -122,7 +132,7 @@ export function RecipeForm({
   );
 
   useEffect(() => {
-    if (!initialData) {
+    if (!initialData || hasEditedRef.current) {
       return;
     }
 
@@ -135,6 +145,7 @@ export function RecipeForm({
   }, [initialData]);
 
   const handleToggleCategory = (categoryId: number) => {
+    markEdited();
     const category = visibleCategories.find((item) => item.id === categoryId);
     if (!category) {
       return;
@@ -155,6 +166,7 @@ export function RecipeForm({
   };
 
   const handleRemoveLockedCategory = (categoryId: number) => {
+    markEdited();
     const ids = categoryIds ?? initialData?.categories?.map((item) => item.id) ?? [];
     setCategoryIds(ids.filter((id) => id !== categoryId));
   };
@@ -164,10 +176,12 @@ export function RecipeForm({
   };
 
   const handleAddIngredient = () => {
+    markEdited();
     setIngredients((current) => [...current, { name: '', quantity: '', unit: '' }]);
   };
 
   const handleRemoveIngredient = (index: number) => {
+    markEdited();
     setIngredients((current) => current.filter((_, itemIndex) => itemIndex !== index));
   };
 
@@ -176,6 +190,7 @@ export function RecipeForm({
     field: keyof IngredientDraft,
     value: string
   ) => {
+    markEdited();
     setIngredients((current) =>
       current.map((ingredient, itemIndex) =>
         itemIndex === index ? { ...ingredient, [field]: value } : ingredient
@@ -207,7 +222,10 @@ export function RecipeForm({
           placeholder={t('recipeForm.recipeName')}
           placeholderTextColor="rgba(241, 245, 249, 0.4)"
           value={name}
-          onChangeText={setName}
+          onChangeText={(value) => {
+            markEdited();
+            setName(value);
+          }}
           testID="recipe-form-name-input"
         />
       </Box>
@@ -221,7 +239,10 @@ export function RecipeForm({
           placeholder={t('recipeForm.description')}
           placeholderTextColor="rgba(241, 245, 249, 0.4)"
           value={description}
-          onChangeText={setDescription}
+          onChangeText={(value) => {
+            markEdited();
+            setDescription(value);
+          }}
           multiline
           textAlignVertical="top"
           testID="recipe-form-description-input"
@@ -237,7 +258,10 @@ export function RecipeForm({
           placeholder={t('recipeForm.portions')}
           placeholderTextColor="rgba(241, 245, 249, 0.4)"
           value={portions}
-          onChangeText={setPortions}
+          onChangeText={(value) => {
+            markEdited();
+            setPortions(value);
+          }}
           keyboardType="number-pad"
           testID="recipe-form-portions-input"
         />
@@ -319,7 +343,10 @@ export function RecipeForm({
           placeholder={t('recipeForm.instructions')}
           placeholderTextColor="rgba(241, 245, 249, 0.4)"
           value={instructions}
-          onChangeText={setInstructions}
+          onChangeText={(value) => {
+            markEdited();
+            setInstructions(value);
+          }}
           multiline
           textAlignVertical="top"
           testID="recipe-form-instructions-input"

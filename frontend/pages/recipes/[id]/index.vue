@@ -26,8 +26,21 @@
       </div>
     </div>
 
+    <RecipeSyncReviewHost />
+
+    <div v-if="recipeStore.refreshing && recipe" class="flex justify-end mb-2" aria-busy="true">
+      <span class="loading loading-spinner loading-sm text-primary" :aria-label="$t('recipeSync.refreshing')" data-testid="recipe-refreshing"></span>
+    </div>
+
     <div v-if="recipeStore.loading && !recipe" class="flex justify-center py-8">
       <span class="loading loading-spinner loading-lg"></span>
+    </div>
+
+    <div v-else-if="!recipe" class="py-8 text-center">
+      <p class="mb-4">{{ $t('recipeDetail.loadFailed') }}</p>
+      <button type="button" class="btn btn-primary btn-sm" data-testid="recipe-retry-button" @click="handleRetry">
+        {{ $t('Retry') }}
+      </button>
     </div>
 
     <div v-else-if="recipe" class="pb-8">
@@ -161,6 +174,10 @@ const addToShoppingListModalRef = ref<{ showModal: () => void; closeModal: () =>
 const isAddingToShoppingList = ref(false);
 
 const recipe = computed(() => recipeStore.currentRecipe);
+
+if (import.meta.client) {
+  recipeStore.hydrateCurrentRecipe(parseInt(String(route.params.id)));
+}
 const canAddToShoppingList = hasFeature('recipe_to_shopping_list');
 
 const getIngredientKey = (ingredient: RecipeIngredient, index: number): string => {
@@ -178,6 +195,10 @@ const filterIngredientsBySelectedKeys = (
 };
 
 const cameFromDiary = computed(() => route.query.from === 'diary');
+
+const handleRetry = () => {
+  void recipeStore.fetchRecipeById(parseInt(route.params.id));
+};
 
 const handleBack = () => {
   if (cameFromDiary.value) {
@@ -263,6 +284,7 @@ onMounted(async () => {
   if (!userStore.user?.family_group_id) {
     await userStore.fetchUser();
   }
+  recipeStore.hydrateCurrentRecipe(parseInt(route.params.id));
   await refreshEntitlements();
   await recipeStore.fetchRecipeById(parseInt(route.params.id));
   track('recipe_viewed');

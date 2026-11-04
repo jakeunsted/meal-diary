@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TourTarget } from '@/components/onboarding/TourTarget';
 import { RecipeCard } from '@/components/recipe/RecipeCard';
+import { RecipeSyncStatusBanner } from '@/components/recipe/RecipeSyncReview';
 import { RecipeCategoryTabs } from '@/components/recipe/RecipeCategoryTabs';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -174,6 +175,12 @@ export default function RecipesScreen() {
         style={{ flex: 1 }}
       >
         <ScreenTitle>{t('recipeForm.title')}</ScreenTitle>
+        {recipesQuery.isFetching && hasRecipeData ? (
+          <Box className="mb-2 items-end" accessibilityLabel={t('recipeSync.refreshing')}>
+            <ActivityIndicator size="small" color="#6366F1" testID="recipes-refreshing" />
+          </Box>
+        ) : null}
+        <RecipeSyncStatusBanner />
 
         {recipeEntitlements.recipeUsageLabel ? (
           <Text

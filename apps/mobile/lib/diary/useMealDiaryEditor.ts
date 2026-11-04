@@ -11,6 +11,7 @@ import {
   recordMealDiaryPendingEdit,
 } from '@/lib/diary/mealDiaryPendingQueue';
 import { saveWeeklyMealsCache } from '@/lib/diary/mealDiaryStorage';
+import { bumpMealDiaryFetchRevision } from '@/lib/diary/mealDiaryFetchRevision';
 import { applyLocalSlotValue } from '@/lib/diary/mealDiarySlotState';
 import { mealDiaryKeys, resolveMealDiaryErrorMessage, useSaveDailyMeal } from '@/lib/queries/mealDiary';
 import type { DailyMeal, MealType, SelectedMeal } from '@/types/mealDiary';
@@ -166,6 +167,7 @@ export function useMealDiaryEditor() {
     ) => {
       const dish = normalizeMealDiaryDish(mealName);
       const nextRecipeId = recipeId ?? null;
+      bumpMealDiaryFetchRevision(familyGroupId, weekKey);
       await recordMealDiaryPendingEdit(familyGroupId, {
         week_start_date: weekKey,
         day_of_week: dayOfWeek,

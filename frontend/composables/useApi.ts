@@ -100,7 +100,7 @@ export const useApi = () => {
   const authStore = useAuthStore();
   const { refreshTokens } = useAuth();
 
-  const ensureFreshTokens = async (url: string): Promise<void> => {
+  const ensureFreshTokens = async (url: string, timeout?: number): Promise<void> => {
     const isRefreshEndpoint = url.includes('/auth/refresh-token');
     if (isRefreshEndpoint) return;
     if (!authStore.accessToken || !authStore.refreshToken) return;
@@ -109,7 +109,7 @@ export const useApi = () => {
 
     try {
       await runWithTokenRefreshLock(async () => {
-        await refreshTokens();
+        await refreshTokens(timeout);
       });
     } catch (err: unknown) {
       if (isSessionExpiredError(err)) {
@@ -135,9 +135,10 @@ export const useApi = () => {
 
   const api = async <T = any>(url: string, options?: ApiOptions): Promise<T> => {
     const { silent = false, suppressPaywall = false, ...fetchOptions } = options ?? {};
+    const timeout = typeof fetchOptions.timeout === 'number' ? fetchOptions.timeout : undefined;
 
     try {
-      await ensureFreshTokens(url);
+      await ensureFreshTokens(url, timeout);
 
       const result = await $fetch<T>(url, {
         ...fetchOptions,
@@ -149,7 +150,12 @@ export const useApi = () => {
 
       return result;
     } catch (error: unknown) {
-      if ((error as any)?.name === 'AbortError' || (error as any)?.cause?.name === 'AbortError') {
+      if (
+        (error as { name?: string; cause?: { name?: string } })?.name === 'AbortError' ||
+        (error as { name?: string; cause?: { name?: string } })?.name === 'TimeoutError' ||
+        (error as { cause?: { name?: string } })?.cause?.name === 'AbortError' ||
+        (error as { cause?: { name?: string } })?.cause?.name === 'TimeoutError'
+      ) {
         throw error;
       }
 

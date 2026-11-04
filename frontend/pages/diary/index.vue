@@ -2,6 +2,13 @@
   <div class="max-w-4xl mx-auto">
     <PullToRefreshChrome :enabled="pullToRefreshEnabled" :on-refresh="refreshWeek" />
     <div class="relative mx-4 my-4 flex items-center justify-center">
+      <span
+        v-if="showWeekLoading"
+        class="loading loading-spinner loading-sm text-primary absolute left-0 pointer-events-none"
+        role="status"
+        :aria-label="$t('diaryPage.refreshing')"
+        data-testid="diary-week-loading"
+      />
       <h1 class="text-2xl font-bold text-center" data-testid="diary-title">{{ $t('Meal diary') }}</h1>
       <button
         type="button"
@@ -99,10 +106,7 @@
         @go-to-this-week="handleGoToThisWeek"
         @weekBlocked="handleWeekBlocked"
       />
-      <div
-        class="relative"
-        :class="{ 'opacity-50 pointer-events-none': showWeekLoading }"
-      >
+      <div class="relative">
         <DayFoodPlanCard
           v-for="dayMeal in mealDiaryStore.weeklyMeals"
           :key="`${resolvedWeekKey}-${dayMeal.day_of_week}`"
@@ -116,14 +120,6 @@
           :readOnly="isWeekReadOnly"
           @setMeal="(payload) => handleSetMeal(payload, dayMeal.day_of_week)"
         />
-      </div>
-      <div
-        v-if="showWeekLoading"
-        class="absolute inset-0 flex items-center justify-center z-10"
-        aria-busy="true"
-        data-testid="diary-week-loading"
-      >
-        <span class="loading loading-spinner loading-lg text-primary" />
       </div>
     </div>
 

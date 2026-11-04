@@ -2,6 +2,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import * as Network from 'expo-network';
 import {
   mealDiarySlotValuesMatch,
+  OFFLINE_REQUEST_TIMEOUT_MS,
   type MealDiaryResolveRequest,
   type MealDiarySyncRequest,
   type MealDiarySyncResult,
@@ -11,6 +12,7 @@ import {
 import { apiFetch } from '@/lib/api/client';
 import { ApiError } from '@/lib/api/errors';
 import { isNetworkError } from '@/lib/auth/httpError';
+import { bumpMealDiaryFetchRevision } from '@/lib/diary/mealDiaryFetchRevision';
 import { saveWeeklyMealsCache } from '@/lib/diary/mealDiaryStorage';
 import {
   ensureMealDiaryPendingQueue,
@@ -187,6 +189,7 @@ function writeWeek(
   weekKey: string,
   meals: DailyMeal[]
 ): void {
+  bumpMealDiaryFetchRevision(familyGroupId, weekKey);
   queryClient.setQueryData(mealDiaryKeys.weekly(familyGroupId, weekKey), meals);
   void saveWeeklyMealsCache(familyGroupId, weekKey, meals);
 }
@@ -426,7 +429,7 @@ async function flushUnlocked(
     try {
       const response = await apiFetch<MealDiarySyncResponse>(
         `/meal-diaries/${familyGroupId}/daily-meals/sync`,
-        { method: 'POST', body }
+        { method: 'POST', body, timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS }
       );
       await applyFlushResponse(
         queryClient,
@@ -616,7 +619,7 @@ export async function keepMealDiaryMine(
 
     const response = await apiFetch<MealDiarySyncResponse>(
       `/meal-diaries/${review.familyGroupId}/daily-meals/sync/resolve`,
-      { method: 'POST', body }
+      { method: 'POST', body, timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS }
     );
 
     if (generation !== reviewGeneration) {

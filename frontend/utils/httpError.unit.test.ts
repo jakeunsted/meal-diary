@@ -53,6 +53,8 @@ describe('http error helpers', () => {
   it('separates network failures, expired sessions, and retryable rotation', () => {
     const offline = { message: 'Failed to fetch' };
     expect(isNetworkError(offline)).toBe(true);
+    expect(isNetworkError({ name: 'TimeoutError', message: 'The operation was aborted' })).toBe(true);
+    expect(isSessionExpiredError({ name: 'TimeoutError', message: 'The operation was aborted' })).toBe(false);
     expect(isNetworkError({ status: 500, message: 'Failed to fetch' })).toBe(false);
     expect(isSessionExpiredError(offline)).toBe(false);
     expect(isSessionExpiredError({ message: 'Invalid or expired refresh token' })).toBe(true);

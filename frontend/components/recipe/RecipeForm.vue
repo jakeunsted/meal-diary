@@ -149,7 +149,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(['submit', 'cancel']);
+const emit = defineEmits(['submit', 'cancel', 'dirty']);
 
 const form = reactive({
   name: props.initialData?.name || '',
@@ -159,15 +159,33 @@ const form = reactive({
   ingredients: props.initialData?.ingredients?.map(i => ({ ...i })) || [],
 });
 
-// Watch for initialData changes (e.g. when editing a recipe loaded async)
-watch(() => props.initialData, (newData) => {
-  if (newData) {
-    form.name = newData.name || '';
-    form.description = newData.description || '';
-    form.instructions = newData.instructions || '';
-    form.portions = newData.portions || null;
-    form.ingredients = newData.ingredients?.map(i => ({ ...i })) || [];
+const hasEdited = ref(false);
+let ignoreFormEdits = 0;
+
+const applyInitialData = (newData) => {
+  if (!newData || hasEdited.value) {
+    return;
   }
+  ignoreFormEdits += 1;
+  form.name = newData.name || '';
+  form.description = newData.description || '';
+  form.instructions = newData.instructions || '';
+  form.portions = newData.portions || null;
+  form.ingredients = newData.ingredients?.map(i => ({ ...i })) || [];
+  nextTick(() => {
+    ignoreFormEdits -= 1;
+  });
+};
+
+// A later refresh can fill the form until the person edits a field.
+watch(() => props.initialData, applyInitialData, { deep: true });
+
+watch(form, () => {
+  if (ignoreFormEdits > 0 || hasEdited.value) {
+    return;
+  }
+  hasEdited.value = true;
+  emit('dirty');
 }, { deep: true });
 
 const handleAddIngredient = () => {

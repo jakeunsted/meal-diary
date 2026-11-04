@@ -140,6 +140,10 @@ export function isAuthError(error: unknown): boolean {
  * Common on mobile when the app resumes before the network is ready.
  */
 export function isNetworkError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const named = error as { name?: string; cause?: { name?: string } };
+  const errorName = named.name ?? named.cause?.name ?? '';
+  if (errorName === 'AbortError' || errorName === 'TimeoutError') return true;
   if (getHttpStatusCode(error) !== undefined) return false;
   const message = extractErrorMessage(error).toLowerCase();
   const networkPatterns = [
@@ -150,6 +154,9 @@ export function isNetworkError(error: unknown): boolean {
     '<no response>',
     'load failed',
     'the internet connection appears to be offline',
+    'timeout',
+    'timed out',
+    'aborted',
   ];
   return networkPatterns.some(p => message.includes(p));
 }

@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddRecipeToShoppingListModal } from '@/components/recipe/AddRecipeToShoppingListModal';
+import { RecipeSyncStatusBanner } from '@/components/recipe/RecipeSyncReview';
 import { DeleteRecipeModal } from '@/components/recipe/DeleteRecipeModal';
 import { Box } from '@/components/ui/box';
 import { Button, ButtonText } from '@/components/ui/button';
@@ -222,6 +223,13 @@ export default function RecipeDetailScreen() {
             </View>
           ) : null}
         </View>
+
+        {recipeQuery.isFetching && recipe ? (
+          <Box className="mb-2 items-end" accessibilityLabel={t('recipeSync.refreshing')}>
+            <ActivityIndicator size="small" color="#6366F1" testID="recipe-refreshing" />
+          </Box>
+        ) : null}
+        <RecipeSyncStatusBanner />
 
         {isLoading ? (
           <Box className="items-center py-8">

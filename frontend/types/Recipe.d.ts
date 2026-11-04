@@ -1,4 +1,4 @@
-import type { RecipeCategoryStarterKey } from '@meal-diary/shared';
+import type { RecipeCategoryStarterKey, RecipeSyncValue } from '@meal-diary/shared';
 
 export interface RecipeIngredient {
   id?: number;
@@ -31,12 +31,33 @@ export interface Recipe {
   updated_at?: string;
 }
 
+export interface RecipePendingEdit {
+  recipeId: number;
+  baseline: RecipeSyncValue;
+  recipe: RecipeSyncValue;
+}
+
+export interface RecipeSyncConflict {
+  recipeId: number;
+  yours: RecipeSyncValue;
+  theirs: RecipeSyncValue;
+  baseline: RecipeSyncValue;
+  serverRecipe?: Recipe | null;
+}
+
 export interface RecipeState {
   recipes: Recipe[];
   categories: RecipeCategory[];
   currentRecipe: Recipe | null;
   loading: boolean;
+  saving: boolean;
+  refreshing: boolean;
+  loadError: boolean;
   searchQuery: string;
+  pendingEdits: RecipePendingEdit[];
+  conflicts: RecipeSyncConflict[];
+  syncing: boolean;
+  syncFailed: boolean;
 }
 
 export interface ImportRecipeFromUrlPayload {

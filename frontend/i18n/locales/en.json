@@ -379,7 +379,8 @@
     "weekAheadLimit": "You can only plan one week ahead on the free plan.",
     "upgradeLink": "View plans to upgrade",
     "askOwnerToUpgrade": "Ask {name} to upgrade for past-week editing.",
-    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for past-week editing."
+    "askOwnerToUpgradeGeneric": "Ask your family owner to upgrade for past-week editing.",
+    "refreshing": "Updating meals"
   },
   "diarySync": {
     "pending": "Changes on this week are saved on this device until they sync.",
@@ -480,6 +481,22 @@
     "selectAll": "Select all",
     "deselectAll": "Deselect all",
     "addToList": "Add to list",
-    "addToShoppingListFailed": "Failed to add ingredients to shopping list"
+    "addToShoppingListFailed": "Failed to add ingredients to shopping list",
+    "loadFailed": "Failed to load recipe"
+  },
+  "recipeSync": {
+    "pending": "Recipe changes are saved on this device until they sync.",
+    "syncFailed": "Recipe changes could not be synced.",
+    "retry": "Retry",
+    "title": "Recipe changed in two places",
+    "body": "Someone else changed a recipe you also changed. Choose which version to keep.",
+    "yours": "Yours",
+    "theirs": "Theirs",
+    "keepMine": "Keep mine",
+    "keepTheirs": "Keep theirs",
+    "keepAllMine": "Keep all mine",
+    "keepAllTheirs": "Keep all theirs",
+    "close": "Close",
+    "refreshing": "Updating recipe"
   }
 }

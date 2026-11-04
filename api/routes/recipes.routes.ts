@@ -283,6 +283,58 @@ router.put('/:id', authenticateToken, async (req, res, next) => {
 
 /**
  * @openapi
+ * /recipes/{id}/sync:
+ *   post:
+ *     summary: Apply an offline recipe edit
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [baseline, recipe]
+ *             properties:
+ *               baseline:
+ *                 type: object
+ *               recipe:
+ *                 type: object
+ *     responses:
+ *       200:
+ *         description: Applied, already saved, conflict, or not found
+ * /recipes/{id}/sync/resolve:
+ *   post:
+ *     summary: Keep an offline recipe edit that still matches the reviewed server value
+ *     tags: [Recipes]
+ *     security:
+ *       - bearerAuth: []
+ */
+router.post('/:id/sync/resolve', authenticateToken, async (req, res, next) => {
+  try {
+    await recipeController.resolveRecipeSync(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/:id/sync', authenticateToken, async (req, res, next) => {
+  try {
+    await recipeController.syncRecipe(req, res);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * @openapi
  * /recipes/{id}:
  *   delete:
  *     summary: Delete a recipe

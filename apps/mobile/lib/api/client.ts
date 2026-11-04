@@ -44,7 +44,7 @@ export function setSessionExpiredHandler(handler: (() => void) | null): void {
   sessionExpiredHandler = handler;
 }
 
-async function ensureFreshTokens(path: string): Promise<void> {
+async function ensureFreshTokens(path: string, timeoutMs?: number): Promise<void> {
   if (path.includes('/auth/refresh-token')) return;
 
   const accessToken = await getAccessToken();
@@ -54,7 +54,7 @@ async function ensureFreshTokens(path: string): Promise<void> {
 
   try {
     await runWithTokenRefreshLock(async () => {
-      const response = await refreshTokens();
+      const response = await refreshTokens(timeoutMs);
       await syncAuthStoreFromRefresh(response);
     });
   } catch (error) {
@@ -80,7 +80,7 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
   const url = `${env.apiUrl}${path.startsWith('/') ? path : `/${path}`}`;
 
   if (auth) {
-    await ensureFreshTokens(path);
+    await ensureFreshTokens(path, timeoutMs);
   }
 
   const performRequest = async (accessToken: string | null): Promise<Response> => {
@@ -117,7 +117,7 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
   if (auth && response.status === 401) {
     try {
       await runWithTokenRefreshLock(async () => {
-        const refreshed = await refreshTokens();
+        const refreshed = await refreshTokens(timeoutMs);
         await syncAuthStoreFromRefresh(refreshed);
       });
       response = await performRequest(await getAccessToken());

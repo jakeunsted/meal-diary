@@ -1,7 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { OFFLINE_REQUEST_TIMEOUT_MS, overlayRecipe, replaceById, resolveStaleFetch } from '@meal-diary/shared';
+import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { apiFetch } from '@/lib/api/client';
+import { retryUnlessOffline } from '@/lib/queries/mealDiary';
 import { entitlementKeys } from '@/lib/queries/profile';
+import { overlayRecipeList } from '@/lib/recipe/overlayRecipe';
+import {
+  bumpRecipeFetches,
+  readRecipeDetailRevision,
+  readRecipeListRevision,
+} from '@/lib/recipe/recipeFetchRevision';
+import { loadRecipePendingQueue } from '@/lib/recipe/recipePendingQueue';
+import {
+  loadCachedRecipe,
+  loadFamilyRecipesCache,
+  saveFamilyRecipesCache,
+} from '@/lib/recipe/recipeStorage';
 import type {
   CreateRecipePayload,
   ImportRecipeFromUrlPayload,
@@ -22,11 +37,15 @@ export async function fetchFamilyRecipes(
   search?: string
 ): Promise<Recipe[]> {
   const query = search ? `?search=${encodeURIComponent(search)}` : '';
-  return apiFetch<Recipe[]>(`/recipes/family/${familyGroupId}${query}`);
+  return apiFetch<Recipe[]>(`/recipes/family/${familyGroupId}${query}`, {
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
+  });
 }
 
 export async function fetchRecipe(recipeId: number): Promise<Recipe> {
-  return apiFetch<Recipe>(`/recipes/${recipeId}`);
+  return apiFetch<Recipe>(`/recipes/${recipeId}`, {
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
+  });
 }
 
 export async function createRecipe(
@@ -39,6 +58,7 @@ export async function createRecipe(
       family_group_id: familyGroupId,
       ...payload,
     },
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -52,6 +72,7 @@ export async function importRecipeFromUrl(
       family_group_id: familyGroupId,
       url: payload.url,
     },
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -62,6 +83,7 @@ export async function updateRecipe(
   return apiFetch<Recipe>(`/recipes/${recipeId}`, {
     method: 'PUT',
     body: payload,
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
   });
 }
 
@@ -71,24 +93,130 @@ export async function deleteRecipe(recipeId: number): Promise<void> {
   });
 }
 
+function recipeFromFamilyCaches(queryClient: QueryClient, recipeId: number): Recipe | undefined {
+  const lists = queryClient.getQueriesData<Recipe[]>({ queryKey: recipeKeys.all });
+  for (const [, data] of lists) {
+    if (!Array.isArray(data)) {
+      continue;
+    }
+    const match = data.find((recipe) => recipe.id === recipeId);
+    if (match) {
+      return match;
+    }
+  }
+  return undefined;
+}
+
+async function fetchFamilyRecipesWithCache(
+  queryClient: QueryClient,
+  familyGroupId: number
+): Promise<Recipe[]> {
+  const revision = readRecipeListRevision(familyGroupId);
+  const fetched = await fetchFamilyRecipes(familyGroupId);
+  const current = queryClient.getQueryData<Recipe[]>(recipeKeys.family(familyGroupId));
+  const resolved = resolveStaleFetch(
+    revision,
+    readRecipeListRevision(familyGroupId),
+    current,
+    fetched
+  );
+  if (resolved !== fetched) {
+    return resolved;
+  }
+  await saveFamilyRecipesCache(familyGroupId, fetched);
+  const pending = await loadRecipePendingQueue(familyGroupId);
+  return overlayRecipeList(fetched, pending);
+}
+
+async function fetchRecipeWithCache(
+  queryClient: QueryClient,
+  recipeId: number
+): Promise<Recipe> {
+  const revision = readRecipeDetailRevision(recipeId);
+  const fetched = await fetchRecipe(recipeId);
+  const current = queryClient.getQueryData<Recipe>(recipeKeys.detail(recipeId));
+  const resolved = resolveStaleFetch(
+    revision,
+    readRecipeDetailRevision(recipeId),
+    current,
+    fetched
+  );
+  if (resolved !== fetched) {
+    return resolved;
+  }
+  const cached = await loadFamilyRecipesCache(fetched.family_group_id);
+  if (cached) {
+    await saveFamilyRecipesCache(fetched.family_group_id, replaceById(cached, fetched));
+  }
+  const pending = await loadRecipePendingQueue(fetched.family_group_id);
+  const edit = pending.find((item) => item.recipeId === fetched.id);
+  return edit ? overlayRecipe(fetched, edit.recipe) : fetched;
+}
+
 export function useFamilyRecipes(
   familyGroupId: number | undefined,
   options?: { enabled?: boolean }
 ) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!familyGroupId) {
+      return;
+    }
+    const queryKey = recipeKeys.family(familyGroupId);
+    if (queryClient.getQueryData(queryKey)) {
+      return;
+    }
+    void (async () => {
+      const cached = await loadFamilyRecipesCache(familyGroupId);
+      if (!cached) {
+        return;
+      }
+      const pending = await loadRecipePendingQueue(familyGroupId);
+      if (queryClient.getQueryData(queryKey)) {
+        return;
+      }
+      queryClient.setQueryData(queryKey, overlayRecipeList(cached, pending));
+    })();
+  }, [familyGroupId, queryClient]);
+
   return useQuery({
     queryKey: recipeKeys.family(familyGroupId ?? 0),
-    queryFn: () => fetchFamilyRecipes(familyGroupId!),
+    queryFn: () => fetchFamilyRecipesWithCache(queryClient, familyGroupId!),
     enabled: !!familyGroupId && (options?.enabled ?? true),
     staleTime: FAMILY_RECIPES_STALE_MS,
+    retry: retryUnlessOffline,
   });
 }
 
 export function useRecipe(recipeId: number | undefined) {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!recipeId) {
+      return;
+    }
+    const queryKey = recipeKeys.detail(recipeId);
+    if (queryClient.getQueryData(queryKey)) {
+      return;
+    }
+    void (async () => {
+      const known = recipeFromFamilyCaches(queryClient, recipeId) ?? await loadCachedRecipe(recipeId);
+      if (!known || queryClient.getQueryData(queryKey)) {
+        return;
+      }
+      const pending = await loadRecipePendingQueue(known.family_group_id);
+      const edit = pending.find((item) => item.recipeId === known.id);
+      queryClient.setQueryData(queryKey, edit ? overlayRecipe(known, edit.recipe) : known);
+    })();
+  }, [queryClient, recipeId]);
+
   return useQuery({
     queryKey: recipeKeys.detail(recipeId ?? 0),
-    queryFn: () => fetchRecipe(recipeId!),
+    queryFn: () => fetchRecipeWithCache(queryClient, recipeId!),
     enabled: !!recipeId,
     staleTime: FAMILY_RECIPES_STALE_MS,
+    retry: retryUnlessOffline,
   });
 }
 
@@ -154,6 +282,7 @@ export function useUpdateRecipe() {
       payload: UpdateRecipePayload;
     }) => updateRecipe(recipeId, payload),
     onSuccess: (recipe, { familyGroupId, recipeId }) => {
+      bumpRecipeFetches(familyGroupId, recipeId);
       queryClient.setQueryData(recipeKeys.detail(recipeId), recipe);
       invalidateRecipeQueries(queryClient, familyGroupId, recipeId);
     },

@@ -95,6 +95,30 @@ describe('meal diary store', () => {
     expect(store.weeklyMeals[0].slots?.[0].dish).toBe('Toast');
   });
 
+  it('ignores a week fetch that started before a local edit', async () => {
+    let finish: (meals: DailyMeal[]) => void = () => undefined;
+    api.mockReturnValue(new Promise((resolve) => {
+      finish = resolve;
+    }));
+    const store = useMealDiaryStore();
+    store.currentWeekStart = WEEK;
+    store.weeklyMeals = [day('Toast')];
+    store.selectedMeal = {
+      type: 'breakfast',
+      mealSlotId: 10,
+      dayOfWeek: 1,
+      name: 'Eggs',
+      recipeId: null,
+    };
+
+    const pending = store.executeWeeklyMealsFetch(WEEK, Date.now());
+    await store.queueSelectedSlot();
+    finish([day('Server')]);
+    await pending;
+
+    expect(store.weeklyMeals[0].slots?.[0].dish).toBe('Eggs');
+  });
+
   it('clears applied slots and records conflicts from a sync response', async () => {
     const store = useMealDiaryStore();
     store.currentWeekStart = WEEK;

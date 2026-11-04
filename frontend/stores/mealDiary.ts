@@ -18,6 +18,7 @@ import {
 import {
   mealDiarySlotValuesMatch,
   normalizeMealDiaryDish,
+  OFFLINE_REQUEST_TIMEOUT_MS,
   type MealDiarySyncResult,
 } from '@meal-diary/shared';
 import {
@@ -265,7 +266,8 @@ export const useMealDiaryStore = defineStore('mealDiary', {
         const familyGroupId = userStore.user.family_group_id;
         const { api } = useApi();
         const response = await api(
-          `/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`
+          `/api/meal-diaries/${familyGroupId}/${weekStartDateStr}/daily-meals`,
+          { timeout: OFFLINE_REQUEST_TIMEOUT_MS, silent: true }
         );
 
         if (revisionAtStart !== diaryRevision) {
@@ -450,6 +452,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             method: 'PATCH',
             body: mealData,
             silent: true,
+            timeout: OFFLINE_REQUEST_TIMEOUT_MS,
           }
         );
 
@@ -983,6 +986,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
             method: 'POST',
             silent: true,
             suppressPaywall: true,
+            timeout: OFFLINE_REQUEST_TIMEOUT_MS,
             body: {
               week_start_date: weekStartDate,
               keep_mine: live.map((row) => ({
@@ -1052,6 +1056,7 @@ export const useMealDiaryStore = defineStore('mealDiary', {
               method: 'POST',
               silent: true,
               suppressPaywall: true,
+              timeout: OFFLINE_REQUEST_TIMEOUT_MS,
               body: {
                 week_start_date: weekStartDate,
                 slots: slots.map((slot) => ({

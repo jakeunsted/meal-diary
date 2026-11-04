@@ -175,7 +175,7 @@ export const useAuth = () => {
    * Uses $fetch directly to avoid recursion through useApi
    * @returns {Promise<TokenResponse>} A promise that resolves to the token response.
    */
-  const refreshTokens = async () => {
+  const refreshTokens = async (timeout?: number) => {
     try {
       if (!authStore.refreshToken) {
         throw new Error('No refresh token available');
@@ -187,7 +187,8 @@ export const useAuth = () => {
       // The refresh endpoint doesn't require an access token, only the refresh token in the body
       const response = await $fetch('/api/auth/refresh-token', {
         method: 'POST',
-        body: { refreshToken: refreshTokenUsed }
+        body: { refreshToken: refreshTokenUsed },
+        ...(timeout != null ? { timeout } : {}),
       }) as TokenResponse;
       
       // Update tokens in store

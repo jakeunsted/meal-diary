@@ -1,13 +1,19 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { OFFLINE_REQUEST_TIMEOUT_MS, resolveStaleFetch } from '@meal-diary/shared';
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
+import { apiFetch, ApiError } from '@/lib/api/client';
+import { isNetworkError } from '@/lib/auth/httpError';
+import {
+  bumpMealDiaryFetchRevision,
+  readMealDiaryFetchRevision,
+} from '@/lib/diary/mealDiaryFetchRevision';
 import { loadMealDiaryPendingQueue } from '@/lib/diary/mealDiaryPendingQueue';
+import { overlayPendingSlots } from '@/lib/diary/mealDiarySlotState';
 import {
   loadWeeklyMealsCache,
   saveWeeklyMealsCache,
 } from '@/lib/diary/mealDiaryStorage';
-import { overlayPendingSlots } from '@/lib/diary/mealDiarySlotState';
-import { apiFetch, ApiError } from '@/lib/api/client';
 import type { DailyMeal, SaveDailyMealPayload } from '@/types/mealDiary';
 
 const WEEKLY_MEALS_STALE_MS = 5 * 60 * 1000;
@@ -23,7 +29,8 @@ export async function fetchWeeklyMeals(
   weekKey: string
 ): Promise<DailyMeal[]> {
   const meals = await apiFetch<DailyMeal[]>(
-    `/meal-diaries/${familyGroupId}/daily-meals?week_start_date=${encodeURIComponent(weekKey)}`
+    `/meal-diaries/${familyGroupId}/daily-meals?week_start_date=${encodeURIComponent(weekKey)}`,
+    { timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS }
   );
 
   return meals.map((meal) => ({
@@ -32,15 +39,36 @@ export async function fetchWeeklyMeals(
   }));
 }
 
+export function retryUnlessOffline(failureCount: number, error: unknown): boolean {
+  if (isNetworkError(error)) {
+    return false;
+  }
+  return failureCount < 2;
+}
+
 async function fetchWeeklyMealsWithCache(
+  queryClient: QueryClient,
   familyGroupId: number,
   weekKey: string
 ): Promise<DailyMeal[]> {
+  const revisionAtStart = readMealDiaryFetchRevision(familyGroupId, weekKey);
   try {
     const meals = await fetchWeeklyMeals(familyGroupId, weekKey);
-    await saveWeeklyMealsCache(familyGroupId, weekKey, meals);
+    const current = queryClient.getQueryData<DailyMeal[]>(
+      mealDiaryKeys.weekly(familyGroupId, weekKey)
+    );
+    const fetched = resolveStaleFetch(
+      revisionAtStart,
+      readMealDiaryFetchRevision(familyGroupId, weekKey),
+      current,
+      meals
+    );
+    if (fetched === current && current) {
+      return current;
+    }
+    await saveWeeklyMealsCache(familyGroupId, weekKey, fetched);
     const pending = await loadMealDiaryPendingQueue(familyGroupId);
-    return overlayPendingSlots(meals, weekKey, pending);
+    return overlayPendingSlots(fetched, weekKey, pending);
   } catch (error) {
     const cached = await loadWeeklyMealsCache(familyGroupId, weekKey);
     if (cached) {
@@ -58,6 +86,7 @@ export async function saveDailyMeal(
   const saved = await apiFetch<DailyMeal>(`/meal-diaries/${familyGroupId}/daily-meals`, {
     method: 'PATCH',
     body: payload,
+    timeoutMs: OFFLINE_REQUEST_TIMEOUT_MS,
   });
 
   return {
@@ -92,10 +121,11 @@ export function useWeeklyMeals(familyGroupId: number | undefined, weekKey: strin
 
   return useQuery({
     queryKey: mealDiaryKeys.weekly(familyGroupId ?? 0, weekKey),
-    queryFn: () => fetchWeeklyMealsWithCache(familyGroupId!, weekKey),
+    queryFn: () => fetchWeeklyMealsWithCache(queryClient, familyGroupId!, weekKey),
     enabled: !!familyGroupId && !!weekKey,
     staleTime: WEEKLY_MEALS_STALE_MS,
     placeholderData: keepPreviousData,
+    retry: retryUnlessOffline,
   });
 }
 
@@ -155,6 +185,7 @@ export function useSaveDailyMeal() {
     }) => saveDailyMeal(familyGroupId, payload),
     onSuccess: (savedMeal, { familyGroupId, payload }) => {
       const queryKey = mealDiaryKeys.weekly(familyGroupId, payload.week_start_date);
+      bumpMealDiaryFetchRevision(familyGroupId, payload.week_start_date);
 
       queryClient.setQueryData<DailyMeal[]>(queryKey, (weeklyMeals) => {
         const next = updateWeeklyMealsCache(weeklyMeals, savedMeal, payload);

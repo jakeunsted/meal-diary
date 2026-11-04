@@ -109,10 +109,30 @@ export type {
   RecipeForCategoryFilter,
 } from './recipeCategories/index.ts';
 
+export { OFFLINE_REQUEST_TIMEOUT_MS } from './network.ts';
+export { resolveStaleFetch } from './staleFetch.ts';
+
 export {
   mealDiarySlotValuesMatch,
   normalizeMealDiaryDish,
 } from './mealDiary/sync.ts';
+
+export {
+  mergeRecipePendingEdit,
+  normalizeRecipeSyncValue,
+  overlayRecipe,
+  parseRecipeSyncValue,
+  recipeSyncChangeLabel,
+  recipeSyncValuesMatch,
+  replaceById,
+  toRecipeSyncValue,
+} from './recipes/sync.ts';
+
+export type {
+  RecipeSyncIngredient,
+  RecipeSyncStatus,
+  RecipeSyncValue,
+} from './recipes/sync.ts';
 
 export type {
   MealDiaryResolveRequest,
