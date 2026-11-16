@@ -1,4 +1,4 @@
-import { createHash, generateKeyPairSync, type JsonWebKey } from 'crypto';
+import { createHash, generateKeyPairSync, type webcrypto } from 'crypto';
 import jwt from 'jsonwebtoken';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,7 +49,7 @@ const appleJwk = {
   kid: 'test-key',
   alg: 'RS256',
   use: 'sig',
-} as JsonWebKey & { kid: string };
+} as webcrypto.JsonWebKey & { kid: string };
 
 const RAW_NONCE = 'unit-test-raw-nonce';
 const NONCE_HASH = createHash('sha256').update(RAW_NONCE).digest('hex');

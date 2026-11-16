@@ -87,7 +87,7 @@ const APPLE_ISSUER = 'https://appleid.apple.com';
 const APPLE_KEYS_URL = 'https://appleid.apple.com/auth/keys';
 const APPLE_KEYS_TTL_MS = 60 * 60 * 1000;
 
-interface AppleJwk extends crypto.JsonWebKey {
+interface AppleJwk extends crypto.webcrypto.JsonWebKey {
   kid: string;
 }
 
