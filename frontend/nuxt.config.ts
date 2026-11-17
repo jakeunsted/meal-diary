@@ -17,6 +17,11 @@ function getViteAllowedHosts(): string[] {
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  // Keep the existing root layout so `~` still points at this package.
+  srcDir: '.',
+  dir: {
+    app: 'app',
+  },
   transpile: ['@meal-diary/shared'],
   devtools: { enabled: false },
   devServer: {
@@ -122,7 +127,7 @@ export default defineNuxtConfig({
   },
   i18n: {
     locales: [
-      { code: 'en', iso: 'en-US', name: 'English', file: 'en.json' },
+      { code: 'en', language: 'en-US', name: 'English', file: 'en.json' },
     ],
     defaultLocale: "en",
     strategy: "prefix_except_default",

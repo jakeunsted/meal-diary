@@ -19,6 +19,11 @@ const appUrl = process.env.APP_URL || 'https://app.mealdiary.co.uk';
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  // Keep the existing root layout so `~` still points at this package.
+  srcDir: '.',
+  dir: {
+    app: 'app',
+  },
   devtools: { enabled: false },
   ssr: true,
   devServer: {
@@ -45,6 +50,11 @@ export default defineNuxtConfig({
     server: {
       allowedHosts: getViteAllowedHosts(),
     },
+    ssr: {
+      // Nuxt UI's tailwind-variants lives in a nested node_modules. Externalizing
+      // it from this workspace produces a relative path that walks out of the repo.
+      noExternal: ['tailwind-variants'],
+    },
   },
   modules: ['@nuxt/ui', '@nuxtjs/i18n', '@nuxtjs/sitemap'],
   colorMode: {
@@ -60,6 +70,9 @@ export default defineNuxtConfig({
     ],
   },
   nitro: {
+    externals: {
+      inline: ['tailwind-variants'],
+    },
     routeRules: {
       '/logo*.png': {
         headers: { 'cache-control': 'public, max-age=31536000, immutable' },

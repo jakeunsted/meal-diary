@@ -23,7 +23,7 @@
     "postinstall": "patch-package"
   },
   "dependencies": {
-    "vue-i18n": "^10.0.8"
+    "vue-i18n": "^11.4.20"
   },
   "devDependencies": {
     "patch-package": "^8.0.1",
